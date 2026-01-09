@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+:root {
+  --background: #f7f7f6; /* off-white */
+  --foreground: #0a0a0a; /* dark text */
+  --muted: #6b6b6b;
+  --card: #ffffff;
+  --accent: #111827;
+}
+
+/* Theme tokens controlled by JS via data-theme attribute */
+:root[data-theme='dark'] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --muted: #9a9a9a;
+  --card: #0a0a0a;
+  --accent: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --background: #000000;
+    --foreground: #ffffff;
+    --muted: #9a9a9a;
+    --card: #0a0a0a;
+    --accent: #ffffff;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tokens */
+.card {
+  background: var(--card);
+  color: var(--foreground);
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.muted {
+  color: var(--muted);
+}
+.accent {
+  color: var(--accent);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(18px);
+}
+:root[data-theme='dark'] .glass {
+  background: rgba(15, 15, 15, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* Hero / Brand styles */
+.hero {
+  border-radius: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Hero illustration is hidden on small screens */
+.hero-illustration {
+  width: 100%;
+  max-width: 420px;
+  pointer-events: none;
+  opacity: 0.95;
+}
+@media (max-width: 640px) {
+  .hero-illustration {
+    display: none;
+  }
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--background);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.45rem 0.85rem;
+  border-radius: 10px;
+}
+.chip {
+  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+/* Hover elevation (subtle) */
+.card:hover {
+  transform: none;
+  transition: box-shadow 180ms ease;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.09);
+}
