@@ -1,37 +1,46 @@
 'use client'
 
+import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light'
-    const t = localStorage.getItem('theme')
-    if (t === 'light' || t === 'dark') return t
-    return window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-  })
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-    try {
-      localStorage.setItem('theme', theme)
-    } catch {}
-  }, [theme])
+    setMounted(true)
+  }, [])
+
+  // Ensure data-theme attribute is set on mount
+  useEffect(() => {
+    if (mounted && theme) {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
+  }, [mounted, theme])
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="sm" className="rounded-full" disabled>
+        <span aria-hidden>☀️</span>
+        <span className="text-muted-foreground">Light</span>
+      </Button>
+    )
+  }
+
+  const isDark = theme === 'dark'
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark')
 
   return (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       aria-label="Toggle theme"
-      onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-      className="inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm"
-      style={{
-        background: 'transparent',
-        border: '1px solid rgba(0,0,0,0.06)',
-      }}
+      onClick={toggleTheme}
+      className="rounded-full"
     >
-      <span aria-hidden>{theme === 'dark' ? '🌙' : '☀️'}</span>
-      <span className="muted">{theme === 'dark' ? 'Dark' : 'Light'}</span>
-    </button>
+      <span aria-hidden>{isDark ? '🌙' : '☀️'}</span>
+      <span className="text-muted-foreground">{isDark ? 'Dark' : 'Light'}</span>
+    </Button>
   )
 }
