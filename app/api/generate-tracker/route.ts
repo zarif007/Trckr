@@ -28,9 +28,24 @@ const trackerSchema = z.object({
     .describe('Array of view names like "Today board", "Weekly summary", etc.'),
 })
 
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  trackerData?: {
+    tabs: string[]
+    fields: Array<{
+      name: string
+      type: string
+      tab: string
+      options?: string[]
+    }>
+    views: string[]
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { query } = await request.json()
+    const { query, messages } = await request.json()
 
     if (!query || typeof query !== 'string') {
       return Response.json({ error: 'Query is required' }, { status: 400 })
@@ -43,13 +58,45 @@ export async function POST(request: Request) {
       )
     }
 
-    const systemPrompt = trackerBuilderPrompt
+    // Build conversation context for the prompt
+    let conversationContext = ''
+
+    if (messages && Array.isArray(messages) && messages.length > 0) {
+      const contextParts: string[] = []
+
+      for (const msg of messages) {
+        if (msg.role === 'user') {
+          contextParts.push(`User: ${msg.content}`)
+        } else if (msg.role === 'assistant' && msg.trackerData) {
+          // Convert tracker data to a readable summary for context
+          const trackerSummary = `Previous tracker I created:
+- Tabs: ${msg.trackerData.tabs.join(', ')}
+- Fields: ${msg.trackerData.fields.map((f: { name: string; type: string; tab: string }) => `${f.name} (${f.type}, tab: ${f.tab})`).join(', ')}
+- Views: ${msg.trackerData.views.join(', ')}`
+          contextParts.push(`Assistant: ${trackerSummary}`)
+        } else if (msg.role === 'assistant') {
+          contextParts.push(`Assistant: ${msg.content}`)
+        }
+      }
+
+      conversationContext = contextParts.join('\n\n') + '\n\n'
+    }
+
+    // Build the final prompt with conversation history
+    const prompt = conversationContext
+      ? `${conversationContext}User: ${query}\n\nBased on our conversation, ${messages && messages.length > 0 ? 'update or modify' : 'create'} the tracker according to the user's latest request.`
+      : query
+
+    // Update system prompt to handle conversations
+    const enhancedSystemPrompt = `${trackerBuilderPrompt}
+
+${messages && messages.length > 0 ? 'Note: The user may be requesting changes or refinements to a previous tracker. Pay attention to the conversation history and modify the tracker accordingly while maintaining the structure.' : ''}`
 
     // Initialize DeepSeek model - API key is auto-detected from DEEPSEEK_API_KEY env var
     const result = await generateObject({
       model: deepseek('deepseek-chat'),
-      system: systemPrompt,
-      prompt: query,
+      system: enhancedSystemPrompt,
+      prompt: prompt,
       schema: trackerSchema,
     })
 

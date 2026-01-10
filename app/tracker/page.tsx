@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Send, Sparkles, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Send, Sparkles, Loader2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,28 +17,48 @@ interface TrackerResponse {
   views: string[]
 }
 
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+  trackerData?: TrackerResponse
+}
+
 export default function TrackerPage() {
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [trackerData, setTrackerData] = useState<TrackerResponse | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const INPUT_ID = 'tracker-input'
 
-  const suggestions = [
-    'Track my daily water intake',
-    'Monitor my workout progress',
-    'Log meals and calories',
-    'Track sleep hours and quality',
-  ]
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages, isLoading])
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return
 
+    const userMessage = input.trim()
+    const currentMessages = messages
+    setInput('')
+
+    const newUserMessage: Message = {
+      role: 'user',
+      content: userMessage,
+    }
+
     setIsLoading(true)
-    setError(null)
-    setTrackerData(null)
-    const query = input.trim()
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        setMessages((prev) => [...prev, newUserMessage])
+        resolve()
+      })
+    })
 
     try {
       const response = await fetch('/api/generate-tracker', {
@@ -46,7 +66,10 @@ export default function TrackerPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({
+          query: userMessage,
+          messages: currentMessages,
+        }),
       })
 
       if (!response.ok) {
@@ -54,16 +77,24 @@ export default function TrackerPage() {
         throw new Error(errorData.error || 'Failed to generate tracker')
       }
 
-      const data: TrackerResponse = await response.json()
-      setTrackerData(data)
-      setInput('') // Clear input only on success
-      console.log('Generated tracker:', data)
+      const trackerData: TrackerResponse = await response.json()
+
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: "Here's your tracker configuration:",
+        trackerData,
+      }
+      setMessages((prev) => [...prev, assistantMessage])
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'An unknown error occurred'
-      setError(errorMessage)
+
+      const errorMessageObj: Message = {
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
+      }
+      setMessages((prev) => [...prev, errorMessageObj])
       console.error('Error generating tracker:', err)
-      // Keep input on error so user can retry
     } finally {
       setIsLoading(false)
     }
@@ -83,144 +114,100 @@ export default function TrackerPage() {
     el?.focus()
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <div className="relative max-w-4xl mx-auto px-6 py-12">
-        <div className="min-h-[calc(100vh-220px)] flex items-center justify-center relative">
-          {/* Subtle animated background */}
-          <div className="absolute inset-0 pointer-events-none z-0">
-            <div
-              className="absolute inset-0"
-              style={{
-                background: `
-                  radial-gradient(600px 300px at 10% 10%, rgba(99, 102, 241, 0.06), transparent 8%),
-                  radial-gradient(400px 200px at 90% 90%, rgba(79, 70, 229, 0.05), transparent 10%)
-                `,
-              }}
-            />
+  const renderTrackerCard = (trackerData: TrackerResponse) => {
+    return (
+      <Card className="p-4 mt-2 space-y-4 bg-card border-border">
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-semibold text-sm text-foreground mb-2">
+              Tabs ({trackerData.tabs.length}):
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {trackerData.tabs.map((tab, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm"
+                >
+                  {tab}
+                </span>
+              ))}
+            </div>
           </div>
-
-          <div className="text-center space-y-6 max-w-md relative z-10">
-            {isLoading ? (
-              <div className="space-y-4">
-                <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg bg-primary">
-                  <Loader2 className="w-10 h-10 text-primary-foreground animate-spin" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2 text-foreground">
-                    Generating your tracker...
-                  </h3>
-                  <p className="text-muted-foreground">
-                    This might take a few seconds
-                  </p>
-                </div>
-              </div>
-            ) : error ? (
-              <div className="space-y-4">
-                <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg bg-destructive/10">
-                  <span className="text-2xl">⚠️</span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold mb-2 text-foreground">
-                    Something went wrong
-                  </h3>
-                  <p className="text-muted-foreground text-sm">{error}</p>
-                </div>
-              </div>
-            ) : trackerData ? (
-              <div className="space-y-4 text-left max-w-2xl mx-auto z-20">
-                <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg bg-primary mb-4">
-                  <Sparkles className="w-10 h-10 text-primary-foreground" />
-                </div>
-                <Card className="p-6 space-y-6">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4 text-foreground">
-                      Generated Tracker
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold text-sm text-foreground mb-2">
-                          tabs ({trackerData.tabs.length}):
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {trackerData.tabs.map((tab, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm"
-                            >
-                              {tab}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-foreground mb-2">
-                          Fields ({trackerData.fields.length}):
-                        </h4>
-                        <div className="space-y-2">
-                          {trackerData.fields.map((field, idx) => (
-                            <div
-                              key={idx}
-                              className="px-3 py-2 rounded-lg bg-muted/50 text-sm"
-                            >
-                              <span className="font-medium text-foreground">
-                                {field.name}
-                              </span>
-                              <span className="text-muted-foreground mx-2">
-                                •
-                              </span>
-                              <span className="text-muted-foreground">
-                                {field.type}
-                              </span>
-                              <span className="text-muted-foreground mx-2">
-                                •
-                              </span>
-                              <span className="text-muted-foreground text-xs">
-                                {field.tab}
-                              </span>
-                              {field.options && field.options.length > 0 && (
-                                <div className="mt-1 text-xs text-muted-foreground">
-                                  Options: {field.options.join(', ')}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-foreground mb-2">
-                          Views ({trackerData.views.length}):
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {trackerData.views.map((view, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
-                            >
-                              {view}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+          <div>
+            <h4 className="font-semibold text-sm text-foreground mb-2">
+              Fields ({trackerData.fields.length}):
+            </h4>
+            <div className="space-y-2">
+              {trackerData.fields.map((field, idx) => (
+                <div
+                  key={idx}
+                  className="px-3 py-2 rounded-lg bg-muted/50 text-sm"
+                >
+                  <span className="font-medium text-foreground">
+                    {field.name}
+                  </span>
+                  <span className="text-muted-foreground mx-2">•</span>
+                  <span className="text-muted-foreground">{field.type}</span>
+                  <span className="text-muted-foreground mx-2">•</span>
+                  <span className="text-muted-foreground text-xs">
+                    {field.tab}
+                  </span>
+                  {field.options && field.options.length > 0 && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Options: {field.options.join(', ')}
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => {
-                        setTrackerData(null)
-                        setError(null)
-                        setInput('')
-                      }}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Create Another Tracker
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-            ) : (
-              <div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm text-foreground mb-2">
+              Views ({trackerData.views.length}):
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {trackerData.views.map((view, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
+                >
+                  {view}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  const clearChat = () => {
+    setMessages([])
+    setInput('')
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {messages.length > 0 && (
+        <div className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <div className="max-w-4xl mx-auto px-6 py-3 flex justify-end">
+            <Button
+              onClick={clearChat}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+            >
+              New Chat
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto pb-64">
+        <div className="relative max-w-4xl mx-auto px-6 py-8">
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center space-y-6 max-w-md">
                 <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg bg-primary">
                   <Sparkles className="w-10 h-10 text-primary-foreground" />
                 </div>
@@ -229,102 +216,124 @@ export default function TrackerPage() {
                     Ready to get started?
                   </h3>
                   <p className="text-muted-foreground">
-                    Try something like "Track my daily water intake" or "Monitor
-                    my workout progress"
+                    Describe what you want to track and I'll create a custom
+                    tracker for you. You can ask for changes or refinements!
                   </p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((message, idx) => (
+                <div
+                  key={idx}
+                  className={`flex gap-4 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {message.role === 'assistant' && (
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-[80%] space-y-2 ${
+                      message.role === 'user' ? 'items-end' : 'items-start'
+                    } flex flex-col`}
+                  >
+                    <div
+                      className={`rounded-2xl px-4 py-3 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
+                    {message.trackerData &&
+                      renderTrackerCard(message.trackerData)}
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="flex gap-4 justify-start">
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <Sparkles className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <div className="max-w-[80%] space-y-2 flex flex-col items-start">
+                    <div className="rounded-2xl px-4 py-3 bg-muted text-foreground">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <p className="text-sm">Generating tracker...</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="fixed left-1/2 bottom-0 -translate-x-1/2 w-full max-w-3xl px-6 py-6">
+      <div className="fixed left-1/2 bottom-0 -translate-x-1/2 w-full max-w-3xl px-6 py-6 bg-background/80 backdrop-blur-sm">
         <div
           className={`relative rounded-2xl transition-all duration-200 ${
             isFocused ? 'shadow-2xl' : 'shadow-xl'
           }`}
         >
-          <Card
-            className={`relative rounded-2xl overflow-hidden border transition-colors border-0 ${
-              isFocused ? 'border-primary' : 'border-border'
-            }`}
-          >
-            <div className="flex items-end gap-3 p-4">
-              <div className="flex-1 relative">
-                <div className="mb-2 flex flex-wrap gap-2 px-1">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => applySuggestion(s)}
-                      className="text-xs px-3 py-1 rounded-full bg-muted/40 hover:bg-muted/60 text-muted-foreground transition"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-
-                <Textarea
-                  id={INPUT_ID}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit()
-                    }
-                    if (e.key === 'Escape') {
-                      setIsFocused(false)
-                      const el = document.getElementById(
-                        INPUT_ID
-                      ) as HTMLTextAreaElement | null
-                      el?.blur()
-                    }
-                  }}
-                  placeholder="Describe what you want to track..."
-                  rows={1}
-                  className="w-full py-2 bg-transparent focus:outline-none resize-none text-base text-foreground placeholder:text-muted-foreground min-h-[48px] max-h-[200px] border-none focus:ring-0"
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className={`rounded-xl h-[52px] w-[52px] shrink-0 transition-transform ${
-                  input.trim() && !isLoading
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg hover:scale-105'
-                    : 'bg-foreground text-background disabled:bg-muted disabled:text-background disabled:opacity-50'
-                }`}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-                <span className="sr-only">Send</span>
-              </Button>
+          <div className="flex items-end gap-3 p-4 rounded-2xl border border-border bg-background transition-all">
+            <div className="flex-1 relative">
+              <Textarea
+                id={INPUT_ID}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSubmit()
+                  }
+                  if (e.key === 'Escape') {
+                    setIsFocused(false)
+                    const el = document.getElementById(
+                      INPUT_ID
+                    ) as HTMLTextAreaElement | null
+                    el?.blur()
+                  }
+                }}
+                placeholder={
+                  messages.length === 0
+                    ? 'Describe what you want to track...'
+                    : 'Ask for changes or refinements...'
+                }
+                rows={1}
+                className="w-full py-3 bg-transparent focus:outline-none resize-none text-base text-foreground placeholder:text-muted-foreground border-none shadow-none focus:ring-0 min-h-[24px] max-h-[200px]"
+              />
             </div>
 
-            <div className="px-4 pb-3 border-t border-border">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Press Enter to send, Shift+Enter for new line</span>
-                <span>{input.length}/2000</span>
-              </div>
-
-              <div className="mt-2 h-2 w-full bg-muted/20 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-500 to-purple-500"
-                  style={{
-                    width: `${Math.min(100, (input.length / 2000) * 100)}%`,
-                  }}
-                />
-              </div>
-            </div>
-          </Card>
+            <Button
+              onClick={handleSubmit}
+              disabled={!input.trim() || isLoading}
+              size="icon"
+              className="rounded-lg h-12 w-12 shrink-0 transition-all hover:bg-primary/90 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+              <span className="sr-only">Send</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>
