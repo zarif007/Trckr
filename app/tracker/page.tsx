@@ -3,18 +3,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { Send, Sparkles, Loader2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
+import { TrackerDisplay } from '@/app/components/TrackerDisplay'
 
 interface TrackerResponse {
-  tabs: string[]
+  tabs: Array<{
+    name: string
+    type: 'table' | 'kanban'
+  }>
   fields: Array<{
     name: string
+    fieldName: string
     type: 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
     tab: string
     options?: string[]
   }>
   views: string[]
+  examples: Array<Record<string, any>>
 }
 
 interface Message {
@@ -116,68 +121,12 @@ export default function TrackerPage() {
 
   const renderTrackerCard = (trackerData: TrackerResponse) => {
     return (
-      <Card className="p-4 mt-2 space-y-4 bg-card border-border">
-        <div className="space-y-4">
-          <div>
-            <h4 className="font-semibold text-sm text-foreground mb-2">
-              Tabs ({trackerData.tabs.length}):
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {trackerData.tabs.map((tab, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm"
-                >
-                  {tab}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm text-foreground mb-2">
-              Fields ({trackerData.fields.length}):
-            </h4>
-            <div className="space-y-2">
-              {trackerData.fields.map((field, idx) => (
-                <div
-                  key={idx}
-                  className="px-3 py-2 rounded-lg bg-muted/50 text-sm"
-                >
-                  <span className="font-medium text-foreground">
-                    {field.name}
-                  </span>
-                  <span className="text-muted-foreground mx-2">•</span>
-                  <span className="text-muted-foreground">{field.type}</span>
-                  <span className="text-muted-foreground mx-2">•</span>
-                  <span className="text-muted-foreground text-xs">
-                    {field.tab}
-                  </span>
-                  {field.options && field.options.length > 0 && (
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      Options: {field.options.join(', ')}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm text-foreground mb-2">
-              Views ({trackerData.views.length}):
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {trackerData.views.map((view, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1 rounded-full bg-primary/10 text-primary text-sm"
-                >
-                  {view}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </Card>
+      <TrackerDisplay
+        tabs={trackerData.tabs}
+        fields={trackerData.fields}
+        examples={trackerData.examples}
+        views={trackerData.views}
+      />
     )
   }
 
@@ -316,7 +265,7 @@ export default function TrackerPage() {
                     : 'Ask for changes or refinements...'
                 }
                 rows={1}
-                className="w-full py-3 bg-transparent focus:outline-none resize-none text-base text-foreground placeholder:text-muted-foreground border-none shadow-none focus:ring-0 min-h-[24px] max-h-[200px]"
+                className="w-full py-3 bg-transparent focus:outline-none resize-none text-base text-foreground placeholder:text-muted-foreground border-none shadow-none focus:ring-0 min-h-6 max-h-50"
               />
             </div>
 
