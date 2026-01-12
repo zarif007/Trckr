@@ -22,6 +22,20 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import { format } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
 
 interface TrackerField {
   name: string
@@ -53,6 +67,7 @@ export function TrackerDisplay({
   const [formData, setFormData] = useState<Record<string, any>>(
     examples[0] || {}
   )
+  const [showDialog, setShowDialog] = useState(false)
 
   // Get fields for the active tab
   const activeTabFields = fields.filter((field) => field.tab === activeTab)
@@ -91,14 +106,32 @@ export function TrackerDisplay({
         )
       case 'date':
         return (
-          <Input
-            key={field.fieldName}
-            type="date"
-            placeholder={field.name}
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="bg-background text-foreground"
-          />
+          <Popover key={field.fieldName}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-left font-normal bg-background text-foreground"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {value ? format(new Date(value), 'PPP') : field.name}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(value) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    handleChange(date.toISOString().split('T')[0])
+                  }
+                }}
+                disabled={(date) =>
+                  date > new Date() || date < new Date('1900-01-01')
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         )
       case 'text':
         return (
@@ -261,8 +294,8 @@ export function TrackerDisplay({
 
   const isTableTab = tabs.find((t) => t.name === activeTab)?.type === 'table'
 
-  return (
-    <Card className="p-6 mt-2 space-y-6 bg-card border-border">
+  const trackerContent = (
+    <>
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b border-border pb-4">
         {tabs.map((tab) => (
@@ -319,6 +352,35 @@ export function TrackerDisplay({
           ))}
         </div>
       </div>
-    </Card>
+    </>
+  )
+
+  return (
+    <div>
+      {/* Preview Button */}
+      <div className="flex justify-center pt-2">
+        <Button
+          onClick={() => setShowDialog(true)}
+          size="lg"
+          className="cursor-pointer"
+        >
+          Preview Tracker
+        </Button>
+      </div>
+
+      {/* Tracker Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="!max-w-7xl h-[95vh] max-h-screen overflow-y-auto p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle>Tracker Preview</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 pt-2 overflow-y-auto">
+            <Card className="p-6 space-y-6 bg-card border-border">
+              {trackerContent}
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

@@ -137,21 +137,6 @@ export default function TrackerPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {messages.length > 0 && (
-        <div className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <div className="max-w-4xl mx-auto px-6 py-3 flex justify-end">
-            <Button
-              onClick={clearChat}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              New Chat
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="flex-1 overflow-y-auto pb-64">
         <div className="relative max-w-4xl mx-auto px-6 py-8">
           {messages.length === 0 ? (
