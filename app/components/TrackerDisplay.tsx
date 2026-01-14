@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { ColumnDef } from '@tanstack/react-table'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,14 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Calendar } from '@/components/ui/calendar'
 import {
@@ -34,24 +27,48 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { DataTable } from '@/components/ui/data-table'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
+
+type TrackerFieldType =
+  | 'string'
+  | 'number'
+  | 'date'
+  | 'options'
+  | 'boolean'
+  | 'text'
+
+interface TrackerTab {
+  name: string
+  fieldName: string
+}
+
+interface TrackerSection {
+  name: string
+  fieldName: string
+  tabId: string
+}
+
+interface TrackerGrid {
+  name: string
+  fieldName: string
+  type: 'table' | 'kanban'
+  sectionId: string
+}
 
 interface TrackerField {
   name: string
   fieldName: string
-  type: 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
-  tab: string
+  type: TrackerFieldType
+  gridId: string
   options?: string[]
-}
-
-interface TrackerTab {
-  name: string
-  type: 'table' | 'kanban'
 }
 
 interface TrackerDisplayProps {
   tabs: TrackerTab[]
+  sections: TrackerSection[]
+  grids: TrackerGrid[]
   fields: TrackerField[]
   examples: Array<Record<string, any>>
   views: string[]
@@ -59,18 +76,31 @@ interface TrackerDisplayProps {
 
 export function TrackerDisplay({
   tabs,
+  sections,
+  grids,
   fields,
   examples,
   views,
 }: TrackerDisplayProps) {
-  const [activeTab, setActiveTab] = useState(tabs[0]?.name || '')
+  const [activeTabId, setActiveTabId] = useState(tabs[0]?.fieldName || '')
   const [formData, setFormData] = useState<Record<string, any>>(
     examples[0] || {}
   )
   const [showDialog, setShowDialog] = useState(false)
 
-  // Get fields for the active tab
-  const activeTabFields = fields.filter((field) => field.tab === activeTab)
+  // Build hierarchy from flat structure
+  const activeTab = tabs.find((tab) => tab.fieldName === activeTabId) || tabs[0]
+  const activeSections = sections
+    .filter((section) => section.tabId === activeTab?.fieldName)
+    .map((section) => ({
+      ...section,
+      grids: grids
+        .filter((grid) => grid.sectionId === section.fieldName)
+        .map((grid) => ({
+          ...grid,
+          fields: fields.filter((field) => field.gridId === grid.fieldName),
+        })),
+    }))
 
   // Render form field based on type
   const renderField = (field: TrackerField) => {
@@ -181,36 +211,29 @@ export function TrackerDisplay({
     }
   }
 
-  const renderTableView = () => {
-    if (examples.length === 0) return null
+  const renderTableGrid = (grid: TrackerGrid & { fields: TrackerField[] }) => {
+    if (examples.length === 0 || grid.fields.length === 0) return null
+
+    // Create columns dynamically from grid fields
+    const columns: ColumnDef<Record<string, any>>[] = grid.fields.map(
+      (field) => ({
+        accessorKey: field.fieldName,
+        header: field.name,
+        cell: ({ row }) => {
+          const value = row.getValue(field.fieldName)
+          return renderCellValue(value, field.type)
+        },
+      })
+    )
 
     return (
-      <div className="overflow-x-auto border rounded-lg border-border">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              {activeTabFields.map((field) => (
-                <TableHead key={field.fieldName} className="text-foreground">
-                  {field.name}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {examples.map((example, idx) => (
-              <TableRow key={idx} className="hover:bg-muted/50">
-                {activeTabFields.map((field) => (
-                  <TableCell
-                    key={`${idx}-${field.fieldName}`}
-                    className="text-foreground"
-                  >
-                    {renderCellValue(example[field.fieldName], field.type)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline">
+            Add Entry
+          </Button>
+        </div>
+        <DataTable columns={columns} data={examples} />
       </div>
     )
   }
@@ -236,11 +259,10 @@ export function TrackerDisplay({
     }
   }
 
-  const renderKanbanView = () => {
+  const renderKanbanGrid = (grid: TrackerGrid & { fields: TrackerField[] }) => {
     if (examples.length === 0) return null
 
-    // For kanban, we'll group by first options field if it exists
-    const optionsField = activeTabFields.find((f) => f.type === 'options')
+    const optionsField = grid.fields.find((f) => f.type === 'options')
 
     if (!optionsField) {
       return (
@@ -251,7 +273,7 @@ export function TrackerDisplay({
     }
 
     const groups = optionsField.options || []
-    const cardFields = activeTabFields.filter(
+    const cardFields = grid.fields.filter(
       (f) => f.fieldName !== optionsField.fieldName
     )
 
@@ -292,7 +314,16 @@ export function TrackerDisplay({
     )
   }
 
-  const isTableTab = tabs.find((t) => t.name === activeTab)?.type === 'table'
+  const renderGrid = (grid: TrackerGrid & { fields: TrackerField[] }) => {
+    switch (grid.type) {
+      case 'table':
+        return renderTableGrid(grid)
+      case 'kanban':
+        return renderKanbanGrid(grid)
+      default:
+        return null
+    }
+  }
 
   const trackerContent = (
     <>
@@ -300,10 +331,12 @@ export function TrackerDisplay({
       <div className="flex gap-2 border-b border-border pb-4">
         {tabs.map((tab) => (
           <Button
-            key={tab.name}
-            variant={activeTab === tab.name ? 'default' : 'outline'}
+            key={tab.fieldName}
+            variant={
+              activeTab?.fieldName === tab.fieldName ? 'default' : 'outline'
+            }
             size="sm"
-            onClick={() => setActiveTab(tab.name)}
+            onClick={() => setActiveTabId(tab.fieldName)}
             className="rounded-b-none"
           >
             {tab.name}
@@ -311,33 +344,31 @@ export function TrackerDisplay({
         ))}
       </div>
 
-      {/* Form Section */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-4">
-          Add New Entry
-        </h3>
-        <div className="space-y-3 bg-muted/30 p-4 rounded-lg">
-          {activeTabFields.map((field) => (
-            <div key={field.fieldName}>
-              {field.type !== 'boolean' && (
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  {field.name}
-                </label>
-              )}
-              {renderField(field)}
-            </div>
-          ))}
-          <Button className="w-full mt-4">Add Entry</Button>
+      {/* Sections & Grids */}
+      {activeSections.map((section) => (
+        <div key={section.fieldName} className="space-y-4">
+          <h3 className="text-sm font-semibold text-foreground">
+            {section.name}
+          </h3>
+          <div className="space-y-6">
+            {section.grids.map((grid) => (
+              <div key={grid.fieldName} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {grid.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      {grid.type}
+                    </p>
+                  </div>
+                </div>
+                {renderGrid(grid)}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Data Preview Section */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-4">
-          Data Preview ({isTableTab ? 'Table View' : 'Kanban View'})
-        </h3>
-        {isTableTab ? renderTableView() : renderKanbanView()}
-      </div>
+      ))}
 
       {/* Views Summary */}
       <div>
