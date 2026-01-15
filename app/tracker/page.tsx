@@ -6,7 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TrackerDisplay } from '@/app/components/TrackerDisplay'
 
-type TrackerFieldType = 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
+type TrackerFieldType =
+  | 'string'
+  | 'number'
+  | 'date'
+  | 'options'
+  | 'boolean'
+  | 'text'
 
 interface TrackerTab {
   name: string
@@ -153,11 +159,6 @@ export default function TrackerPage() {
     )
   }
 
-  const clearChat = () => {
-    setMessages([])
-    setInput('')
-  }
-
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto pb-64">
@@ -184,8 +185,9 @@ export default function TrackerPage() {
               {messages.map((message, idx) => (
                 <div
                   key={idx}
-                  className={`flex gap-4 ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                  className={`flex gap-4 ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
                 >
                   {message.role === 'assistant' && (
                     <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
@@ -193,14 +195,16 @@ export default function TrackerPage() {
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] space-y-2 ${message.role === 'user' ? 'items-end' : 'items-start'
-                      } flex flex-col`}
+                    className={`max-w-[80%] space-y-2 ${
+                      message.role === 'user' ? 'items-end' : 'items-start'
+                    } flex flex-col`}
                   >
                     <div
-                      className={`rounded-2xl px-4 py-3 ${message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
-                        }`}
+                      className={`rounded-2xl px-4 py-3 ${
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted text-foreground'
+                      }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">
                         {message.content}
@@ -239,8 +243,9 @@ export default function TrackerPage() {
 
       <div className="fixed left-1/2 bottom-0 -translate-x-1/2 w-full max-w-3xl px-6 py-6 bg-background/80 backdrop-blur-sm">
         <div
-          className={`relative rounded-2xl transition-all duration-200 ${isFocused ? 'shadow-2xl' : 'shadow-xl'
-            }`}
+          className={`relative rounded-2xl transition-all duration-200 ${
+            isFocused ? 'shadow-2xl' : 'shadow-xl'
+          }`}
         >
           <div className="flex items-end gap-3 p-4 rounded-2xl border border-border bg-background transition-all">
             <div className="flex-1 relative">

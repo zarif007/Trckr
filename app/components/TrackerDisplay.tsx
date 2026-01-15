@@ -4,32 +4,16 @@ import { useState } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Calendar } from '@/components/ui/calendar'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
 import { DataTable } from '@/components/ui/data-table'
-import { format } from 'date-fns'
-import { CalendarIcon } from 'lucide-react'
+import { FieldInput } from './FieldInput'
 
 type TrackerFieldType =
   | 'string'
@@ -112,107 +96,33 @@ export function TrackerDisplay({
       }))
     }
 
-    switch (field.type) {
-      case 'string':
-        return (
-          <Input
-            key={field.fieldName}
-            placeholder={field.name}
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="bg-background text-foreground"
-          />
-        )
-      case 'number':
-        return (
-          <Input
-            key={field.fieldName}
-            type="number"
-            placeholder={field.name}
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="bg-background text-foreground"
-          />
-        )
-      case 'date':
-        return (
-          <Popover key={field.fieldName}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal bg-background text-foreground"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), 'PPP') : field.name}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => {
-                  if (date) {
-                    handleChange(date.toISOString().split('T')[0])
-                  }
-                }}
-                disabled={(date) =>
-                  date > new Date() || date < new Date('1900-01-01')
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        )
-      case 'text':
-        return (
-          <Textarea
-            key={field.fieldName}
-            placeholder={field.name}
-            value={value}
-            onChange={(e) => handleChange(e.target.value)}
-            className="bg-background text-foreground"
-            rows={3}
-          />
-        )
-      case 'boolean':
-        return (
-          <div key={field.fieldName} className="flex items-center gap-2">
-            <Checkbox
-              checked={value || false}
-              onCheckedChange={handleChange}
-              id={field.fieldName}
-            />
-            <label htmlFor={field.fieldName} className="text-sm font-medium">
-              {field.name}
-            </label>
-          </div>
-        )
-      case 'options':
-        return (
-          <Select
-            key={field.fieldName}
-            value={value}
-            onValueChange={handleChange}
-          >
-            <SelectTrigger className="bg-background text-foreground">
-              <SelectValue placeholder={field.name} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )
-      default:
-        return null
-    }
+    return (
+      <FieldInput
+        key={field.fieldName}
+        field={{
+          name: field.name,
+          fieldName: field.fieldName,
+          type: field.type,
+          options: field.options,
+        }}
+        value={value}
+        onChange={handleChange}
+      />
+    )
   }
 
   const renderTableGrid = (grid: TrackerGrid & { fields: TrackerField[] }) => {
     if (examples.length === 0 || grid.fields.length === 0) return null
+
+    // Create field metadata for the DataTable
+    const fieldMetadata: Record<string, any> = {}
+    grid.fields.forEach((field) => {
+      fieldMetadata[field.fieldName] = {
+        name: field.name,
+        type: field.type,
+        options: field.options,
+      }
+    })
 
     // Create columns dynamically from grid fields
     const columns: ColumnDef<Record<string, any>>[] = grid.fields.map(
@@ -233,7 +143,11 @@ export function TrackerDisplay({
             Add Entry
           </Button>
         </div>
-        <DataTable columns={columns} data={examples} />
+        <DataTable
+          columns={columns}
+          data={examples}
+          fieldMetadata={fieldMetadata}
+        />
       </div>
     )
   }
@@ -243,12 +157,10 @@ export function TrackerDisplay({
 
     switch (fieldType) {
       case 'boolean':
-        return value ? (
-          <Badge variant="outline" className="bg-green-100 text-green-800">
-            Yes
-          </Badge>
-        ) : (
-          <Badge variant="outline">No</Badge>
+        return (
+          <div className="flex items-center justify-center">
+            <Checkbox checked={value || false} disabled />
+          </div>
         )
       case 'options':
         return <Badge variant="secondary">{value}</Badge>
