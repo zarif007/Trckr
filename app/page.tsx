@@ -8,8 +8,6 @@ export default function Home() {
   return (
     <div className="min-h-screen font-sans bg-background">
       <div className="relative max-w-6xl mx-auto px-4 py-10 space-y-14">
-        <NavBar />
-
         <section className="rounded-2xl overflow-hidden relative">
           <Card className="overflow-hidden p-6 sm:p-10 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border-border dark:border-border/80">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">

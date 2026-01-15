@@ -181,3 +181,22 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes zoomIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
