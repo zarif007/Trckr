@@ -276,7 +276,7 @@ export default function Home() {
                   key={item.title}
                   className="bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 rounded-xl p-4 sm:p-5 space-y-2"
                 >
-                  <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center font-semibold text-sm text-foreground">
+                  <div className="h-8 w-8 rounded-lg bg-gray-50 dark:bg-black flex items-center justify-center font-semibold text-sm text-foreground">
                     {idx + 1}
                   </div>
                   <div className="font-semibold text-foreground">

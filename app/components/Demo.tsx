@@ -16,7 +16,10 @@ export default function Demo() {
   }
 
   return (
-    <Card id="demo" className="mt-8 p-5 shadow-md hover:shadow-lg transition-shadow border-border dark:border-border/80">
+    <Card
+      id="demo"
+      className="mt-8 p-5 shadow-md hover:shadow-lg transition-shadow border-border dark:border-border/80"
+    >
       <h3 className="text-lg sm:text-xl font-semibold text-foreground">
         See a complete example
       </h3>
@@ -30,7 +33,7 @@ export default function Demo() {
         <label className="block text-sm font-medium text-foreground">
           1. What you tell Trckr
         </label>
-        <pre className="mt-2 p-3 rounded-md bg-muted/50 dark:bg-muted/30 border border-border dark:border-border/80 overflow-x-auto text-sm text-foreground">
+        <pre className="mt-2 p-3 rounded-md bg-gray-50 dark:bg-black/50 dark:bg-gray-50 dark:bg-black/30 border border-border dark:border-border/80 overflow-x-auto text-sm text-foreground">
           {demoPrompt}
         </pre>
 
@@ -40,16 +43,24 @@ export default function Demo() {
           </label>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Card className="p-3 shadow-sm border-border dark:border-border/80">
-              <h4 className="font-semibold text-foreground">{generatedBoard.title}</h4>
+              <h4 className="font-semibold text-foreground">
+                {generatedBoard.title}
+              </h4>
               <p className="text-muted-foreground text-xs mt-1">
                 A simple table where each row is a day you log how much you
                 drank.
               </p>
               <div className="mt-3">
-                <div className="text-sm text-muted-foreground">Fields Trckr adds</div>
+                <div className="text-sm text-muted-foreground">
+                  Fields Trckr adds
+                </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {generatedBoard.fields.map((f) => (
-                    <Badge key={f} variant="outline" className="border-border dark:border-border/80">
+                    <Badge
+                      key={f}
+                      variant="outline"
+                      className="border-border dark:border-border/80"
+                    >
                       {f}
                     </Badge>
                   ))}
@@ -59,7 +70,9 @@ export default function Demo() {
 
             <Card className="p-3 shadow-sm border-border dark:border-border/80">
               <div>
-                <div className="text-sm text-muted-foreground">Views & reminders</div>
+                <div className="text-sm text-muted-foreground">
+                  Views & reminders
+                </div>
                 <ul className="mt-2 list-disc ml-5 text-sm text-muted-foreground space-y-1">
                   {generatedBoard.views.map((v) => (
                     <li key={v}>{v}</li>
@@ -68,10 +81,16 @@ export default function Demo() {
               </div>
 
               <div className="mt-3">
-                <div className="text-sm text-muted-foreground">Reminder times</div>
+                <div className="text-sm text-muted-foreground">
+                  Reminder times
+                </div>
                 <div className="mt-2 flex gap-2 flex-wrap">
                   {generatedBoard.reminders.map((r) => (
-                    <Badge key={r} variant="outline" className="border-border dark:border-border/80">
+                    <Badge
+                      key={r}
+                      variant="outline"
+                      className="border-border dark:border-border/80"
+                    >
                       {r}
                     </Badge>
                   ))}
@@ -79,7 +98,9 @@ export default function Demo() {
               </div>
 
               <div className="mt-3">
-                <div className="text-sm text-muted-foreground">Helpful suggestions</div>
+                <div className="text-sm text-muted-foreground">
+                  Helpful suggestions
+                </div>
                 <ul className="mt-2 list-disc ml-5 text-sm text-muted-foreground space-y-1">
                   {generatedBoard.suggestions.map((s) => (
                     <li key={s}>{s}</li>

@@ -203,7 +203,7 @@ export default function TrackerPage() {
                       className={`rounded-2xl px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted text-foreground'
+                          : 'bg-gray-50 dark:bg-black text-foreground'
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap">
@@ -214,7 +214,7 @@ export default function TrackerPage() {
                       renderTrackerCard(message.trackerData)}
                   </div>
                   {message.role === 'user' && (
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-black flex items-center justify-center shrink-0">
                       <User className="w-4 h-4 text-muted-foreground" />
                     </div>
                   )}
@@ -226,7 +226,7 @@ export default function TrackerPage() {
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="max-w-[80%] space-y-2 flex flex-col items-start">
-                    <div className="rounded-2xl px-4 py-3 bg-muted text-foreground">
+                    <div className="rounded-2xl px-4 py-3 bg-gray-50 dark:bg-black text-foreground">
                       <div className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <p className="text-sm">Generating tracker...</p>

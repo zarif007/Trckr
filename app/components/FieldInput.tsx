@@ -103,7 +103,7 @@ export function FieldInput({
               selected={value ? new Date(value) : undefined}
               onSelect={(date) => {
                 if (date) {
-                  onChange(date.toISOString().split('T')[0])
+                  onChange(date)
                 }
               }}
               disabled={(date) =>

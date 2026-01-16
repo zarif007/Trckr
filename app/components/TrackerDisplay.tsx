@@ -6,12 +6,8 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { DataTable } from '@/components/ui/data-table'
 import { FieldInput } from './FieldInput'
 
@@ -72,21 +68,6 @@ export function TrackerDisplay({
   )
   const [showDialog, setShowDialog] = useState(false)
 
-  // Build hierarchy from flat structure
-  const activeTab = tabs.find((tab) => tab.fieldName === activeTabId) || tabs[0]
-  const activeSections = sections
-    .filter((section) => section.tabId === activeTab?.fieldName)
-    .map((section) => ({
-      ...section,
-      grids: grids
-        .filter((grid) => grid.sectionId === section.fieldName)
-        .map((grid) => ({
-          ...grid,
-          fields: fields.filter((field) => field.gridId === grid.fieldName),
-        })),
-    }))
-
-  // Render form field based on type
   const renderField = (field: TrackerField) => {
     const value = formData[field.fieldName] ?? ''
     const handleChange = (newValue: any) => {
@@ -114,7 +95,6 @@ export function TrackerDisplay({
   const renderTableGrid = (grid: TrackerGrid & { fields: TrackerField[] }) => {
     if (examples.length === 0 || grid.fields.length === 0) return null
 
-    // Create field metadata for the DataTable
     const fieldMetadata: Record<string, any> = {}
     grid.fields.forEach((field) => {
       fieldMetadata[field.fieldName] = {
@@ -124,7 +104,6 @@ export function TrackerDisplay({
       }
     })
 
-    // Create columns dynamically from grid fields
     const columns: ColumnDef<Record<string, any>>[] = grid.fields.map(
       (field) => ({
         accessorKey: field.fieldName,
@@ -197,7 +176,7 @@ export function TrackerDisplay({
           )
           return (
             <div key={group} className="shrink-0 w-80">
-              <div className="bg-muted rounded-lg p-4 mb-4">
+              <div className="bg-gray-50 dark:bg-black rounded-lg p-4 mb-4">
                 <h3 className="font-semibold text-foreground">{group}</h3>
               </div>
               <div className="space-y-3">
@@ -239,51 +218,67 @@ export function TrackerDisplay({
 
   const trackerContent = (
     <>
-      {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-border pb-4">
-        {tabs.map((tab) => (
-          <Button
-            key={tab.fieldName}
-            variant={
-              activeTab?.fieldName === tab.fieldName ? 'default' : 'outline'
-            }
-            size="sm"
-            onClick={() => setActiveTabId(tab.fieldName)}
-            className="rounded-b-none"
-          >
-            {tab.name}
-          </Button>
-        ))}
-      </div>
+      <Tabs
+        value={activeTabId}
+        onValueChange={setActiveTabId}
+        className="w-full"
+      >
+        <TabsList className="bg-slate-50 dark:bg-black">
+          {tabs.map((tab) => (
+            <TabsTrigger key={tab.fieldName} value={tab.fieldName}>
+              {tab.name}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* Sections & Grids */}
-      {activeSections.map((section) => (
-        <div key={section.fieldName} className="space-y-4">
-          <h3 className="text-sm font-semibold text-foreground">
-            {section.name}
-          </h3>
-          <div className="space-y-6">
-            {section.grids.map((grid) => (
-              <div key={grid.fieldName} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">
-                      {grid.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                      {grid.type}
-                    </p>
+        {tabs.map((tab) => {
+          const tabSections = sections
+            .filter((section) => section.tabId === tab.fieldName)
+            .map((section) => ({
+              ...section,
+              grids: grids
+                .filter((grid) => grid.sectionId === section.fieldName)
+                .map((grid) => ({
+                  ...grid,
+                  fields: fields.filter(
+                    (field) => field.gridId === grid.fieldName
+                  ),
+                })),
+            }))
+
+          return (
+            <TabsContent
+              key={tab.fieldName}
+              value={tab.fieldName}
+              className="space-y-6 mt-6"
+            >
+              {tabSections.map((section) => (
+                <div key={section.fieldName} className="space-y-4">
+                  <h3 className="text-2xl font-semibold text-foreground border-b pb-2">
+                    {section.name}
+                  </h3>
+                  <div className="space-y-6">
+                    {section.grids.map((grid) => (
+                      <div key={grid.fieldName} className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-lg font-semibold text-foreground">
+                              {grid.name}
+                            </p>
+                          </div>
+                        </div>
+                        {renderGrid(grid)}
+                      </div>
+                    ))}
                   </div>
                 </div>
-                {renderGrid(grid)}
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+              ))}
+            </TabsContent>
+          )
+        })}
+      </Tabs>
 
-      {/* Views Summary */}
-      <div>
+      <div className="pt-4 border-t">
         <h3 className="text-sm font-semibold text-foreground mb-3">
           Available Views
         </h3>
@@ -300,7 +295,6 @@ export function TrackerDisplay({
 
   return (
     <div>
-      {/* Preview Button */}
       <div className="flex justify-center pt-2">
         <Button
           onClick={() => setShowDialog(true)}
@@ -311,7 +305,6 @@ export function TrackerDisplay({
         </Button>
       </div>
 
-      {/* Tracker Dialog */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="!max-w-7xl rounded-xl max-h-screen overflow-y-auto p-0">
           <div className="overflow-y-auto">

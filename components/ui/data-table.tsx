@@ -20,11 +20,46 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Type,
+  Hash,
+  Calendar,
+  AlignLeft,
+  CheckSquare,
+  List,
+  Eraser,
+  Zap,
+} from 'lucide-react'
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { FieldInput } from '@/app/components/FieldInput'
+
+// Separate component for cell context menu
+const CellContextMenu = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+      <ContextMenuContent className="w-48">
+        <ContextMenuItem>
+          <Eraser className="mr-2 h-4 w-4" />
+          Clear
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem>
+          <Zap className="mr-2 h-4 w-4" />
+          Logic
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  )
+}
 
 type FieldType = 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
 
@@ -43,6 +78,25 @@ interface DataTableProps<TData, TValue> {
   fieldMetadata?: FieldMetadata
 }
 
+const getFieldIcon = (type: FieldType) => {
+  switch (type) {
+    case 'string':
+      return Type
+    case 'number':
+      return Hash
+    case 'date':
+      return Calendar
+    case 'text':
+      return AlignLeft
+    case 'boolean':
+      return CheckSquare
+    case 'options':
+      return List
+    default:
+      return Type
+  }
+}
+
 export function DataTable<TData, TValue>({
   columns,
   data,
@@ -57,10 +111,30 @@ export function DataTable<TData, TValue>({
   } | null>(null)
   const [editingValue, setEditingValue] = React.useState<any>(null)
   const [tableData, setTableData] = React.useState<TData[]>(data)
+  const tableRef = React.useRef<HTMLDivElement>(null)
 
   React.useEffect(() => {
     setTableData(data)
   }, [data])
+
+  // Handle clicking outside the table to deselect rows and cells
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        tableRef.current &&
+        !tableRef.current.contains(event.target as Node)
+      ) {
+        setRowSelection({})
+        setEditingCell(null)
+        setEditingValue(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleCellEdit = (rowIndex: number, columnId: string, value: any) => {
     const newData = [...tableData]
@@ -125,7 +199,7 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-4" ref={tableRef}>
       <div className="rounded-md border border-border bg-transparent overflow-hidden">
         <Table className="table-fixed w-full border-collapse">
           <TableHeader className="bg-gray-50 dark:bg-black">
@@ -136,6 +210,9 @@ export function DataTable<TData, TValue>({
               >
                 {headerGroup.headers.map((header) => {
                   const isSelect = header.id === 'select'
+                  const fieldType = fieldMetadata?.[header.id]?.type
+                  const Icon = fieldType ? getFieldIcon(fieldType) : null
+
                   return (
                     <TableHead
                       key={header.id}
@@ -145,12 +222,22 @@ export function DataTable<TData, TValue>({
                         isSelect ? 'p-0' : 'px-4'
                       )}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
+                      {header.isPlaceholder ? null : isSelect ? (
+                        flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {Icon && (
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          {flexRender(
                             header.column.columnDef.header,
                             header.getContext()
                           )}
+                        </div>
+                      )}
                     </TableHead>
                   )
                 })}
@@ -162,7 +249,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="group hover:bg-muted/10 border-b border-border/50 last:border-0 transition-colors"
+                  className="group hover:bg-gray-50 dark:bg-black/10 border-b border-border/50 last:border-0 transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => {
                     const isSelect = cell.column.id === 'select'
@@ -234,19 +321,24 @@ export function DataTable<TData, TValue>({
                                 )}
                               </div>
                             ) : (
-                              <div
-                                className="w-full h-full px-4 flex items-center cursor-text text-sm"
-                                onClick={() =>
-                                  handleCellEditStart(row.index, cell.column.id)
-                                }
-                              >
-                                <span className="truncate">
-                                  {flexRender(
-                                    cell.column.columnDef.cell,
-                                    cell.getContext()
-                                  )}
-                                </span>
-                              </div>
+                              <CellContextMenu>
+                                <div
+                                  className="w-full h-full px-4 flex items-center cursor-text text-sm"
+                                  onClick={() =>
+                                    handleCellEditStart(
+                                      row.index,
+                                      cell.column.id
+                                    )
+                                  }
+                                >
+                                  <span className="truncate">
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
+                                  </span>
+                                </div>
+                              </CellContextMenu>
                             )}
                           </div>
                         )}
