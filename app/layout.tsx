@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased max-w-5xl mx-auto py-4`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="data-theme"
@@ -36,8 +36,10 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="trckr-theme"
         >
-          <NavBar />
-          {children}
+          <div className="max-w-5xl mx-auto py-4">
+            <NavBar />
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

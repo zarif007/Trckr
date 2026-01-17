@@ -4,55 +4,20 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Sparkles, Loader2, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { TrackerDisplay } from '@/app/components/TrackerDisplay'
+import { TrackerDisplay } from '@/app/components/tracker-display'
+import {
+  TrackerDisplayProps,
+} from '@/app/components/tracker-display/types'
 
-type TrackerFieldType =
-  | 'string'
-  | 'number'
-  | 'date'
-  | 'options'
-  | 'boolean'
-  | 'text'
-
-interface TrackerTab {
-  name: string
-  fieldName: string
-}
-
-interface TrackerSection {
-  name: string
-  fieldName: string
-  tabId: string
-}
-
-interface TrackerGrid {
-  name: string
-  fieldName: string
-  type: 'table' | 'kanban'
-  sectionId: string
-}
-
-interface TrackerField {
-  name: string
-  fieldName: string
-  type: TrackerFieldType
-  gridId: string
-  options?: string[]
-}
-
-interface TrackerResponse {
-  tabs: TrackerTab[]
-  sections: TrackerSection[]
-  grids: TrackerGrid[]
-  fields: TrackerField[]
+interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
   views: string[]
-  examples: Array<Record<string, any>>
 }
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   trackerData?: TrackerResponse
+  errorMessage?: string
 }
 
 export default function TrackerPage() {
