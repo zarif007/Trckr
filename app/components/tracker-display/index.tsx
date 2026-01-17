@@ -19,6 +19,24 @@ export function TrackerDisplay({
 }: TrackerDisplayProps) {
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.fieldName || '')
   const [showDialog, setShowDialog] = useState(false)
+  const [data, setData] = useState(examples)
+
+  useEffect(() => {
+    setData(examples)
+  }, [examples])
+
+  const handleUpdate = (rowIndex: number, columnId: string, value: any) => {
+    setData((prev) => {
+      const newData = [...prev]
+      if (newData[rowIndex]) {
+        newData[rowIndex] = {
+          ...newData[rowIndex],
+          [columnId]: value,
+        }
+      }
+      return newData
+    })
+  }
 
   const trackerContent = (
     <>
@@ -60,13 +78,15 @@ export function TrackerDisplay({
                 <TrackerSection
                   key={section.fieldName}
                   section={section}
-                  examples={examples}
+                  examples={data}
+                  onUpdate={handleUpdate}
                 />
               ))}
             </TabsContent>
           )
         })}
       </Tabs>
+
 
       <div className="pt-4 border-t">
         <h3 className="text-sm font-semibold text-foreground mb-3">

@@ -7,11 +7,13 @@ interface TrackerSectionProps {
     grids: (TrackerGrid & { fields: TrackerField[] })[]
   }
   examples: Array<Record<string, any>>
+  onUpdate?: (rowIndex: number, columnId: string, value: any) => void
 }
 
 export function TrackerSection({
   section,
   examples,
+  onUpdate,
 }: TrackerSectionProps) {
   return (
     <div className="space-y-4">
@@ -32,6 +34,7 @@ export function TrackerSection({
               <TrackerTableGrid
                 grid={grid}
                 examples={examples}
+                onUpdate={onUpdate}
               />
             )}
             {grid.type === 'kanban' && (
@@ -43,3 +46,4 @@ export function TrackerSection({
     </div>
   )
 }
+

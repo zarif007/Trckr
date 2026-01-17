@@ -8,11 +8,13 @@ import { TrackerCell } from './tracker-cell'
 interface TrackerTableGridProps {
   grid: TrackerGrid & { fields: TrackerField[] }
   examples: Array<Record<string, any>>
+  onUpdate?: (rowIndex: number, columnId: string, value: any) => void
 }
 
 export function TrackerTableGrid({
   grid,
   examples,
+  onUpdate,
 }: TrackerTableGridProps) {
   if (examples.length === 0 || grid.fields.length === 0) return null
 
@@ -49,7 +51,9 @@ export function TrackerTableGrid({
         columns={columns}
         data={examples}
         fieldMetadata={fieldMetadata}
+        onCellUpdate={onUpdate}
       />
     </div>
   )
 }
+

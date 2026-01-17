@@ -29,17 +29,23 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   fieldMetadata?: FieldMetadata
+  onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   fieldMetadata,
+  onCellUpdate,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const tableRef = useRef<HTMLDivElement>(null)
 
+  /*
+   * Removed click outside listener because it interferes with Popover/Dialog interactions
+   * (clicking in a portal is considered "outside" the table ref).
+   * 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -55,6 +61,7 @@ export function DataTable<TData, TValue>({
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
+  */
 
   const columnsWithSelection: ColumnDef<TData, TValue>[] = [
     {
@@ -97,7 +104,11 @@ export function DataTable<TData, TValue>({
       sorting,
       rowSelection,
     },
+    meta: {
+      updateData: onCellUpdate,
+    },
   })
+
 
   return (
     <div className="w-full space-y-4" ref={tableRef}>
@@ -153,7 +164,7 @@ export function DataTable<TData, TValue>({
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out"
+                  className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <DataTableCell

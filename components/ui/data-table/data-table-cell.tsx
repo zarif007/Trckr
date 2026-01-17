@@ -1,7 +1,8 @@
 import { Cell, Row, flexRender } from '@tanstack/react-table'
 import { TableCell } from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
+import { DataTableInput } from './data-table-input'
 import { FieldMetadata } from './utils'
+import { useState, useEffect } from 'react'
 
 interface DataTableCellProps<TData, TValue> {
   cell: Cell<TData, any>
@@ -15,7 +16,21 @@ export function DataTableCell<TData, TValue>({
   fieldMetadata,
 }: DataTableCellProps<TData, TValue>) {
   const isSelect = cell.column.id === 'select'
-  const isBoolean = fieldMetadata?.[cell.column.id]?.type === 'boolean'
+  const fieldInfo = fieldMetadata?.[cell.column.id]
+  const meta = cell.getContext().table.options.meta as {
+    updateData?: (rowIndex: number, columnId: string, value: any) => void
+  }
+
+  const [value, setValue] = useState(cell.getValue())
+
+  useEffect(() => {
+    setValue(cell.getValue())
+  }, [cell.getValue()])
+
+  const handleUpdate = (newValue: any) => {
+    setValue(newValue)
+    meta?.updateData?.(row.index, cell.column.id, newValue)
+  }
 
   return (
     <TableCell
@@ -23,21 +38,25 @@ export function DataTableCell<TData, TValue>({
         width: isSelect ? '44px' : '150px',
         minWidth: isSelect ? '44px' : '150px',
       }}
-      className="p-0 h-10 border-r border-border/50 last:border-r-0"
+      className="p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell"
     >
       {isSelect ? (
         flexRender(cell.column.columnDef.cell, cell.getContext())
+      ) : fieldInfo ? (
+        <DataTableInput
+          value={value}
+          onChange={handleUpdate}
+          type={fieldInfo.type}
+          options={fieldInfo.options}
+        />
       ) : (
         <div className="w-full h-full px-4 flex items-center text-[13px] text-foreground/90">
-          {isBoolean ? (
-            <Checkbox checked={cell.getValue() as boolean} disabled />
-          ) : (
-            <span className="truncate">
-              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-            </span>
-          )}
+          <span className="truncate">
+            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+          </span>
         </div>
       )}
     </TableCell>
   )
 }
+
