@@ -22,7 +22,7 @@ body {
   /* Light theme (default) */
   :root,
   :root[data-theme='light'] {
-    --background: 0 0% 96.9%; /* #f7f7f6 - off-white */
+    --background: 0 0% 100%; /* #ffffff - pure white */
     --foreground: 0 0% 3.9%; /* #0a0a0a - dark text */
     --card: 0 0% 100%; /* white */
     --card-foreground: 0 0% 3.9%;
@@ -47,7 +47,7 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar: 0 0% 98.5%;
+    --sidebar: 0 0% 100%;
     --sidebar-foreground: 0 0% 3.9%;
     --sidebar-primary: 0 0% 9%;
     --sidebar-primary-foreground: 0 0% 98%;
@@ -59,11 +59,11 @@ body {
 
   /* Dark theme */
   :root[data-theme='dark'] {
-    --background: 0 0% 0%; /* black */
+    --background: 0 0% 0%; /* pure black */
     --foreground: 0 0% 100%; /* white */
-    --card: 0 0% 3.9%; /* #0a0a0a - very dark gray */
+    --card: 0 0% 0%; /* pure black */
     --card-foreground: 0 0% 100%;
-    --popover: 0 0% 3.9%;
+    --popover: 0 0% 0%; /* pure black */
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 9%;
@@ -83,7 +83,7 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar: 0 0% 3.9%;
+    --sidebar: 0 0% 0%; /* pure black */
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 98%;
     --sidebar-primary-foreground: 0 0% 9%;
@@ -98,9 +98,9 @@ body {
     :root:not([data-theme]) {
       --background: 0 0% 0%;
       --foreground: 0 0% 100%;
-      --card: 0 0% 3.9%;
+      --card: 0 0% 0%;
       --card-foreground: 0 0% 100%;
-      --popover: 0 0% 3.9%;
+      --popover: 0 0% 0%;
       --popover-foreground: 0 0% 100%;
       --primary: 0 0% 98%;
       --primary-foreground: 0 0% 9%;
@@ -120,7 +120,7 @@ body {
       --chart-3: 30 80% 55%;
       --chart-4: 280 65% 60%;
       --chart-5: 340 75% 55%;
-      --sidebar: 0 0% 3.9%;
+      --sidebar: 0 0% 0%;
       --sidebar-foreground: 0 0% 100%;
       --sidebar-primary: 0 0% 98%;
       --sidebar-primary-foreground: 0 0% 9%;

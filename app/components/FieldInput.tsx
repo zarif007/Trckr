@@ -35,6 +35,7 @@ interface FieldInputProps {
   onChange: (value: any) => void
   className?: string
   isInline?: boolean
+  autoFocus?: boolean
 }
 
 export function FieldInput({
@@ -43,6 +44,7 @@ export function FieldInput({
   onChange,
   className = '',
   isInline = false,
+  autoFocus = false,
 }: FieldInputProps) {
   const normalInputClass = `bg-background text-foreground ${className}`
   const inlineInputClass =
@@ -56,6 +58,7 @@ export function FieldInput({
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={isInline ? inlineInputClass : normalInputClass}
+          autoFocus={autoFocus}
         />
       )
     case 'number':
@@ -66,31 +69,34 @@ export function FieldInput({
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={isInline ? inlineInputClass : normalInputClass}
+          autoFocus={autoFocus}
         />
       )
     case 'date':
       return (
-        <Popover>
+        <Popover defaultOpen={autoFocus}>
           <PopoverTrigger asChild>
             {isInline ? (
               <button
-                className="h-full w-full px-2 text-left font-normal text-foreground"
+                className="h-full w-full px-2 text-left font-normal text-foreground flex items-center"
                 style={{
                   background: 'transparent',
                   border: 'none',
                   outline: 'none',
                 }}
+                autoFocus={autoFocus}
               >
                 {value ? (
                   format(new Date(value), 'PPP')
                 ) : (
-                  <CalendarIcon className="h-4 w-4" />
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                 )}
               </button>
             ) : (
               <Button
                 variant="outline"
                 className={`justify-start text-left font-normal bg-background text-foreground w-full ${className}`}
+                autoFocus={autoFocus}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {value ? format(new Date(value), 'PPP') : field.name}
@@ -126,6 +132,7 @@ export function FieldInput({
               : normalInputClass
           }
           rows={isInline ? 1 : 3}
+          autoFocus={autoFocus}
         />
       )
     case 'boolean':
@@ -141,6 +148,7 @@ export function FieldInput({
             checked={value || false}
             onCheckedChange={onChange}
             id={field.fieldName}
+            autoFocus={autoFocus}
           />
           {!isInline && (
             <label htmlFor={field.fieldName} className="text-sm font-medium">
@@ -151,7 +159,7 @@ export function FieldInput({
       )
     case 'options':
       return (
-        <Select value={value ?? ''} onValueChange={onChange}>
+        <Select value={value ?? ''} onValueChange={onChange} defaultOpen={autoFocus}>
           <SelectTrigger
             className={
               isInline
@@ -161,6 +169,7 @@ export function FieldInput({
             style={
               isInline ? { border: 'none', background: 'transparent' } : {}
             }
+            autoFocus={autoFocus}
           >
             <SelectValue placeholder={isInline ? '' : field.name} />
           </SelectTrigger>
