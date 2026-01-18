@@ -39,7 +39,11 @@ export function TrackerSection({
               />
             )}
             {grid.type === 'kanban' && (
-              <TrackerKanbanGrid grid={grid} examples={examples} />
+              <TrackerKanbanGrid 
+                grid={grid} 
+                examples={examples} 
+                onUpdate={onUpdate}
+              />
             )}
             {grid.type === 'div' && (
               <TrackerDivGrid 
