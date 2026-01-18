@@ -42,27 +42,6 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const tableRef = useRef<HTMLDivElement>(null)
 
-  /*
-   * Removed click outside listener because it interferes with Popover/Dialog interactions
-   * (clicking in a portal is considered "outside" the table ref).
-   * 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        tableRef.current &&
-        !tableRef.current.contains(event.target as Node)
-      ) {
-        setRowSelection({})
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-  */
-
   const columnsWithSelection: ColumnDef<TData, TValue>[] = [
     {
       id: 'select',
@@ -109,10 +88,9 @@ export function DataTable<TData, TValue>({
     },
   })
 
-
   return (
     <div className="w-full space-y-4" ref={tableRef}>
-      <div className="rounded-xl border border-border/60 bg-card/50 shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-x-auto">
+      <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
         <Table className="w-full min-w-full border-collapse table-fixed">
           <TableHeader className="">
             {table.getHeaderGroups().map((headerGroup) => (

@@ -38,7 +38,7 @@ const trackerSchema = z.object({
         name: z.string().describe('Grid display name'),
         fieldName: fieldName(),
         type: z
-          .enum(['table', 'kanban'])
+          .enum(['table', 'kanban', 'div'])
           .describe('Layout type for this grid'),
         sectionId: z
           .string()
@@ -97,7 +97,7 @@ interface Message {
     grids: Array<{
       name: string
       fieldName: string
-      type: 'table' | 'kanban'
+      type: 'table' | 'kanban' | 'div'
       sectionId: string
     }>
     fields: Array<{

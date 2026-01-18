@@ -8,13 +8,13 @@ export default function Home() {
   return (
     <div className="min-h-screen font-sans bg-background">
       <div className="relative max-w-6xl mx-auto px-4 py-10 space-y-14">
-        <section className="rounded-2xl overflow-hidden relative">
-          <Card className="overflow-hidden p-6 sm:p-10 rounded-2xl shadow-lg hover:shadow-xl transition-shadow border-border dark:border-border/80">
+        <section className="rounded-md overflow-hidden relative">
+          <Card className="overflow-hidden p-6 sm:p-10 rounded-md shadow-lg hover:shadow-xl transition-shadow border-border dark:border-border/80">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
               <div className="space-y-5">
                 <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 text-foreground text-xs font-semibold uppercase tracking-wide shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Modern AI trackers
+                  Modern AI trackers - Tables that breathes 
                 </div>
 
                 <div className="space-y-3">
@@ -274,9 +274,9 @@ export default function Home() {
               ].map((item, idx) => (
                 <Card
                   key={item.title}
-                  className="bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 rounded-xl p-4 sm:p-5 space-y-2"
+                  className="bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 rounded-md p-4 sm:p-5 space-y-2"
                 >
-                  <div className="h-8 w-8 rounded-lg bg-gray-50 dark:bg-black flex items-center justify-center font-semibold text-sm text-foreground">
+                  <div className="h-8 w-8 rounded-md bg-gray-50 dark:bg-black flex items-center justify-center font-semibold text-sm text-foreground">
                     {idx + 1}
                   </div>
                   <div className="font-semibold text-foreground">

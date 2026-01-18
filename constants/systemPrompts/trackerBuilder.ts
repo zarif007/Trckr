@@ -33,11 +33,12 @@ You must follow these rules strictly:
 3. Grids
 - A grid represents a layout block for structured data:
   - table: standard table layout for row-based data
-  - kanban: kanban board grouped by an options field
+  - kanban: kanban board grouped by an options field (MUST have logical order for options like: To Do -> In Progress -> Done)
+  - div: free-form section for specific details, meta info, bio, or rich descriptions. (Use for singular/static info, NOT for lists of repetitive data. Use Table for lists.)
 - Each grid object must include:
   - name: human-friendly name
   - fieldName: camelCase identifier (no spaces; English) - MUST be unique
-  - type: "table" | "kanban"
+  - type: "table" | "kanban" | "div"
   - sectionId: the fieldName of the section this grid belongs to (must match a section's fieldName)
 - Grids are independent objects, linked to sections via sectionId
 

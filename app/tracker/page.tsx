@@ -131,7 +131,7 @@ export default function TrackerPage() {
           {messages.length === 0 ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center space-y-6 max-w-md">
-                <div className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center shadow-lg bg-primary">
+                <div className="w-20 h-20 mx-auto rounded-md flex items-center justify-center shadow-lg bg-primary">
                   <Sparkles className="w-10 h-10 text-primary-foreground" />
                 </div>
                 <div>
@@ -165,7 +165,7 @@ export default function TrackerPage() {
                     } flex flex-col`}
                   >
                     <div
-                      className={`rounded-2xl px-4 py-3 ${
+                      className={`rounded-md px-4 py-3 ${
                         message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-gray-50 dark:bg-black text-foreground'
@@ -191,7 +191,7 @@ export default function TrackerPage() {
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
                   <div className="max-w-[80%] space-y-2 flex flex-col items-start">
-                    <div className="rounded-2xl px-4 py-3 bg-gray-50 dark:bg-black text-foreground">
+                    <div className="rounded-md px-4 py-3 bg-gray-50 dark:bg-black text-foreground">
                       <div className="flex items-center gap-2">
                         <Loader2 className="w-4 h-4 animate-spin" />
                         <p className="text-sm">Generating tracker...</p>
@@ -208,11 +208,11 @@ export default function TrackerPage() {
 
       <div className="fixed left-1/2 bottom-0 -translate-x-1/2 w-full max-w-3xl px-6 py-6 bg-background/80 backdrop-blur-sm">
         <div
-          className={`relative rounded-2xl transition-all duration-200 ${
+          className={`relative rounded-md transition-all duration-200 ${
             isFocused ? 'shadow-2xl' : 'shadow-xl'
           }`}
         >
-          <div className="flex items-end gap-3 p-4 rounded-2xl border border-border bg-background transition-all">
+          <div className="flex items-end gap-3 p-4 rounded-md border border-border bg-background transition-all">
             <div className="flex-1 relative">
               <Textarea
                 id={INPUT_ID}
@@ -247,7 +247,7 @@ export default function TrackerPage() {
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
               size="icon"
-              className="rounded-lg h-12 w-12 shrink-0 transition-all hover:bg-primary/90 disabled:opacity-50"
+              className="rounded-md h-12 w-12 shrink-0 transition-all hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

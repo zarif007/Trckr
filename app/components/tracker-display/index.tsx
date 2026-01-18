@@ -116,7 +116,7 @@ export function TrackerDisplay({
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="!max-w-7xl rounded-xl max-h-screen overflow-y-auto p-0 border-0">
+        <DialogContent className="!max-w-7xl rounded-md max-h-screen overflow-y-auto p-0 border-0">
           <div className="overflow-y-auto">
             <Card className="p-6 space-y-6 bg-card border-border">
               {trackerContent}

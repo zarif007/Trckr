@@ -1,6 +1,7 @@
 import { TrackerSection as ITrackerSection, TrackerGrid, TrackerField } from './types'
 import { TrackerTableGrid } from './tracker-table-grid'
 import { TrackerKanbanGrid } from './tracker-kanban-grid'
+import { TrackerDivGrid } from './tracker-div-grid'
 
 interface TrackerSectionProps {
   section: ITrackerSection & {
@@ -39,6 +40,13 @@ export function TrackerSection({
             )}
             {grid.type === 'kanban' && (
               <TrackerKanbanGrid grid={grid} examples={examples} />
+            )}
+            {grid.type === 'div' && (
+              <TrackerDivGrid 
+                grid={grid} 
+                examples={examples} 
+                onUpdate={onUpdate}
+              />
             )}
           </div>
         ))}

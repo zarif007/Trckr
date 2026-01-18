@@ -38,7 +38,7 @@ export function DataTableCell<TData, TValue>({
         width: isSelect ? '44px' : '150px',
         minWidth: isSelect ? '44px' : '150px',
       }}
-      className="p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell"
+      className="p-0 h-10 border-r-[1.5px] border-border/50 last:border-r-0 relative group/cell"
     >
       {isSelect ? (
         flexRender(cell.column.columnDef.cell, cell.getContext())

@@ -12,7 +12,7 @@ export default function NavBar() {
     <nav className="w-full">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 shadow-lg flex items-center justify-center">
+          <div className="w-11 h-11 rounded-md bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 shadow-lg flex items-center justify-center">
             <div
               style={{
                 width: 30,
@@ -87,7 +87,7 @@ export default function NavBar() {
       </div>
 
       {open && (
-        <div className="md:hidden mt-3 space-y-3 bg-card/60 p-4 rounded-lg border border-border dark:border-border/80">
+        <div className="md:hidden mt-3 space-y-3 bg-card/60 p-4 rounded-md border border-border dark:border-border/80">
           <div className="flex flex-col gap-2">
             <Link
               href="#how"

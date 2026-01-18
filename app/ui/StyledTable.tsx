@@ -7,7 +7,7 @@ const StyledTable = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="w-full rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-950">
+  <div className="w-full rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden bg-white dark:bg-gray-950">
     <table
       ref={ref}
       className={cn('w-full caption-bottom text-sm', className)}

@@ -33,7 +33,7 @@ export function TrackerKanbanGrid({ grid, examples }: TrackerKanbanGridProps) {
         )
         return (
           <div key={group} className="shrink-0 w-80">
-            <div className="bg-gray-50 dark:bg-black rounded-lg p-4 mb-4">
+            <div className="bg-gray-50 dark:bg-black rounded-md p-4 mb-4">
               <h3 className="font-semibold text-foreground">{group}</h3>
             </div>
             <div className="space-y-3">

@@ -20,7 +20,7 @@ export interface TrackerSection {
 export interface TrackerGrid {
   name: string
   fieldName: string
-  type: 'table' | 'kanban'
+  type: 'table' | 'kanban' | 'div'
   sectionId: string
 }
 
