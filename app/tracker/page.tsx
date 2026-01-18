@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Sparkles, Loader2, User } from 'lucide-react'
+import { Send, Sparkles, Loader2, User, Maximize2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { TrackerDisplay } from '@/app/components/tracker-display'
@@ -10,6 +10,12 @@ import {
 } from '@/app/components/tracker-display/types'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { trackerSchema } from '@/lib/schemas/tracker'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
   views: string[]
@@ -27,6 +33,8 @@ export default function TrackerPage() {
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [pendingQuery, setPendingQuery] = useState<string | null>(null)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [activeTrackerData, setActiveTrackerData] = useState<TrackerResponse | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const INPUT_ID = 'tracker-input'
 
@@ -41,6 +49,7 @@ export default function TrackerPage() {
         }
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
+        setActiveTrackerData(object as TrackerResponse)
       }
     },
     onError: (err) => {
@@ -85,6 +94,13 @@ export default function TrackerPage() {
   }
 
   useEffect(() => {
+    if (isLoading) {
+      setIsDialogOpen(true)
+      setActiveTrackerData(null) // Reset active tracker data when starting new generation
+    }
+  }, [isLoading])
+
+  useEffect(() => {
     const el = document.getElementById(INPUT_ID) as HTMLTextAreaElement | null
     if (!el) return
     el.style.height = '0px'
@@ -98,45 +114,49 @@ export default function TrackerPage() {
     el?.focus()
   }
 
-  const renderTrackerCard = (trackerData: TrackerResponse) => {
+  const renderTrackerPreview = (trackerData: TrackerResponse) => {
     return (
-      <TrackerDisplay
-        tabs={trackerData.tabs}
-        sections={trackerData.sections}
-        grids={trackerData.grids}
-        fields={trackerData.fields}
-        examples={trackerData.examples}
-        views={trackerData.views}
-      />
+      <div 
+        onClick={() => {
+          setActiveTrackerData(trackerData)
+          setIsDialogOpen(true)
+        }}
+        className="group relative max-w-sm p-4 rounded-md border border-border bg-card hover:border-primary/50 transition-all cursor-pointer"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-primary/10 text-primary">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Tracker Generated</p>
+              <p className="text-xs text-muted-foreground">{trackerData.tabs?.[0]?.fieldName || 'Custom Tracker'}</p>
+            </div>
+          </div>
+          <div className="p-2 rounded-md group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary transition-colors">
+            <Maximize2 className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
     )
   }
 
-  // Render partial streaming tracker directly inline
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderStreamingTracker = (partialData: any) => {
-    // Filter out undefined/incomplete items from the streaming data
-    const tabs = (partialData.tabs || []).filter((t: unknown) => t && typeof t === 'object' && (t as any).fieldName)
-    const sections = (partialData.sections || []).filter((s: unknown) => s && typeof s === 'object' && (s as any).fieldName)
-    const grids = (partialData.grids || []).filter((g: unknown) => g && typeof g === 'object' && (g as any).fieldName)
-    const fields = (partialData.fields || []).filter((f: unknown) => f && typeof f === 'object' && (f as any).fieldName)
-    const examples = (partialData.examples || []).filter((e: unknown) => e && typeof e === 'object')
-    const views = (partialData.views || []).filter((v: unknown) => typeof v === 'string')
-
-    // Don't render until we have at least one complete tab
-    if (!tabs.length) {
-      return null
-    }
-
+  const renderStreamingPreview = () => {
     return (
-      <div className="w-full transition-all duration-300 ease-out">
-        <TrackerDisplay
-          tabs={tabs}
-          sections={sections}
-          grids={grids}
-          fields={fields}
-          examples={examples}
-          views={views}
-        />
+      <div 
+        className="relative w-full p-4 rounded-md border border-primary/20 bg-primary/5 animate-pulse"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-md bg-primary/20 text-primary">
+              <Loader2 className="w-4 h-4 animate-spin" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Building Tracker...</p>
+              <p className="text-xs text-muted-foreground italic">Updating live in preview dialog</p>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -148,7 +168,7 @@ export default function TrackerPage() {
           {messages.length === 0 && !isLoading ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center space-y-6 max-w-md">
-                <div className="w-20 h-20 mx-auto rounded-md flex items-center justify-center shadow-lg bg-primary">
+                <div className="w-20 h-20 mx-auto rounded-md flex items-center justify-center bg-primary">
                   <Sparkles className="w-10 h-10 text-primary-foreground" />
                 </div>
                 <div>
@@ -196,7 +216,7 @@ export default function TrackerPage() {
                     )}
                     {message.trackerData && (
                       <div className="w-full">
-                        {renderTrackerCard(message.trackerData)}
+                        {renderTrackerPreview(message.trackerData)}
                       </div>
                     )}
                   </div>
@@ -220,7 +240,7 @@ export default function TrackerPage() {
                       </p>
                     </div>
                   </div>
-                  {object && renderStreamingTracker(object)}
+                  {isLoading && renderStreamingPreview()}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -231,9 +251,7 @@ export default function TrackerPage() {
 
       <div className="fixed left-1/2 bottom-0 -translate-x-1/2 w-full max-w-3xl px-6 py-6 bg-background/80 backdrop-blur-sm">
         <div
-          className={`relative rounded-md transition-all duration-200 ${
-            isFocused ? 'shadow-2xl' : 'shadow-xl'
-          }`}
+          className={`relative rounded-md transition-all duration-200`}
         >
           <div className="flex items-end gap-3 p-4 rounded-md border border-border bg-background transition-all">
             <div className="flex-1 relative">
@@ -282,6 +300,48 @@ export default function TrackerPage() {
           </div>
         </div>
       </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="!max-w-4xl w-full h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Tracker Preview
+              {isLoading && (
+                <span className="flex items-center gap-1.5 ml-4 px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium animate-pulse">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating...
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-6 bg-background">
+            {(isLoading && object) ? (
+               <TrackerDisplay
+                  tabs={(object.tabs || []).filter((t: unknown): t is any => !!(t && typeof t === 'object' && (t as any).fieldName))}
+                  sections={(object.sections || []).filter((s: unknown): s is any => !!(s && typeof s === 'object' && (s as any).fieldName))}
+                  grids={(object.grids || []).filter((g: unknown): g is any => !!(g && typeof g === 'object' && (g as any).fieldName))}
+                  fields={(object.fields || []).filter((f: unknown): f is any => !!(f && typeof f === 'object' && (f as any).fieldName))}
+                  examples={(object.examples || []).filter((e: unknown): e is any => !!(e && typeof e === 'object'))}
+                  views={(object.views || []).filter((v: unknown): v is string => typeof v === 'string')}
+               />
+            ) : activeTrackerData ? (
+              <TrackerDisplay
+                tabs={activeTrackerData.tabs}
+                sections={activeTrackerData.sections}
+                grids={activeTrackerData.grids}
+                fields={activeTrackerData.fields}
+                examples={activeTrackerData.examples}
+                views={activeTrackerData.views}
+              />
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <p>Initializing tracker preview...</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
