@@ -8,6 +8,8 @@ import { TrackerDisplay } from '@/app/components/tracker-display'
 import {
   TrackerDisplayProps,
 } from '@/app/components/tracker-display/types'
+import { experimental_useObject as useObject } from '@ai-sdk/react'
+import { trackerSchema } from '@/lib/schemas/tracker'
 
 interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
   views: string[]
@@ -15,7 +17,7 @@ interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
 
 interface Message {
   role: 'user' | 'assistant'
-  content: string
+  content?: string
   trackerData?: TrackerResponse
   errorMessage?: string
 }
@@ -23,10 +25,35 @@ interface Message {
 export default function TrackerPage() {
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
+  const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const INPUT_ID = 'tracker-input'
+
+  const { object, submit, isLoading, error } = useObject({
+    api: '/api/generate-tracker',
+    schema: trackerSchema,
+    onFinish: ({ object }) => {
+      if (object) {
+        const assistantMessage: Message = {
+          role: 'assistant',
+          trackerData: object as TrackerResponse,
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        setPendingQuery(null)
+      }
+    },
+    onError: (err) => {
+      const errorMessage = err.message || 'An unknown error occurred'
+      const errorMessageObj: Message = {
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
+      }
+      setMessages((prev) => [...prev, errorMessageObj])
+      setPendingQuery(null)
+      console.error('Error generating tracker:', err)
+    },
+  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -34,67 +61,27 @@ export default function TrackerPage() {
 
   useEffect(() => {
     scrollToBottom()
-  }, [messages, isLoading])
+  }, [messages, isLoading, object])
 
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return
 
     const userMessage = input.trim()
-    const currentMessages = messages
     setInput('')
+    setPendingQuery(userMessage)
 
     const newUserMessage: Message = {
       role: 'user',
       content: userMessage,
     }
 
-    setIsLoading(true)
+    setMessages((prev) => [...prev, newUserMessage])
 
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        setMessages((prev) => [...prev, newUserMessage])
-        resolve()
-      })
+    // Submit to the streaming API
+    submit({
+      query: userMessage,
+      messages: messages,
     })
-
-    try {
-      const response = await fetch('/api/generate-tracker', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          query: userMessage,
-          messages: currentMessages,
-        }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate tracker')
-      }
-
-      const trackerData: TrackerResponse = await response.json()
-
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: "Here's your tracker configuration:",
-        trackerData,
-      }
-      setMessages((prev) => [...prev, assistantMessage])
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'An unknown error occurred'
-
-      const errorMessageObj: Message = {
-        role: 'assistant',
-        content: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
-      }
-      setMessages((prev) => [...prev, errorMessageObj])
-      console.error('Error generating tracker:', err)
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   useEffect(() => {
@@ -124,11 +111,41 @@ export default function TrackerPage() {
     )
   }
 
+  // Render partial streaming tracker directly inline
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderStreamingTracker = (partialData: any) => {
+    // Filter out undefined/incomplete items from the streaming data
+    const tabs = (partialData.tabs || []).filter((t: unknown) => t && typeof t === 'object' && (t as any).fieldName)
+    const sections = (partialData.sections || []).filter((s: unknown) => s && typeof s === 'object' && (s as any).fieldName)
+    const grids = (partialData.grids || []).filter((g: unknown) => g && typeof g === 'object' && (g as any).fieldName)
+    const fields = (partialData.fields || []).filter((f: unknown) => f && typeof f === 'object' && (f as any).fieldName)
+    const examples = (partialData.examples || []).filter((e: unknown) => e && typeof e === 'object')
+    const views = (partialData.views || []).filter((v: unknown) => typeof v === 'string')
+
+    // Don't render until we have at least one complete tab
+    if (!tabs.length) {
+      return null
+    }
+
+    return (
+      <div className="w-full transition-all duration-300 ease-out">
+        <TrackerDisplay
+          tabs={tabs}
+          sections={sections}
+          grids={grids}
+          fields={fields}
+          examples={examples}
+          views={views}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-y-auto pb-64">
         <div className="relative max-w-4xl mx-auto px-6 py-8">
-          {messages.length === 0 ? (
+          {messages.length === 0 && !isLoading ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center space-y-6 max-w-md">
                 <div className="w-20 h-20 mx-auto rounded-md flex items-center justify-center shadow-lg bg-primary">
@@ -160,23 +177,28 @@ export default function TrackerPage() {
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] space-y-2 ${
-                      message.role === 'user' ? 'items-end' : 'items-start'
+                    className={`space-y-2 ${
+                      message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start flex-1'
                     } flex flex-col`}
                   >
-                    <div
-                      className={`rounded-md px-4 py-3 ${
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-gray-50 dark:bg-black text-foreground'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap">
-                        {message.content}
-                      </p>
-                    </div>
-                    {message.trackerData &&
-                      renderTrackerCard(message.trackerData)}
+                    {message.content && (
+                      <div
+                        className={`rounded-md px-4 py-3 ${
+                          message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-gray-50 dark:bg-black text-foreground'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      </div>
+                    )}
+                    {message.trackerData && (
+                      <div className="w-full">
+                        {renderTrackerCard(message.trackerData)}
+                      </div>
+                    )}
                   </div>
                   {message.role === 'user' && (
                     <div className="w-8 h-8 rounded-full bg-gray-50 dark:bg-black flex items-center justify-center shrink-0">
@@ -186,18 +208,19 @@ export default function TrackerPage() {
                 </div>
               ))}
               {isLoading && (
-                <div className="flex gap-4 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                    <Sparkles className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <div className="max-w-[80%] space-y-2 flex flex-col items-start">
-                    <div className="rounded-md px-4 py-3 bg-gray-50 dark:bg-black text-foreground">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <p className="text-sm">Generating tracker...</p>
-                      </div>
+                <div className="space-y-4 animate-in fade-in-0 duration-300">
+                  <div className="flex gap-4 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                      <Sparkles className="w-4 h-4 text-primary-foreground" />
+                    </div>
+                    <div className="flex items-center gap-2 rounded-md px-4 py-3 bg-gray-50 dark:bg-black text-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <p className="text-sm">
+                        {object ? 'Building your tracker...' : 'Thinking...'}
+                      </p>
                     </div>
                   </div>
+                  {object && renderStreamingTracker(object)}
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -262,3 +285,4 @@ export default function TrackerPage() {
     </div>
   )
 }
+

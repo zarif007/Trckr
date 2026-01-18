@@ -26,9 +26,9 @@ export function TrackerSection({
           <div key={grid.fieldName} className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-lg font-semibold text-foreground">
-                  {grid.name}
-                </p>
+                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                {grid.name}
+              </label>
               </div>
             </div>
             {grid.type === 'table' && (

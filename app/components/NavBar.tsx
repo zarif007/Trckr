@@ -12,7 +12,7 @@ export default function NavBar() {
     <nav className="w-full">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-md bg-card/80 backdrop-blur-lg border border-border dark:border-border/80 shadow-lg flex items-center justify-center">
+          <div className="w-11 h-11 rounded-md bg-card/80 backdrop-blur-lg flex items-center justify-center">
             <div
               style={{
                 width: 30,
@@ -27,7 +27,6 @@ export default function NavBar() {
 
           <div>
             <h1 className="text-2xl font-extrabold text-foreground">Trckr</h1>
-            <p className="text-muted-foreground text-sm">Track Anything</p>
           </div>
         </div>
 
@@ -48,12 +47,6 @@ export default function NavBar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button asChild>
-              <Link href="#demo">Try the guided demo</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="#demo">Get Started</Link>
-            </Button>
             <ThemeToggle />
           </div>
         </div>
