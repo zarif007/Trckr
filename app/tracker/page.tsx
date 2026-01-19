@@ -317,12 +317,12 @@ export default function TrackerPage() {
           <div className="flex-1 overflow-y-auto p-6 bg-background">
             {(isLoading && object) ? (
                <TrackerDisplay
-                  tabs={(object.tabs || []).filter((t: unknown): t is any => !!(t && typeof t === 'object' && (t as any).fieldName))}
-                  sections={(object.sections || []).filter((s: unknown): s is any => !!(s && typeof s === 'object' && (s as any).fieldName))}
-                  grids={(object.grids || []).filter((g: unknown): g is any => !!(g && typeof g === 'object' && (g as any).fieldName))}
-                  fields={(object.fields || []).filter((f: unknown): f is any => !!(f && typeof f === 'object' && (f as any).fieldName))}
-                  examples={(object.examples || []).filter((e: unknown): e is any => !!(e && typeof e === 'object'))}
-                  views={(object.views || []).filter((v: unknown): v is string => typeof v === 'string')}
+                  tabs={(object.tabs || []).filter((t: any) => t && typeof t === 'object' && t.name) as any}
+                  sections={(object.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
+                  grids={(object.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
+                  fields={(object.fields || []).filter((f: any) => f && typeof f === 'object' && f.name) as any}
+                  examples={(object.examples || []).filter((e: any) => e && typeof e === 'object') as any}
+                  views={(object.views || []).filter((v: any) => typeof v === 'string') as any}
                />
             ) : activeTrackerData ? (
               <TrackerDisplay

@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TrackerDisplayProps } from './types'
 import { TrackerSection } from './tracker-section'
 
-// Inline version of TrackerDisplay for streaming - no dialog, renders directly
 export function TrackerDisplayInline({
   tabs,
   sections,
@@ -16,20 +15,24 @@ export function TrackerDisplayInline({
   views,
 }: TrackerDisplayProps) {
   const [activeTabId, setActiveTabId] = useState(tabs[0]?.fieldName || '')
-  const [data, setData] = useState(examples)
 
   useEffect(() => {
-    if (tabs[0]?.fieldName && !activeTabId) {
-      setActiveTabId(tabs[0].fieldName)
+    if (tabs.length > 0) {
+      const tabExists = tabs.some(tab => tab.fieldName === activeTabId);
+      if (!activeTabId || !tabExists) {
+        setActiveTabId(tabs[0].fieldName);
+      }
     }
   }, [tabs, activeTabId])
 
+  const [localExamples, setLocalExamples] = useState(examples)
+
   useEffect(() => {
-    setData(examples)
+    setLocalExamples(examples)
   }, [examples])
 
   const handleUpdate = (rowIndex: number, columnId: string, value: any) => {
-    setData((prev) => {
+    setLocalExamples((prev) => {
       const newData = [...prev]
       if (newData[rowIndex]) {
         newData[rowIndex] = {
@@ -41,7 +44,6 @@ export function TrackerDisplayInline({
     })
   }
 
-  // Don't render anything if no tabs
   if (!tabs.length) {
     return null
   }
@@ -97,7 +99,7 @@ export function TrackerDisplayInline({
                 >
                   <TrackerSection
                     section={section}
-                    examples={data}
+                    examples={localExamples}
                     onUpdate={handleUpdate}
                   />
                 </div>
