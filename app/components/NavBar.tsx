@@ -11,22 +11,21 @@ export default function NavBar() {
   return (
     <nav className="w-full">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-md bg-card/80 backdrop-blur-lg flex items-center justify-center">
+        <div className="flex items-center gap-2 group cursor-pointer">
+          <div className="w-8 h-8 flex items-center justify-center">
             <div
               style={{
-                width: 30,
-                height: 30,
-                borderRadius: 10,
+                width: 20,
+                height: 20,
                 background: 'linear-gradient(135deg,#8b5cf6,#06b6d4)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.12)',
+                borderRadius: '50%',
               }}
-              className="dark:shadow-[0_10px_30px_rgba(139,92,246,0.3)]"
+              className="transition-transform group-hover:scale-110"
             />
           </div>
 
           <div>
-            <h1 className="text-2xl font-extrabold text-foreground">Trckr</h1>
+            <h1 className="text-xl font-bold tracking-tighter text-foreground">Trckr</h1>
           </div>
         </div>
 

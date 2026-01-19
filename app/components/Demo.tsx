@@ -16,101 +16,92 @@ export default function Demo() {
   }
 
   return (
-    <Card
+    <div
       id="demo"
-      className="mt-8 p-5 shadow-md hover:shadow-lg transition-shadow border-border dark:border-border/80"
+      className="mt-8 p-8 rounded-3xl bg-secondary/30 border border-border/50 hover:bg-secondary/40 transition-all"
     >
-      <h3 className="text-lg sm:text-xl font-semibold text-foreground">
-        See a complete example
-      </h3>
-      <p className="text-muted-foreground text-sm mt-1">
-        This is what happens when you describe a tracker to Trckr in plain
-        language: on the left is the request, on the right is the board Trckr
-        would suggest.
-      </p>
+      <div className="max-w-3xl mx-auto space-y-8">
+        <div className="text-center space-y-2">
+          <h3 className="text-2xl font-bold tracking-tight text-foreground">
+            The Experience
+          </h3>
+          <p className="text-muted-foreground text-sm font-medium">
+            Natural language in. Structured interface out.
+          </p>
+        </div>
 
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-foreground">
-          1. What you tell Trckr
-        </label>
-        <pre className="mt-2 p-3 rounded-md bg-gray-50 dark:bg-black/50 dark:bg-gray-50 dark:bg-black/30 border border-border dark:border-border/80 overflow-x-auto text-sm text-foreground">
-          {demoPrompt}
-        </pre>
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">
+              INPUT
+            </label>
+            <div className="p-4 rounded-xl bg-background border border-border/50 font-mono text-sm text-foreground shadow-sm">
+              {demoPrompt}
+            </div>
+          </div>
 
-        <div className="mt-4">
-          <label className="block text-sm font-medium text-foreground">
-            2. What Trckr builds for you
-          </label>
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Card className="p-3 shadow-sm border-border dark:border-border/80">
-              <h4 className="font-semibold text-foreground">
-                {generatedBoard.title}
-              </h4>
-              <p className="text-muted-foreground text-xs mt-1">
-                A simple table where each row is a day you log how much you
-                drank.
-              </p>
-              <div className="mt-3">
-                <div className="text-sm text-muted-foreground">
-                  Fields Trckr adds
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {generatedBoard.fields.map((f) => (
-                    <Badge
-                      key={f}
-                      variant="outline"
-                      className="border-border dark:border-border/80"
-                    >
-                      {f}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-3 shadow-sm border-border dark:border-border/80">
-              <div>
-                <div className="text-sm text-muted-foreground">
-                  Views & reminders
-                </div>
-                <ul className="mt-2 list-disc ml-5 text-sm text-muted-foreground space-y-1">
-                  {generatedBoard.views.map((v) => (
-                    <li key={v}>{v}</li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="mt-3">
-                <div className="text-sm text-muted-foreground">
-                  Reminder times
-                </div>
-                <div className="mt-2 flex gap-2 flex-wrap">
-                  {generatedBoard.reminders.map((r) => (
-                    <Badge
-                      key={r}
-                      variant="outline"
-                      className="border-border dark:border-border/80"
-                    >
-                      {r}
-                    </Badge>
-                  ))}
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">
+              OUTPUT
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-5 rounded-xl bg-background border border-border/50 shadow-sm space-y-4 transition-all hover:border-primary/30">
+                <h4 className="font-bold text-foreground">
+                  {generatedBoard.title}
+                </h4>
+                <div className="space-y-3">
+                  <div className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                    SCEMA
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {generatedBoard.fields.map((f) => (
+                      <Badge
+                        key={f}
+                        variant="outline"
+                        className="text-[10px] bg-secondary/50 border-border/50 py-0"
+                      >
+                        {f}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="mt-3">
-                <div className="text-sm text-muted-foreground">
-                  Helpful suggestions
+              <div className="p-5 rounded-xl bg-background border border-border/50 shadow-sm space-y-4 transition-all hover:border-primary/30">
+                <div className="space-y-3">
+                  <div className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                    Views
+                  </div>
+                  <ul className="space-y-1.5">
+                    {generatedBoard.views.map((v) => (
+                      <li key={v} className="text-sm text-muted-foreground font-medium flex items-center gap-2">
+                        <span className="w-1 h-1 rounded-full bg-primary/40" />
+                        {v}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <ul className="mt-2 list-disc ml-5 text-sm text-muted-foreground space-y-1">
-                  {generatedBoard.suggestions.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ul>
+                <div className="pt-3 border-t border-border/30">
+                  <div className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest pb-2">
+                    REMINERS
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {generatedBoard.reminders.map((r) => (
+                      <Badge
+                        key={r}
+                        variant="secondary"
+                        className="text-[10px] py-0 bg-primary/10 text-primary border-primary/20"
+                      >
+                        {r}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
       </div>
-    </Card>
+    </div>
   )
 }
