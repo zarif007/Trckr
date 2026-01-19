@@ -84,7 +84,7 @@ export default function Home() {
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute bg-foreground/5 border border-foreground/10 rounded-lg pointer-events-none hidden lg:block"
+              className="absolute bg-foreground/5 border border-foreground/10 rounded-md pointer-events-none hidden lg:block"
               style={{
                 width: Math.random() * 40 + 20,
                 height: Math.random() * 40 + 20,
@@ -109,11 +109,11 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-muted-foreground"
+              className="inline-flex items-center gap-2 rounded-md px-4 py-1.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.3em] text-muted-foreground"
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-md bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-md h-2 w-2 bg-emerald-500"></span>
               </span>
               The Future of Data Infrastucture
             </motion.div>
@@ -122,17 +122,17 @@ export default function Home() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-              className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-foreground max-w-4xl mx-auto"
+              className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold tracking-[-0.04em] leading-[0.9]"
             >
               Track anything. <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground to-muted-foreground/20">Describe, generate, log.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-foreground via-foreground/90 to-foreground/30">Describe, generate, log.</span>
             </motion.h1>
 
             <motion.p 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
-              className="text-muted-foreground text-xl md:text-2xl lg:text-3xl leading-tight max-w-3xl mx-auto font-medium"
+              className="text-muted-foreground font-inter text-lg md:text-xl lg:text-2xl leading-[1.4] tracking-[-0.01em] text-muted-foreground/90 max-w-3xl mx-auto font-medium"
             >
               No templates. No complexity. <br />
               Just pure productivity from a single prompt.
@@ -144,13 +144,13 @@ export default function Home() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-8"
             >
-              <Button size="lg" className="h-14 px-10 text-lg font-bold rounded-full group transition-all hover:scale-105 active:scale-95 bg-foreground text-background" asChild>
+              <Button size="lg" className="h-14 px-10 text-lg font-bold rounded-md group transition-all hover:scale-105 active:scale-95 bg-foreground text-background" asChild>
                 <a href="/tracker">
                   Get Started
                   <span className="inline-block transition-transform group-hover:translate-x-1 ml-2" aria-hidden>→</span>
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-bold rounded-full hover:bg-secondary/50 border-border/50 transition-all" asChild>
+              <Button size="lg" variant="outline" className="h-14 px-10 text-lg font-bold rounded-md hover:bg-secondary/50 border-border/50 transition-all" asChild>
                 <a href="#demo">
                   Watch Demo
                 </a>
@@ -205,7 +205,7 @@ export default function Home() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: idx * 0.1 }}
                 whileHover={{ y: -4 }}
-                className="group relative p-6 rounded-2xl bg-secondary/30 border border-border/50 transition-all hover:bg-secondary/50 hover:border-border"
+                className="group relative p-6 rounded-md bg-secondary/30 border border-border/50 transition-all hover:bg-secondary/50 hover:border-border"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -228,6 +228,56 @@ export default function Home() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        </motion.section>
+
+        <motion.section 
+          id="examples" 
+          className="space-y-12"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="space-y-4 text-center">
+            <h3 className="text-2xl font-bold tracking-tight text-foreground">
+              Just describe what you want to track
+            </h3>
+            <p className="text-muted-foreground text-base max-w-2xl font-medium mx-auto">
+              Type naturally and let AI build your tracker. Here are some examples to get you started.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            {[
+              "I want to track my daily water intake with a goal of 8 glasses per day",
+              "Create a workout log with exercises, sets, reps, and weight",
+              "Track my reading progress with book titles, pages read, and ratings",
+              "Monitor my spending by category with monthly summaries",
+              "Log my meditation sessions with duration and notes",
+              "Track job applications with company name, position, status, and follow-up dates"
+            ].map((prompt, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: idx * 0.05 }}
+                className="group relative"
+              >
+                <div className="p-4 rounded-md bg-secondary/20 border border-border/40 hover:bg-secondary/40 hover:border-border transition-all cursor-pointer">
+                  <p className="text-sm text-foreground/80 font-mono leading-relaxed">
+                    "{prompt}"
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <Button size="lg" className="rounded-md px-8" asChild>
+              <a href="/tracker">Try it yourself →</a>
+            </Button>
           </div>
         </motion.section>
 
@@ -298,7 +348,7 @@ export default function Home() {
               <span className="text-muted-foreground/40">is here today.</span>
             </h3>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-              <Button size="lg" className="h-16 px-12 text-xl font-black rounded-full group transition-all hover:scale-105 active:scale-95 bg-foreground text-background shadow-2xl shadow-primary/20" asChild>
+              <Button size="lg" className="h-16 px-12 text-xl font-black rounded-md group transition-all hover:scale-105 active:scale-95 bg-foreground text-background shadow-2xl shadow-primary/20" asChild>
                 <a href="/tracker">
                   Start Building Now
                   <span className="inline-block transition-transform group-hover:translate-x-2 ml-3" aria-hidden>→</span>
