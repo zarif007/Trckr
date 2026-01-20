@@ -58,18 +58,18 @@ export default function Hero({ y1, y2 }: HeroProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-md bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-md h-2 w-2 bg-emerald-500"></span>
           </span>
-          The Future of Data Infrastucture
+          The Future of Data Tracking
         </motion.div>
 
         <motion.h1 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-          className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold leading-[1.4]"
+          className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold leading-[1.3]"
         >
           Track <span className="relative inline-block ml-2">
             <span className="absolute inset-0 bg-foreground -rotate-2 rounded-sm" />
-            <span className="relative px-4 py-1 text-background font-bold tracking-tight">anything.</span>
+            <span className="relative px-4 py-1 text-background font-bold tracking-tight">Anything.</span>
           </span> <br />
           <span className="flex flex-wrap items-center justify-center gap-x-4 gap-y-6 text-[2.4rem] md:text-[3.8rem] lg:text-[4.8rem] mt-10 text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 font-medium">
             Describe, generate, log.
