@@ -9,7 +9,7 @@ export default function NavBar() {
   const [open, setOpen] = useState(false)
 
   return (
-    <nav className="w-full">
+    <nav className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 group cursor-pointer">
           <div className="w-8 h-8 flex items-center justify-center">

@@ -46,7 +46,7 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="trckr-theme"
         >
-          <div className="max-w-7xl mx-auto py-4">
+          <div className="max-w-full mx-auto py-4">
             <NavBar />
             {children}
           </div>
