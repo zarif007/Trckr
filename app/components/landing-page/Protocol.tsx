@@ -39,7 +39,7 @@ export default function Protocol() {
             key={item.title}
             className="relative space-y-4 group"
           >
-            <div className="text-[40px] font-black text-muted-foreground/10 group-hover:text-primary/10 transition-colors">
+            <div className="text-[40px] font-black text-primary/10 transition-colors">
               0{idx + 1}
             </div>
             <h4 className="text-xl font-bold text-foreground tracking-tight">

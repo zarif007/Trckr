@@ -71,9 +71,32 @@ export default function Hero({ y1, y2 }: HeroProps) {
             <span className="absolute inset-0 bg-foreground -rotate-2 rounded-sm" />
             <span className="relative px-4 py-1 text-background font-bold tracking-tight">Anything.</span>
           </span> <br />
-          <span className="flex flex-wrap items-center justify-center gap-x-4 gap-y-6 text-[2.4rem] md:text-[3.8rem] lg:text-[4.8rem] mt-10 text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground/80 to-foreground/40 font-medium">
-            Describe, generate, log.
-          </span>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-6 mt-10">
+            {[
+              { text: "Describe", gradient: "from-foreground via-foreground to-foreground/70" },
+              { text: "generate", gradient: "from-foreground via-foreground/90 to-foreground/60" },
+              { text: "log", gradient: "from-foreground via-foreground/80 to-foreground/50" }
+            ].map((word, i) => (
+              <motion.span
+                key={word.text}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 + i * 0.2, ease: "easeOut" }}
+                whileHover={{ scale: 1.05, filter: "brightness(1.2)" }}
+                className={`text-[2.4rem] md:text-[3.8rem] lg:text-[4.8rem] text-transparent bg-clip-text bg-gradient-to-r ${word.gradient} font-medium tracking-tight cursor-default flex items-center gap-4`}
+              >
+                {word.text}
+                {i < 2 && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.8 + i * 0.2 }}
+                    className="w-2 h-2 rounded-full bg-foreground/20 hidden md:block"
+                  />
+                )}
+              </motion.span>
+            ))}
+          </div>
         </motion.h1>
 
         <motion.p 
