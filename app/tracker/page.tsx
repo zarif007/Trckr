@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight } from 'lucide-react'
+import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
 import { motion, AnimatePresence, useSpring } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -17,7 +17,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import Background from '@/app/components/landing-page/Background'
 
 interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
   views: string[]
@@ -38,7 +37,7 @@ export default function TrackerPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, setActiveTrackerData] = useState<TrackerResponse | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const INPUT_ID = 'tracker-input'
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const springConfig = { damping: 25, stiffness: 150 }
   const mouseXSpring = useSpring(0, springConfig)
@@ -115,18 +114,59 @@ export default function TrackerPage() {
   }, [isLoading])
 
   useEffect(() => {
-    const el = document.getElementById(INPUT_ID) as HTMLTextAreaElement | null
-    if (!el) return
-    el.style.height = '0px'
-    const next = Math.min(el.scrollHeight, 200)
-    el.style.height = `${next}px`
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '0px'
+      const scrollHeight = textareaRef.current.scrollHeight
+      textareaRef.current.style.height = Math.min(scrollHeight, 200) + 'px'
+    }
   }, [input])
 
   const applySuggestion = (s: string) => {
     setInput(s)
-    const el = document.getElementById(INPUT_ID) as HTMLTextAreaElement | null
-    el?.focus()
+    textareaRef.current?.focus()
   }
+
+  const suggestions = [
+    {
+      icon: Zap,
+      title: 'Personal Fitness Logger',
+      desc: 'Track workouts, weights, and progress with charts',
+      query: 'Create a personal fitness tracker to log daily workouts, sets, reps, and body weight progress with visualization.',
+      gradient: 'from-orange-500/20 to-red-500/20',
+      iconColor: 'text-orange-500'
+    },
+    {
+      icon: Target,
+      title: 'Company Inventory',
+      desc: 'Manage stock levels, suppliers, and SKU details',
+      query: 'Build a company inventory system to track stock levels, supplier contacts, and warehouse locations.',
+      gradient: 'from-blue-500/20 to-cyan-500/20',
+      iconColor: 'text-blue-500'
+    },
+    {
+      icon: BookOpen,
+      title: 'Recipe Collection',
+      desc: 'Save favorite recipes with ingredients and cooking steps',
+      query: 'Design a digital cookbook for saving recipes, including ingredient lists, difficulty ratings, and preparation time.',
+      gradient: 'from-green-500/20 to-emerald-500/20',
+      iconColor: 'text-green-500'
+    },
+    {
+      icon: CheckSquare,
+      title: 'Project Task Manager',
+      desc: 'Stay organized with deadlines, priorities, and status',
+      query: 'Create a project management tracker with task deadlines, priority levels, and kanban stages.',
+      gradient: 'from-purple-500/20 to-pink-500/20',
+      iconColor: 'text-purple-500'
+    }
+  ]
+
+  const quickSuggestions = [
+    { text: 'Add status column', icon: '📊' },
+    { text: 'Group by priority', icon: '🎯' },
+    { text: 'Add email field', icon: '📧' },
+    { text: 'Change color theme', icon: '🎨' }
+  ]
 
   const renderTrackerPreview = (trackerData: TrackerResponse) => {
     return (
@@ -180,10 +220,9 @@ export default function TrackerPage() {
   const isChatEmpty = messages.length === 0 && !isLoading
 
   return (
-    <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col">
-      <Background mouseXSpring={mouseXSpring} mouseYSpring={mouseYSpring} />
-
-      <div className="flex-1 overflow-y-auto pb-48 z-10">
+    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col">      
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto pb-32 z-10">
         <div className="relative max-w-4xl mx-auto px-6 py-12">
           <AnimatePresence mode="wait">
             {isChatEmpty ? (
@@ -199,7 +238,7 @@ export default function TrackerPage() {
                   <motion.div 
                     animate={{ rotate: 360 }}
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute -inset-4 rounded-full bg-gradient-to-tr from-primary/30 via-transparent to-purple-500/30 blur-2xl opacity-50"
+                    className="absolute -inset-4 rounded-full"
                   />
                   <div className="relative w-24 h-24 rounded-2xl flex items-center justify-center bg-foreground shadow-2xl">
                     <Sparkles className="w-12 h-12 text-background" />
@@ -220,14 +259,29 @@ export default function TrackerPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                  {['Personal fitness logger', 'Company inventory tracker', 'Recipe collection with ratings', 'Project task manager'].map((suggestion) => (
+                  {suggestions.map((suggestion) => (
                     <button
-                      key={suggestion}
-                      onClick={() => applySuggestion(suggestion)}
-                      className="p-4 rounded-xl border border-border/50 bg-secondary/20 hover:bg-secondary/40 hover:border-primary/50 transition-all text-left group"
+                      key={suggestion.title}
+                      onClick={() => applySuggestion(suggestion.query)}
+                      className="relative p-6 rounded-2xl border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
                     >
-                      <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{suggestion}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Start with this template →</p>
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className={`p-3 rounded-xl bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
+                            <suggestion.icon className="w-6 h-6" />
+                          </div>
+                          <ArrowRight className="w-5 h-5 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
+                        </div>
+                        
+                        <div className="space-y-1.5">
+                          <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                            {suggestion.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground leading-relaxed">
+                            {suggestion.desc}
+                          </p>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -249,9 +303,9 @@ export default function TrackerPage() {
                     }`}
                   >
                     {message.role === 'assistant' && (
-                        <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
-                          <Sparkles className="w-5 h-5 text-background" />
-                        </div>
+                      <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
+                        <Sparkles className="w-5 h-5 text-background" />
+                      </div>
                     )}
                     <div
                       className={`space-y-3 ${
@@ -266,9 +320,7 @@ export default function TrackerPage() {
                               : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-[15px] leading-relaxed'
                           }`}
                         >
-                          <p className="whitespace-pre-wrap">
-                            {message.content}
-                          </p>
+                          <p className="whitespace-pre-wrap">{message.content}</p>
                         </div>
                       )}
                       {message.trackerData && (
@@ -291,9 +343,9 @@ export default function TrackerPage() {
                     className="space-y-6"
                   >
                     <div className="flex gap-6 justify-start">
-                        <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
-                          <Sparkles className="w-5 h-5 text-background" />
-                        </div>
+                      <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
+                        <Sparkles className="w-5 h-5 text-background" />
+                      </div>
                       <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
                         <Loader2 className="w-4 h-4 animate-spin text-primary" />
                         <p className="text-[15px]">
@@ -311,62 +363,84 @@ export default function TrackerPage() {
         </div>
       </div>
 
-      <motion.div 
-        layout
-        className={`fixed left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 py-8 z-20 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-          isChatEmpty ? 'top-1/2 -translate-y-1/2 mt-32' : 'bottom-0'
-        }`}
-      >
-        <div className="relative group/input">
-           <motion.div 
-            layout
-            className={`absolute -inset-0.5 bg-gradient-to-r from-primary to-purple-600 rounded-2xl blur opacity-20 group-hover/input:opacity-40 transition duration-1000 group-hover/input:duration-200 ${isFocused ? 'opacity-50' : ''}`}
-          />
-          <div className="relative flex items-end gap-3 p-4 rounded-2xl border border-border/50 bg-background/90 backdrop-blur-xl transition-all shadow-2xl">
-            <div className="flex-1 relative">
-              <Textarea
-                id={INPUT_ID}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSubmit()
-                  }
-                  if (e.key === 'Escape') {
-                    setIsFocused(false)
-                    const el = document.getElementById(INPUT_ID) as HTMLTextAreaElement | null
-                    el?.blur()
-                  }
-                }}
-                placeholder={
-                  isChatEmpty
-                    ? 'e.g. A finance tracker for a small e-commerce brand...'
-                    : 'Ask for changes or refinements...'
-                }
-                rows={1}
-                className="w-full py-4 bg-transparent focus:outline-none resize-none text-[16px] font-medium text-foreground placeholder:text-muted-foreground/60 border-none shadow-none focus:ring-0 min-h-[56px] max-h-[200px]"
-              />
-            </div>
+      {/* Input Area */}
+      <div className={`fixed left-0 right-0 bottom-0 z-30 pt-8 pb-6`}>
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="space-y-3">
+            {/* Quick Suggestions */}
+            {!isChatEmpty && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1"
+              >
+                {quickSuggestions.map((s) => (
+                  <button
+                    key={s.text}
+                    onClick={() => applySuggestion(s.text)}
+                    className="group flex items-center gap-2 px-4 py-2.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap shadow-sm"
+                  >
+                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
+                    <span className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
+                      {s.text}
+                    </span>
+                  </button>
+                ))}
+              </motion.div>
+            )}
 
-            <Button
-              onClick={handleSubmit}
-              disabled={!input.trim() || isLoading}
-              className={`rounded-xl h-14 w-14 shrink-0 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 shadow-lg ${input.trim() ? 'bg-foreground text-background hover:bg-foreground/90' : 'bg-secondary text-muted-foreground'}`}
-            >
-              {isLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <ArrowRight className="w-6 h-6" />
-              )}
-              <span className="sr-only">Send</span>
-            </Button>
+            {/* Textarea Container */}
+            <div className="relative group">
+              <motion.div 
+                className={`absolute -inset-[1px] rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
+              />
+              
+              <div className="relative bg-card rounded-[19px] shadow-2xl border border-border/50 overflow-hidden">
+                <div className="flex items-end gap-2 p-2">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSubmit()
+                      }
+                      if (e.key === 'Escape') {
+                        setIsFocused(false)
+                        textareaRef.current?.blur()
+                      }
+                    }}
+                    placeholder={isChatEmpty ? 'Describe your ideal tracker...' : 'Ask for changes or refinements...'}
+                    rows={1}
+                    className="flex-1 px-4 py-4 bg-transparent resize-none text-base font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[56px] max-h-[200px]"
+                  />
+                  
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!input.trim() || isLoading}
+                    className={`shrink-0 h-12 w-12 rounded-[14px] transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                      input.trim() && !isLoading
+                        ? 'bg-foreground text-background hover:bg-foreground/90'
+                        : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
+      {/* Dialog for Tracker Display */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
           <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">

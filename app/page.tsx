@@ -2,7 +2,6 @@
 
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import Background from './components/landing-page/Background'
 import Hero from './components/landing-page/Hero'
 import Features from './components/landing-page/Features'
 import Examples from './components/landing-page/Examples'
@@ -31,9 +30,7 @@ export default function Home() {
   const y2 = useTransform(scrollY, [0, 500], [0, -150])
 
   return (
-    <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
-      <Background mouseXSpring={mouseXSpring} mouseYSpring={mouseYSpring} />
-      
+    <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground overflow-x-hidden">      
       <div className="relative max-w-full mx-auto px-6 py-12 space-y-24 z-20">
         <Hero y1={y1} y2={y2} />
 

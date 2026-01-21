@@ -65,7 +65,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-          className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold leading-[1.3]"
+          className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold leading-[1.1] md:leading-[1.3]"
         >
           Track <span className="relative inline-block ml-2">
             <span className="absolute inset-0 bg-foreground -rotate-2 rounded-sm" />
@@ -83,7 +83,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 + i * 0.2, ease: "easeOut" }}
                 whileHover={{ scale: 1.05, filter: "brightness(1.2)" }}
-                className={`text-[2.4rem] md:text-[3.8rem] lg:text-[4.8rem] text-transparent bg-clip-text bg-gradient-to-r ${word.gradient} font-medium tracking-tight cursor-default flex items-center gap-4`}
+                className={`text-[2rem] md:text-[3.8rem] lg:text-[4.8rem] text-transparent bg-clip-text bg-gradient-to-r ${word.gradient} font-medium tracking-tight cursor-default flex items-center gap-4`}
               >
                 {word.text}
                 {i < 2 && (
