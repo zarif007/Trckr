@@ -121,14 +121,16 @@ export function DataTable<TData, TValue>({
                           header.getContext()
                         )
                       ) : (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 overflow-hidden">
                           {Icon && (
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
                           )}
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          <span className="truncate">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                          </span>
                         </div>
                       )}
                     </TableHead>
