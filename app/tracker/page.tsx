@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
+import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence, useSpring } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -10,7 +10,7 @@ import {
   TrackerDisplayProps,
 } from '@/app/components/tracker-display/types'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
-import { trackerSchema } from '@/lib/schemas/tracker'
+import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,9 @@ interface Message {
   role: 'user' | 'assistant'
   content?: string
   trackerData?: TrackerResponse
+  managerData?: MultiAgentSchema['manager']
   errorMessage?: string
+  isThinkingOpen?: boolean
 }
 
 export default function TrackerPage() {
@@ -54,19 +56,22 @@ export default function TrackerPage() {
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
-    schema: trackerSchema,
-    onFinish: ({ object }) => {
+    schema: multiAgentSchema,
+    onFinish: ({ object }: { object?: MultiAgentSchema }) => {
       if (object) {
         const assistantMessage: Message = {
           role: 'assistant',
-          trackerData: object as TrackerResponse,
+          trackerData: object.tracker as TrackerResponse,
+          managerData: object.manager,
         }
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
-        setActiveTrackerData(object as TrackerResponse)
+        if (object.tracker) {
+          setActiveTrackerData(object.tracker as TrackerResponse)
+        }
       }
     },
-    onError: (err) => {
+    onError: (err: Error) => {
       const errorMessage = err.message || 'An unknown error occurred'
       const errorMessageObj: Message = {
         role: 'assistant',
@@ -107,11 +112,13 @@ export default function TrackerPage() {
   }
 
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading && object?.tracker) {
       setIsDialogOpen(true)
-      setActiveTrackerData(null)
     }
-  }, [isLoading])
+    if (!isLoading) {
+      // Don't auto-close, but we reset active data on finish which is handled in onFinish
+    }
+  }, [isLoading, object?.tracker])
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -323,6 +330,47 @@ export default function TrackerPage() {
                           <p className="whitespace-pre-wrap">{message.content}</p>
                         </div>
                       )}
+                      {message.managerData && (
+                        <div className="w-full space-y-4">
+                          <div className="flex flex-col gap-2 p-4 rounded-2xl bg-secondary/20 border border-border/40 backdrop-blur-sm">
+                            <button 
+                              onClick={() => {
+                                setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isThinkingOpen: !m.isThinkingOpen } : m))
+                              }}
+                              className="flex items-center justify-between w-full text-xs font-bold text-muted-foreground uppercase tracking-widest hover:text-primary transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Target className="w-3 h-3" />
+                                Manager Insights
+                              </div>
+                              {message.isThinkingOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </button>
+                            
+                            <AnimatePresence>
+                              {message.isThinkingOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: 'auto', opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="pt-2 space-y-3">
+                                    <p className="text-sm font-medium leading-relaxed italic text-foreground/80">
+                                      "{message.managerData.thinking}"
+                                    </p>
+                                    {message.managerData.prd && (
+                                      <div className="mt-2 pt-2 border-t border-border/20">
+                                        <p className="text-sm font-bold text-primary">{message.managerData.prd.name}</p>
+                                        <p className="text-xs text-muted-foreground">{message.managerData.prd.description}</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      )}
                       {message.trackerData && (
                         <div className="w-full">
                           {renderTrackerPreview(message.trackerData)}
@@ -346,14 +394,59 @@ export default function TrackerPage() {
                       <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
                         <Sparkles className="w-5 h-5 text-background" />
                       </div>
-                      <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                        <p className="text-[15px]">
-                          {object ? 'Building your tracker...' : 'Thinking...'}
-                        </p>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <p className="text-[15px]">
+                            {!object?.manager ? 'Consulting Manager...' : 
+                             !object?.tracker ? 'Manager defining requirements...' : 
+                             'Building your tracker...'}
+                          </p>
+                        </div>
+
+                        {object?.manager && (
+                          <motion.div 
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-5 rounded-2xl bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em]">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Strategy Phase
+                              </div>
+                            </div>
+                            
+                            {object.manager.thinking && (
+                              <p className="text-sm text-foreground/70 font-medium leading-relaxed border-l-2 border-primary/30 pl-4 py-1">
+                                {object.manager.thinking}
+                              </p>
+                            )}
+
+                            {object.manager.prd && (
+                              <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className="grid grid-cols-2 gap-3 mt-4"
+                              >
+                                <div className="p-3 rounded-xl bg-background/50 border border-border/30">
+                                  <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Concept</p>
+                                  <p className="text-xs font-bold truncate">{object.manager.prd.name || "Designing..."}</p>
+                                </div>
+                                <div className="p-3 rounded-xl bg-background/50 border border-border/30">
+                                  <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Target</p>
+                                  <p className="text-xs font-bold truncate">{object.manager.prd.description || "Analyzing..."}</p>
+                                </div>
+                              </motion.div>
+                            )}
+                          </motion.div>
+                        )}
                       </div>
                     </div>
-                    {isLoading && renderStreamingPreview()}
+                    {isLoading && object?.tracker && renderStreamingPreview()}
                   </motion.div>
                 )}
                 <div ref={messagesEndRef} />
@@ -458,14 +551,14 @@ export default function TrackerPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-8 lg:p-12">
-            {(isLoading && object) ? (
+            {(isLoading && object?.tracker) ? (
                <TrackerDisplay
-                  tabs={(object.tabs || []).filter((t: any) => t && typeof t === 'object' && t.name) as any}
-                  sections={(object.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
-                  grids={(object.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
-                  fields={(object.fields || []).filter((f: any) => f && typeof f === 'object' && f.name) as any}
-                  examples={(object.examples || []).filter((e: any) => e && typeof e === 'object') as any}
-                  views={(object.views || []).filter((v: any) => typeof v === 'string') as any}
+                  tabs={(object.tracker.tabs || []).filter((t: any) => t && typeof t === 'object' && t.name) as any}
+                  sections={(object.tracker.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
+                  grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
+                  fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.name) as any}
+                  examples={(object.tracker.examples || []).filter((e: any) => e && typeof e === 'object') as any}
+                  views={(object.tracker.views || []).filter((v: any) => typeof v === 'string') as any}
                />
             ) : activeTrackerData ? (
               <TrackerDisplay
