@@ -395,7 +395,7 @@ export default function TrackerPage() {
                 className={`absolute -inset-[1px] rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
               />
               
-              <div className="relative bg-card rounded-[19px] shadow-2xl border border-border/50 overflow-hidden">
+              <div className="relative bg-card rounded-[19px] shadow-2xl border border-border/50 overflow-hidden border-2 border-muted/100">
                 <div className="flex items-end gap-2 p-2">
                   <textarea
                     ref={textareaRef}
@@ -421,7 +421,7 @@ export default function TrackerPage() {
                   <Button
                     onClick={handleSubmit}
                     disabled={!input.trim() || isLoading}
-                    className={`shrink-0 h-12 w-12 rounded-[14px] transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`shrink-0 h-14 w-14 rounded-[14px] transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
                       input.trim() && !isLoading
                         ? 'bg-foreground text-background hover:bg-foreground/90'
                         : 'bg-secondary text-muted-foreground'

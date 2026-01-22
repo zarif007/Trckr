@@ -9,26 +9,37 @@ export default function NavBar() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 group cursor-pointer">
-            <div className="w-8 h-8 flex items-center justify-center">
-              <div
-                style={{
-                  width: 20,
-                  height: 20,
-                  background: 'linear-gradient(135deg,#8b5cf6,#06b6d4)',
-                  borderRadius: '50%',
-                }}
-                className="transition-transform group-hover:scale-110"
-              />
+          <Link href="/" className="flex items-center gap-2 group cursor-pointer">
+            <div className="w-12 h-12 flex items-center justify-center relative">
+              <div className="relative w-12 h-12 flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:-rotate-12">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-full h-full text-foreground"
+                >
+                  <path
+                    d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
+                    fill="currentColor"
+                    className="opacity-100"
+                  />
+                  <path
+                    d="M12 12L20 7.5V16.5L12 21V12Z"
+                    fill="currentColor"
+                    className="opacity-70"
+                  />
+                  <path
+                    d="M12 12L4 7.5V16.5L12 21V12Z"
+                    fill="currentColor"
+                    className="opacity-40"
+                  />
+                </svg>
+              </div>
             </div>
-
-            <div>
-              <h1 className="text-xl font-bold tracking-tighter text-foreground">Trckr</h1>
-            </div>
-          </div>
+          </Link>
 
           <div className="hidden md:flex items-center gap-4">
             <div className="flex items-center gap-3">

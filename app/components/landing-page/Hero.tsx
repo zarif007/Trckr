@@ -65,7 +65,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
-          className="font-space text-[3.2rem] md:text-[5rem] lg:text-[6.5rem] font-extrabold leading-[1.1] md:leading-[1.3]"
+          className="font-space text-[4.2rem] md:text-[6rem] lg:text-[6.5rem] font-extrabold leading-[1.1] md:leading-[1.3]"
         >
           Track <span className="relative inline-block ml-2">
             <span className="absolute inset-0 bg-foreground -rotate-2 rounded-sm" />
