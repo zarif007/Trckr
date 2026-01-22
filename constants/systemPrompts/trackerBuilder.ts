@@ -31,10 +31,10 @@ You must follow these rules strictly:
 - Sections are independent objects, linked to tabs via tabId
 
 3. Grids
-- A grid represents a layout block for structured data:
-  - table: standard table layout for row-based data
-  - kanban: kanban board grouped by an options field (MUST have logical order for options like: To Do -> In Progress -> Done)
-  - div: free-form section for specific details, meta info, bio, or rich descriptions. (Use for singular/static info, NOT for lists of repetitive data. Use Table for lists.)
+- A grid represents a layout block for structured data. You MUST choose the correct type based on data cardinality:
+  - table: REQUIRED for multi-instance data (lists of items, logs, records). Use this when there can be more than one entry of this entity (e.g., tasks, warehouses, transactions, daily logs).
+  - kanban: Use for multi-instance data that follows a pipeline/status flow. Grouped by an options field (MUST have a logical order like: To Do -> In Progress -> Done).
+  - div: ONLY for single-instance objects or static configurations. Use for generic metadata, global settings, a single user bio, or a one-off description. NEVER use "div" for entities that the user will add multiple items to. If there's any chance of multiple instances, use "table".
 - Each grid object must include:
   - name: human-friendly name
   - fieldName: camelCase identifier (no spaces; English) - MUST be unique
