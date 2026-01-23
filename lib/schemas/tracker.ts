@@ -67,6 +67,24 @@ export const trackerSchema = z.object({
       })
     )
     .describe('Array of independent field objects linked to grids via gridId'),
+  shadowGrids: z
+    .array(
+      z.object({
+        name: z.string().describe('Shadow grid display name'),
+        fieldName: fieldName(),
+        type: z
+          .enum(['table', 'kanban'])
+          .describe('Layout type for this shadow grid'),
+        gridId: z
+          .string()
+          .describe('fieldName of the actual grid this shadow grid tracks'),
+        sectionId: z
+          .string()
+          .describe('fieldName of the section this shadow grid belongs to'),
+      })
+    )
+    .optional()
+    .describe('Array of shadow grid objects linked to actual grids via gridId'),
   views: z
     .array(z.string())
     .describe('Array of view names like "Table", "Calendar", etc.'),

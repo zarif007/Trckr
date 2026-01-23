@@ -28,11 +28,12 @@ export async function POST(request: Request) {
         if (msg.role === 'user') {
           contextParts.push(`User: ${msg.content}`)
         } else if (msg.role === 'assistant' && msg.trackerData) {
-          const { tabs = [], sections = [], grids = [], fields = [] } = msg.trackerData
+          const { tabs = [], sections = [], grids = [], shadowGrids = [], fields = [] } = msg.trackerData
           const trackerSummary = `Previous tracker I created:
 - Tabs: ${tabs.map((t: any) => `${t.name} (${t.fieldName})`).join(', ')}
 - Sections: ${sections.map((s: any) => `${s.name} (${s.fieldName}, tab: ${s.tabId})`).join(', ')}
 - Grids: ${grids.map((g: any) => `${g.name} (${g.fieldName}, ${g.type}, section: ${g.sectionId})`).join(', ')}
+- Shadow Grids: ${shadowGrids.map((sg: any) => `${sg.name} (${sg.fieldName}, ${sg.type}, shadows: ${sg.gridId}, section: ${sg.sectionId})`).join(', ')}
 - Fields: ${fields.map((f: any) => `${f.name} (${f.fieldName}, ${f.type}, grid: ${f.gridId})`).join(', ')}`
           contextParts.push(`Assistant: ${trackerSummary}`)
         } else if (msg.role === 'assistant') {

@@ -10,6 +10,7 @@ export function TrackerDisplayInline({
   tabs,
   sections,
   grids,
+  shadowGrids,
   fields,
   examples,
   views,
@@ -81,6 +82,14 @@ export function TrackerDisplayInline({
                   ...grid,
                   fields: fields.filter(
                     (field) => field.gridId === grid.fieldName
+                  ),
+                })),
+              shadowGrids: (shadowGrids || [])
+                .filter((sg) => sg.sectionId === section.fieldName)
+                .map((sg) => ({
+                  ...sg,
+                  fields: fields.filter(
+                    (field) => field.gridId === sg.gridId
                   ),
                 })),
             }))

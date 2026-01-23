@@ -32,10 +32,19 @@ export interface TrackerField {
   options?: string[]
 }
 
+export interface TrackerShadowGrid {
+  name: string
+  fieldName: string
+  type: 'table' | 'kanban'
+  gridId: string
+  sectionId: string
+}
+
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
   sections: TrackerSection[]
   grids: TrackerGrid[]
+  shadowGrids?: TrackerShadowGrid[]
   fields: TrackerField[]
   examples: Array<Record<string, any>>
   views: string[]

@@ -1,4 +1,4 @@
-import { TrackerSection as ITrackerSection, TrackerGrid, TrackerField } from './types'
+import { TrackerSection as ITrackerSection, TrackerGrid, TrackerField, TrackerShadowGrid } from './types'
 import { TrackerTableGrid } from './tracker-table-grid'
 import { TrackerKanbanGrid } from './tracker-kanban-grid'
 import { TrackerDivGrid } from './tracker-div-grid'
@@ -6,6 +6,7 @@ import { TrackerDivGrid } from './tracker-div-grid'
 interface TrackerSectionProps {
   section: ITrackerSection & {
     grids: (TrackerGrid & { fields: TrackerField[] })[]
+    shadowGrids: (TrackerShadowGrid & { fields: TrackerField[] })[]
   }
   examples: Array<Record<string, any>>
   onUpdate?: (rowIndex: number, columnId: string, value: any) => void
@@ -22,32 +23,32 @@ export function TrackerSection({
         {section.name}
       </h3>
       <div className="space-y-6">
-        {section.grids.map((grid) => (
+        {[...section.grids, ...section.shadowGrids].map((grid) => (
           <div key={grid.fieldName} className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {grid.name}
-              </label>
+                  {grid.name}
+                </label>
               </div>
             </div>
             {grid.type === 'table' && (
               <TrackerTableGrid
-                grid={grid}
+                grid={grid as any}
                 examples={examples}
                 onUpdate={onUpdate}
               />
             )}
             {grid.type === 'kanban' && (
               <TrackerKanbanGrid 
-                grid={grid} 
+                grid={grid as any} 
                 examples={examples} 
                 onUpdate={onUpdate}
               />
             )}
             {grid.type === 'div' && (
               <TrackerDivGrid 
-                grid={grid} 
+                grid={grid as any} 
                 examples={examples} 
                 onUpdate={onUpdate}
               />

@@ -537,7 +537,7 @@ export default function TrackerPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
           <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-xl font-bold tracking-tight">
+            <DialogTitle className="flex items-center gap-3 text-sm md:text-xl font-bold tracking-tight">
               <div className="p-2 rounded-lg bg-foreground text-background">
                 <Sparkles className="w-5 h-5" />
               </div>
@@ -556,6 +556,7 @@ export default function TrackerPage() {
                   tabs={(object.tracker.tabs || []).filter((t: any) => t && typeof t === 'object' && t.name) as any}
                   sections={(object.tracker.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
                   grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
+                  shadowGrids={(object.tracker.shadowGrids || []).filter((sg: any) => sg && typeof sg === 'object' && sg.name) as any}
                   fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.name) as any}
                   examples={(object.tracker.examples || []).filter((e: any) => e && typeof e === 'object') as any}
                   views={(object.tracker.views || []).filter((v: any) => typeof v === 'string') as any}
@@ -565,6 +566,7 @@ export default function TrackerPage() {
                 tabs={activeTrackerData.tabs}
                 sections={activeTrackerData.sections}
                 grids={activeTrackerData.grids}
+                shadowGrids={activeTrackerData.shadowGrids}
                 fields={activeTrackerData.fields}
                 examples={activeTrackerData.examples}
                 views={activeTrackerData.views}
