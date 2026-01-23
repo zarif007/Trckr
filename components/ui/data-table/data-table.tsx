@@ -45,7 +45,7 @@ export function DataTable<TData, TValue>({
   const columnsWithSelection: ColumnDef<TData, TValue>[] = [
     {
       id: 'select',
-      size: 44,
+      size: 32,
       header: ({ table }) => (
         <div className="flex items-center justify-center">
           <Checkbox
@@ -107,12 +107,12 @@ export function DataTable<TData, TValue>({
                     <TableHead
                       key={header.id}
                       style={{
-                        width: isSelect ? '44px' : '150px',
-                        minWidth: isSelect ? '44px' : '150px',
+                        width: isSelect ? '32px' : '150px',
+                        minWidth: isSelect ? '32px' : '150px',
                       }}
                       className={cn(
                         'h-9 text-muted-foreground font-medium text-[13px] border-r border-border/50 last:border-r-0',
-                        isSelect ? 'p-0 w-[44px]' : 'px-4'
+                        isSelect ? 'p-0 w-[32px]' : 'px-4'
                       )}
                     >
                       {header.isPlaceholder ? null : isSelect ? (

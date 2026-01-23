@@ -35,13 +35,15 @@ export function DataTableCell<TData, TValue>({
   return (
     <TableCell
       style={{
-        width: isSelect ? '44px' : '150px',
-        minWidth: isSelect ? '44px' : '150px',
+        width: isSelect ? '32px' : '150px',
+        minWidth: isSelect ? '32px' : '150px',
       }}
-      className="p-0 h-10 border-r-[1.5px] border-border/50 last:border-r-0 relative group/cell"
+      className="p-0 h-10 border-r-[1.5px] border-border/50 last:border-r-0 relative group/cell focus-within:bg-muted transition-colors"
     >
       {isSelect ? (
-        flexRender(cell.column.columnDef.cell, cell.getContext())
+        <div className="flex items-center justify-center w-full h-full">
+          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+        </div>
       ) : fieldInfo ? (
         <DataTableInput
           value={value}

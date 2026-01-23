@@ -38,7 +38,7 @@ export function DataTableInput({
   autoFocus,
 }: DataTableInputProps) {
   const inlineInputClass =
-    'border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 focus-visible:bg-muted/50 h-full px-2 w-full text-[13px] font-normal rounded-md transition-colors'
+    'border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full text-[13px] font-normal rounded-none transition-colors'
 
   switch (type) {
     case 'string':
@@ -113,7 +113,7 @@ export function DataTableInput({
           <SelectTrigger
             className={cn(
               inlineInputClass,
-              "text-left px-2 border-0 shadow-none bg-transparent hover:bg-muted/50 focus:ring-0 focus:ring-offset-0 data-[state=open]:bg-muted/50",
+              "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full",
               className
             )}
           >

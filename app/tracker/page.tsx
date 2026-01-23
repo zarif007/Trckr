@@ -247,44 +247,44 @@ export default function TrackerPage() {
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="absolute -inset-4 rounded-full"
                   />
-                  <div className="relative w-24 h-24 rounded-2xl flex items-center justify-center bg-foreground shadow-2xl">
-                    <Sparkles className="w-12 h-12 text-background" />
+                  <div className="relative w-16 h-16 rounded-xl flex items-center justify-center bg-foreground shadow-xl">
+                    <Sparkles className="w-8 h-8 text-background" />
                   </div>
                 </div>
                 
-                <div className="text-center space-y-4">
-                  <h3 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+                <div className="text-center space-y-3">
+                  <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
                     Build your <span className="relative inline-block">
                       <span className="absolute inset-0 bg-primary -rotate-2 rounded-sm" />
                       <span className="relative px-2 text-primary-foreground">tracker.</span>
                     </span>
                   </h3>
-                  <p className="text-lg md:text-xl text-muted-foreground/90 max-w-lg mx-auto font-medium">
+                  <p className="text-sm md:text-base text-muted-foreground/90 max-w-md mx-auto font-medium">
                     What would you like to build today? <br />
                     Describe your data needs in plain english.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-xl">
                   {suggestions.map((suggestion) => (
                     <button
                       key={suggestion.title}
                       onClick={() => applySuggestion(suggestion.query)}
-                      className="relative p-6 rounded-2xl border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
+                      className="relative p-4 rounded-xl border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
                     >
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <div className={`p-3 rounded-xl bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
-                            <suggestion.icon className="w-6 h-6" />
+                          <div className={`p-2 rounded-lg bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
+                            <suggestion.icon className="w-4 h-4" />
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
+                          <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
                         </div>
                         
-                        <div className="space-y-1.5">
-                          <h4 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
                             {suggestion.title}
                           </h4>
-                          <p className="text-sm text-muted-foreground leading-relaxed">
+                          <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
                             {suggestion.desc}
                           </p>
                         </div>
@@ -305,26 +305,26 @@ export default function TrackerPage() {
                     key={idx}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex gap-6 ${
+                    className={`flex gap-4 ${
                       message.role === 'user' ? 'justify-end' : 'justify-start'
                     }`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
-                        <Sparkles className="w-5 h-5 text-background" />
+                      <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
+                        <Sparkles className="w-4 h-4 text-background" />
                       </div>
                     )}
                     <div
-                      className={`space-y-3 ${
-                        message.role === 'user' ? 'items-end max-w-[80%]' : 'items-start flex-1'
+                      className={`space-y-2 ${
+                        message.role === 'user' ? 'items-end max-w-[85%]' : 'items-start flex-1'
                       } flex flex-col`}
                     >
                       {message.content && (
                         <div
-                          className={`rounded-2xl px-5 py-4 shadow-sm font-medium ${
+                          className={`rounded-xl px-4 py-2.5 shadow-sm font-medium ${
                             message.role === 'user'
-                              ? 'bg-primary text-primary-foreground text-[15px] leading-relaxed'
-                              : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-[15px] leading-relaxed'
+                              ? 'bg-primary text-primary-foreground text-sm leading-relaxed'
+                              : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-sm leading-relaxed'
                           }`}
                         >
                           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -332,7 +332,7 @@ export default function TrackerPage() {
                       )}
                       {message.managerData && (
                         <div className="w-full space-y-4">
-                          <div className="flex flex-col gap-2 p-4 rounded-2xl bg-secondary/20 border border-border/40 backdrop-blur-sm">
+                          <div className="flex flex-col gap-2 p-4 rounded-md bg-secondary/20 border border-border/40 backdrop-blur-sm">
                             <button 
                               onClick={() => {
                                 setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isThinkingOpen: !m.isThinkingOpen } : m))
@@ -378,8 +378,8 @@ export default function TrackerPage() {
                       )}
                     </div>
                     {message.role === 'user' && (
-                      <div className="w-10 h-10 rounded-xl bg-secondary/50 border border-border/50 flex items-center justify-center shrink-0 mt-1">
-                        <User className="w-5 h-5 text-muted-foreground" />
+                      <div className="w-8 h-8 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center shrink-0 mt-1">
+                        <User className="w-4 h-4 text-muted-foreground" />
                       </div>
                     )}
                   </motion.div>
@@ -390,14 +390,14 @@ export default function TrackerPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="space-y-6"
                   >
-                    <div className="flex gap-6 justify-start">
-                      <div className="w-10 h-10 rounded-xl bg-foreground flex items-center justify-center shrink-0 shadow-lg mt-1">
-                        <Sparkles className="w-5 h-5 text-background" />
+                    <div className="flex gap-4 justify-start">
+                      <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
+                        <Sparkles className="w-4 h-4 text-background" />
                       </div>
-                      <div className="flex-1 space-y-4">
-                        <div className="flex items-center gap-3 rounded-2xl px-5 py-4 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
-                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                          <p className="text-[15px]">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                          <p className="text-sm">
                             {!object?.manager ? 'Consulting Manager...' : 
                              !object?.tracker ? 'Manager defining requirements...' : 
                              'Building your tracker...'}
@@ -408,7 +408,7 @@ export default function TrackerPage() {
                           <motion.div 
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            className="p-5 rounded-2xl bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
+                            className="p-5 rounded-md bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em]">
@@ -471,10 +471,10 @@ export default function TrackerPage() {
                   <button
                     key={s.text}
                     onClick={() => applySuggestion(s.text)}
-                    className="group flex items-center gap-2 px-4 py-2.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap shadow-sm"
+                    className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap shadow-sm"
                   >
-                    <span className="text-base group-hover:scale-110 transition-transform">{s.icon}</span>
-                    <span className="text-sm font-semibold text-muted-foreground group-hover:text-foreground transition-colors">
+                    <span className="text-sm group-hover:scale-110 transition-transform">{s.icon}</span>
+                    <span className="text-[11px] font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
                       {s.text}
                     </span>
                   </button>
@@ -485,11 +485,11 @@ export default function TrackerPage() {
             {/* Textarea Container */}
             <div className="relative group">
               <motion.div 
-                className={`absolute -inset-[1px] rounded-[20px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
+                className={`absolute -inset-[1px] rounded-[14px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
               />
               
-              <div className="relative bg-card rounded-[19px] shadow-2xl border border-border/50 overflow-hidden border-2 border-muted/100">
-                <div className="flex items-end gap-2 p-2">
+              <div className="relative bg-card rounded-[12px] shadow-xl border border-border/50 overflow-hidden border-2 border-muted/100">
+                <div className="flex items-end gap-2 p-1.5">
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -508,22 +508,22 @@ export default function TrackerPage() {
                     }}
                     placeholder={isChatEmpty ? 'Describe your ideal tracker...' : 'Ask for changes or refinements...'}
                     rows={1}
-                    className="flex-1 px-4 py-4 bg-transparent resize-none text-base font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[56px] max-h-[200px]"
+                    className="flex-1 px-3 py-3 bg-transparent resize-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[44px] max-h-[200px]"
                   />
                   
                   <Button
                     onClick={handleSubmit}
                     disabled={!input.trim() || isLoading}
-                    className={`shrink-0 h-14 w-14 rounded-[14px] transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`shrink-0 h-10 w-10 rounded-[8px] transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${
                       input.trim() && !isLoading
                         ? 'bg-foreground text-background hover:bg-foreground/90'
                         : 'bg-secondary text-muted-foreground'
                     }`}
                   >
                     {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4" />
                     )}
                   </Button>
                 </div>
