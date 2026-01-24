@@ -184,11 +184,11 @@ export default function TrackerPage() {
           setActiveTrackerData(trackerData)
           setIsDialogOpen(true)
         }}
-        className="group relative max-w-sm p-5 rounded-xl border border-border/50 bg-secondary/30 backdrop-blur-xl hover:border-primary/50 transition-all cursor-pointer shadow-lg hover:shadow-primary/5"
+        className="group relative max-w-sm p-5 rounded-md border border-border/50 bg-secondary/30 backdrop-blur-xl hover:border-primary/50 transition-all cursor-pointer shadow-lg hover:shadow-primary/5"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+            <div className="p-2.5 rounded-md bg-primary/10 text-primary border border-primary/20">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -196,7 +196,7 @@ export default function TrackerPage() {
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{trackerData.tabs?.[0]?.fieldName || 'Custom Tracker'}</p>
             </div>
           </div>
-          <div className="p-2 rounded-lg group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary transition-colors">
+          <div className="p-2 rounded-md group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary transition-colors">
             <Maximize2 className="w-4 h-4" />
           </div>
         </div>
@@ -207,11 +207,11 @@ export default function TrackerPage() {
   const renderStreamingPreview = () => {
     return (
       <div 
-        className="relative w-full p-5 rounded-xl border border-primary/20 bg-primary/5 animate-pulse backdrop-blur-sm"
+        className="relative w-full p-5 rounded-md border border-primary/20 bg-primary/5 animate-pulse backdrop-blur-sm"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="p-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30">
+            <div className="p-2.5 rounded-md bg-primary/20 text-primary border border-primary/30">
               <Loader2 className="w-5 h-5 animate-spin" />
             </div>
             <div>
@@ -230,7 +230,7 @@ export default function TrackerPage() {
     <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col">      
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-32 z-10">
-        <div className="relative max-w-4xl mx-auto px-6 py-12">
+        <div className="relative max-w-4xl mx-auto px-2 md:px-6 py-0">
           <AnimatePresence mode="wait">
             {isChatEmpty ? (
               <motion.div 
@@ -247,7 +247,7 @@ export default function TrackerPage() {
                     transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
                     className="absolute -inset-4 rounded-full"
                   />
-                  <div className="relative w-16 h-16 rounded-xl flex items-center justify-center bg-foreground shadow-xl">
+                  <div className="relative w-16 h-16 rounded-md flex items-center justify-center bg-foreground shadow-xl">
                     <Sparkles className="w-8 h-8 text-background" />
                   </div>
                 </div>
@@ -255,7 +255,7 @@ export default function TrackerPage() {
                 <div className="text-center space-y-3">
                   <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
                     Build your <span className="relative inline-block">
-                      <span className="absolute inset-0 bg-primary -rotate-2 rounded-sm" />
+                      <span className="absolute inset-0 bg-primary -rotate-2 rounded-md" />
                       <span className="relative px-2 text-primary-foreground">tracker.</span>
                     </span>
                   </h3>
@@ -270,11 +270,11 @@ export default function TrackerPage() {
                     <button
                       key={suggestion.title}
                       onClick={() => applySuggestion(suggestion.query)}
-                      className="relative p-4 rounded-xl border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
+                      className="relative p-4 rounded-md border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
                     >
                       <div className="space-y-2">
                         <div className="flex items-start justify-between">
-                          <div className={`p-2 rounded-lg bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
+                          <div className={`p-2 rounded-md bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
                             <suggestion.icon className="w-4 h-4" />
                           </div>
                           <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
@@ -298,7 +298,7 @@ export default function TrackerPage() {
                 key="chat-messages"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="space-y-8 pt-12"
+                className="space-y-4 md:space-y-8 pt-8 md:pt-12"
               >
                 {messages.map((message, idx) => (
                   <motion.div
@@ -310,7 +310,7 @@ export default function TrackerPage() {
                     }`}
                   >
                     {message.role === 'assistant' && (
-                      <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
+                      <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-0">
                         <Sparkles className="w-4 h-4 text-background" />
                       </div>
                     )}
@@ -321,7 +321,7 @@ export default function TrackerPage() {
                     >
                       {message.content && (
                         <div
-                          className={`rounded-xl px-4 py-2.5 shadow-sm font-medium ${
+                          className={`rounded-md px-4 py-2.5 shadow-sm font-medium ${
                             message.role === 'user'
                               ? 'bg-primary text-primary-foreground text-sm leading-relaxed'
                               : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-sm leading-relaxed'
@@ -378,7 +378,7 @@ export default function TrackerPage() {
                       )}
                     </div>
                     {message.role === 'user' && (
-                      <div className="w-8 h-8 rounded-lg bg-secondary/50 border border-border/50 flex items-center justify-center shrink-0 mt-1">
+                      <div className="w-8 h-8 rounded-md bg-secondary/50 border border-border/50 flex items-center justify-center shrink-0">
                         <User className="w-4 h-4 text-muted-foreground" />
                       </div>
                     )}
@@ -391,11 +391,11 @@ export default function TrackerPage() {
                     className="space-y-6"
                   >
                     <div className="flex gap-4 justify-start">
-                      <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
+                      <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
                         <Sparkles className="w-4 h-4 text-background" />
                       </div>
                       <div className="flex-1 space-y-3">
-                        <div className="flex items-center gap-2 rounded-xl px-4 py-2.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
+                        <div className="flex items-center gap-2 rounded-md px-4 py-2.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                           <p className="text-sm">
                             {!object?.manager ? 'Consulting Manager...' : 
@@ -432,11 +432,11 @@ export default function TrackerPage() {
                                 animate={{ opacity: 1 }}
                                 className="grid grid-cols-2 gap-3 mt-4"
                               >
-                                <div className="p-3 rounded-xl bg-background/50 border border-border/30">
+                                <div className="p-3 rounded-md bg-background/50 border border-border/30">
                                   <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Concept</p>
                                   <p className="text-xs font-bold truncate">{object.manager.prd.name || "Designing..."}</p>
                                 </div>
-                                <div className="p-3 rounded-xl bg-background/50 border border-border/30">
+                                <div className="p-3 rounded-md bg-background/50 border border-border/30">
                                   <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Target</p>
                                   <p className="text-xs font-bold truncate">{object.manager.prd.description || "Analyzing..."}</p>
                                 </div>
@@ -538,7 +538,7 @@ export default function TrackerPage() {
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
           <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
             <DialogTitle className="flex items-center gap-3 text-sm md:text-xl font-bold tracking-tight">
-              <div className="p-2 rounded-lg bg-foreground text-background">
+              <div className="p-2 rounded-md bg-foreground text-background">
                 <Sparkles className="w-5 h-5" />
               </div>
               Tracker Construction Kit

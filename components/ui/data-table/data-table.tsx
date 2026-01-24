@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -10,6 +10,9 @@ import {
   SortingState,
   getSortedRowModel,
   RowSelectionState,
+  VisibilityState,
+  getExpandedRowModel,
+  ExpandedState,
 } from '@tanstack/react-table'
 
 import {
@@ -20,8 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
+import { Settings2, ChevronDown, ChevronUp } from 'lucide-react'
 import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
 
@@ -40,12 +52,28 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const tableRef = useRef<HTMLDivElement>(null)
+  const [expanded, setExpanded] = useState<ExpandedState>({})
 
-  const columnsWithSelection: ColumnDef<TData, TValue>[] = [
+  // Initialize column visibility: first 5 columns visible, others hidden
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
+    const initialVisibility: VisibilityState = {}
+    columns.forEach((col, index) => {
+      // @ts-ignore - accessorKey might not exist on all column types but usually does for data columns
+      const key = col.id || col.accessorKey || index.toString()
+      if (key) {
+        initialVisibility[key] = index < 5
+      }
+    })
+    return initialVisibility
+  })
+
+  // Memoize columns to prevent unnecessary re-renders that might close the dialog
+  const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(() => [
     {
       id: 'select',
-      size: 32,
+      size: 34,
+      minSize: 34,
+      maxSize: 34,
       header: ({ table }) => (
         <div className="flex items-center justify-center">
           <Checkbox
@@ -69,19 +97,114 @@ export function DataTable<TData, TValue>({
       ),
     } as ColumnDef<TData, TValue>,
     ...columns,
-  ]
+    {
+      id: 'actions',
+      size: 34,
+      minSize: 34,
+      maxSize: 34,
+      header: ({ table }) => (
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-muted">
+              <Settings2 className="h-4 w-4" />
+              <span className="sr-only">View settings</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[300px]" onInteractOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Toggle Columns</DialogTitle>
+            </DialogHeader>
+            <div className="py-2">
+              <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                {table
+                  .getAllColumns()
+                  .filter(
+                    (column) =>
+                      typeof column.accessorFn !== 'undefined' &&
+                      column.getCanHide()
+                  )
+                  .map((column) => {
+                    return (
+                      <div
+                        key={column.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) =>
+                            column.toggleVisibility(!!value)
+                          }
+                          id={`col-${column.id}`}
+                        />
+                        <label
+                          htmlFor={`col-${column.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
+                        >
+                          {typeof column.columnDef.header === 'string'
+                            ? column.columnDef.header
+                            : column.id}
+                        </label>
+                      </div>
+                    )
+                  })}
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ),
+      cell: ({ row, table }) => {
+        // Check if there are any hidden columns that contain data
+        const hiddenColumns = table
+          .getAllColumns()
+          .filter(
+            (col) =>
+              !col.getIsVisible() &&
+              col.id !== 'select' &&
+              col.id !== 'actions'
+          )
+        
+        const hasHiddenDetails = hiddenColumns.length > 0;
+
+        return (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0"
+            onClick={() => row.toggleExpanded()}
+            disabled={!hasHiddenDetails}
+          >
+            {hasHiddenDetails ? (
+              row.getIsExpanded() ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )
+            ) : (
+                <div className="h-4 w-4" /> 
+            )}
+            <span className="sr-only">Toggle expand</span>
+          </Button>
+        )
+      },
+    } as ColumnDef<TData, TValue>,
+  ], [columns])
 
   const table = useReactTable({
     data: data,
-    columns: columnsWithSelection,
+    columns: columnsWithSelectionAndActions,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
+    getExpandedRowModel: getExpandedRowModel(),
+    onExpandedChange: setExpanded,
+    onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       rowSelection,
+      expanded,
+      columnVisibility,
     },
     meta: {
       updateData: onCellUpdate,
@@ -89,7 +212,7 @@ export function DataTable<TData, TValue>({
   })
 
   return (
-    <div className="w-full space-y-4" ref={tableRef}>
+    <div className="w-full space-y-4">
       <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
         <Table className="w-full min-w-full border-collapse table-fixed">
           <TableHeader className="">
@@ -100,26 +223,31 @@ export function DataTable<TData, TValue>({
               >
                 {headerGroup.headers.map((header) => {
                   const isSelect = header.id === 'select'
+                  const isActions = header.id === 'actions'
                   const fieldType = fieldMetadata?.[header.id]?.type
                   const Icon = fieldType ? getFieldIcon(fieldType) : null
+
+                  const fixedWidth = '34px'
 
                   return (
                     <TableHead
                       key={header.id}
                       style={{
-                        width: isSelect ? '32px' : '150px',
-                        minWidth: isSelect ? '32px' : '150px',
+                        width: isSelect || isActions ? fixedWidth : '150px',
+                        minWidth: isSelect || isActions ? fixedWidth : '150px',
                       }}
                       className={cn(
                         'h-9 text-muted-foreground font-medium text-[13px] border-r border-border/50 last:border-r-0',
-                        isSelect ? 'p-0 w-[32px]' : 'px-4'
+                        (isSelect || isActions) ? 'p-0 text-center w-[34px]' : 'px-4'
                       )}
                     >
-                      {header.isPlaceholder ? null : isSelect ? (
-                        flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )
+                      {header.isPlaceholder ? null : isSelect || isActions ? (
+                        <div className="flex items-center justify-center w-full h-full">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2 overflow-hidden">
                           {Icon && (
@@ -142,24 +270,93 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <DataTableCell
-                      key={cell.id}
-                      cell={cell}
-                      row={row}
-                      fieldMetadata={fieldMetadata}
-                    />
-                  ))}
-                </TableRow>
+                <>
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      if (cell.column.id === 'actions') {
+                         return (
+                           <TableCell key={cell.id} className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 max-w-[34px]">
+                              <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                                {flexRender(
+                                  cell.column.columnDef.cell,
+                                  cell.getContext()
+                                )}
+                              </div>
+                           </TableCell>
+                         )
+                      }
+                      return (
+                        <DataTableCell
+                          key={cell.id}
+                          cell={cell}
+                          row={row}
+                          fieldMetadata={fieldMetadata}
+                        />
+                      )
+                    })}
+                  </TableRow>
+                  {row.getIsExpanded() && (
+                    <TableRow className="bg-muted/30">
+                      <TableCell
+                        colSpan={row.getVisibleCells().length}
+                        className="p-4"
+                      >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {table
+                            .getAllColumns()
+                            .filter(
+                              (col) =>
+                                !col.getIsVisible() &&
+                                col.id !== 'select' &&
+                                col.id !== 'actions'
+                            )
+                            .map((col) => {
+                                // We need to get the cell value for this row and column
+                                // Since it's not a visible cell, we can't use row.getVisibleCells()
+                                // We construct a fake cell context or use the column's accessor
+                                const cellValue = row.getValue(col.id)
+                                
+                                return (
+                                  <div key={col.id} className="flex flex-col space-y-1">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                      {typeof col.columnDef.header === 'string'
+                                        ? col.columnDef.header
+                                        : col.id}
+                                    </span>
+                                    <div className="text-sm">
+                                      {/* This is a simplification. Ideally reuse DataTableCell logic or flexRender if possible 
+                                          but DataTableCell expects a Cell object. 
+                                          We can try to find the cell from row.getAllCells().
+                                      */}
+                                      {(() => {
+                                          const cell = row.getAllCells().find(c => c.column.id === col.id)
+                                          if (cell) {
+                                              return (
+                                                  <div className="border border-border/40 rounded-md px-3 py-2 bg-background/50">
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                  </div>
+                                              )
+                                          }
+                                          return String(cellValue)
+                                      })()}
+                                    </div>
+                                  </div>
+                                )
+                            })}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               ))
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={columnsWithSelection.length}
+                  colSpan={columnsWithSelectionAndActions.length}
                   className="h-24 text-center text-muted-foreground text-sm"
                 >
                   No results.

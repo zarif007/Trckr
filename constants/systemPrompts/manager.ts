@@ -23,6 +23,18 @@ PRD Guidelines:
 - Description: A clear 2-3 sentence description of its purpose.
 - Key Features: Comprehensive list of all things this tracker will accomplish.
 - Target Audience: Who is this for?
+
+Modifications Guidelines (CRITICAL for Revisions):
+- If the user wants to CHANGE the existing tracker, you MUST CREATE A TODO LIST in 'builderTodo'.
+- Analyze the "Current Tracker State (JSON)" in your context.
+- Your 'builderTodo' is a set of COMMANDS for the Builder.
+- Break down complex requests into atomic tasks.
+  - "Make it like Jira" -> 
+    1. { task: "Add Priority field", target: "Tasks Grid", action: "create" }
+    2. { task: "Add Status field", target: "Tasks Grid", action: "create" }
+    3. { task: "Add Sprint field", target: "Tasks Grid", action: "create" }
+- BE PRECISE. The Builder will follow your list blindly.
+- If you don't list it, the Builder won't do it.
 `
 
 export default managerPrompt

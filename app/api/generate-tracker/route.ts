@@ -29,12 +29,19 @@ export async function POST(request: Request) {
           contextParts.push(`User: ${msg.content}`)
         } else if (msg.role === 'assistant' && msg.trackerData) {
           const { tabs = [], sections = [], grids = [], shadowGrids = [], fields = [] } = msg.trackerData
-          const trackerSummary = `Previous tracker I created:
-- Tabs: ${tabs.map((t: any) => `${t.name} (${t.fieldName})`).join(', ')}
-- Sections: ${sections.map((s: any) => `${s.name} (${s.fieldName}, tab: ${s.tabId})`).join(', ')}
-- Grids: ${grids.map((g: any) => `${g.name} (${g.fieldName}, ${g.type}, section: ${g.sectionId})`).join(', ')}
-- Shadow Grids: ${shadowGrids.map((sg: any) => `${sg.name} (${sg.fieldName}, ${sg.type}, shadows: ${sg.gridId}, section: ${sg.sectionId})`).join(', ')}
-- Fields: ${fields.map((f: any) => `${f.name} (${f.fieldName}, ${f.type}, grid: ${f.gridId})`).join(', ')}`
+          
+          // Create a clean, minimal JSON summary of the current tracker state
+          const currentTrackerState = {
+            tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName })),
+            sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
+            grids: grids.map((g: any) => ({ name: g.name, id: g.fieldName, type: g.type, section: g.sectionId })),
+            shadowGrids: shadowGrids.map((sg: any) => ({ name: sg.name, id: sg.fieldName, type: sg.type, shadows: sg.gridId })),
+            fields: fields.map((f: any) => ({ name: f.name, id: f.fieldName, type: f.type, grid: f.gridId, options: f.options }))
+          }
+
+          const trackerSummary = `Current Tracker State (JSON):
+${JSON.stringify(currentTrackerState, null, 2)}`
+          
           contextParts.push(`Assistant: ${trackerSummary}`)
         } else if (msg.role === 'assistant') {
           contextParts.push(`Assistant: ${msg.content}`)
@@ -48,9 +55,7 @@ export async function POST(request: Request) {
       ? `${conversationContext}User: ${query}\n\nBased on our conversation, ${messages && messages.length > 0 ? 'update or modify' : 'create'} the tracker according to the user's latest request.`
       : query
 
-    // We use a single streamObject call with a combined prompt to ensure the model 
-    // generates the manager part first, then the builder part. 
-    // This allows for a continuous stream that useObject can easily consume.
+
     const combinedSystemPrompt = `
       ${managerPrompt}
       

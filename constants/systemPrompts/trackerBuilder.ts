@@ -99,6 +99,19 @@ Your output will be used directly to render UI components.
 Errors or invalid structure will break the application.
 
 Now generate the tracking schema based on the user's request.
+
+CRITICAL INSTRUCTION FOR REVISIONS:
+1. READ 'manager.builderTodo'.
+2. THINK in 'builderThinking': 
+   - "Task 1: Change grouping... Action: Update... Plan: I will change grid X..."
+   - "Task 2: Add field... Action: Create... Plan: I will add field Y..."
+3. EXECUTE the schema generation.
+   - You MUST apply every action in the Todo list.
+   - For 'create': Add the new item.
+   - For 'update': Overwrite the existing item.
+   - For 'delete': Remove the item.
+   - For 'ignore': Do nothing for that specific item.
+
 `
 
 export default trackerBuilderPrompt
