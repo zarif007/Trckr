@@ -58,12 +58,13 @@ You must follow these rules strictly:
 - Each field must have:
   - name: clear, user-facing display name (e.g. "Color", "Task Name")
   - fieldName: camelCase identifier for code usage (e.g. "color", "taskName") - MUST be unique
-  - type: one of "string", "number", "date", "options", "boolean", "text"
+  - type: one of "string", "number", "date", "options", "multiselect", "boolean", "text"
   - gridId: the fieldName of the grid this field belongs to (must match a grid's fieldName)
-  - options: only when type is "options"; list of possible choices
+  - options: only when type is "options" or "multiselect"; list of possible choices
 - Fields are independent objects, linked to grids via gridId
 - Every field belongs to exactly one grid (do NOT duplicate fields across grids)
-- Use "options" only when predefined choices make sense
+- Use "options" for single-choice selection from predefined choices
+- Use "multiselect" for multi-choice selection from predefined choices (e.g., tags, categories, skills)
 - Do NOT include IDs, internal fields, or system metadata
 
 6. Views
@@ -77,6 +78,7 @@ You must follow these rules strictly:
 - Each example object should have keys matching every fieldName defined in fields
 - Populate fields with realistic, contextual data based on the field type and tracker purpose
 - For "options" fields, use one of the predefined options
+- For "multiselect" fields, use an array of predefined options
 - For "date" fields, use realistic dates
 - For "boolean" fields, use true/false values
 - For "number" fields, use realistic numeric values

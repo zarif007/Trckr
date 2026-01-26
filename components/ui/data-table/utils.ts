@@ -5,9 +5,10 @@ import {
   AlignLeft,
   CheckSquare,
   List,
+  Tags,
 } from 'lucide-react'
 
-export type FieldType = 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
+export type FieldType = 'string' | 'number' | 'date' | 'options' | 'multiselect' | 'boolean' | 'text'
 
 export interface FieldMetadata {
   [key: string]: {
@@ -31,6 +32,8 @@ export const getFieldIcon = (type: FieldType) => {
       return CheckSquare
     case 'options':
       return List
+    case 'multiselect':
+      return Tags
     default:
       return Type
   }

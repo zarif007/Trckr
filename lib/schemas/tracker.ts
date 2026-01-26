@@ -53,6 +53,7 @@ export const trackerSchema = z.object({
             'number',
             'date',
             'options',
+            'multiselect',
             'boolean',
             'text',
           ])
@@ -63,7 +64,7 @@ export const trackerSchema = z.object({
         options: z
           .array(z.string())
           .optional()
-          .describe('Options when type is "options"'),
+          .describe('Options when type is "options" or "multiselect"'),
       })
     )
     .describe('Array of independent field objects linked to grids via gridId'),

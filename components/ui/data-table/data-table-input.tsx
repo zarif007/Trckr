@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns'
 import { FieldType } from './utils'
 import { cn } from '@/lib/utils'
+import { MultiSelect } from '@/components/ui/multi-select'
 
 interface DataTableInputProps {
   value: any
@@ -129,6 +130,16 @@ export function DataTableInput({
             ))}
           </SelectContent>
         </Select>
+      )
+    case 'multiselect':
+      return (
+        <MultiSelect
+          options={options ?? []}
+          value={Array.isArray(value) ? value : []}
+          onChange={onChange}
+          isInline={true}
+          className={cn(inlineInputClass, className)}
+        />
       )
     default:
       return <span className="px-2">{String(value)}</span>

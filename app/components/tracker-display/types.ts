@@ -3,6 +3,7 @@ export type TrackerFieldType =
   | 'number'
   | 'date'
   | 'options'
+  | 'multiselect'
   | 'boolean'
   | 'text'
 

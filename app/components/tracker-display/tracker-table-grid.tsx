@@ -30,6 +30,7 @@ export function TrackerTableGrid({
   const columns = useMemo<ColumnDef<Record<string, any>>[]>(
     () =>
       grid.fields.map((field) => ({
+        id: field.fieldName,
         accessorKey: field.fieldName,
         header: field.name,
         cell: ({ row }) => {

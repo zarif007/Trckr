@@ -19,6 +19,16 @@ export function TrackerCell({ value, type }: TrackerCellProps) {
       )
     case 'options':
       return <Badge variant="secondary">{value}</Badge>
+    case 'multiselect':
+      return (
+        <div className="flex flex-wrap gap-1">
+          {Array.isArray(value) && value.length > 0 ? (
+            <span className="text-sm">{value.join(' ')}</span>
+          ) : (
+            <span>-</span>
+          )}
+        </div>
+      )
     case 'date':
       return <span>{new Date(value).toLocaleDateString()}</span>
     default:

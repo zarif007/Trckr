@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MultiSelect } from '@/components/ui/multi-select'
 import { TrackerGrid, TrackerField } from './types'
 
 interface TrackerDivGridProps {
@@ -73,6 +74,16 @@ export function TrackerDivGrid({
                       ))}
                     </SelectContent>
                   </Select>
+                )
+              case 'multiselect':
+                return (
+                  <MultiSelect
+                    options={field.options || []}
+                    value={Array.isArray(value) ? value : []}
+                    onChange={(val) => onUpdate?.(0, field.fieldName, val)}
+                    placeholder={`Select ${field.name}`}
+                    className="w-full bg-secondary/10 border-border/50"
+                  />
                 )
               case 'date':
                 return (

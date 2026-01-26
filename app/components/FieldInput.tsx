@@ -17,10 +17,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
+import { MultiSelect } from '@/components/ui/multi-select'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
 
-type FieldType = 'string' | 'number' | 'date' | 'options' | 'boolean' | 'text'
+type FieldType = 'string' | 'number' | 'date' | 'options' | 'multiselect' | 'boolean' | 'text'
 
 interface FieldMetadata {
   name: string
@@ -163,7 +164,7 @@ export function FieldInput({
           <SelectTrigger
             className={
               isInline
-                ? 'h-full w-full px-2 text-left text-foreground border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0 hover:bg-transparent'
+                ? 'h-full w-full hover:bg-transparent text-left text-foreground border-0 bg-transparent shadow-none focus:ring-0 focus-visible:ring-0 hover:bg-transparent'
                 : normalInputClass
             }
             style={
@@ -181,6 +182,18 @@ export function FieldInput({
             ))}
           </SelectContent>
         </Select>
+      )
+    case 'multiselect':
+      return (
+        <MultiSelect
+          options={field.options ?? []}
+          value={Array.isArray(value) ? value : []}
+          onChange={onChange}
+          placeholder={isInline ? '' : field.name}
+          className={isInline ? '' : normalInputClass}
+          isInline={isInline}
+          autoFocus={autoFocus}
+        />
       )
     default:
       return null

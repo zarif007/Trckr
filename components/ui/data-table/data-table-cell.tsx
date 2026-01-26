@@ -3,6 +3,7 @@ import { TableCell } from '@/components/ui/table'
 import { DataTableInput } from './data-table-input'
 import { FieldMetadata } from './utils'
 import { useState, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 
 interface DataTableCellProps<TData, TValue> {
   cell: Cell<TData, any>
@@ -38,7 +39,10 @@ export function DataTableCell<TData, TValue>({
         width: isSelect ? '32px' : '150px',
         minWidth: isSelect ? '32px' : '150px',
       }}
-      className="p-0 h-10 border-r-[1.5px] border-border/50 last:border-r-0 relative group/cell focus-within:bg-muted transition-colors"
+      className={cn(
+        "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",
+        !isSelect && "cursor-text hover:bg-muted/50 focus-within:bg-muted"
+      )}
     >
       {isSelect ? (
         <div className="flex items-center justify-center w-full h-full">
