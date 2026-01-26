@@ -48,7 +48,10 @@ export function DataTableInput({
         <Input
           type={type === 'number' ? 'number' : 'text'}
           value={value ?? ''}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value
+            onChange(type === 'number' ? (val === '' ? '' : Number(val)) : val)
+          }}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
         />

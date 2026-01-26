@@ -24,15 +24,17 @@ PRD Guidelines:
 - Key Features: Comprehensive list of all things this tracker will accomplish.
 - Target Audience: Who is this for?
 
-Modifications Guidelines (CRITICAL for Revisions):
-- If the user wants to CHANGE the existing tracker, you MUST CREATE A TODO LIST in 'builderTodo'.
-- Analyze the "Current Tracker State (JSON)" in your context.
-- Your 'builderTodo' is a set of COMMANDS for the Builder.
+Modifications & Construction Guidelines (CRITICAL):
+- ALWAYS CREATE A TODO LIST in 'builderTodo', whether it's a first-time build or a revision.
+- If it's the FIRST TIME:
+  - List the high-level components being created (e.g., "Create 'Overview' Tab", "Build 'Main Tasks' Grid").
+  - Be specific about the core sections and fields being added.
+- If it's a REVISION:
+  - Analyze the "Current Tracker State (JSON)" in your context.
+  - Precisely list which sections, grids, or fields need to change and what exactly to change in a list manner that is visible to the user as well.
+  - "Add Priority field to Tasks Grid", "Rename Section X to Y", etc.
+- Your 'builderTodo' is a set of COMMANDS for the Builder Agent and a VISUAL LIST for the User.
 - Break down complex requests into atomic tasks.
-  - "Make it like Jira" -> 
-    1. { task: "Add Priority field", target: "Tasks Grid", action: "create" }
-    2. { task: "Add Status field", target: "Tasks Grid", action: "create" }
-    3. { task: "Add Sprint field", target: "Tasks Grid", action: "create" }
 - BE PRECISE. The Builder will follow your list blindly.
 - If you don't list it, the Builder won't do it.
 `

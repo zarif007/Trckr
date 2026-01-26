@@ -27,24 +27,44 @@ export async function POST(request: Request) {
       for (const msg of messages) {
         if (msg.role === 'user') {
           contextParts.push(`User: ${msg.content}`)
-        } else if (msg.role === 'assistant' && msg.trackerData) {
-          const { tabs = [], sections = [], grids = [], shadowGrids = [], fields = [] } = msg.trackerData
+        } else if (msg.role === 'assistant') {
+          let assistantMsgParts = []
           
-          // Create a clean, minimal JSON summary of the current tracker state
-          const currentTrackerState = {
-            tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName })),
-            sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
-            grids: grids.map((g: any) => ({ name: g.name, id: g.fieldName, type: g.type, section: g.sectionId })),
-            shadowGrids: shadowGrids.map((sg: any) => ({ name: sg.name, id: sg.fieldName, type: sg.type, shadows: sg.gridId })),
-            fields: fields.map((f: any) => ({ name: f.name, id: f.fieldName, type: f.type, grid: f.gridId, options: f.options }))
+          if (msg.managerData) {
+            const { thinking, prd, builderTodo } = msg.managerData
+            assistantMsgParts.push(`Manager Thinking: ${thinking}`)
+            assistantMsgParts.push(`PRD: ${JSON.stringify(prd, null, 2)}`)
+            if (builderTodo && builderTodo.length > 0) {
+              assistantMsgParts.push(`Builder Tasks: ${JSON.stringify(builderTodo, null, 2)}`)
+            }
           }
 
-          const trackerSummary = `Current Tracker State (JSON):
-${JSON.stringify(currentTrackerState, null, 2)}`
-          
-          contextParts.push(`Assistant: ${trackerSummary}`)
-        } else if (msg.role === 'assistant') {
-          contextParts.push(`Assistant: ${msg.content}`)
+          if (msg.trackerData) {
+            const { tabs = [], sections = [], grids = [], shadowGrids = [], fields = [] } = msg.trackerData
+            
+            // Create a clean, minimal JSON summary of the current tracker state
+            const currentTrackerState = {
+              tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName })),
+              sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
+              grids: grids.map((g: any) => ({ name: g.name, id: g.fieldName, type: g.type, section: g.sectionId })),
+              shadowGrids: shadowGrids.map((sg: any) => ({ name: sg.name, id: sg.fieldName, type: sg.type, shadows: sg.gridId })),
+              fields: fields.map((f: any) => ({ name: f.name, id: f.fieldName, type: f.type, grid: f.gridId, options: f.options }))
+            }
+
+            assistantMsgParts.push(`Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`)
+          }
+
+          if (msg.builderThinking) {
+            assistantMsgParts.push(`Builder Thinking: ${msg.builderThinking}`)
+          }
+
+          if (msg.content) {
+            assistantMsgParts.push(msg.content)
+          }
+
+          if (assistantMsgParts.length > 0) {
+            contextParts.push(`Assistant:\n${assistantMsgParts.join('\n')}`)
+          }
         }
       }
 

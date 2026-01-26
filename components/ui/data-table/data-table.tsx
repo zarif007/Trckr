@@ -11,8 +11,6 @@ import {
   getSortedRowModel,
   RowSelectionState,
   VisibilityState,
-  getExpandedRowModel,
-  ExpandedState,
 } from '@tanstack/react-table'
 
 import {
@@ -36,6 +34,7 @@ import { cn } from '@/lib/utils'
 import { Settings2, ChevronDown, ChevronUp } from 'lucide-react'
 import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
+import { DataTableInput } from './data-table-input'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -52,8 +51,6 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const [expanded, setExpanded] = useState<ExpandedState>({})
-
   // Initialize column visibility: first 5 columns visible, others hidden
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(() => {
     const initialVisibility: VisibilityState = {}
@@ -153,37 +150,74 @@ export function DataTable<TData, TValue>({
         </Dialog>
       ),
       cell: ({ row, table }) => {
-        // Check if there are any hidden columns that contain data
-        const hiddenColumns = table
-          .getAllColumns()
-          .filter(
-            (col) =>
-              !col.getIsVisible() &&
-              col.id !== 'select' &&
-              col.id !== 'actions'
-          )
-        
-        const hasHiddenDetails = hiddenColumns.length > 0;
-
         return (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 p-0"
-            onClick={() => row.toggleExpanded()}
-            disabled={!hasHiddenDetails}
-          >
-            {hasHiddenDetails ? (
-              row.getIsExpanded() ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 p-0"
+              >
                 <ChevronDown className="h-4 w-4" />
-              )
-            ) : (
-                <div className="h-4 w-4" /> 
-            )}
-            <span className="sr-only">Toggle expand</span>
-          </Button>
+                <span className="sr-only">View full details</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Row Details</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-1 gap-4 py-4 max-h-[70vh] overflow-y-auto">
+                {table
+                  .getAllColumns()
+                  .filter(
+                    (col) =>
+                      col.id !== 'select' &&
+                      col.id !== 'actions'
+                  )
+                  .map((col) => {
+                    const cell = row.getAllCells().find(c => c.column.id === col.id)
+                    const meta = table.options.meta as any
+                    const fieldMetadata = meta?.fieldMetadata
+                    const fieldInfo = fieldMetadata?.[col.id]
+                    const value = cell ? cell.getValue() : row.getValue(col.id)
+
+                    return (
+                      <div key={col.id} className="flex flex-col space-y-1.5 border-b border-border/40 pb-3 last:border-0 last:pb-0">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {typeof col.columnDef.header === 'string'
+                            ? col.columnDef.header
+                            : col.id}
+                        </span>
+                        <div className="text-sm">
+                          {fieldInfo ? (
+                            <div className="rounded-md border border-border/40 bg-muted/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                              <DataTableInput
+                                value={value}
+                                onChange={(newValue) => {
+                                  const updateData = meta?.updateData
+                                  updateData?.(row.index, col.id, newValue)
+                                }}
+                                type={fieldInfo.type}
+                                options={fieldInfo.options}
+                                className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
+                              />
+                            </div>
+                          ) : cell ? (
+                            <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </div>
+                          ) : (
+                            <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
+                              {String(value)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </DialogContent>
+          </Dialog>
         )
       },
     } as ColumnDef<TData, TValue>,
@@ -197,17 +231,15 @@ export function DataTable<TData, TValue>({
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
-    getExpandedRowModel: getExpandedRowModel(),
-    onExpandedChange: setExpanded,
     onColumnVisibilityChange: setColumnVisibility,
     state: {
       sorting,
       rowSelection,
-      expanded,
       columnVisibility,
     },
     meta: {
       updateData: onCellUpdate,
+      fieldMetadata: fieldMetadata,
     },
   })
 
@@ -270,88 +302,34 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <>
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && 'selected'}
-                    className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      if (cell.column.id === 'actions') {
-                         return (
-                           <TableCell key={cell.id} className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 max-w-[34px]">
-                              <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext()
-                                )}
-                              </div>
-                           </TableCell>
-                         )
-                      }
-                      return (
-                        <DataTableCell
-                          key={cell.id}
-                          cell={cell}
-                          row={row}
-                          fieldMetadata={fieldMetadata}
-                        />
-                      )
-                    })}
-                  </TableRow>
-                  {row.getIsExpanded() && (
-                    <TableRow className="bg-muted/30">
-                      <TableCell
-                        colSpan={row.getVisibleCells().length}
-                        className="p-4"
-                      >
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {table
-                            .getAllColumns()
-                            .filter(
-                              (col) =>
-                                !col.getIsVisible() &&
-                                col.id !== 'select' &&
-                                col.id !== 'actions'
-                            )
-                            .map((col) => {
-                                // We need to get the cell value for this row and column
-                                // Since it's not a visible cell, we can't use row.getVisibleCells()
-                                // We construct a fake cell context or use the column's accessor
-                                const cellValue = row.getValue(col.id)
-                                
-                                return (
-                                  <div key={col.id} className="flex flex-col space-y-1">
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                      {typeof col.columnDef.header === 'string'
-                                        ? col.columnDef.header
-                                        : col.id}
-                                    </span>
-                                    <div className="text-sm">
-                                      {/* This is a simplification. Ideally reuse DataTableCell logic or flexRender if possible 
-                                          but DataTableCell expects a Cell object. 
-                                          We can try to find the cell from row.getAllCells().
-                                      */}
-                                      {(() => {
-                                          const cell = row.getAllCells().find(c => c.column.id === col.id)
-                                          if (cell) {
-                                              return (
-                                                  <div className="border border-border/40 rounded-md px-3 py-2 bg-background/50">
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                  </div>
-                                              )
-                                          }
-                                          return String(cellValue)
-                                      })()}
-                                    </div>
-                                  </div>
-                                )
-                            })}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    if (cell.column.id === 'actions') {
+                       return (
+                         <TableCell key={cell.id} className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 max-w-[34px]">
+                            <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </div>
+                         </TableCell>
+                       )
+                    }
+                    return (
+                      <DataTableCell
+                        key={cell.id}
+                        cell={cell}
+                        row={row}
+                        fieldMetadata={fieldMetadata}
+                      />
+                    )
+                  })}
+                </TableRow>
               ))
             ) : (
               <TableRow>

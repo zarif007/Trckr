@@ -1,9 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrackerDisplayProps } from './types'
+import { 
+  TrackerDisplayProps, 
+  TrackerTab, 
+  TrackerSection as ITrackerSection, 
+  TrackerGrid, 
+  TrackerShadowGrid, 
+  TrackerField 
+} from './types'
 import { TrackerSection } from './tracker-section'
 
 export function TrackerDisplayInline({
@@ -71,51 +78,18 @@ export function TrackerDisplayInline({
           </TabsList>
         )}
 
-        {tabs.map((tab) => {
-          const tabSections = sections
-            .filter((section) => section.tabId === tab.fieldName)
-            .map((section) => ({
-              ...section,
-              grids: grids
-                .filter((grid) => grid.sectionId === section.fieldName)
-                .map((grid) => ({
-                  ...grid,
-                  fields: fields.filter(
-                    (field) => field.gridId === grid.fieldName
-                  ),
-                })),
-              shadowGrids: (shadowGrids || [])
-                .filter((sg) => sg.sectionId === section.fieldName)
-                .map((sg) => ({
-                  ...sg,
-                  fields: fields.filter(
-                    (field) => field.gridId === sg.gridId
-                  ),
-                })),
-            }))
-
-          return (
-            <TabsContent
-              key={tab.fieldName}
-              value={tab.fieldName}
-              className="space-y-6 mt-6"
-            >
-              {tabSections.map((section, index) => (
-                <div 
-                  key={section.fieldName}
-                  className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <TrackerSection
-                    section={section}
-                    examples={localExamples}
-                    onUpdate={handleUpdate}
-                  />
-                </div>
-              ))}
-            </TabsContent>
-          )
-        })}
+        {tabs.map((tab) => (
+          <TrackerTabContent
+            key={tab.fieldName}
+            tab={tab}
+            sections={sections}
+            grids={grids}
+            shadowGrids={shadowGrids}
+            fields={fields}
+            localExamples={localExamples}
+            handleUpdate={handleUpdate}
+          />
+        ))}
       </Tabs>
 
       {views.length > 0 && (
@@ -138,5 +112,69 @@ export function TrackerDisplayInline({
         </div>
       )}
     </div>
+  )
+}
+
+function TrackerTabContent({ 
+  tab, 
+  sections, 
+  grids, 
+  shadowGrids, 
+  fields, 
+  localExamples, 
+  handleUpdate 
+}: { 
+  tab: TrackerTab;
+  sections: ITrackerSection[];
+  grids: TrackerGrid[];
+  shadowGrids?: TrackerShadowGrid[];
+  fields: TrackerField[];
+  localExamples: any[];
+  handleUpdate: (rowIndex: number, columnId: string, value: any) => void;
+}) {
+  const tabSections = useMemo(() => {
+    return sections
+      .filter((section) => section.tabId === tab.fieldName)
+      .map((section) => ({
+        ...section,
+        grids: grids
+          .filter((grid) => grid.sectionId === section.fieldName)
+          .map((grid) => ({
+            ...grid,
+            fields: fields.filter(
+              (field) => field.gridId === grid.fieldName
+            ),
+          })),
+        shadowGrids: (shadowGrids || [])
+          .filter((sg) => sg.sectionId === section.fieldName)
+          .map((sg) => ({
+            ...sg,
+            fields: fields.filter(
+              (field) => field.gridId === sg.gridId
+            ),
+          })),
+      }))
+  }, [tab.fieldName, sections, grids, shadowGrids, fields])
+
+  return (
+    <TabsContent
+      key={tab.fieldName}
+      value={tab.fieldName}
+      className="space-y-6 mt-6"
+    >
+      {tabSections.map((section: any, index: number) => (
+        <div 
+          key={section.fieldName}
+          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+          style={{ animationDelay: `${index * 100}ms` }}
+        >
+          <TrackerSection
+            section={section}
+            examples={localExamples}
+            onUpdate={handleUpdate}
+          />
+        </div>
+      ))}
+    </TabsContent>
   )
 }
