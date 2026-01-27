@@ -26,11 +26,24 @@ export interface TrackerGrid {
 }
 
 export interface TrackerField {
-  name: string
-  fieldName: string
-  type: TrackerFieldType
+  id: string
+  key: string
+  dataType: TrackerFieldType
   gridId: string
-  options?: string[]
+  ui: {
+    label: string
+    placeholder?: string
+    order?: number
+  }
+  config?: {
+    defaultValue?: any
+    required?: boolean
+    min?: number
+    max?: number
+    minLength?: number
+    maxLength?: number
+    options?: { id: string; label: string }[]
+  }
 }
 
 export interface TrackerShadowGrid {

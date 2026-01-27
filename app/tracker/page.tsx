@@ -66,6 +66,7 @@ export default function TrackerPage() {
           managerData: object.manager,
           builderThinking: object.builderThinking,
         }
+        console.log(object.tracker)
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
         if (object.tracker) {
@@ -229,7 +230,7 @@ export default function TrackerPage() {
   const isChatEmpty = messages.length === 0 && !isLoading
 
   return (
-    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col">      
+    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col pt-0 md:pt-12">      
       {/* Content */}
       <div className="flex-1 overflow-y-auto pb-32 z-10">
         <div className="relative max-w-4xl mx-auto px-2 md:px-6 py-0">

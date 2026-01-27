@@ -45,9 +45,15 @@ export const trackerSchema = z.object({
   fields: z
     .array(
       z.object({
-        name: z.string().describe('Field display name'),
-        fieldName: fieldName(),
-        type: z
+        id: z
+          .string()
+          .regex(/^[a-z0-9_]+$/, { message: 'Must be snake_case' })
+          .describe('Immutable, DB-safe identifier (snake_case)'),
+        key: z
+          .string()
+          .regex(/^[a-z][A-Za-z0-9]*$/, { message: 'Must be camelCase' })
+          .describe('API identifier (camelCase) for code usage'),
+        dataType: z
           .enum([
             'string',
             'number',
@@ -57,14 +63,34 @@ export const trackerSchema = z.object({
             'boolean',
             'text',
           ])
-          .describe('Field data type'),
+          .describe('Semantic data type of the field'),
         gridId: z
           .string()
           .describe('fieldName of the grid this field belongs to'),
-        options: z
-          .array(z.string())
-          .optional()
-          .describe('Options when type is "options" or "multiselect"'),
+        ui: z.object({
+          label: z.string().describe('Human-readable label for the field'),
+          placeholder: z.string().optional().describe('Placeholder text for inputs'),
+          order: z.number().optional().describe('Sort order for display'),
+        }),
+        config: z
+          .object({
+            defaultValue: z.any().optional(),
+            required: z.boolean().optional(),
+            min: z.number().optional(),
+            max: z.number().optional(),
+            minLength: z.number().optional(),
+            maxLength: z.number().optional(),
+            options: z
+              .array(
+                z.object({
+                  id: z.string(),
+                  label: z.string(),
+                })
+              )
+              .optional()
+              .describe('Options for select/multiselect fields'),
+          })
+          .optional(),
       })
     )
     .describe('Array of independent field objects linked to grids via gridId'),

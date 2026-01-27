@@ -5,10 +5,15 @@ import { TrackerFieldType } from './types'
 interface TrackerCellProps {
   value: any
   type: TrackerFieldType
+  options?: { id: string; label: string }[]
 }
 
-export function TrackerCell({ value, type }: TrackerCellProps) {
+export function TrackerCell({ value, type, options }: TrackerCellProps) {
   if (value === null || value === undefined) return <span>-</span>
+
+  const getLabel = (val: string) => {
+    return options?.find((o) => o.id === val)?.label || val
+  }
 
   switch (type) {
     case 'boolean':
@@ -18,12 +23,16 @@ export function TrackerCell({ value, type }: TrackerCellProps) {
         </div>
       )
     case 'options':
-      return <Badge variant="secondary">{value}</Badge>
+      return <Badge variant="secondary">{getLabel(value)}</Badge>
     case 'multiselect':
       return (
         <div className="flex flex-wrap gap-1">
           {Array.isArray(value) && value.length > 0 ? (
-            <span className="text-sm">{value.join(' ')}</span>
+            value.map((val: string) => (
+               <Badge key={val} variant="outline" className="text-xs">
+                 {getLabel(val)}
+               </Badge>
+            ))
           ) : (
             <span>-</span>
           )}

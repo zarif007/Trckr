@@ -54,18 +54,24 @@ You must follow these rules strictly:
   - sectionId: the fieldName of the section where this shadow grid should appear
 - Use shadow grids when the user benefit from seeing the SAME data in multiple formats (e.g., Tasks as a list AND a Kanban board).
 
-5. Fields
-- Each field must have:
-  - name: clear, user-facing display name (e.g. "Color", "Task Name")
-  - fieldName: camelCase identifier for code usage (e.g. "color", "taskName") - MUST be unique
-  - type: one of "string", "number", "date", "options", "multiselect", "boolean", "text"
-  - gridId: the fieldName of the grid this field belongs to (must match a grid's fieldName)
-  - options: only when type is "options" or "multiselect"; list of possible choices
+6. Fields
+- Each field object must include:
+  - id: immutable, DB-safe identifier (snake_case)
+  - key: API identifier for code usage (camelCase)
+  - dataType: one of "string", "number", "date", "options", "multiselect", "boolean", "text"
+  - gridId: the fieldName of the grid this field belongs to
+  - ui: object containing visual settings
+    - label: human-readable label
+    - placeholder: (optional)
+    - order: (optional) number
+  - config: (optional) object containing validation and behavior
+    - required: (optional) boolean
+    - options: (optional) array of { id, label } objects (for options/multiselect)
+    - defaultValue: (optional)
 - Fields are independent objects, linked to grids via gridId
-- Every field belongs to exactly one grid (do NOT duplicate fields across grids)
-- Use "options" for single-choice selection from predefined choices
-- Use "multiselect" for multi-choice selection from predefined choices (e.g., tags, categories, skills)
-- Do NOT include IDs, internal fields, or system metadata
+- Use "options" data type for single-choice selection from predefined choices
+- Use "multiselect" data type for multi-choice selection
+- Do NOT include internal fields or system metadata that isn't part of the schema
 
 6. Views
 - Views describe how the user might want to see their data

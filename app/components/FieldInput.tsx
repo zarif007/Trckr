@@ -20,18 +20,10 @@ import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
-
-type FieldType = 'string' | 'number' | 'date' | 'options' | 'multiselect' | 'boolean' | 'text'
-
-interface FieldMetadata {
-  name: string
-  fieldName: string
-  type: FieldType
-  options?: string[]
-}
+import { TrackerField } from './tracker-display/types'
 
 interface FieldInputProps {
-  field: FieldMetadata
+  field: TrackerField
   value: any
   onChange: (value: any) => void
   className?: string
@@ -51,26 +43,32 @@ export function FieldInput({
   const inlineInputClass =
     'border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2'
 
-  switch (field.type) {
+  switch (field.dataType) {
     case 'string':
       return (
         <Input
-          placeholder={isInline ? '' : field.name}
+          placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={isInline ? inlineInputClass : normalInputClass}
           autoFocus={autoFocus}
+          required={field.config?.required}
+          minLength={field.config?.minLength}
+          maxLength={field.config?.maxLength}
         />
       )
     case 'number':
       return (
         <Input
           type="number"
-          placeholder={isInline ? '' : field.name}
+          placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={isInline ? inlineInputClass : normalInputClass}
           autoFocus={autoFocus}
+          required={field.config?.required}
+          min={field.config?.min}
+          max={field.config?.max}
         />
       )
     case 'date':
@@ -100,7 +98,7 @@ export function FieldInput({
                 autoFocus={autoFocus}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {value ? format(new Date(value), 'PPP') : field.name}
+                {value ? format(new Date(value), 'PPP') : field.ui.label}
               </Button>
             )}
           </PopoverTrigger>
@@ -124,7 +122,7 @@ export function FieldInput({
     case 'text':
       return (
         <Textarea
-          placeholder={isInline ? '' : field.name}
+          placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={
@@ -134,6 +132,9 @@ export function FieldInput({
           }
           rows={isInline ? 1 : 3}
           autoFocus={autoFocus}
+          required={field.config?.required}
+          minLength={field.config?.minLength}
+          maxLength={field.config?.maxLength}
         />
       )
     case 'boolean':
@@ -148,12 +149,13 @@ export function FieldInput({
           <Checkbox
             checked={value || false}
             onCheckedChange={onChange}
-            id={field.fieldName}
+            id={field.id}
             autoFocus={autoFocus}
+            required={field.config?.required}
           />
           {!isInline && (
-            <label htmlFor={field.fieldName} className="text-sm font-medium">
-              {field.name}
+            <label htmlFor={field.id} className="text-sm font-medium">
+              {field.ui.label}
             </label>
           )}
         </div>
@@ -172,12 +174,12 @@ export function FieldInput({
             }
             autoFocus={autoFocus}
           >
-            <SelectValue placeholder={isInline ? '' : field.name} />
+            <SelectValue placeholder={isInline ? '' : field.ui.placeholder || field.ui.label} />
           </SelectTrigger>
           <SelectContent>
-            {field.options?.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
+            {field.config?.options?.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -186,10 +188,10 @@ export function FieldInput({
     case 'multiselect':
       return (
         <MultiSelect
-          options={field.options ?? []}
+          options={field.config?.options?.map(o => o.label) ?? []}
           value={Array.isArray(value) ? value : []}
           onChange={onChange}
-          placeholder={isInline ? '' : field.name}
+          placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
           className={isInline ? '' : normalInputClass}
           isInline={isInline}
           autoFocus={autoFocus}

@@ -32,17 +32,17 @@ export function TrackerDivGrid({
     <div className="w-full max-w-4xl">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
         {grid.fields.map((field) => {
-          const value = dataToDisplay[field.fieldName]
+          const value = dataToDisplay[field.key]
 
           const renderField = () => {
-            switch (field.type) {
+            switch (field.dataType) {
               case 'text':
                 return (
                   <Textarea
                     className="min-h-[100px] text-sm leading-7 text-foreground/90 bg-secondary/20 border-border/50 focus-visible:ring-1"
                     defaultValue={value || ''}
                     onBlur={(e) =>
-                      onUpdate?.(0, field.fieldName, e.target.value)
+                      onUpdate?.(0, field.key, e.target.value)
                     }
                   />
                 )
@@ -52,7 +52,7 @@ export function TrackerDivGrid({
                     <Checkbox
                       checked={value || false}
                       onCheckedChange={(checked) =>
-                        onUpdate?.(0, field.fieldName, checked)
+                        onUpdate?.(0, field.key, checked)
                       }
                     />
                   </div>
@@ -61,15 +61,15 @@ export function TrackerDivGrid({
                 return (
                   <Select
                     value={value || ''}
-                    onValueChange={(val) => onUpdate?.(0, field.fieldName, val)}
+                    onValueChange={(val) => onUpdate?.(0, field.key, val)}
                   >
                     <SelectTrigger className="w-full bg-secondary/10 border-border/50">
-                      <SelectValue placeholder={`Select ${field.name}`} />
+                      <SelectValue placeholder={`Select ${field.ui.label}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {field.options?.map((option) => (
-                        <SelectItem key={option} value={option}>
-                          {option}
+                      {field.config?.options?.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -78,10 +78,10 @@ export function TrackerDivGrid({
               case 'multiselect':
                 return (
                   <MultiSelect
-                    options={field.options || []}
+                    options={field.config?.options?.map(o => o.label) || []}
                     value={Array.isArray(value) ? value : []}
-                    onChange={(val) => onUpdate?.(0, field.fieldName, val)}
-                    placeholder={`Select ${field.name}`}
+                    onChange={(val) => onUpdate?.(0, field.key, val)}
+                    placeholder={`Select ${field.ui.label}`}
                     className="w-full bg-secondary/10 border-border/50"
                   />
                 )
@@ -96,7 +96,7 @@ export function TrackerDivGrid({
                         : undefined
                     }
                     onBlur={(e) =>
-                      onUpdate?.(0, field.fieldName, e.target.value)
+                      onUpdate?.(0, field.key, e.target.value)
                     }
                   />
                 )
@@ -107,7 +107,7 @@ export function TrackerDivGrid({
                     className="bg-secondary/10 border-border/50"
                     defaultValue={value}
                     onBlur={(e) =>
-                      onUpdate?.(0, field.fieldName, Number(e.target.value))
+                      onUpdate?.(0, field.key, Number(e.target.value))
                     }
                   />
                 )
@@ -117,7 +117,7 @@ export function TrackerDivGrid({
                     className="bg-secondary/10 border-border/50"
                     defaultValue={value || ''}
                     onBlur={(e) =>
-                      onUpdate?.(0, field.fieldName, e.target.value)
+                      onUpdate?.(0, field.key, e.target.value)
                     }
                   />
                 )
@@ -126,13 +126,13 @@ export function TrackerDivGrid({
 
           return (
             <div
-              key={field.fieldName}
+              key={field.key}
               className={`space-y-2 ${
-                field.type === 'text' ? 'col-span-1 md:col-span-2' : 'col-span-1'
+                field.dataType === 'text' ? 'col-span-1 md:col-span-2' : 'col-span-1'
               }`}
             >
               <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                {field.name}
+                {field.ui.label}
               </label>
               {renderField()}
             </div>

@@ -58,12 +58,12 @@ function KanbanCard({ card, cardFields, isOverlay = false }: { card: any; cardFi
       className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''}`}
     >
       {cardFields.map((field) => (
-        <div key={field.fieldName} className="mb-2 last:mb-0">
+        <div key={field.id} className="mb-2 last:mb-0">
           <p className="text-xs text-muted-foreground font-medium">
-            {field.name}
+            {field.ui.label}
           </p>
           <div className="text-sm text-foreground">
-            <TrackerCell value={card[field.fieldName]} type={field.type} />
+            <TrackerCell value={card[field.key]} type={field.dataType} options={field.config?.options} />
           </div>
         </div>
       ))}
@@ -104,7 +104,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
 
   if (examples.length === 0) return null
 
-  const optionsField = grid.fields.find((f) => f.type === 'options')
+  const optionsField = grid.fields.find((f) => f.dataType === 'options')
 
   if (!optionsField) {
     return (
@@ -114,9 +114,9 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     )
   }
 
-  const groups = optionsField.options || []
+  const groups = optionsField.config?.options || []
   const cardFields = grid.fields.filter(
-    (f) => f.fieldName !== optionsField.fieldName
+    (f) => f.key !== optionsField.key
   )
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -137,16 +137,16 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     const cardIdx = parseInt(cardIdxStr)
     const currentCard = examples[cardIdx]
 
-    // overId can be a group name (if dropping into an empty column) or another card's ID
-    let nextGroup = overId
+    // overId can be a group ID (if dropping into an empty column) or another card's ID
+    let nextGroupId = overId
     if (overId.includes('-')) {
       const parts = overId.split('-')
-      // If it's a card ID, the group name is the last part
-      nextGroup = parts[parts.length - 1]
+      // If it's a card ID, the group ID is the last part
+      nextGroupId = parts[parts.length - 1]
     }
 
-    if (currentCard[optionsField.fieldName] !== nextGroup && onUpdate) {
-      onUpdate(cardIdx, optionsField.fieldName, nextGroup)
+    if (currentCard[optionsField.key] !== nextGroupId && onUpdate) {
+      onUpdate(cardIdx, optionsField.key, nextGroupId)
     }
   }
 
@@ -163,13 +163,13 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
         {groups.map((group) => {
           const cardsInGroup = examples
             .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, any> & { _originalIdx: number }))
-            .filter((ex) => ex[optionsField.fieldName] === group)
+            .filter((ex) => ex[optionsField.key] === group.id)
 
           return (
-            <div key={group} className="shrink-0 w-80">
+            <div key={group.id} className="shrink-0 w-80">
               <div className="bg-muted/70 rounded-md p-4 mb-4">
                 <h3 className="font-semibold text-foreground flex items-center justify-between">
-                  {group}
+                  {group.label}
                   <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
                     {cardsInGroup.length}
                   </span>
@@ -177,18 +177,18 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
               </div>
               
               <SortableContext
-                id={group}
-                items={cardsInGroup.map(c => `${c._originalIdx}-${group}`)}
+                id={group.id}
+                items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-3 min-h-[100px]">
                   {cardsInGroup.length === 0 ? (
-                     <DroppableEmptyColumn id={group} />
+                     <DroppableEmptyColumn id={group.id} />
                   ) : (
                     cardsInGroup.map((card) => (
                       <SortableCard
-                        key={`${card._originalIdx}-${group}`}
-                        id={`${card._originalIdx}-${group}`}
+                        key={`${card._originalIdx}-${group.id}`}
+                        id={`${card._originalIdx}-${group.id}`}
                         card={card}
                         cardFields={cardFields}
                       />

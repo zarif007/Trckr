@@ -20,22 +20,22 @@ export function TrackerTableGrid({
 
   const fieldMetadata: Record<string, any> = {}
   grid.fields.forEach((field) => {
-    fieldMetadata[field.fieldName] = {
-      name: field.name,
-      type: field.type,
-      options: field.options,
+    fieldMetadata[field.key] = {
+      label: field.ui.label,
+      type: field.dataType,
+      options: field.config?.options,
     }
   })
 
   const columns = useMemo<ColumnDef<Record<string, any>>[]>(
     () =>
       grid.fields.map((field) => ({
-        id: field.fieldName,
-        accessorKey: field.fieldName,
-        header: field.name,
+        id: field.key,
+        accessorKey: field.key,
+        header: field.ui.label,
         cell: ({ row }) => {
-          const value = row.getValue(field.fieldName)
-          return <TrackerCell value={value} type={field.type} />
+          const value = row.getValue(field.key)
+          return <TrackerCell value={value} type={field.dataType} options={field.config?.options} />
         },
       })),
     [grid.fields]

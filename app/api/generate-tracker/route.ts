@@ -48,7 +48,14 @@ export async function POST(request: Request) {
               sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
               grids: grids.map((g: any) => ({ name: g.name, id: g.fieldName, type: g.type, section: g.sectionId })),
               shadowGrids: shadowGrids.map((sg: any) => ({ name: sg.name, id: sg.fieldName, type: sg.type, shadows: sg.gridId })),
-              fields: fields.map((f: any) => ({ name: f.name, id: f.fieldName, type: f.type, grid: f.gridId, options: f.options }))
+              fields: fields.map((f: any) => ({ 
+                id: f.id, 
+                key: f.key, 
+                dataType: f.dataType, 
+                grid: f.gridId, 
+                label: f.ui?.label,
+                options: f.config?.options 
+              }))
             }
 
             assistantMsgParts.push(`Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`)
