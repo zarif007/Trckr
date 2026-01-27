@@ -58,7 +58,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-md bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-md h-2 w-2 bg-emerald-500"></span>
           </span>
-          The Future of Data Tracking
+          AI-native tracking
         </motion.div>
 
         <motion.h1 
@@ -73,9 +73,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
           </span> <br />
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-6 mt-10">
             {[
-              { text: "Describe", gradient: "from-foreground via-foreground to-foreground/70" },
-              { text: "generate", gradient: "from-foreground via-foreground/90 to-foreground/60" },
-              { text: "log", gradient: "from-foreground via-foreground/80 to-foreground/50" }
+              { text: "From a Single Prompt", gradient: "from-foreground via-foreground to-foreground/70" },
             ].map((word, i) => (
               <motion.span
                 key={word.text}
@@ -83,17 +81,9 @@ export default function Hero({ y1, y2 }: HeroProps) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 + i * 0.2, ease: "easeOut" }}
                 whileHover={{ scale: 1.05, filter: "brightness(1.2)" }}
-                className={`text-[2rem] md:text-[3.8rem] lg:text-[4.8rem] text-transparent bg-clip-text bg-gradient-to-r ${word.gradient} font-medium tracking-tight cursor-default flex items-center gap-4`}
+                className={`text-[1rem] md:text-[2rem] lg:text-[3rem] text-transparent bg-clip-text bg-gradient-to-r ${word.gradient} font-semibold tracking-tight cursor-default flex items-center gap-4`}
               >
                 {word.text}
-                {i < 2 && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.8 + i * 0.2 }}
-                    className="w-2 h-2 rounded-full bg-foreground/20 hidden md:block"
-                  />
-                )}
               </motion.span>
             ))}
           </div>
