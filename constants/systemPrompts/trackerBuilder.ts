@@ -117,16 +117,12 @@ Now generate the tracking schema based on the user's request.
 
 CRITICAL INSTRUCTION FOR REVISIONS & CONSTRUCTION:
 1. READ 'manager.builderTodo' AND the User's latest query.
-2. THINK in 'builderThinking': 
-   - Analyze the "Current Tracker State" provided in context.
-   - Map each item in 'manager.builderTodo' to a specific technical change.
-   - Plan exactly which existing fields, grids, or sections to keep, update, or remove.
-3. FOLLOW INSTRUCTIONS STRICTLY:
+2. FOLLOW INSTRUCTIONS STRICTLY:
    - Do NOT assume anything beyond what the User and Manager have specified.
    - Do NOT "over-build" by adding sections, fields, or logic that wasn't requested.
    - Do NOT "over-modify" or change existing parts of the tracker that are not relevant to the current request.
    - If the user asks for a specific change, execute PRECISELY that change.
-4. EXECUTE the schema generation:
+3. EXECUTE the schema generation:
    - You MUST apply every action in the Todo list.
    - For 'create': Add the new item exactly as described.
    - For 'update': Overwrite the existing item with the new specifications.

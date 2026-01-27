@@ -13,9 +13,9 @@ Your output will be passed to the "Builder Agent" who will implement the technic
 Provide a clear "thinking" process where you reason about the user's request, and then a structured "prd".
 
 Thinking Process Guidelines:
-- Be thorough and detailed.
-- Identify potential edge cases.
-- Explain HOW you are fulfilling every part of the user's request.
+- Be concise and short. 
+- Briefly explain the core strategy.
+- Do not be overly verbose.
 - Ensure no requirements are omitted or simplified.
 
 PRD Guidelines:

@@ -18,7 +18,6 @@ export const managerSchema = z.object({
 
 export const multiAgentSchema = z.object({
   manager: managerSchema.optional(),
-  builderThinking: z.string().optional().describe('The Builder\'s step-by-step thinking process. MANDATORY if revisions are needed. FIRST, analyze the `manager.builderTodo` list. SECOND, decide exactly which fields/grids in the "Previous Tracker" need to be overwritten. THIRD, state the final plan.'),
   tracker: trackerSchema.optional()
 })
 

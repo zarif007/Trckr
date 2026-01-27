@@ -74,10 +74,6 @@ export async function POST(request: Request) {
             assistantMsgParts.push(`Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`)
           }
 
-          if (msg.builderThinking) {
-            assistantMsgParts.push(`Builder Thinking: ${msg.builderThinking}`)
-          }
-
           if (msg.content) {
             assistantMsgParts.push(msg.content)
           }

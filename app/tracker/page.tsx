@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare, ChevronDown, ChevronUp } from 'lucide-react'
 import { motion, AnimatePresence, useSpring } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { TrackerDisplay } from '@/app/components/tracker-display'
 import {
   TrackerDisplayProps,
@@ -27,7 +26,6 @@ interface Message {
   content?: string
   trackerData?: TrackerResponse
   managerData?: MultiAgentSchema['manager']
-  builderThinking?: string
   errorMessage?: string
   isThinkingOpen?: boolean
 }
@@ -64,7 +62,6 @@ export default function TrackerPage() {
           role: 'assistant',
           trackerData: object.tracker as TrackerResponse,
           managerData: object.manager,
-          builderThinking: object.builderThinking,
         }
         console.log(object.tracker)
         setMessages((prev) => [...prev, assistantMessage])
@@ -423,8 +420,7 @@ export default function TrackerPage() {
                           <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                           <p className="text-sm">
                             {!object?.manager ? 'Consulting Product Manager...' : 
-                             !object?.builderThinking ? 'Manager defining requirements...' : 
-                             !object?.tracker ? 'Builder architecting structure...' : 
+                             !object?.tracker ? 'Architecting structure...' : 
                              'Constructing your tracker...'}
                           </p>
                         </div>
@@ -491,21 +487,7 @@ export default function TrackerPage() {
                           </motion.div>
                         )}
 
-                        {object?.builderThinking && (
-                          <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="p-5 rounded-md bg-primary/5 border border-primary/20 backdrop-blur-md space-y-3"
-                          >
-                            <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em]">
-                              <Zap className="w-3 h-3" />
-                              Builder Strategy
-                            </div>
-                            <p className="text-sm text-foreground/80 font-medium leading-relaxed italic">
-                              {object.builderThinking}
-                            </p>
-                          </motion.div>
-                        )}
+
                       </div>
                     </div>
                     {isLoading && object?.tracker && renderStreamingPreview()}
