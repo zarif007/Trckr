@@ -142,7 +142,7 @@ function TrackerTabContent({
           .map((grid) => ({
             ...grid,
             fields: fields.filter(
-              (field) => field.gridId === grid.fieldName
+              (field) => field.gridId === grid.id
             ),
           })),
         shadowGrids: (shadowGrids || [])

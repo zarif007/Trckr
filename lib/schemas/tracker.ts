@@ -31,14 +31,35 @@ export const trackerSchema = z.object({
   grids: z
     .array(
       z.object({
+        id: z
+          .string()
+          .regex(/^[a-z0-9_]+$/, { message: 'Must be snake_case' })
+          .describe('Immutable, DB-safe identifier (snake_case)'),
+        key: z
+          .string()
+          .regex(/^[a-z][A-Za-z0-9]*$/, { message: 'Must be camelCase' })
+          .describe('API identifier (camelCase) for code usage'),
         name: z.string().describe('Grid display name'),
-        fieldName: fieldName(),
         type: z
           .enum(['table', 'kanban', 'div'])
           .describe('Layout type for this grid'),
         sectionId: z
           .string()
           .describe('fieldName of the section this grid belongs to'),
+        config: z.union([
+          z.object({
+            layout: z.enum(['vertical', 'horizontal']).optional(),
+          }).describe('Configuration for div grids'),
+          z.object({
+            sortable: z.boolean().optional(),
+            pagination: z.boolean().optional(),
+            rowSelection: z.boolean().optional(),
+          }).describe('Configuration for table grids'),
+          z.object({
+            groupBy: z.string().describe('Field ID to group by (REQUIRED for Kanban)'),
+            orderBy: z.string().optional().describe('Field ID to order by'),
+          }).describe('Configuration for kanban grids'),
+        ]).optional(),
       })
     )
     .describe('Array of independent grid objects linked to sections via sectionId'),
@@ -66,7 +87,7 @@ export const trackerSchema = z.object({
           .describe('Semantic data type of the field'),
         gridId: z
           .string()
-          .describe('fieldName of the grid this field belongs to'),
+          .describe('id (snake_case) of the grid this field belongs to'),
         ui: z.object({
           label: z.string().describe('Human-readable label for the field'),
           placeholder: z.string().optional().describe('Placeholder text for inputs'),
@@ -97,14 +118,21 @@ export const trackerSchema = z.object({
   shadowGrids: z
     .array(
       z.object({
+        id: z
+          .string()
+          .regex(/^[a-z0-9_]+$/, { message: 'Must be snake_case' })
+          .describe('Immutable, DB-safe identifier (snake_case)'),
+        key: z
+          .string()
+          .regex(/^[a-z][A-Za-z0-9]*$/, { message: 'Must be camelCase' })
+          .describe('API identifier (camelCase)'),
         name: z.string().describe('Shadow grid display name'),
-        fieldName: fieldName(),
         type: z
           .enum(['table', 'kanban'])
           .describe('Layout type for this shadow grid'),
         gridId: z
           .string()
-          .describe('fieldName of the actual grid this shadow grid tracks'),
+          .describe('id (snake_case) of the actual grid this shadow grid tracks'),
         sectionId: z
           .string()
           .describe('fieldName of the section this shadow grid belongs to'),

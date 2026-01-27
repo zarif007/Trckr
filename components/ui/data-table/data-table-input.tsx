@@ -25,7 +25,7 @@ interface DataTableInputProps {
   value: any
   onChange: (value: any) => void
   type: FieldType
-  options?: string[]
+  options?: (string | { id: string; label: string })[]
   className?: string
   autoFocus?: boolean
 }
@@ -126,11 +126,15 @@ export function DataTableInput({
             </div>
           </SelectTrigger>
           <SelectContent>
-            {options?.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
+            {options?.map((option) => {
+              const optValue = typeof option === 'string' ? option : option.id
+              const optLabel = typeof option === 'string' ? option : option.label
+              return (
+                <SelectItem key={optValue} value={optValue}>
+                  {optLabel}
+                </SelectItem>
+              )
+            })}
           </SelectContent>
         </Select>
       )

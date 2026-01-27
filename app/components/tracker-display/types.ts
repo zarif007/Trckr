@@ -18,11 +18,32 @@ export interface TrackerSection {
   tabId: string
 }
 
+export type GridType = 'div' | 'table' | 'kanban'
+
+export type DivGridConfig = {
+  layout?: 'vertical' | 'horizontal'
+}
+
+export type TableGridConfig = {
+  sortable?: boolean
+  pagination?: boolean
+  rowSelection?: boolean
+}
+
+export type KanbanGridConfig = {
+  groupBy: string
+  orderBy?: string
+}
+
+export type GridConfig = DivGridConfig | TableGridConfig | KanbanGridConfig
+
 export interface TrackerGrid {
+  id: string
+  key: string
   name: string
-  fieldName: string
-  type: 'table' | 'kanban' | 'div'
+  type: GridType
   sectionId: string
+  config?: GridConfig
 }
 
 export interface TrackerField {
@@ -47,8 +68,9 @@ export interface TrackerField {
 }
 
 export interface TrackerShadowGrid {
+  id: string
+  key: string
   name: string
-  fieldName: string
   type: 'table' | 'kanban'
   gridId: string
   sectionId: string

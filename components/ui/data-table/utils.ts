@@ -14,7 +14,7 @@ export interface FieldMetadata {
   [key: string]: {
     name: string
     type: FieldType
-    options?: string[]
+    options?: (string | { id: string; label: string })[]
   }
 }
 

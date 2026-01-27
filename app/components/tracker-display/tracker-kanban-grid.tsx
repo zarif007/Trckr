@@ -104,12 +104,16 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
 
   if (examples.length === 0) return null
 
-  const optionsField = grid.fields.find((f) => f.dataType === 'options')
+  let optionsField = grid.fields.find((f) => f.id === (grid.config as any)?.groupBy)
+  
+  if (!optionsField) {
+    optionsField = grid.fields.find((f) => f.dataType === 'options')
+  }
 
   if (!optionsField) {
     return (
       <div className="text-muted-foreground text-sm">
-        Kanban view requires an options field to group by
+        Kanban view requires a grouping field (check grid config or ensure an options field exists)
       </div>
     )
   }

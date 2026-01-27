@@ -53,6 +53,7 @@ export function TrackerTableGrid({
         data={examples}
         fieldMetadata={fieldMetadata}
         onCellUpdate={onUpdate}
+        config={grid.config}
       />
     </div>
   )

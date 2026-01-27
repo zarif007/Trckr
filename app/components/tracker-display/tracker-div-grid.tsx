@@ -28,9 +28,11 @@ export function TrackerDivGrid({
 
   if (!dataToDisplay) return null
 
+  const isVertical = (grid.config as any)?.layout === 'vertical'
+
   return (
     <div className="w-full max-w-4xl">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+      <div className={`grid gap-x-8 gap-y-6 ${isVertical ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
         {grid.fields.map((field) => {
           const value = dataToDisplay[field.key]
 

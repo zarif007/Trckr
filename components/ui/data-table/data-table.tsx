@@ -41,6 +41,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   fieldMetadata?: FieldMetadata
   onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void
+  config?: any
 }
 
 export function DataTable<TData, TValue>({

@@ -33,24 +33,30 @@ You must follow these rules strictly:
 
 3. Grids
 - A grid represents a layout block for structured data. You MUST choose the correct type based on data cardinality:
-  - table: REQUIRED for multi-instance data (lists of items, logs, records). Use this when there can be more than one entry of this entity (e.g., tasks, warehouses, transactions, daily logs).
-  - kanban: Use for multi-instance data that follows a pipeline/status flow. Grouped by an options field (MUST have a logical order like: To Do -> In Progress -> Done).
-  - div: ONLY for single-instance objects or static configurations. Use for generic metadata, global settings, a single user bio, or a one-off description. NEVER use "div" for entities that the user will add multiple items to. If there's any chance of multiple instances, use "table".
+  - table: REQUIRED for multi-instance data.
+  - kanban: Use for multi-instance data that follows a pipeline/status flow.
+  - div: ONLY for single-instance objects or static configurations.
 - Each grid object must include:
+  - id: immutable, DB-safe identifier (snake_case)
+  - key: API identifier (camelCase)
   - name: human-friendly name
-  - fieldName: camelCase identifier (no spaces; English) - MUST be unique
   - type: "table" | "kanban" | "div"
-  - sectionId: the fieldName of the section this grid belongs to (must match a section's fieldName)
+  - sectionId: the fieldName of the section this grid belongs to
+  - config: (optional) type-specific configuration
+    - For 'div': { layout?: 'vertical' | 'horizontal' }
+    - For 'table': { sortable?: boolean, pagination?: boolean, rowSelection?: boolean }
+    - For 'kanban': { groupBy: string (REQUIRED fieldId), orderBy?: string }
 - Grids are independent objects, linked to sections via sectionId
 
 4. Shadow Grids
 - A shadow grid is a different visual representation of an existing grid's data (e.g., a Kanban view of a Table's data).
 - They are "connected": changing data in one view updates the other automatically.
 - Each shadow grid object must include:
-  - name: human-friendly name (e.g., "Board View")
-  - fieldName: camelCase identifier (no spaces; English) - MUST be unique
-  - type: "table" | "kanban" (it MUST be different from the base grid's type if possible, or provide a useful alternative)
-  - gridId: the fieldName of the actual grid it shadows
+  - id: immutable identifier (snake_case)
+  - key: API identifier (camelCase)
+  - name: human-friendly name
+  - type: "table" | "kanban"
+  - gridId: the id (snake_case) of the actual grid it shadows
   - sectionId: the fieldName of the section where this shadow grid should appear
 - Use shadow grids when the user benefit from seeing the SAME data in multiple formats (e.g., Tasks as a list AND a Kanban board).
 
@@ -59,7 +65,7 @@ You must follow these rules strictly:
   - id: immutable, DB-safe identifier (snake_case)
   - key: API identifier for code usage (camelCase)
   - dataType: one of "string", "number", "date", "options", "multiselect", "boolean", "text"
-  - gridId: the fieldName of the grid this field belongs to
+  - gridId: the id (snake_case) of the grid this field belongs to
   - ui: object containing visual settings
     - label: human-readable label
     - placeholder: (optional)

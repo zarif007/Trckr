@@ -24,7 +24,7 @@ export function TrackerSection({
       </h3>
       <div className="space-y-6">
         {[...section.grids, ...section.shadowGrids].map((grid) => (
-          <div key={grid.fieldName} className="space-y-3">
+          <div key={grid.id} className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
                 <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">

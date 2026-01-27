@@ -14,71 +14,71 @@ export default function Demo() {
       { name: 'Study Materials', fieldName: 'study_materials', tabId: 'resources' }
     ],
     grids: [
-      { name: 'Assignment List', fieldName: 'assignment_list', type: 'table' as const, sectionId: 'current_tasks' },
-      { name: 'By Status', fieldName: 'by_status', type: 'kanban' as const, sectionId: 'current_tasks' },
-      { name: 'Books & Links', fieldName: 'books_links', type: 'table' as const, sectionId: 'study_materials' }
+      { id: 'assignment_list', key: 'assignmentList', name: 'Assignment List', type: 'table' as const, sectionId: 'current_tasks' },
+      { id: 'by_status', key: 'byStatus', name: 'By Status', type: 'kanban' as const, sectionId: 'current_tasks', config: { groupBy: 'kb_status' } },
+      { id: 'books_links', key: 'booksLinks', name: 'Books & Links', type: 'table' as const, sectionId: 'study_materials' }
     ],
     fields: [
       // Assignment List fields (table)
-      { name: 'Assignment', fieldName: 'assignment', type: 'string' as const, gridId: 'assignment_list' },
-      { name: 'Course', fieldName: 'course', type: 'string' as const, gridId: 'assignment_list' },
-      { name: 'Due Date', fieldName: 'due_date', type: 'date' as const, gridId: 'assignment_list' },
-      { name: 'Priority', fieldName: 'priority', type: 'options' as const, gridId: 'assignment_list', options: ['High', 'Medium', 'Low'] },
-      { name: 'Status', fieldName: 'status', type: 'options' as const, gridId: 'assignment_list', options: ['Not Started', 'In Progress', 'Completed'] },
-      { name: 'Completed', fieldName: 'completed', type: 'boolean' as const, gridId: 'assignment_list' },
+      { id: 'assignment_name', key: 'assignment', dataType: 'string' as const, gridId: 'assignment_list', ui: { label: 'Assignment' } },
+      { id: 'course_name', key: 'course', dataType: 'string' as const, gridId: 'assignment_list', ui: { label: 'Course' } },
+      { id: 'due_date', key: 'dueDate', dataType: 'date' as const, gridId: 'assignment_list', ui: { label: 'Due Date' } },
+      { id: 'priority', key: 'priority', dataType: 'options' as const, gridId: 'assignment_list', ui: { label: 'Priority' }, config: { options: [{ id: 'high', label: 'High' }, { id: 'medium', label: 'Medium' }, { id: 'low', label: 'Low' }] } },
+      { id: 'status', key: 'status', dataType: 'options' as const, gridId: 'assignment_list', ui: { label: 'Status' }, config: { options: [{ id: 'not_started', label: 'Not Started' }, { id: 'in_progress', label: 'In Progress' }, { id: 'completed', label: 'Completed' }] } },
+      { id: 'is_completed', key: 'completed', dataType: 'boolean' as const, gridId: 'assignment_list', ui: { label: 'Completed' } },
       // By Status fields (kanban)
-      { name: 'Assignment', fieldName: 'assignment', type: 'string' as const, gridId: 'by_status' },
-      { name: 'Course', fieldName: 'course', type: 'string' as const, gridId: 'by_status' },
-      { name: 'Due Date', fieldName: 'due_date', type: 'date' as const, gridId: 'by_status' },
-      { name: 'Status', fieldName: 'status', type: 'options' as const, gridId: 'by_status', options: ['Not Started', 'In Progress', 'Completed'] },
+      { id: 'kb_assignment', key: 'assignment', dataType: 'string' as const, gridId: 'by_status', ui: { label: 'Assignment' } },
+      { id: 'kb_course', key: 'course', dataType: 'string' as const, gridId: 'by_status', ui: { label: 'Course' } },
+      { id: 'kb_due_date', key: 'dueDate', dataType: 'date' as const, gridId: 'by_status', ui: { label: 'Due Date' } },
+      { id: 'kb_status', key: 'status', dataType: 'options' as const, gridId: 'by_status', ui: { label: 'Status' }, config: { options: [{ id: 'not_started', label: 'Not Started' }, { id: 'in_progress', label: 'In Progress' }, { id: 'completed', label: 'Completed' }] } },
       // Study Materials fields
-      { name: 'Title', fieldName: 'title', type: 'string' as const, gridId: 'books_links' },
-      { name: 'Type', fieldName: 'type', type: 'options' as const, gridId: 'books_links', options: ['Book', 'Article', 'Video', 'Website'] },
-      { name: 'Link', fieldName: 'link', type: 'string' as const, gridId: 'books_links' }
+      { id: 'resource_title', key: 'title', dataType: 'string' as const, gridId: 'books_links', ui: { label: 'Title' } },
+      { id: 'resource_type', key: 'type', dataType: 'options' as const, gridId: 'books_links', ui: { label: 'Type' }, config: { options: [{ id: 'book', label: 'Book' }, { id: 'article', label: 'Article' }, { id: 'video', label: 'Video' }, { id: 'website', label: 'Website' }] } },
+      { id: 'resource_link', key: 'link', dataType: 'string' as const, gridId: 'books_links', ui: { label: 'Link' } }
     ],
     examples: [
       {
         assignment: 'Essay on Climate Change',
         course: 'Environmental Science',
-        due_date: '2026-01-25',
-        priority: 'High',
-        status: 'In Progress',
+        dueDate: '2026-01-25',
+        priority: 'high',
+        status: 'in_progress',
         completed: false,
         title: 'Climate Change Basics',
-        type: 'Article',
+        type: 'article',
         link: 'https://example.com/climate'
       },
       {
         assignment: 'Math Problem Set 5',
         course: 'Calculus II',
-        due_date: '2026-01-22',
-        priority: 'Medium',
-        status: 'Not Started',
+        dueDate: '2026-01-22',
+        priority: 'medium',
+        status: 'not_started',
         completed: false,
         title: 'Calculus Textbook',
-        type: 'Book',
+        type: 'book',
         link: 'https://example.com/calc'
       },
       {
         assignment: 'Lab Report: Chemistry Experiment',
         course: 'Chemistry 101',
-        due_date: '2026-01-28',
-        priority: 'High',
-        status: 'Not Started',
+        dueDate: '2026-01-28',
+        priority: 'high',
+        status: 'not_started',
         completed: false,
         title: 'Chemistry Lab Guide',
-        type: 'Video',
+        type: 'video',
         link: 'https://example.com/chem'
       },
       {
         assignment: 'Reading Chapter 7-9',
         course: 'World History',
-        due_date: '2026-01-20',
-        priority: 'Low',
-        status: 'Completed',
+        dueDate: '2026-01-20',
+        priority: 'low',
+        status: 'completed',
         completed: true,
         title: 'World History Encyclopedia',
-        type: 'Website',
+        type: 'website',
         link: 'https://example.com/history'
       }
     ],

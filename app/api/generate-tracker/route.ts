@@ -46,13 +46,26 @@ export async function POST(request: Request) {
             const currentTrackerState = {
               tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName })),
               sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
-              grids: grids.map((g: any) => ({ name: g.name, id: g.fieldName, type: g.type, section: g.sectionId })),
-              shadowGrids: shadowGrids.map((sg: any) => ({ name: sg.name, id: sg.fieldName, type: sg.type, shadows: sg.gridId })),
+              grids: grids.map((g: any) => ({ 
+                name: g.name, 
+                id: g.id, 
+                key: g.key, 
+                type: g.type, 
+                section: g.sectionId,
+                config: g.config
+              })),
+              shadowGrids: shadowGrids.map((sg: any) => ({ 
+                name: sg.name, 
+                id: sg.id, 
+                key: sg.key, 
+                type: sg.type, 
+                gridId: sg.gridId 
+              })),
               fields: fields.map((f: any) => ({ 
                 id: f.id, 
                 key: f.key, 
                 dataType: f.dataType, 
-                grid: f.gridId, 
+                gridId: f.gridId, 
                 label: f.ui?.label,
                 options: f.config?.options 
               }))

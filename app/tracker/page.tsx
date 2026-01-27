@@ -603,7 +603,6 @@ export default function TrackerPage() {
               <div className="p-2 rounded-md bg-foreground text-background">
                 <Sparkles className="w-5 h-5" />
               </div>
-              Tracker Construction Kit
               {isLoading && (
                 <span className="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider animate-pulse border border-primary/20">
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -619,7 +618,7 @@ export default function TrackerPage() {
                   sections={(object.tracker.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
                   grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
                   shadowGrids={(object.tracker.shadowGrids || []).filter((sg: any) => sg && typeof sg === 'object' && sg.name) as any}
-                  fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.name) as any}
+                  fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
                   examples={(object.tracker.examples || []).filter((e: any) => e && typeof e === 'object') as any}
                   views={(object.tracker.views || []).filter((v: any) => typeof v === 'string') as any}
                />
