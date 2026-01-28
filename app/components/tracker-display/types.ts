@@ -10,12 +10,14 @@ export type TrackerFieldType =
 export interface TrackerTab {
   name: string
   fieldName: string
+  placeId: number
 }
 
 export interface TrackerSection {
   name: string
   fieldName: string
   tabId: string
+  placeId: number
 }
 
 export type GridType = 'div' | 'table' | 'kanban'
@@ -43,6 +45,9 @@ export interface TrackerGrid {
   name: string
   type: GridType
   sectionId: string
+  placeId: number
+  isShadow?: boolean
+  gridId?: string
   config?: GridConfig
 }
 
@@ -51,6 +56,7 @@ export interface TrackerField {
   key: string
   dataType: TrackerFieldType
   gridId: string
+  placeId: number
   ui: {
     label: string
     placeholder?: string
@@ -67,20 +73,10 @@ export interface TrackerField {
   }
 }
 
-export interface TrackerShadowGrid {
-  id: string
-  key: string
-  name: string
-  type: 'table' | 'kanban'
-  gridId: string
-  sectionId: string
-}
-
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
   sections: TrackerSection[]
   grids: TrackerGrid[]
-  shadowGrids?: TrackerShadowGrid[]
   fields: TrackerField[]
   examples: Array<Record<string, any>>
   views: string[]

@@ -16,6 +16,7 @@ export const trackerSchema = z.object({
       z.object({
         name: z.string().describe('Human-friendly tab title'),
         fieldName: fieldName(),
+        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
       })
     )
     .describe('Array of independent tab objects'),
@@ -25,6 +26,7 @@ export const trackerSchema = z.object({
         name: z.string().describe('Section display name'),
         fieldName: fieldName(),
         tabId: z.string().describe('fieldName of the tab this section belongs to'),
+        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
       })
     )
     .describe('Array of independent section objects linked to tabs via tabId'),
@@ -43,9 +45,18 @@ export const trackerSchema = z.object({
         type: z
           .enum(['table', 'kanban', 'div'])
           .describe('Layout type for this grid'),
+        isShadow: z
+          .boolean()
+          .optional()
+          .describe('Whether this grid is a shadow representation of another grid'),
+        gridId: z
+          .string()
+          .optional()
+          .describe('id (snake_case) of the actual grid this shadow grid tracks when isShadow is true'),
         sectionId: z
           .string()
           .describe('fieldName of the section this grid belongs to'),
+        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
         config: z.union([
           z.object({
             layout: z.enum(['vertical', 'horizontal']).optional(),
@@ -88,6 +99,7 @@ export const trackerSchema = z.object({
         gridId: z
           .string()
           .describe('id (snake_case) of the grid this field belongs to'),
+        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
         ui: z.object({
           label: z.string().describe('Human-readable label for the field'),
           placeholder: z.string().optional().describe('Placeholder text for inputs'),
@@ -115,31 +127,6 @@ export const trackerSchema = z.object({
       })
     )
     .describe('Array of independent field objects linked to grids via gridId'),
-  shadowGrids: z
-    .array(
-      z.object({
-        id: z
-          .string()
-          .regex(/^[a-z0-9_]+$/, { message: 'Must be snake_case' })
-          .describe('Immutable, DB-safe identifier (snake_case)'),
-        key: z
-          .string()
-          .regex(/^[a-z][A-Za-z0-9]*$/, { message: 'Must be camelCase' })
-          .describe('API identifier (camelCase)'),
-        name: z.string().describe('Shadow grid display name'),
-        type: z
-          .enum(['table', 'kanban'])
-          .describe('Layout type for this shadow grid'),
-        gridId: z
-          .string()
-          .describe('id (snake_case) of the actual grid this shadow grid tracks'),
-        sectionId: z
-          .string()
-          .describe('fieldName of the section this shadow grid belongs to'),
-      })
-    )
-    .optional()
-    .describe('Array of shadow grid objects linked to actual grids via gridId'),
   views: z
     .array(z.string())
     .describe('Array of view names like "Table", "Calendar", etc.'),

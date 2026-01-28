@@ -7,12 +7,11 @@ The schema MUST follow this structure exactly (flat structure with references, N
 - tabs: an array of independent tab objects
 - sections: an array of independent section objects with tabId references
 - grids: an array of independent grid objects with sectionId references
-- shadowGrids: (optional) an array of shadow grid objects with gridId and sectionId references
 - fields: an array of independent field objects with gridId references
 - views: an array of suggested data views for visualizing the tracker
 - examples: array of sample data objects whose keys match fieldName values
 
-CRITICAL: All fieldName values across tabs, sections, grids, shadowGrids, and fields MUST be unique. No duplicates allowed.
+CRITICAL: All fieldName values across tabs, sections, and fields MUST be unique. No duplicates allowed.
 
 You must follow these rules strictly:
 
@@ -21,6 +20,7 @@ You must follow these rules strictly:
 - Each tab object must include:
   - name: short, human-friendly title (e.g. "Overview")
   - fieldName: camelCase identifier for code usage (e.g. "overview")
+  - placeId: numeric identifier for sorting (smaller numbers appear first, e.g. 1, 2, 3)
   - MUST be unique across all tabs, sections, grids, and fields
 
 2. Sections
@@ -29,6 +29,7 @@ You must follow these rules strictly:
   - name: human-friendly name
   - fieldName: camelCase identifier (no spaces; English) - MUST be unique
   - tabId: the fieldName of the tab this section belongs to (must match a tab's fieldName)
+  - placeId: numeric identifier for sorting within the tab (smaller numbers appear first)
 - Sections are independent objects, linked to tabs via tabId
 
 3. Grids
@@ -42,23 +43,14 @@ You must follow these rules strictly:
   - name: human-friendly name
   - type: "table" | "kanban" | "div"
   - sectionId: the fieldName of the section this grid belongs to
+  - placeId: numeric identifier for sorting within the section (smaller numbers appear first)
+  - isShadow: (optional) boolean indicating if this grid is a shadow representation of another grid
+  - gridId: (optional) the id (snake_case) of the actual grid whose data this grid represents when isShadow is true
   - config: (optional) type-specific configuration
     - For 'div': { layout?: 'vertical' | 'horizontal' }
     - For 'table': { sortable?: boolean, pagination?: boolean, rowSelection?: boolean }
     - For 'kanban': { groupBy: string (REQUIRED fieldId), orderBy?: string }
-- Grids are independent objects, linked to sections via sectionId
-
-4. Shadow Grids
-- A shadow grid is a different visual representation of an existing grid's data (e.g., a Kanban view of a Table's data).
-- They are "connected": changing data in one view updates the other automatically.
-- Each shadow grid object must include:
-  - id: immutable identifier (snake_case)
-  - key: API identifier (camelCase)
-  - name: human-friendly name
-  - type: "table" | "kanban"
-  - gridId: the id (snake_case) of the actual grid it shadows
-  - sectionId: the fieldName of the section where this shadow grid should appear
-- Use shadow grids when the user benefit from seeing the SAME data in multiple formats (e.g., Tasks as a list AND a Kanban board).
+- Grids are independent objects, linked to sections via sectionId. Shadow layouts are represented as grids with isShadow: true and gridId pointing to the base grid.
 
 6. Fields
 - Each field object must include:
@@ -66,10 +58,11 @@ You must follow these rules strictly:
   - key: API identifier for code usage (camelCase)
   - dataType: one of "string", "number", "date", "options", "multiselect", "boolean", "text"
   - gridId: the id (snake_case) of the grid this field belongs to
+  - placeId: numeric identifier for sorting within the grid (smaller numbers appear first)
   - ui: object containing visual settings
     - label: human-readable label
     - placeholder: (optional)
-    - order: (optional) number
+    - order: (optional) number (deprecated in favor of root-level placeId)
   - config: (optional) object containing validation and behavior
     - required: (optional) boolean
     - options: (optional) array of { id, label } objects (for options/multiselect)

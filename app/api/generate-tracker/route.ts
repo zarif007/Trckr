@@ -29,7 +29,7 @@ export async function POST(request: Request) {
           contextParts.push(`User: ${msg.content}`)
         } else if (msg.role === 'assistant') {
           let assistantMsgParts = []
-          
+
           if (msg.managerData) {
             const { thinking, prd, builderTodo } = msg.managerData
             assistantMsgParts.push(`Manager Thinking: ${thinking}`)
@@ -40,34 +40,31 @@ export async function POST(request: Request) {
           }
 
           if (msg.trackerData) {
-            const { tabs = [], sections = [], grids = [], shadowGrids = [], fields = [] } = msg.trackerData
-            
+            const { tabs = [], sections = [], grids = [], fields = [] } = msg.trackerData
+
             // Create a clean, minimal JSON summary of the current tracker state
             const currentTrackerState = {
-              tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName })),
-              sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId })),
-              grids: grids.map((g: any) => ({ 
-                name: g.name, 
-                id: g.id, 
-                key: g.key, 
-                type: g.type, 
+              tabs: tabs.map((t: any) => ({ name: t.name, id: t.fieldName, placeId: t.placeId })),
+              sections: sections.map((s: any) => ({ name: s.name, id: s.fieldName, tab: s.tabId, placeId: s.placeId })),
+              grids: grids.map((g: any) => ({
+                name: g.name,
+                id: g.id,
+                key: g.key,
+                type: g.type,
                 section: g.sectionId,
+                placeId: g.placeId,
+                isShadow: g.isShadow,
+                gridId: g.gridId,
                 config: g.config
               })),
-              shadowGrids: shadowGrids.map((sg: any) => ({ 
-                name: sg.name, 
-                id: sg.id, 
-                key: sg.key, 
-                type: sg.type, 
-                gridId: sg.gridId 
-              })),
-              fields: fields.map((f: any) => ({ 
-                id: f.id, 
-                key: f.key, 
-                dataType: f.dataType, 
-                gridId: f.gridId, 
+              fields: fields.map((f: any) => ({
+                id: f.id,
+                key: f.key,
+                dataType: f.dataType,
+                gridId: f.gridId,
+                placeId: f.placeId,
                 label: f.ui?.label,
-                options: f.config?.options 
+                options: f.config?.options
               }))
             }
 
