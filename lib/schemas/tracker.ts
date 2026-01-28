@@ -95,7 +95,7 @@ export const trackerSchema = z.object({
             'boolean',
             'text',
           ])
-          .describe('Semantic data type of the field'),
+          .describe('Semantic data type of the field. Note: "options" and "multiselect" MUST point to a lookup grid in the "Shared" tab via config.optionsGridId.'),
         gridId: z
           .string()
           .describe('id (snake_case) of the grid this field belongs to'),
@@ -113,6 +113,12 @@ export const trackerSchema = z.object({
             max: z.number().optional(),
             minLength: z.number().optional(),
             maxLength: z.number().optional(),
+            optionsGridId: z
+              .string()
+              .optional()
+              .describe(
+                'For options/multiselect fields: the grid id (snake_case) of a Shared lookup table whose rows are { label, value }. Prefer this over inline options.'
+              ),
             options: z
               .array(
                 z.object({
@@ -121,19 +127,27 @@ export const trackerSchema = z.object({
                 })
               )
               .optional()
-              .describe('Options for select/multiselect fields'),
+              .describe(
+                'DEPRECATED: Inline options for select/multiselect fields. Prefer optionsGridId + gridData.'
+              ),
           })
           .optional(),
       })
     )
     .describe('Array of independent field objects linked to grids via gridId'),
+  gridData: z
+    .record(z.string(), z.array(z.record(z.string(), z.any())))
+    .optional()
+    .describe(
+      'Optional per-grid datasets keyed by gridId. Used for Shared lookup tables (rows are typically { label, value }). ALWAYS provide 3-5 example rows for every lookup table created.'
+    ),
   views: z
     .array(z.string())
     .describe('Array of view names like "Table", "Calendar", etc.'),
   examples: z
     .array(z.record(z.string(), z.any()))
     .describe(
-      'Array of 2-3 sample data objects; keys must match every fieldName defined in fields.'
+      'Array of 2-3 sample data objects; keys must match every field.key defined in fields.'
     ),
 })
 

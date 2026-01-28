@@ -1,11 +1,11 @@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import { TrackerFieldType } from './types'
+import { TrackerFieldType, TrackerOption } from './types'
 
 interface TrackerCellProps {
-  value: any
+  value: unknown
   type: TrackerFieldType
-  options?: { id: string; label: string }[]
+  options?: TrackerOption[]
 }
 
 export function TrackerCell({ value, type, options }: TrackerCellProps) {
@@ -19,19 +19,19 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
     case 'boolean':
       return (
         <div className="flex items-center justify-center">
-          <Checkbox checked={value || false} disabled />
+          <Checkbox checked={value === true} disabled />
         </div>
       )
     case 'options':
-      return <Badge variant="secondary">{getLabel(value)}</Badge>
+      return <Badge variant="secondary">{getLabel(String(value))}</Badge>
     case 'multiselect':
       return (
         <div className="flex flex-wrap gap-1">
           {Array.isArray(value) && value.length > 0 ? (
-            value.map((val: string) => (
-               <Badge key={val} variant="outline" className="text-xs">
-                 {getLabel(val)}
-               </Badge>
+            value.map((val) => (
+              <Badge key={String(val)} variant="outline" className="text-xs">
+                {getLabel(String(val))}
+              </Badge>
             ))
           ) : (
             <span>-</span>
@@ -39,7 +39,7 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
         </div>
       )
     case 'date':
-      return <span>{new Date(value).toLocaleDateString()}</span>
+      return <span>{new Date(String(value)).toLocaleDateString()}</span>
     default:
       return <span>{String(value)}</span>
   }

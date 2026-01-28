@@ -40,7 +40,7 @@ export async function POST(request: Request) {
           }
 
           if (msg.trackerData) {
-            const { tabs = [], sections = [], grids = [], fields = [] } = msg.trackerData
+            const { tabs = [], sections = [], grids = [], fields = [], gridData } = msg.trackerData
 
             // Create a clean, minimal JSON summary of the current tracker state
             const currentTrackerState = {
@@ -64,8 +64,12 @@ export async function POST(request: Request) {
                 gridId: f.gridId,
                 placeId: f.placeId,
                 label: f.ui?.label,
+                optionsGridId: f.config?.optionsGridId,
+                // Keep inline options for backwards compatibility context, but prefer optionsGridId going forward
                 options: f.config?.options
               }))
+              ,
+              gridDataKeys: gridData ? Object.keys(gridData) : []
             }
 
             assistantMsgParts.push(`Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`)

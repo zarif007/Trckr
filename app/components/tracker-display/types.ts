@@ -7,6 +7,8 @@ export type TrackerFieldType =
   | 'boolean'
   | 'text'
 
+export type TrackerOption = { id: string; label: string }
+
 export interface TrackerTab {
   name: string
   fieldName: string
@@ -63,13 +65,21 @@ export interface TrackerField {
     order?: number
   }
   config?: {
-    defaultValue?: any
+    defaultValue?: unknown
     required?: boolean
     min?: number
     max?: number
     minLength?: number
     maxLength?: number
-    options?: { id: string; label: string }[]
+    /**
+     * Deprecated: inline options. Prefer `optionsGridId` (Shared lookup table).
+     */
+    options?: TrackerOption[]
+    /**
+     * For options/multiselect fields, references a grid (usually in the Shared tab)
+     * whose rows contain `{ label, value }`.
+     */
+    optionsGridId?: string
   }
 }
 
@@ -78,6 +88,11 @@ export interface TrackerDisplayProps {
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
-  examples: Array<Record<string, any>>
+  examples: Array<Record<string, unknown>>
+  /**
+   * Optional per-grid datasets. If a gridId exists here, it overrides `examples`
+   * as the dataset for that grid.
+   */
+  gridData?: Record<string, Array<Record<string, unknown>>>
   views: string[]
 }

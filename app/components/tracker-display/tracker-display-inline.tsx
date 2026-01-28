@@ -18,26 +18,63 @@ export function TrackerDisplayInline({
   grids,
   fields,
   examples,
+  gridData,
   views,
 }: TrackerDisplayProps) {
-  const [activeTabId, setActiveTabId] = useState(tabs[0]?.fieldName || '')
+  const normalizedTabs = useMemo(() => {
+    const sharedFieldName = 'shared'
+    const tabsWithoutShared = (tabs ?? []).filter((t) => t?.fieldName !== sharedFieldName)
+    const maxPlaceId = tabsWithoutShared.reduce(
+      (acc, t) => Math.max(acc, typeof t?.placeId === 'number' ? t.placeId : 0),
+      0
+    )
+
+    const existingShared = (tabs ?? []).find((t) => t?.fieldName === sharedFieldName)
+    const sharedTab = existingShared
+      ? { ...existingShared, name: existingShared.name || 'Shared', placeId: maxPlaceId + 1 }
+      : { name: 'Shared', fieldName: sharedFieldName, placeId: maxPlaceId + 1 }
+
+    return [...tabsWithoutShared, sharedTab]
+  }, [tabs])
+
+  const [activeTabId, setActiveTabId] = useState(normalizedTabs[0]?.fieldName || '')
 
   useEffect(() => {
-    if (tabs.length > 0) {
-      const tabExists = tabs.some(tab => tab.fieldName === activeTabId);
+    if (normalizedTabs.length > 0) {
+      const tabExists = normalizedTabs.some(tab => tab.fieldName === activeTabId);
       if (!activeTabId || !tabExists) {
-        setActiveTabId(tabs[0].fieldName);
+        setActiveTabId(normalizedTabs[0].fieldName);
       }
     }
-  }, [tabs, activeTabId])
+  }, [normalizedTabs, activeTabId])
 
   const [localExamples, setLocalExamples] = useState(examples)
+  const [localGridData, setLocalGridData] = useState<Record<string, Array<Record<string, unknown>>>>(
+    gridData ?? {}
+  )
 
   useEffect(() => {
     setLocalExamples(examples)
   }, [examples])
 
-  const handleUpdate = (rowIndex: number, columnId: string, value: any) => {
+  useEffect(() => {
+    setLocalGridData(gridData ?? {})
+  }, [gridData])
+
+  const handleUpdate = (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
+    // If this grid has an explicit dataset, update it; otherwise update main examples.
+    if (localGridData?.[gridId]) {
+      setLocalGridData((prev) => {
+        const current = prev?.[gridId] ?? []
+        const next = [...current]
+        if (next[rowIndex]) {
+          next[rowIndex] = { ...next[rowIndex], [columnId]: value }
+        }
+        return { ...(prev ?? {}), [gridId]: next }
+      })
+      return
+    }
+
     setLocalExamples((prev) => {
       const newData = [...prev]
       if (newData[rowIndex]) {
@@ -50,7 +87,7 @@ export function TrackerDisplayInline({
     })
   }
 
-  if (!tabs.length) {
+  if (!normalizedTabs.length) {
     return null
   }
 
@@ -61,9 +98,9 @@ export function TrackerDisplayInline({
         onValueChange={setActiveTabId}
         className="w-full"
       >
-        {tabs.length > 0 && (
+        {normalizedTabs.length > 0 && (
           <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
-            {[...tabs].sort((a, b) => a.placeId - b.placeId).map((tab, index) => (
+            {[...normalizedTabs].sort((a, b) => a.placeId - b.placeId).map((tab, index) => (
               <TabsTrigger
                 key={tab.fieldName}
                 value={tab.fieldName}
@@ -76,7 +113,7 @@ export function TrackerDisplayInline({
           </TabsList>
         )}
 
-        {[...tabs].sort((a,b) => a.placeId - b.placeId).map((tab) => (
+        {[...normalizedTabs].sort((a, b) => a.placeId - b.placeId).map((tab) => (
           <TrackerTabContent
             key={tab.fieldName}
             tab={tab}
@@ -84,6 +121,7 @@ export function TrackerDisplayInline({
             grids={grids}
             fields={fields}
             localExamples={localExamples}
+            localGridData={localGridData}
             handleUpdate={handleUpdate}
           />
         ))}
@@ -118,16 +156,20 @@ function TrackerTabContent({
   grids,
   fields,
   localExamples,
+  localGridData,
   handleUpdate
 }: {
   tab: TrackerTab;
   sections: ITrackerSection[];
   grids: TrackerGrid[];
   fields: TrackerField[];
-  localExamples: any[];
-  handleUpdate: (rowIndex: number, columnId: string, value: any) => void;
+  localExamples: Array<Record<string, unknown>>;
+  localGridData: Record<string, Array<Record<string, unknown>>>;
+  handleUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void;
 }) {
-  const tabSections = useMemo(() => {
+  const tabSections = useMemo<
+    Array<ITrackerSection & { grids: Array<TrackerGrid & { fields: TrackerField[] }> }>
+  >(() => {
     return sections
       .filter((section) => section.tabId === tab.fieldName)
       .sort((a, b) => a.placeId - b.placeId)
@@ -153,7 +195,7 @@ function TrackerTabContent({
       value={tab.fieldName}
       className="space-y-6 mt-6"
     >
-      {tabSections.map((section: any, index: number) => (
+      {tabSections.map((section, index) => (
         <div
           key={section.fieldName}
           className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
@@ -162,6 +204,7 @@ function TrackerTabContent({
           <TrackerSection
             section={section}
             examples={localExamples}
+            gridData={localGridData}
             onUpdate={handleUpdate}
           />
         </div>

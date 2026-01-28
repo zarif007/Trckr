@@ -1,45 +1,50 @@
-import { useMemo } from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/ui/data-table'
+import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { TrackerGrid, TrackerField } from './types'
 import { TrackerCell } from './tracker-cell'
+import { resolveFieldOptions } from './resolve-options'
 
 interface TrackerTableGridProps {
   grid: TrackerGrid & { fields: TrackerField[] }
-  examples: Array<Record<string, any>>
-  onUpdate?: (rowIndex: number, columnId: string, value: any) => void
+  rows: Array<Record<string, unknown>>
+  gridData?: Record<string, Array<Record<string, unknown>>>
+  onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
 
 export function TrackerTableGrid({
   grid,
-  examples,
+  rows,
+  gridData,
   onUpdate,
 }: TrackerTableGridProps) {
-  if (examples.length === 0 || grid.fields.length === 0) return null
+  if (grid.fields.length === 0) return null
 
-  const fieldMetadata: Record<string, any> = {}
+  const fieldMetadata: FieldMetadata = {}
   grid.fields.forEach((field) => {
     fieldMetadata[field.key] = {
-      label: field.ui.label,
+      name: field.ui.label,
       type: field.dataType,
-      options: field.config?.options,
+      options: resolveFieldOptions(field, gridData),
     }
   })
 
-  const columns = useMemo<ColumnDef<Record<string, any>>[]>(
-    () =>
-      grid.fields.map((field) => ({
-        id: field.key,
-        accessorKey: field.key,
-        header: field.ui.label,
-        cell: ({ row }) => {
-          const value = row.getValue(field.key)
-          return <TrackerCell value={value} type={field.dataType} options={field.config?.options} />
-        },
-      })),
-    [grid.fields]
-  )
+  const columns: ColumnDef<Record<string, unknown>>[] = grid.fields.map((field) => ({
+    id: field.key,
+    accessorKey: field.key,
+    header: field.ui.label,
+    cell: ({ row }) => {
+      const value = row.getValue(field.key)
+      return (
+        <TrackerCell
+          value={value}
+          type={field.dataType}
+          options={resolveFieldOptions(field, gridData)}
+        />
+      )
+    },
+  }))
 
   return (
     <div className="space-y-3">
@@ -50,7 +55,7 @@ export function TrackerTableGrid({
       </div>
       <DataTable
         columns={columns}
-        data={examples}
+        data={rows}
         fieldMetadata={fieldMetadata}
         onCellUpdate={onUpdate}
         config={grid.config}

@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { TrackerGrid, TrackerField } from './types'
 import { TrackerCell } from './tracker-cell'
+import { resolveFieldOptions } from './resolve-options'
 import {
   DndContext,
   DragOverlay,
@@ -25,11 +26,22 @@ import { useDroppable } from '@dnd-kit/core'
 
 interface TrackerKanbanGridProps {
   grid: TrackerGrid & { fields: TrackerField[] }
-  examples: Array<Record<string, any>>
-  onUpdate?: (rowIndex: number, columnId: string, value: any) => void
+  rows: Array<Record<string, unknown>>
+  gridData?: Record<string, Array<Record<string, unknown>>>
+  onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
 
-function SortableCard({ id, card, cardFields }: { id: string; card: any; cardFields: TrackerField[] }) {
+function SortableCard({
+  id,
+  card,
+  cardFields,
+  gridData,
+}: {
+  id: string
+  card: Record<string, unknown>
+  cardFields: TrackerField[]
+  gridData?: Record<string, Array<Record<string, unknown>>>
+}) {
   const {
     attributes,
     listeners,
@@ -47,12 +59,22 @@ function SortableCard({ id, card, cardFields }: { id: string; card: any; cardFie
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <KanbanCard card={card} cardFields={cardFields} />
+      <KanbanCard card={card} cardFields={cardFields} gridData={gridData} />
     </div>
   )
 }
 
-function KanbanCard({ card, cardFields, isOverlay = false }: { card: any; cardFields: TrackerField[]; isOverlay?: boolean }) {
+function KanbanCard({
+  card,
+  cardFields,
+  gridData,
+  isOverlay = false,
+}: {
+  card: Record<string, unknown>
+  cardFields: TrackerField[]
+  gridData?: Record<string, Array<Record<string, unknown>>>
+  isOverlay?: boolean
+}) {
   return (
     <Card
       className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''}`}
@@ -63,7 +85,11 @@ function KanbanCard({ card, cardFields, isOverlay = false }: { card: any; cardFi
             {field.ui.label}
           </p>
           <div className="text-sm text-foreground">
-            <TrackerCell value={card[field.key]} type={field.dataType} options={field.config?.options} />
+            <TrackerCell
+              value={card[field.key]}
+              type={field.dataType}
+              options={resolveFieldOptions(field, gridData)}
+            />
           </div>
         </div>
       ))}
@@ -73,13 +99,12 @@ function KanbanCard({ card, cardFields, isOverlay = false }: { card: any; cardFi
 
 function DroppableEmptyColumn({ id }: { id: string }) {
   const { setNodeRef, isOver } = useDroppable({ id })
-  
+
   return (
-    <div 
+    <div
       ref={setNodeRef}
-      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${
-        isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
-      }`}
+      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
+        }`}
     >
       <p className="text-xs text-muted-foreground text-center px-4">
         Drop here
@@ -88,9 +113,9 @@ function DroppableEmptyColumn({ id }: { id: string }) {
   )
 }
 
-export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGridProps) {
+export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -102,10 +127,10 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     })
   )
 
-  if (examples.length === 0) return null
+  if (rows.length === 0) return null
 
-  let optionsField = grid.fields.find((f) => f.id === (grid.config as any)?.groupBy)
-  
+  let optionsField = grid.fields.find((f) => f.id === (grid.config as { groupBy?: string } | undefined)?.groupBy)
+
   if (!optionsField) {
     optionsField = grid.fields.find((f) => f.dataType === 'options')
   }
@@ -118,7 +143,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     )
   }
 
-  const groups = optionsField.config?.options || []
+  const groups = resolveFieldOptions(optionsField, gridData) || []
   const cardFields = grid.fields.filter(
     (f) => f.key !== optionsField.key
   )
@@ -139,7 +164,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     // cardId is in format `idx-currentGroup`
     const [cardIdxStr] = cardId.split('-')
     const cardIdx = parseInt(cardIdxStr)
-    const currentCard = examples[cardIdx]
+    const currentCard = rows[cardIdx]
 
     // overId can be a group ID (if dropping into an empty column) or another card's ID
     let nextGroupId = overId
@@ -149,12 +174,13 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
       nextGroupId = parts[parts.length - 1]
     }
 
-    if (currentCard[optionsField.key] !== nextGroupId && onUpdate) {
+    const currentGroup = currentCard?.[optionsField.key]
+    if (String(currentGroup ?? '') !== nextGroupId && onUpdate) {
       onUpdate(cardIdx, optionsField.key, nextGroupId)
     }
   }
 
-  const activeCard = activeId ? examples[parseInt(activeId.split('-')[0])] : null
+  const activeCard = activeId ? rows[parseInt(activeId.split('-')[0])] : null
 
   return (
     <DndContext
@@ -165,9 +191,9 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
     >
       <div className="flex gap-4 overflow-x-auto pb-4 items-start">
         {groups.map((group) => {
-          const cardsInGroup = examples
-            .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, any> & { _originalIdx: number }))
-            .filter((ex) => ex[optionsField.key] === group.id)
+          const cardsInGroup = rows
+            .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
+            .filter((ex) => String(ex[optionsField.key] ?? '') === group.id)
 
           return (
             <div key={group.id} className="shrink-0 w-80">
@@ -179,7 +205,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
                   </span>
                 </h3>
               </div>
-              
+
               <SortableContext
                 id={group.id}
                 items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
@@ -187,7 +213,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
               >
                 <div className="space-y-3 min-h-[100px]">
                   {cardsInGroup.length === 0 ? (
-                     <DroppableEmptyColumn id={group.id} />
+                    <DroppableEmptyColumn id={group.id} />
                   ) : (
                     cardsInGroup.map((card) => (
                       <SortableCard
@@ -195,6 +221,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
                         id={`${card._originalIdx}-${group.id}`}
                         card={card}
                         cardFields={cardFields}
+                        gridData={gridData}
                       />
                     ))
                   )}
@@ -214,7 +241,7 @@ export function TrackerKanbanGrid({ grid, examples, onUpdate }: TrackerKanbanGri
         }),
       }}>
         {activeCard ? (
-          <KanbanCard card={activeCard} cardFields={cardFields} isOverlay />
+          <KanbanCard card={activeCard} cardFields={cardFields} gridData={gridData} isOverlay />
         ) : null}
       </DragOverlay>
     </DndContext>

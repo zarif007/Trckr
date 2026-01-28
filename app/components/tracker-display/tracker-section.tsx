@@ -7,13 +7,15 @@ interface TrackerSectionProps {
   section: ITrackerSection & {
     grids: (TrackerGrid & { fields: TrackerField[] })[]
   }
-  examples: Array<Record<string, any>>
-  onUpdate?: (rowIndex: number, columnId: string, value: any) => void
+  examples: Array<Record<string, unknown>>
+  gridData?: Record<string, Array<Record<string, unknown>>>
+  onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
 }
 
 export function TrackerSection({
   section,
   examples,
+  gridData,
   onUpdate,
 }: TrackerSectionProps) {
   return (
@@ -33,23 +35,40 @@ export function TrackerSection({
             </div>
             {grid.type === 'table' && (
               <TrackerTableGrid
-                grid={grid as any}
-                examples={examples}
-                onUpdate={onUpdate}
+                grid={grid}
+                rows={(() => {
+                  const effectiveGridId = (grid.isShadow && grid.gridId) ? grid.gridId : grid.id
+                  const explicit = gridData?.[effectiveGridId]
+                  const looksLikeLookup =
+                    (grid.fields?.length ?? 0) === 2 &&
+                    grid.fields?.some((f) => f.key === 'label') &&
+                    grid.fields?.some((f) => f.key === 'value')
+                  return explicit ?? (looksLikeLookup ? [] : examples)
+                })()}
+                gridData={gridData}
+                onUpdate={(rowIndex, columnId, value) =>
+                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                }
               />
             )}
             {grid.type === 'kanban' && (
               <TrackerKanbanGrid
-                grid={grid as any}
-                examples={examples}
-                onUpdate={onUpdate}
+                grid={grid}
+                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? examples}
+                gridData={gridData}
+                onUpdate={(rowIndex, columnId, value) =>
+                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                }
               />
             )}
             {grid.type === 'div' && (
               <TrackerDivGrid
-                grid={grid as any}
-                examples={examples}
-                onUpdate={onUpdate}
+                grid={grid}
+                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? examples}
+                gridData={gridData}
+                onUpdate={(rowIndex, columnId, value) =>
+                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                }
               />
             )}
           </div>
