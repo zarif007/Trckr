@@ -41,6 +41,8 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   fieldMetadata?: FieldMetadata
   onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void
+  onAddEntry?: (newRow: Record<string, any>) => void
+  onDeleteEntries?: (rowIndices: number[]) => void
   config?: any
 }
 
@@ -49,9 +51,18 @@ export function DataTable<TData, TValue>({
   data,
   fieldMetadata,
   onCellUpdate,
+  onAddEntry,
+  onDeleteEntries,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [newRowData, setNewRowData] = useState<Record<string, any>>({})
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+
+  const selectedRows = Object.keys(rowSelection)
+    .map(Number)
+    .filter((idx) => rowSelection[idx])
   // Initialize column visibility: first 5 columns visible, others hidden
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     () => {
@@ -262,8 +273,115 @@ export function DataTable<TData, TValue>({
 
   const fixedWidth = '34px'
 
+  const handleAddEntry = () => {
+    onAddEntry?.(newRowData)
+    setNewRowData({})
+    setShowAddDialog(false)
+  }
+
+  const handleDeleteSelected = () => {
+    onDeleteEntries?.(selectedRows)
+    setRowSelection({})
+    setDeleteConfirmOpen(false)
+  }
+
   return (
     <div className="w-full space-y-4">
+      <div className="flex justify-end gap-2">
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogTrigger asChild>
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={selectedRows.length === 0}
+            >
+              Delete ({selectedRows.length})
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Delete Entries</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete {selectedRows.length} row
+                {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
+                undone.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setDeleteConfirmOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteSelected}>
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline">
+              Add Entry
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Add New Entry</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+              {columns.map((col) => {
+                // @ts-ignore
+                const columnId = col.id || col.accessorKey
+                const fieldInfo = fieldMetadata?.[columnId]
+
+                if (!fieldInfo) return null
+
+                return (
+                  <div key={columnId} className="flex flex-col space-y-1.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      {typeof col.header === 'string' ? col.header : columnId}
+                    </span>
+                    <div className="rounded-md border border-border/40 bg-muted/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                      <DataTableInput
+                        value={newRowData[columnId] ?? ''}
+                        onChange={(value) =>
+                          setNewRowData((prev) => ({
+                            ...prev,
+                            [columnId]: value,
+                          }))
+                        }
+                        type={fieldInfo.type}
+                        options={fieldInfo.options}
+                        className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
+                        autoFocus={
+                          columnId === (columns[0] as any)?.id ||
+                          (columns[0] as any)?.accessorKey
+                        }
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAddDialog(false)
+                  setNewRowData({})
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleAddEntry}>Add Entry</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
       <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
         <Table className="w-full border-collapse">
           <TableHeader className="">

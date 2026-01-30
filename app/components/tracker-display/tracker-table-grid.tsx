@@ -1,5 +1,4 @@
 import { ColumnDef } from '@tanstack/react-table'
-import { Button } from '@/components/ui/button'
 import { DataTable } from '@/components/ui/data-table'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { TrackerGrid, TrackerField } from './types'
@@ -11,6 +10,8 @@ interface TrackerTableGridProps {
   rows: Array<Record<string, unknown>>
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
+  onAddEntry?: (newRow: Record<string, unknown>) => void
+  onDeleteEntries?: (rowIndices: number[]) => void
 }
 
 export function TrackerTableGrid({
@@ -18,6 +19,8 @@ export function TrackerTableGrid({
   rows,
   gridData,
   onUpdate,
+  onAddEntry,
+  onDeleteEntries,
 }: TrackerTableGridProps) {
   if (grid.fields.length === 0) return null
 
@@ -30,37 +33,33 @@ export function TrackerTableGrid({
     }
   })
 
-  const columns: ColumnDef<Record<string, unknown>>[] = grid.fields.map((field) => ({
-    id: field.key,
-    accessorKey: field.key,
-    header: field.ui.label,
-    cell: ({ row }) => {
-      const value = row.getValue(field.key)
-      return (
-        <TrackerCell
-          value={value}
-          type={field.dataType}
-          options={resolveFieldOptions(field, gridData)}
-        />
-      )
-    },
-  }))
+  const columns: ColumnDef<Record<string, unknown>>[] = grid.fields.map(
+    (field) => ({
+      id: field.key,
+      accessorKey: field.key,
+      header: field.ui.label,
+      cell: ({ row }) => {
+        const value = row.getValue(field.key)
+        return (
+          <TrackerCell
+            value={value}
+            type={field.dataType}
+            options={resolveFieldOptions(field, gridData)}
+          />
+        )
+      },
+    }),
+  )
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <Button size="sm" variant="outline">
-          Add Entry
-        </Button>
-      </div>
-      <DataTable
-        columns={columns}
-        data={rows}
-        fieldMetadata={fieldMetadata}
-        onCellUpdate={onUpdate}
-        config={grid.config}
-      />
-    </div>
+    <DataTable
+      columns={columns}
+      data={rows}
+      fieldMetadata={fieldMetadata}
+      onCellUpdate={onUpdate}
+      onAddEntry={onAddEntry}
+      onDeleteEntries={onDeleteEntries}
+      config={grid.config}
+    />
   )
 }
-

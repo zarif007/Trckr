@@ -1,4 +1,8 @@
-import { TrackerSection as ITrackerSection, TrackerGrid, TrackerField } from './types'
+import {
+  TrackerSection as ITrackerSection,
+  TrackerGrid,
+  TrackerField,
+} from './types'
 import { TrackerTableGrid } from './tracker-table-grid'
 import { TrackerKanbanGrid } from './tracker-kanban-grid'
 import { TrackerDivGrid } from './tracker-div-grid'
@@ -8,13 +12,22 @@ interface TrackerSectionProps {
     grids: (TrackerGrid & { fields: TrackerField[] })[]
   }
   gridData?: Record<string, Array<Record<string, unknown>>>
-  onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
+  onUpdate?: (
+    gridId: string,
+    rowIndex: number,
+    columnId: string,
+    value: unknown,
+  ) => void
+  onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
+  onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
 }
 
 export function TrackerSection({
   section,
   gridData,
   onUpdate,
+  onAddEntry,
+  onDeleteEntries,
 }: TrackerSectionProps) {
   return (
     <div className="space-y-4">
@@ -35,33 +48,69 @@ export function TrackerSection({
               <TrackerTableGrid
                 grid={grid}
                 rows={(() => {
-                  const effectiveGridId = (grid.isShadow && grid.gridId) ? grid.gridId : grid.id
+                  const effectiveGridId =
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
                   const explicit = gridData?.[effectiveGridId]
                   return explicit ?? []
                 })()}
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                  onUpdate?.(
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
+                    rowIndex,
+                    columnId,
+                    value,
+                  )
+                }
+                onAddEntry={(newRow) =>
+                  onAddEntry?.(
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
+                    newRow,
+                  )
+                }
+                onDeleteEntries={(rowIndices) =>
+                  onDeleteEntries?.(
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
+                    rowIndices,
+                  )
                 }
               />
             )}
             {grid.type === 'kanban' && (
               <TrackerKanbanGrid
                 grid={grid}
-                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? []}
+                rows={
+                  gridData?.[
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
+                  ] ?? []
+                }
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                  onUpdate?.(
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
+                    rowIndex,
+                    columnId,
+                    value,
+                  )
                 }
               />
             )}
             {grid.type === 'div' && (
               <TrackerDivGrid
                 grid={grid}
-                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? []}
+                rows={
+                  gridData?.[
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
+                  ] ?? []
+                }
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
+                  onUpdate?.(
+                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
+                    rowIndex,
+                    columnId,
+                    value,
+                  )
                 }
               />
             )}
@@ -71,4 +120,3 @@ export function TrackerSection({
     </div>
   )
 }
-

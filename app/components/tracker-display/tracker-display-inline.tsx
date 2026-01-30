@@ -8,7 +8,7 @@ import {
   TrackerTab,
   TrackerSection as ITrackerSection,
   TrackerGrid,
-  TrackerField
+  TrackerField,
 } from './types'
 import { TrackerSection } from './tracker-section'
 
@@ -23,26 +23,35 @@ export function TrackerDisplayInline({
     return (tabs ?? []).sort((a, b) => a.placeId - b.placeId)
   }, [tabs])
 
-  const [activeTabId, setActiveTabId] = useState(normalizedTabs[0]?.fieldName || '')
+  const [activeTabId, setActiveTabId] = useState(
+    normalizedTabs[0]?.fieldName || '',
+  )
 
   useEffect(() => {
     if (normalizedTabs.length > 0) {
-      const tabExists = normalizedTabs.some(tab => tab.fieldName === activeTabId);
+      const tabExists = normalizedTabs.some(
+        (tab) => tab.fieldName === activeTabId,
+      )
       if (!activeTabId || !tabExists) {
-        setActiveTabId(normalizedTabs[0].fieldName);
+        setActiveTabId(normalizedTabs[0].fieldName)
       }
     }
   }, [normalizedTabs, activeTabId])
 
-  const [localGridData, setLocalGridData] = useState<Record<string, Array<Record<string, unknown>>>>(
-    gridData ?? {}
-  )
+  const [localGridData, setLocalGridData] = useState<
+    Record<string, Array<Record<string, unknown>>>
+  >(gridData ?? {})
 
   useEffect(() => {
     setLocalGridData(gridData ?? {})
   }, [gridData])
 
-  const handleUpdate = (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
+  const handleUpdate = (
+    gridId: string,
+    rowIndex: number,
+    columnId: string,
+    value: unknown,
+  ) => {
     setLocalGridData((prev) => {
       const current = prev?.[gridId] ?? []
       const next = [...current]
@@ -50,6 +59,21 @@ export function TrackerDisplayInline({
         next[rowIndex] = { ...next[rowIndex], [columnId]: value }
       }
       return { ...(prev ?? {}), [gridId]: next }
+    })
+  }
+
+  const handleAddEntry = (gridId: string, newRow: Record<string, unknown>) => {
+    setLocalGridData((prev) => {
+      const current = prev?.[gridId] ?? []
+      return { ...(prev ?? {}), [gridId]: [...current, newRow] }
+    })
+  }
+
+  const handleDeleteEntries = (gridId: string, rowIndices: number[]) => {
+    setLocalGridData((prev) => {
+      const current = prev?.[gridId] ?? []
+      const filtered = current.filter((_, index) => !rowIndices.includes(index))
+      return { ...(prev ?? {}), [gridId]: filtered }
     })
   }
 
@@ -88,6 +112,8 @@ export function TrackerDisplayInline({
             fields={fields}
             localGridData={localGridData}
             handleUpdate={handleUpdate}
+            handleAddEntry={handleAddEntry}
+            handleDeleteEntries={handleDeleteEntries}
           />
         ))}
       </Tabs>
@@ -101,17 +127,30 @@ function TrackerTabContent({
   grids,
   fields,
   localGridData,
-  handleUpdate
+  handleUpdate,
+  handleAddEntry,
+  handleDeleteEntries,
 }: {
-  tab: TrackerTab;
-  sections: ITrackerSection[];
-  grids: TrackerGrid[];
-  fields: TrackerField[];
-  localGridData: Record<string, Array<Record<string, unknown>>>;
-  handleUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void;
+  tab: TrackerTab
+  sections: ITrackerSection[]
+  grids: TrackerGrid[]
+  fields: TrackerField[]
+  localGridData: Record<string, Array<Record<string, unknown>>>
+  handleUpdate: (
+    gridId: string,
+    rowIndex: number,
+    columnId: string,
+    value: unknown,
+  ) => void
+  handleAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
+  handleDeleteEntries: (gridId: string, rowIndices: number[]) => void
 }) {
   const tabSections = useMemo<
-    Array<ITrackerSection & { grids: Array<TrackerGrid & { fields: TrackerField[] }> }>
+    Array<
+      ITrackerSection & {
+        grids: Array<TrackerGrid & { fields: TrackerField[] }>
+      }
+    >
   >(() => {
     return sections
       .filter((section) => section.tabId === tab.fieldName)
@@ -125,7 +164,9 @@ function TrackerTabContent({
             ...grid,
             fields: fields
               .filter(
-                (field) => field.gridId === (grid.isShadow && grid.gridId ? grid.gridId : grid.id)
+                (field) =>
+                  field.gridId ===
+                  (grid.isShadow && grid.gridId ? grid.gridId : grid.id),
               )
               .sort((a, b) => a.placeId - b.placeId),
           })),
@@ -148,6 +189,8 @@ function TrackerTabContent({
             section={section}
             gridData={localGridData}
             onUpdate={handleUpdate}
+            onAddEntry={handleAddEntry}
+            onDeleteEntries={handleDeleteEntries}
           />
         </div>
       ))}
