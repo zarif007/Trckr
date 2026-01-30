@@ -244,6 +244,8 @@ export function DataTable<TData, TValue>({
     },
   })
 
+  const fixedWidth = '34px'
+
   return (
     <div className="w-full space-y-4">
       <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
@@ -260,13 +262,11 @@ export function DataTable<TData, TValue>({
                   const fieldType = fieldMetadata?.[header.id]?.type
                   const Icon = fieldType ? getFieldIcon(fieldType) : null
 
-                  const fixedWidth = '34px'
-
                   return (
                     <TableHead
                       key={header.id}
                       style={{
-                        width: isSelect || isActions ? fixedWidth : '150px',
+                        width: isSelect || isActions ? fixedWidth : undefined,
                         minWidth: isSelect || isActions ? fixedWidth : '150px',
                       }}
                       className={cn(
@@ -311,7 +311,11 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => {
                     if (cell.column.id === 'actions') {
                        return (
-                         <TableCell key={cell.id} className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 max-w-[34px]">
+                         <TableCell 
+                            key={cell.id} 
+                            style={{ width: fixedWidth, minWidth: fixedWidth }}
+                            className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0"
+                          >
                             <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
                               {flexRender(
                                 cell.column.columnDef.cell,

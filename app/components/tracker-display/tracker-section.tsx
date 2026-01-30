@@ -7,14 +7,12 @@ interface TrackerSectionProps {
   section: ITrackerSection & {
     grids: (TrackerGrid & { fields: TrackerField[] })[]
   }
-  examples: Array<Record<string, unknown>>
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
 }
 
 export function TrackerSection({
   section,
-  examples,
   gridData,
   onUpdate,
 }: TrackerSectionProps) {
@@ -39,11 +37,7 @@ export function TrackerSection({
                 rows={(() => {
                   const effectiveGridId = (grid.isShadow && grid.gridId) ? grid.gridId : grid.id
                   const explicit = gridData?.[effectiveGridId]
-                  const looksLikeLookup =
-                    (grid.fields?.length ?? 0) === 2 &&
-                    grid.fields?.some((f) => f.key === 'label') &&
-                    grid.fields?.some((f) => f.key === 'value')
-                  return explicit ?? (looksLikeLookup ? [] : examples)
+                  return explicit ?? []
                 })()}
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
@@ -54,7 +48,7 @@ export function TrackerSection({
             {grid.type === 'kanban' && (
               <TrackerKanbanGrid
                 grid={grid}
-                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? examples}
+                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? []}
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
                   onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)
@@ -64,7 +58,7 @@ export function TrackerSection({
             {grid.type === 'div' && (
               <TrackerDivGrid
                 grid={grid}
-                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? examples}
+                rows={gridData?.[(grid.isShadow && grid.gridId) ? grid.gridId : grid.id] ?? []}
                 gridData={gridData}
                 onUpdate={(rowIndex, columnId, value) =>
                   onUpdate?.((grid.isShadow && grid.gridId) ? grid.gridId : grid.id, rowIndex, columnId, value)

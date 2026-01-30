@@ -72,14 +72,13 @@ export interface TrackerField {
     minLength?: number
     maxLength?: number
     /**
-     * Deprecated: inline options. Prefer `optionsGridId` (Shared lookup table).
+     * Deprecated: inline options.
      */
     options?: TrackerOption[]
     /**
-     * For options/multiselect fields, references a grid (usually in the Shared tab)
-     * whose rows contain `{ label, value }`.
+     * For options/multiselect fields: the mapping id to resolve options.
      */
-    optionsGridId?: string
+    optionsMappingId?: string
   }
 }
 
@@ -88,11 +87,8 @@ export interface TrackerDisplayProps {
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
-  examples: Array<Record<string, unknown>>
   /**
-   * Optional per-grid datasets. If a gridId exists here, it overrides `examples`
-   * as the dataset for that grid.
+   * Optional per-grid datasets.
    */
   gridData?: Record<string, Array<Record<string, unknown>>>
-  views: string[]
 }

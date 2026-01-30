@@ -10,18 +10,14 @@ function toStringOrEmpty(v: unknown): string {
 
 /**
  * Resolves selectable options for a field.
- *
- * - Prefer Shared lookup tables via `field.config.optionsGridId` and `gridData[gridId]`
- *   where each row is `{ label, value }`.
- * - Fall back to deprecated inline `field.config.options`.
  */
 export function resolveFieldOptions(
   field: TrackerField,
   gridData?: GridData
 ): TrackerOption[] | undefined {
-  const optionsGridId = field.config?.optionsGridId
-  if (optionsGridId && gridData?.[optionsGridId]) {
-    const rows = gridData[optionsGridId] ?? []
+  const optionsMappingId = field.config?.optionsMappingId
+  if (optionsMappingId && gridData?.[optionsMappingId]) {
+    const rows = gridData[optionsMappingId] ?? []
     const resolved = rows
       .map((row) => {
         const id = toStringOrEmpty(row.value)
@@ -35,4 +31,3 @@ export function resolveFieldOptions(
 
   return field.config?.options
 }
-

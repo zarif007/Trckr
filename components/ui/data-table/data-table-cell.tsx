@@ -36,8 +36,8 @@ export function DataTableCell<TData, TValue>({
   return (
     <TableCell
       style={{
-        width: isSelect ? '32px' : '150px',
-        minWidth: isSelect ? '32px' : '150px',
+        width: isSelect ? '34px' : undefined,
+        minWidth: isSelect ? '34px' : '150px',
       }}
       className={cn(
         "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",

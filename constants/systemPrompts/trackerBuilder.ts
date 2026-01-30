@@ -9,8 +9,6 @@ The schema MUST follow this structure exactly (flat structure with references, N
 - grids: an array of independent grid objects with sectionId references
 - fields: an array of independent field objects with gridId references
 - gridData: (optional) an object keyed by gridId containing row arrays for that grid
-- views: an array of suggested data views for visualizing the tracker
-- examples: array of sample data objects whose keys match field.key values
 
 CRITICAL: All fieldName values across tabs, sections, and fields MUST be unique. No duplicates allowed.
 
@@ -18,8 +16,6 @@ You must follow these rules strictly:
 
 1. Tabs
 - Tabs represent pages. Use as many tabs as necessary to fulfill the user's request logically.
-- ALWAYS include a default tab named "Shared" with fieldName "shared".
-- The "Shared" tab MUST have the HIGHEST placeId so it always sorts last.
 - Each tab object must include:
   - name: short, human-friendly title (e.g. "Overview")
   - fieldName: camelCase identifier for code usage (e.g. "overview")
@@ -68,44 +64,13 @@ You must follow these rules strictly:
     - order: (optional) number (deprecated in favor of root-level placeId)
   - config: (optional) object containing validation and behavior
     - required: (optional) boolean
-    - optionsGridId: (optional) string (gridId) pointing to a Shared lookup table (REQUIRED for options/multiselect)
+    - optionsMappingId: (optional) string (id) pointing to a mapping for resolving options
     - options: (DEPRECATED) do NOT use unless explicitly instructed
     - defaultValue: (optional)
 - Fields are independent objects, linked to grids via gridId
 - Use "options" data type for single-choice selection from predefined choices
 - Use "multiselect" data type for multi-choice selection
 - Do NOT include internal fields or system metadata that isn't part of the schema
-
-SHARED LOOKUP TABLES (CRITICAL):
-- For EVERY field with dataType "options" or "multiselect", you MUST:
-  1) Create a table grid inside the "Shared" tab that stores the allowed choices.
-     - The grid must be type: "table"
-     - It must have EXACTLY 2 fields: "Label" and "Value"
-       - Use keys: "label" and "value"
-       - Use ids (snake_case): "label" and "value"
-  2) Populate the lookup table rows in 'gridData[thatGridId]' as an array of objects.
-     - IMPORTANT: Generate a comprehensive set of options (at least 3-5) for each lookup table to serve as examples.
-     - Each row must be: { "label": "<human label>", "value": "<stored value>" }
-  3) On the original field, set 'config.optionsGridId' to that lookup grid's id.
-- The main field values stored in examples MUST use the "value" from the lookup table (not the label).
-
-6. Views
-- Views describe how the user might want to see their data
-- Suggest all useful views that would benefit the user based on their request.
-- Examples: "Table", "Calendar", "Weekly Summary", "Chart"
-- Views should match the tracking goal
-
-7. Examples
-- Generate 2–3 realistic sample data objects to demonstrate the tracker with actual data.
-- Each example object should have keys matching every field.key defined in fields.
-- Populate fields with realistic, contextual data based on the field type and tracker purpose.
-- For "options" fields, use a valid lookup "value" from its Shared table.
-- For "multiselect" fields, use an array of valid lookup "value" strings from its Shared table.
-- For "date" fields, use realistic dates.
-- For "boolean" fields, use true/false values.
-- For "number" fields, use realistic numeric values.
-- For "string" and "text" fields, use relevant example content.
-- Make examples diverse and realistic.
 
 8. Output format
 - Output ONLY valid JSON

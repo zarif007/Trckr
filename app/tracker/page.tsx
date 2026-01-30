@@ -17,9 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-interface TrackerResponse extends Omit<TrackerDisplayProps, 'views'> {
-  views: string[]
-}
+interface TrackerResponse extends TrackerDisplayProps {}
 
 interface Message {
   role: 'user' | 'assistant'
@@ -595,8 +593,6 @@ export default function TrackerPage() {
                 sections={(object.tracker.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
                 grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
                 fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
-                examples={(object.tracker.examples || []).filter((e: any) => e && typeof e === 'object') as any}
-                views={(object.tracker.views || []).filter((v: any) => typeof v === 'string') as any}
               />
             ) : activeTrackerData ? (
               <TrackerDisplay
@@ -604,8 +600,6 @@ export default function TrackerPage() {
                 sections={activeTrackerData.sections}
                 grids={activeTrackerData.grids}
                 fields={activeTrackerData.fields}
-                examples={activeTrackerData.examples}
-                views={activeTrackerData.views}
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">

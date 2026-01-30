@@ -64,11 +64,9 @@ export async function POST(request: Request) {
                 gridId: f.gridId,
                 placeId: f.placeId,
                 label: f.ui?.label,
-                optionsGridId: f.config?.optionsGridId,
-                // Keep inline options for backwards compatibility context, but prefer optionsGridId going forward
+                optionsMappingId: f.config?.optionsMappingId,
                 options: f.config?.options
-              }))
-              ,
+              })),
               gridDataKeys: gridData ? Object.keys(gridData) : []
             }
 
