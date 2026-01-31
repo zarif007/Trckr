@@ -12,20 +12,21 @@ import { TrackerCell } from './tracker-cell'
 
 // Helper to look up options from optionTables
 function resolveFieldOptions(
-    field: { id: string, dataType: string },
-    optionTables: TrackerOptionTable[],
-    optionsMappingId?: string
+  field: { id: string; dataType: string },
+  optionTables: TrackerOptionTable[],
+  optionsMappingId?: string,
 ) {
-    if (field.dataType !== 'options' && field.dataType !== 'multiselect') return undefined
-    if (!optionsMappingId) return undefined
-    
-    const table = optionTables.find(t => t.id === optionsMappingId)
-    if (!table) return undefined
-    
-    return table.options.map((opt) => ({
-      ...opt,
-      id: opt.id ?? String(opt.value),
-    }))
+  if (field.dataType !== 'options' && field.dataType !== 'multiselect')
+    return undefined
+  if (!optionsMappingId) return undefined
+
+  const table = optionTables.find((t) => t.id === optionsMappingId)
+  if (!table || !table.options) return undefined
+
+  return table.options.map((opt) => ({
+    ...opt,
+    id: opt.id ?? String(opt.value),
+  }))
 }
 
 interface TrackerTableGridProps {
@@ -51,19 +52,24 @@ export function TrackerTableGrid({
 }: TrackerTableGridProps) {
   // Find fields connected to this grid
   const connectedFieldNodes = layoutNodes
-    .filter(n => n.gridId === grid.id && n.refType === 'field')
+    .filter((n) => n.gridId === grid.id && n.refType === 'field')
     .sort((a, b) => a.order - b.order)
 
   if (connectedFieldNodes.length === 0) {
-      if (layoutNodes.length === 0) return null
-      return <div className="p-4 text-muted-foreground">Empty Table (No Fields linked)</div>
+    if (layoutNodes.length === 0) return null
+    return (
+      <div className="p-4 text-muted-foreground">
+        Empty Table (No Fields linked)
+      </div>
+    )
   }
 
   const tableFields = connectedFieldNodes
-    .map(node => fields.find(f => f.id === node.refId))
+    .map((node) => fields.find((f) => f.id === node.refId))
     .filter((f): f is TrackerField => !!f)
-  
-  if (tableFields.length === 0) return <div className="p-4 text-red-500">Missing Field Definitions</div>
+
+  if (tableFields.length === 0)
+    return <div className="p-4 text-red-500">Missing Field Definitions</div>
 
   // Rows come from gridData[grid.id]
   const rows = gridData?.[grid.id] ?? []
@@ -73,7 +79,11 @@ export function TrackerTableGrid({
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
-      options: resolveFieldOptions(field, optionTables, field.config?.optionsMappingId),
+      options: resolveFieldOptions(
+        field,
+        optionTables,
+        field.config?.optionsMappingId,
+      ),
     }
   })
 
@@ -89,7 +99,11 @@ export function TrackerTableGrid({
           <TrackerCell
             value={value}
             type={field.dataType}
-            options={resolveFieldOptions(field, optionTables, field.config?.optionsMappingId)}
+            options={resolveFieldOptions(
+              field,
+              optionTables,
+              field.config?.optionsMappingId,
+            )}
           />
         )
       },
