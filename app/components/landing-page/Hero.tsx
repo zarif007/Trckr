@@ -58,7 +58,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-md bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-md h-2 w-2 bg-emerald-500"></span>
           </span>
-          AI-native tracking
+          AI-native Data tracking
         </motion.div>
 
         <motion.h1 

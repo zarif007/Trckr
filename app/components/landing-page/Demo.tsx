@@ -53,19 +53,19 @@ export default function Demo() {
 
   const demoData = {
     tabs: [
-      { name: 'My Assignments', fieldName: 'assignments', placeId: 1 },
-      { name: 'Resources', fieldName: 'resources', placeId: 2 },
+      { id: 'assignments', name: 'My Assignments', placeId: 1 },
+      { id: 'resources', name: 'Resources', placeId: 2 },
     ],
     sections: [
       {
+        id: 'current_tasks',
         name: 'Current Tasks',
-        fieldName: 'current_tasks',
         tabId: 'assignments',
         placeId: 1,
       },
       {
+        id: 'study_materials',
         name: 'Study Materials',
-        fieldName: 'study_materials',
         tabId: 'resources',
         placeId: 1,
       },
@@ -73,183 +73,167 @@ export default function Demo() {
     grids: [
       {
         id: 'assignment_list',
-        key: 'assignmentList',
         name: 'Assignment List',
         type: 'table' as const,
         sectionId: 'current_tasks',
         placeId: 1,
+        config: {},
       },
       {
         id: 'by_status',
-        key: 'byStatus',
         name: 'By Status',
         type: 'kanban' as const,
         sectionId: 'current_tasks',
         placeId: 2,
-        isShadow: true,
-        gridId: 'assignment_list',
-        config: { groupBy: 'status' },
+        config: { groupBy: 'kb_status' },
       },
       {
         id: 'books_links',
-        key: 'booksLinks',
         name: 'Books & Links',
         type: 'table' as const,
         sectionId: 'study_materials',
         placeId: 1,
+        config: {},
       },
     ],
     fields: [
-      // Assignment List fields (table)
+      // Assignment Fields
       {
         id: 'assignment_name',
-        key: 'assignment',
         dataType: 'string' as const,
-        gridId: 'assignment_list',
-        placeId: 1,
         ui: { label: 'Assignment' },
       },
       {
         id: 'course_name',
-        key: 'course',
         dataType: 'string' as const,
-        gridId: 'assignment_list',
-        placeId: 2,
         ui: { label: 'Course' },
       },
       {
         id: 'due_date',
-        key: 'dueDate',
         dataType: 'date' as const,
-        gridId: 'assignment_list',
-        placeId: 3,
         ui: { label: 'Due Date' },
       },
       {
         id: 'priority',
-        key: 'priority',
         dataType: 'options' as const,
-        gridId: 'assignment_list',
-        placeId: 4,
         ui: { label: 'Priority' },
-        config: {
-          options: [
-            { id: 'high', label: 'High' },
-            { id: 'medium', label: 'Medium' },
-            { id: 'low', label: 'Low' },
-          ],
-        },
+        config: { optionsMappingId: 'priority_options' },
       },
       {
         id: 'status',
-        key: 'status',
         dataType: 'options' as const,
-        gridId: 'assignment_list',
-        placeId: 5,
         ui: { label: 'Status' },
-        config: {
-          options: [
-            { id: 'not_started', label: 'Not Started' },
-            { id: 'in_progress', label: 'In Progress' },
-            { id: 'completed', label: 'Completed' },
-          ],
-        },
+        config: { optionsMappingId: 'status_options' },
       },
       {
         id: 'is_completed',
-        key: 'completed',
         dataType: 'boolean' as const,
-        gridId: 'assignment_list',
-        placeId: 6,
         ui: { label: 'Completed' },
       },
-      // By Status fields (kanban)
+      // Shared fields for Kanban (duplicated definitions for now as per plan/schema limitations)
       {
         id: 'kb_assignment',
-        key: 'assignment',
         dataType: 'string' as const,
-        gridId: 'by_status',
-        placeId: 1,
         ui: { label: 'Assignment' },
       },
       {
         id: 'kb_course',
-        key: 'course',
         dataType: 'string' as const,
-        gridId: 'by_status',
-        placeId: 2,
         ui: { label: 'Course' },
       },
       {
         id: 'kb_due_date',
-        key: 'dueDate',
         dataType: 'date' as const,
-        gridId: 'by_status',
-        placeId: 3,
         ui: { label: 'Due Date' },
       },
       {
         id: 'kb_status',
-        key: 'status',
         dataType: 'options' as const,
-        gridId: 'by_status',
-        placeId: 4,
         ui: { label: 'Status' },
-        config: {
-          options: [
-            { id: 'not_started', label: 'Not Started' },
-            { id: 'in_progress', label: 'In Progress' },
-            { id: 'completed', label: 'Completed' },
-          ],
-        },
+        config: { optionsMappingId: 'status_options' },
       },
-      // Study Materials fields
+      // Resource Fields
       {
         id: 'resource_title',
-        key: 'title',
         dataType: 'string' as const,
-        gridId: 'books_links',
-        placeId: 1,
         ui: { label: 'Title' },
       },
       {
         id: 'resource_type',
-        key: 'type',
         dataType: 'options' as const,
-        gridId: 'books_links',
-        placeId: 2,
         ui: { label: 'Type' },
-        config: {
-          options: [
-            { id: 'book', label: 'Book' },
-            { id: 'article', label: 'Article' },
-            { id: 'video', label: 'Video' },
-            { id: 'website', label: 'Website' },
-          ],
-        },
+        config: { optionsMappingId: 'resource_type_options' },
       },
       {
         id: 'resource_link',
-        key: 'link',
-        dataType: 'string' as const,
-        gridId: 'books_links',
-        placeId: 3,
+        dataType: 'link' as const,
         ui: { label: 'Link' },
+      },
+    ],
+    layoutNodes: [
+      // Assignment List Nodes
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'assignment_name', order: 1 },
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'course_name', order: 2 },
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'due_date', order: 3 },
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'priority', order: 4 },
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'status', order: 5 },
+      { gridId: 'assignment_list', refType: 'field' as const, refId: 'is_completed', order: 6 },
+      // By Status Nodes
+      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_assignment', order: 1 },
+      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_course', order: 2 },
+      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_due_date', order: 3 },
+      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_status', order: 4 },
+      // Books & Links Nodes
+      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_title', order: 1 },
+      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_type', order: 2 },
+      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_link', order: 3 },
+    ],
+    optionTables: [
+      {
+        id: 'priority_options',
+        options: [
+          { id: 'high', label: 'High', value: 'high' },
+          { id: 'medium', label: 'Medium', value: 'medium' },
+          { id: 'low', label: 'Low', value: 'low' },
+        ],
+      },
+      {
+        id: 'status_options',
+        options: [
+          { id: 'not_started', label: 'Not Started', value: 'not_started' },
+          { id: 'in_progress', label: 'In Progress', value: 'in_progress' },
+          { id: 'completed', label: 'Completed', value: 'completed' },
+        ],
+      },
+      {
+        id: 'resource_type_options',
+        options: [
+          { id: 'book', label: 'Book', value: 'book' },
+          { id: 'article', label: 'Article', value: 'article' },
+          { id: 'video', label: 'Video', value: 'video' },
+          { id: 'website', label: 'Website', value: 'website' },
+        ],
       },
     ],
     gridData: {
       assignment_list: examples.map((ex) => ({
-        assignment: ex.assignment,
-        course: ex.course,
-        dueDate: ex.dueDate,
+        assignment_name: ex.assignment,
+        course_name: ex.course,
+        due_date: ex.dueDate,
         priority: ex.priority,
         status: ex.status,
-        completed: ex.completed,
+        is_completed: ex.completed,
+      })),
+      by_status: examples.map((ex) => ({
+        kb_assignment: ex.assignment,
+        kb_course: ex.course,
+        kb_due_date: ex.dueDate,
+        kb_status: ex.status,
       })),
       books_links: examples.map((ex) => ({
-        title: ex.title,
-        type: ex.type,
-        link: ex.link,
+        resource_title: ex.title,
+        resource_type: ex.type,
+        resource_link: ex.link,
       })),
     },
   }

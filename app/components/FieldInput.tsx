@@ -187,7 +187,7 @@ export function FieldInput({
           </SelectTrigger>
           <SelectContent>
             {resolvedOptions?.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
+              <SelectItem key={option.id} value={option.value}>
                 {option.label}
               </SelectItem>
             ))}
@@ -197,7 +197,12 @@ export function FieldInput({
     case 'multiselect':
       return (
         <MultiSelect
-          options={resolvedOptions ?? []}
+          options={
+            resolvedOptions?.map((opt) => ({
+              id: opt.id ?? String(opt.value ?? ''),
+              label: opt.label,
+            })) ?? []
+          }
           value={Array.isArray(value) ? value.map(String) : []}
           onChange={onChange}
           placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}

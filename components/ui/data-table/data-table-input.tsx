@@ -148,6 +148,31 @@ export function DataTableInput({
           className={cn(inlineInputClass, className)}
         />
       )
+    case 'link':
+      return (
+        <Input
+          type="text"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(inlineInputClass, className)}
+          placeholder="https://"
+          autoFocus={autoFocus}
+        />
+      )
+    case 'currency':
+    case 'percentage':
+      return (
+        <Input
+          type="number"
+          value={value ?? ''}
+          onChange={(e) => {
+            const val = e.target.value
+            onChange(val === '' ? '' : Number(val))
+          }}
+          className={cn(inlineInputClass, className)}
+          autoFocus={autoFocus}
+        />
+      )
     default:
       return <span className="px-2">{String(value)}</span>
   }

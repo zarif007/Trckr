@@ -2,15 +2,19 @@ import {
   TrackerSection as ITrackerSection,
   TrackerGrid,
   TrackerField,
+  TrackerLayoutNode,
+  TrackerOptionTable,
 } from './types'
 import { TrackerTableGrid } from './tracker-table-grid'
 import { TrackerKanbanGrid } from './tracker-kanban-grid'
 import { TrackerDivGrid } from './tracker-div-grid'
 
 interface TrackerSectionProps {
-  section: ITrackerSection & {
-    grids: (TrackerGrid & { fields: TrackerField[] })[]
-  }
+  section: ITrackerSection
+  grids: TrackerGrid[]
+  fields: TrackerField[]
+  layoutNodes: TrackerLayoutNode[]
+  optionTables: TrackerOptionTable[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (
     gridId: string,
@@ -24,98 +28,86 @@ interface TrackerSectionProps {
 
 export function TrackerSection({
   section,
+  grids,
+  fields,
+  layoutNodes,
+  optionTables,
   gridData,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
 }: TrackerSectionProps) {
+  // Filter grids that belong to this section
+  // They are already filtered in the parent, but purely trusting props is fine too
+  // if the parent passed the correct subset.
+  // Based on current implementation, parent passes specific grids.
+  
   return (
     <div className="space-y-4">
       <h3 className="text-2xl font-semibold text-foreground border-b pb-2">
         {section.name}
       </h3>
       <div className="space-y-6">
-        {section.grids.map((grid) => (
-          <div key={grid.id} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  {grid.name}
-                </label>
-              </div>
-            </div>
-            {grid.type === 'table' && (
-              <TrackerTableGrid
-                grid={grid}
-                rows={(() => {
-                  const effectiveGridId =
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
-                  const explicit = gridData?.[effectiveGridId]
-                  return explicit ?? []
-                })()}
-                gridData={gridData}
-                onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.(
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
-                    rowIndex,
-                    columnId,
-                    value,
-                  )
-                }
-                onAddEntry={(newRow) =>
-                  onAddEntry?.(
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
-                    newRow,
-                  )
-                }
-                onDeleteEntries={(rowIndices) =>
-                  onDeleteEntries?.(
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
-                    rowIndices,
-                  )
-                }
-              />
-            )}
-            {grid.type === 'kanban' && (
-              <TrackerKanbanGrid
-                grid={grid}
-                rows={
-                  gridData?.[
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
-                  ] ?? []
-                }
-                gridData={gridData}
-                onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.(
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
-                    rowIndex,
-                    columnId,
-                    value,
-                  )
-                }
-              />
-            )}
-            {grid.type === 'div' && (
-              <TrackerDivGrid
-                grid={grid}
-                rows={
-                  gridData?.[
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id
-                  ] ?? []
-                }
-                gridData={gridData}
-                onUpdate={(rowIndex, columnId, value) =>
-                  onUpdate?.(
-                    grid.isShadow && grid.gridId ? grid.gridId : grid.id,
-                    rowIndex,
-                    columnId,
-                    value,
-                  )
-                }
-              />
-            )}
-          </div>
-        ))}
+        {grids.map((grid) => {
+            // Get layout nodes for this grid
+            const gridLayoutNodes = layoutNodes
+                .filter(node => node.gridId === grid.id)
+                .sort((a, b) => a.order - b.order)
+            
+            return (
+                <div key={grid.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                    <div>
+                        <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        {grid.name}
+                        </label>
+                    </div>
+                    </div>
+                     {grid.type === 'table' && (
+                        <TrackerTableGrid
+                            grid={grid}
+                            layoutNodes={gridLayoutNodes}
+                            fields={fields}
+                            optionTables={optionTables}
+                            gridData={gridData}
+                            onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                            onAddEntry={onAddEntry ? (newRow) => onAddEntry(grid.id, newRow) : undefined}
+                            onDeleteEntries={onDeleteEntries ? (rowIndices) => onDeleteEntries(grid.id, rowIndices) : undefined}
+                        />
+                    )}
+                    {grid.type === 'kanban' && (
+                         <TrackerKanbanGrid
+                            grid={grid}
+                            layoutNodes={gridLayoutNodes}
+                            fields={fields}
+                            optionTables={optionTables}
+                            gridData={gridData}
+                            onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                         />
+                    )}
+                    {grid.type === 'div' && (
+                        <TrackerDivGrid
+                            grid={grid}
+                            layoutNodes={gridLayoutNodes}
+                            fields={fields}
+                            optionTables={optionTables}
+                            gridData={gridData}
+                            onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                        />
+                    )}
+                    {grid.type === 'calendar' && (
+                         <div className="p-4 border border-dashed rounded text-muted-foreground">
+                            Calendar Grid: {grid.name} (Not implemented)
+                        </div>
+                    )}
+                     {grid.type === 'timeline' && (
+                         <div className="p-4 border border-dashed rounded text-muted-foreground">
+                            Timeline Grid: {grid.name} (Not implemented)
+                        </div>
+                    )}
+                </div>
+            )
+        })}
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   TrackerDisplayProps,
@@ -9,6 +8,8 @@ import {
   TrackerSection as ITrackerSection,
   TrackerGrid,
   TrackerField,
+  TrackerLayoutNode,
+  TrackerOptionTable,
 } from './types'
 import { TrackerSection } from './tracker-section'
 
@@ -17,6 +18,8 @@ export function TrackerDisplayInline({
   sections,
   grids,
   fields,
+  layoutNodes = [],
+  optionTables = [],
   gridData,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
@@ -24,16 +27,16 @@ export function TrackerDisplayInline({
   }, [tabs])
 
   const [activeTabId, setActiveTabId] = useState(
-    normalizedTabs[0]?.fieldName || '',
+    normalizedTabs[0]?.id || '',
   )
 
   useEffect(() => {
     if (normalizedTabs.length > 0) {
       const tabExists = normalizedTabs.some(
-        (tab) => tab.fieldName === activeTabId,
+        (tab) => tab.id === activeTabId,
       )
       if (!activeTabId || !tabExists) {
-        setActiveTabId(normalizedTabs[0].fieldName)
+        setActiveTabId(normalizedTabs[0].id)
       }
     }
   }, [normalizedTabs, activeTabId])
@@ -92,8 +95,8 @@ export function TrackerDisplayInline({
           <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
             {normalizedTabs.map((tab, index) => (
               <TabsTrigger
-                key={tab.fieldName}
-                value={tab.fieldName}
+                key={tab.id}
+                value={tab.id}
                 className="animate-in fade-in-0 slide-in-from-left-2 duration-300"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -105,11 +108,13 @@ export function TrackerDisplayInline({
 
         {normalizedTabs.map((tab) => (
           <TrackerTabContent
-            key={tab.fieldName}
+            key={tab.id}
             tab={tab}
             sections={sections}
             grids={grids}
             fields={fields}
+            layoutNodes={layoutNodes}
+            optionTables={optionTables}
             localGridData={localGridData}
             handleUpdate={handleUpdate}
             handleAddEntry={handleAddEntry}
@@ -126,6 +131,8 @@ function TrackerTabContent({
   sections,
   grids,
   fields,
+  layoutNodes,
+  optionTables,
   localGridData,
   handleUpdate,
   handleAddEntry,
@@ -135,6 +142,8 @@ function TrackerTabContent({
   sections: ITrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
+  layoutNodes: TrackerLayoutNode[]
+  optionTables: TrackerOptionTable[]
   localGridData: Record<string, Array<Record<string, unknown>>>
   handleUpdate: (
     gridId: string,
@@ -145,48 +154,36 @@ function TrackerTabContent({
   handleAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
   handleDeleteEntries: (gridId: string, rowIndices: number[]) => void
 }) {
-  const tabSections = useMemo<
-    Array<
-      ITrackerSection & {
-        grids: Array<TrackerGrid & { fields: TrackerField[] }>
-      }
-    >
-  >(() => {
+  const tabSections = useMemo(() => {
     return sections
-      .filter((section) => section.tabId === tab.fieldName)
+      .filter((section) => section.tabId === tab.id)
       .sort((a, b) => a.placeId - b.placeId)
       .map((section) => ({
         ...section,
         grids: grids
-          .filter((grid) => grid.sectionId === section.fieldName)
+          .filter((grid) => grid.sectionId === section.id)
           .sort((a, b) => a.placeId - b.placeId)
-          .map((grid) => ({
-            ...grid,
-            fields: fields
-              .filter(
-                (field) =>
-                  field.gridId ===
-                  (grid.isShadow && grid.gridId ? grid.gridId : grid.id),
-              )
-              .sort((a, b) => a.placeId - b.placeId),
-          })),
       }))
-  }, [tab.fieldName, sections, grids, fields])
+  }, [tab.id, sections, grids])
 
   return (
     <TabsContent
-      key={tab.fieldName}
-      value={tab.fieldName}
+      key={tab.id}
+      value={tab.id}
       className="space-y-6 mt-6"
     >
       {tabSections.map((section, index) => (
         <div
-          key={section.fieldName}
+          key={section.id}
           className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
           style={{ animationDelay: `${index * 100}ms` }}
         >
           <TrackerSection
             section={section}
+            grids={section.grids}
+            fields={fields}
+            layoutNodes={layoutNodes}
+            optionTables={optionTables}
             gridData={localGridData}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}

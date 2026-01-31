@@ -53,37 +53,33 @@ export async function POST(request: Request) {
             // Create a clean, minimal JSON summary of the current tracker state
             const currentTrackerState = {
               tabs: tabs.map((t: any) => ({
+                id: t.id,
                 name: t.name,
-                id: t.fieldName,
                 placeId: t.placeId,
               })),
               sections: sections.map((s: any) => ({
+                id: s.id,
                 name: s.name,
-                id: s.fieldName,
-                tab: s.tabId,
+                tabId: s.tabId,
                 placeId: s.placeId,
               })),
               grids: grids.map((g: any) => ({
-                name: g.name,
                 id: g.id,
-                key: g.key,
+                name: g.name,
                 type: g.type,
-                section: g.sectionId,
+                sectionId: g.sectionId,
                 placeId: g.placeId,
-                isShadow: g.isShadow,
-                gridId: g.gridId,
                 config: g.config,
               })),
               fields: fields.map((f: any) => ({
                 id: f.id,
-                key: f.key,
                 dataType: f.dataType,
-                gridId: f.gridId,
-                placeId: f.placeId,
-                label: f.ui?.label,
-                optionsMappingId: f.config?.optionsMappingId,
-                options: f.config?.options,
+                ui: f.ui,
+                config: f.config,
               })),
+              layoutNodes: (msg.trackerData as any).layoutNodes || [],
+              collections: (msg.trackerData as any).collections || [],
+              optionTables: (msg.trackerData as any).optionTables || [],
               gridDataKeys: gridData ? Object.keys(gridData) : [],
             }
 
@@ -118,8 +114,12 @@ export async function POST(request: Request) {
       
       ${trackerBuilderPrompt}
       
-      CRITICAL: You are a unified system. First fill the "manager" object thoroughly. 
-      Only then proceed to fill the "tracker" object based on your PRD.
+      CRITICAL: You are a unified system. You MUST generate a response containing TWO parts:
+      1. "manager": The breakdown of requirements.
+      2. "tracker": The actual schema implementation.
+
+      NEVER stop after the manager object. The user will see an error if 'tracker' is missing.
+      You MUST populate the 'tracker' object based on the manager's PRD.
     `
 
     const result = streamObject({

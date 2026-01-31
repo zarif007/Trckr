@@ -6,80 +6,62 @@ export type TrackerFieldType =
   | 'multiselect'
   | 'boolean'
   | 'text'
+  | 'link'
+  | 'currency'
+  | 'percentage'
 
-export type TrackerOption = { id: string; label: string }
-
-export interface TrackerTab {
+export type TrackerTab = {
+  id: string
   name: string
-  fieldName: string
   placeId: number
 }
 
-export interface TrackerSection {
+export type TrackerSection = {
+  id: string
   name: string
-  fieldName: string
   tabId: string
   placeId: number
 }
 
-export type GridType = 'div' | 'table' | 'kanban'
+export type GridType = 'div' | 'table' | 'kanban' | 'timeline' | 'calendar'
 
-export type DivGridConfig = {
-  layout?: 'vertical' | 'horizontal'
-}
-
-export type TableGridConfig = {
-  sortable?: boolean
-  pagination?: boolean
-  rowSelection?: boolean
-}
-
-export type KanbanGridConfig = {
-  groupBy: string
-  orderBy?: string
-}
-
-export type GridConfig = DivGridConfig | TableGridConfig | KanbanGridConfig
-
-export interface TrackerGrid {
+export type TrackerGrid = {
   id: string
-  key: string
   name: string
   type: GridType
   sectionId: string
   placeId: number
-  isShadow?: boolean
-  gridId?: string
-  config?: GridConfig
+  config?: any // Using any for flexibility as per schema union
 }
 
-export interface TrackerField {
+export type TrackerField = {
   id: string
-  key: string
   dataType: TrackerFieldType
-  gridId: string
-  placeId: number
   ui: {
     label: string
     placeholder?: string
-    order?: number
   }
-  config?: {
-    defaultValue?: unknown
-    required?: boolean
-    min?: number
-    max?: number
-    minLength?: number
-    maxLength?: number
-    /**
-     * Deprecated: inline options.
-     */
-    options?: TrackerOption[]
-    /**
-     * For options/multiselect fields: the mapping id to resolve options.
-     */
-    optionsMappingId?: string
-  }
+  config?: any
+}
+
+export type TrackerLayoutNode = {
+    gridId: string
+    refType: 'field' | 'collection'
+    refId: string
+    order: number
+    renderAs?: 'default' | 'table' | 'kanban' | 'calendar' | 'timeline'
+}
+
+export type TrackerOption = {
+    label: string
+    value: any
+    id?: string
+    [key: string]: any
+}
+
+export type TrackerOptionTable = {
+    id: string
+    options: Array<TrackerOption>
 }
 
 export interface TrackerDisplayProps {
@@ -87,8 +69,7 @@ export interface TrackerDisplayProps {
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
-  /**
-   * Optional per-grid datasets.
-   */
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  layoutNodes?: TrackerLayoutNode[]
+  optionTables?: TrackerOptionTable[]
+  gridData?: any
 }

@@ -6,9 +6,22 @@ import {
   CheckSquare,
   List,
   Tags,
+  Link,
+  DollarSign,
+  Percent,
 } from 'lucide-react'
 
-export type FieldType = 'string' | 'number' | 'date' | 'options' | 'multiselect' | 'boolean' | 'text'
+export type FieldType =
+  | 'string'
+  | 'number'
+  | 'date'
+  | 'options'
+  | 'multiselect'
+  | 'boolean'
+  | 'text'
+  | 'link'
+  | 'currency'
+  | 'percentage'
 
 export interface FieldMetadata {
   [key: string]: {
@@ -34,6 +47,12 @@ export const getFieldIcon = (type: FieldType) => {
       return List
     case 'multiselect':
       return Tags
+    case 'link':
+      return Link
+    case 'currency':
+      return DollarSign
+    case 'percentage':
+      return Percent
     default:
       return Type
   }

@@ -22,7 +22,7 @@ export function resolveFieldOptions(
       .map((row) => {
         const id = toStringOrEmpty(row.value)
         const label = toStringOrEmpty(row.label)
-        return id && label ? ({ id, label } satisfies TrackerOption) : null
+        return id && label ? ({ id, label, value: id } satisfies TrackerOption) : null
       })
       .filter(Boolean) as TrackerOption[]
 

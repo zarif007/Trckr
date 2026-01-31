@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare, ChevronDown, ChevronUp } from 'lucide-react'
+import { Send, Sparkles, Loader2, User, Maximize2, ArrowRight, Zap, Target, BookOpen, CheckSquare, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence, useSpring } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { TrackerDisplay } from '@/app/components/tracker-display'
@@ -191,7 +191,7 @@ export default function TrackerPage() {
             </div>
             <div>
               <p className="text-sm font-bold tracking-tight">Tracker Ready</p>
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{trackerData.tabs?.[0]?.fieldName || 'Custom Tracker'}</p>
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{trackerData.tabs?.[0]?.id || 'Custom Tracker'}</p>
             </div>
           </div>
           <div className="p-2 rounded-md group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary transition-colors">
@@ -593,6 +593,9 @@ export default function TrackerPage() {
                 sections={(object.tracker.sections || []).filter((s: any) => s && typeof s === 'object' && s.name) as any}
                 grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
                 fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
+                layoutNodes={(object.tracker.layoutNodes || []) as any}
+                optionTables={(object.tracker.optionTables || []) as any}
+                gridData={(object.tracker.gridData || {}) as any}
               />
             ) : activeTrackerData ? (
               <TrackerDisplay
@@ -600,14 +603,43 @@ export default function TrackerPage() {
                 sections={activeTrackerData.sections}
                 grids={activeTrackerData.grids}
                 fields={activeTrackerData.fields}
+                layoutNodes={activeTrackerData.layoutNodes}
+                optionTables={activeTrackerData.optionTables}
+                gridData={activeTrackerData.gridData}
               />
+            ) : error ? (
+              <div className="h-full flex flex-col items-center justify-center text-red-500 gap-4">
+                <div className="p-3 rounded-full bg-red-500/10">
+                  <AlertTriangle className="w-8 h-8" />
+                </div>
+                <div className="text-center max-w-md">
+                   <p className="font-bold">Generation Failed</p>
+                   <p className="text-sm text-muted-foreground">{error.message || "An error occurred while generating the tracker."}</p>
+                </div>
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+              </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">
-                <div className="relative">
-                  <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl animate-pulse" />
-                  <Loader2 className="w-12 h-12 animate-spin text-primary relative" />
-                </div>
-                <p className="text-lg font-bold tracking-tight animate-pulse">Initializing Interface...</p>
+                {messages.length > 0 && !isLoading ? (
+                   <div className="flex flex-col items-center gap-4 text-amber-500">
+                      <div className="p-3 rounded-full bg-amber-500/10">
+                        <AlertTriangle className="w-8 h-8" />
+                      </div>
+                      <div className="text-center max-w-md">
+                        <p className="font-bold">No Tracker Generated</p>
+                        <p className="text-sm text-muted-foreground">The AI responded but did not generate a valid tracker configuration.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                   </div>
+                ) : (
+                    <>
+                        <div className="relative">
+                        <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                        <Loader2 className="w-12 h-12 animate-spin text-primary relative" />
+                        </div>
+                        <p className="text-lg font-bold tracking-tight animate-pulse">Initializing Interface...</p>
+                    </>
+                )}
               </div>
             )}
           </div>

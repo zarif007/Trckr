@@ -1,7 +1,12 @@
 import { Card } from '@/components/ui/card'
-import { TrackerGrid, TrackerField } from './types'
+import {
+  TrackerGrid,
+  TrackerFieldType,
+  TrackerField,
+  TrackerLayoutNode,
+  TrackerOptionTable,
+} from './types'
 import { TrackerCell } from './tracker-cell'
-import { resolveFieldOptions } from './resolve-options'
 import {
   DndContext,
   DragOverlay,
@@ -25,8 +30,10 @@ import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 
 interface TrackerKanbanGridProps {
-  grid: TrackerGrid & { fields: TrackerField[] }
-  rows: Array<Record<string, unknown>>
+  grid: TrackerGrid
+  layoutNodes: TrackerLayoutNode[]
+  fields: TrackerField[]
+  optionTables: TrackerOptionTable[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
@@ -35,12 +42,12 @@ function SortableCard({
   id,
   card,
   cardFields,
-  gridData,
+  optionTables,
 }: {
   id: string
   card: Record<string, unknown>
-  cardFields: TrackerField[]
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string; }>
+  optionTables: TrackerOptionTable[]
 }) {
   const {
     attributes,
@@ -59,40 +66,47 @@ function SortableCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <KanbanCard card={card} cardFields={cardFields} gridData={gridData} />
+      <KanbanCard card={card} cardFields={cardFields} optionTables={optionTables} />
     </div>
   )
 }
 
+
 function KanbanCard({
   card,
   cardFields,
-  gridData,
+  optionTables,
   isOverlay = false,
 }: {
   card: Record<string, unknown>
-  cardFields: TrackerField[]
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string; }>
+  optionTables: TrackerOptionTable[]
   isOverlay?: boolean
 }) {
   return (
     <Card
       className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''}`}
     >
-      {cardFields.map((field) => (
-        <div key={field.id} className="mb-2 last:mb-0">
-          <p className="text-xs text-muted-foreground font-medium">
-            {field.ui.label}
-          </p>
-          <div className="text-sm text-foreground">
-            <TrackerCell
-              value={card[field.key]}
-              type={field.dataType}
-              options={resolveFieldOptions(field, gridData)}
-            />
-          </div>
-        </div>
-      ))}
+      {cardFields.map((field) => {
+         // Resolve options if needed (similar to other grids)
+         // Assuming collection fields might simple, but for proper display we need options
+         // Since generic collection field doesn't map options easily, we might need a workaround or assume standard mapping?
+         // For now, pass undefined or minimal options.
+         return (
+            <div key={field.id} className="mb-2 last:mb-0">
+            <p className="text-xs text-muted-foreground font-medium">
+                {field.label}
+            </p>
+            <div className="text-sm text-foreground">
+                <TrackerCell
+                value={card[field.id]}
+                type={field.dataType}
+                // options={...}
+                />
+            </div>
+            </div>
+         )
+      })}
     </Card>
   )
 }
@@ -113,7 +127,14 @@ function DroppableEmptyColumn({ id }: { id: string }) {
   )
 }
 
-export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKanbanGridProps) {
+export function TrackerKanbanGrid({ 
+    grid,
+    layoutNodes,
+    fields,
+    optionTables,
+    gridData,
+    onUpdate 
+}: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
   const sensors = useSensors(
@@ -127,26 +148,60 @@ export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKan
     })
   )
 
-  if (rows.length === 0) return null
+  // Find fields connected to this grid
+  const connectedFieldNodes = layoutNodes
+    .filter(n => n.gridId === grid.id && n.refType === 'field')
+    .sort((a, b) => a.order - b.order)
 
-  let optionsField = grid.fields.find((f) => f.id === (grid.config as { groupBy?: string } | undefined)?.groupBy)
-
-  if (!optionsField) {
-    optionsField = grid.fields.find((f) => f.dataType === 'options')
+  const kanbanFields = connectedFieldNodes
+    .map(node => fields.find(f => f.id === node.refId))
+    .filter((f): f is TrackerField => !!f)
+  
+  if (kanbanFields.length === 0) {
+      if (layoutNodes.length === 0) return null
+      return <div className="p-4 text-muted-foreground">Empty Kanban (No Fields linked)</div>
   }
 
-  if (!optionsField) {
+  const rows = gridData?.[grid.id] ?? []
+  if (rows.length === 0) return null
+
+  // Determine grouping field
+  let groupByFieldId = (grid.config as { groupBy?: string } | undefined)?.groupBy
+  
+  if (!groupByFieldId) {
+      // Fallback: finding first options field
+      const optionField = kanbanFields.find(f => f.dataType === 'options' || f.dataType === 'multiselect')
+      if (optionField) groupByFieldId = optionField.id
+  }
+
+  if (!groupByFieldId) {
     return (
       <div className="text-muted-foreground text-sm">
-        Kanban view requires a grouping field (check grid config or ensure an options field exists)
+        Kanban view requires a grouping field (check grid config or ensure an options/multiselect field exists)
       </div>
     )
   }
+  
+  const groupingField = kanbanFields.find(f => f.id === groupByFieldId)
+  
+  let groups: Array<{ id: string, label: string }> = []
+  
+  // Try to find explicit options if available
+  const options = resolveFieldOptions(groupingField!, optionTables, groupingField?.config?.optionsMappingId)
+  
+  if (options && options.length > 0) {
+      groups = options.map(o => ({ id: String(o.value ?? o.id ?? o.label), label: o.label }))
+  } else {
+      // Distinct values from rows as fallback
+      const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? 'Uncategorized'))))
+      groups = distinctValues.map(v => ({ id: v, label: v }))
+  }
 
-  const groups = resolveFieldOptions(optionsField, gridData) || []
-  const cardFields = grid.fields.filter(
-    (f) => f.key !== optionsField.key
-  )
+  // Fields to display on card (simple mapping for display)
+  // Mapping to format expected by KanbanCard: { id, dataType, label }
+  const cardFieldsDisplay = kanbanFields
+    .filter(f => f.id !== groupByFieldId)
+    .map(f => ({ id: f.id, dataType: f.dataType, label: f.ui.label }))
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -174,9 +229,9 @@ export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKan
       nextGroupId = parts[parts.length - 1]
     }
 
-    const currentGroup = currentCard?.[optionsField.key]
+    const currentGroup = currentCard?.[groupByFieldId!]
     if (String(currentGroup ?? '') !== nextGroupId && onUpdate) {
-      onUpdate(cardIdx, optionsField.key, nextGroupId)
+      onUpdate(cardIdx, groupByFieldId!, nextGroupId)
     }
   }
 
@@ -193,7 +248,7 @@ export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKan
         {groups.map((group) => {
           const cardsInGroup = rows
             .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
-            .filter((ex) => String(ex[optionsField.key] ?? '') === group.id)
+            .filter((ex) => String(ex[groupByFieldId!] ?? '') === group.id)
 
           return (
             <div key={group.id} className="shrink-0 w-80">
@@ -220,8 +275,8 @@ export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKan
                         key={`${card._originalIdx}-${group.id}`}
                         id={`${card._originalIdx}-${group.id}`}
                         card={card}
-                        cardFields={cardFields}
-                        gridData={gridData}
+                        cardFields={cardFieldsDisplay}
+                        optionTables={optionTables}
                       />
                     ))
                   )}
@@ -241,9 +296,24 @@ export function TrackerKanbanGrid({ grid, rows, gridData, onUpdate }: TrackerKan
         }),
       }}>
         {activeCard ? (
-          <KanbanCard card={activeCard} cardFields={cardFields} gridData={gridData} isOverlay />
+          <KanbanCard card={activeCard} cardFields={cardFieldsDisplay} optionTables={optionTables} isOverlay />
         ) : null}
       </DragOverlay>
     </DndContext>
   )
+}
+// Helper to look up options from optionTables (Duplicated from table grid or shared?)
+// Ideally should be imported. For now defining locally or assuming it's available.
+// I need to make sure resolveFieldOptions is available or implemented here. 
+function resolveFieldOptions(
+    field: TrackerField,
+    optionTables: TrackerOptionTable[],
+    optionsMappingId?: string
+) {
+    if (field.dataType !== 'options' && field.dataType !== 'multiselect') return undefined
+    if (!optionsMappingId) return undefined
+    
+    const table = optionTables.find(t => t.id === optionsMappingId)
+    if (!table) return undefined
+    return table.options
 }

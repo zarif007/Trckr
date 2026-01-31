@@ -18,7 +18,7 @@ export const managerSchema = z.object({
 
 export const multiAgentSchema = z.object({
   manager: managerSchema.optional(),
-  tracker: trackerSchema.optional()
+  tracker: trackerSchema
 })
 
 export type MultiAgentSchema = z.infer<typeof multiAgentSchema>

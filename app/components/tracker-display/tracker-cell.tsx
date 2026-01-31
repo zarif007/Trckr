@@ -40,6 +40,36 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
       )
     case 'date':
       return <span>{new Date(String(value)).toLocaleDateString()}</span>
+    case 'link':
+      return (
+        <a
+          href={String(value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:underline"
+        >
+          {String(value)}
+        </a>
+      )
+    case 'currency':
+      const currencyValue = Number(value)
+      return (
+        <span>
+          {!isNaN(currencyValue)
+            ? new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+              }).format(currencyValue)
+            : String(value)}
+        </span>
+      )
+    case 'percentage':
+      const percentValue = Number(value)
+      return (
+        <span>
+          {!isNaN(percentValue) ? `${percentValue}%` : String(value)}
+        </span>
+      )
     default:
       return <span>{String(value)}</span>
   }
