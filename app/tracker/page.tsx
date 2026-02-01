@@ -20,7 +20,7 @@ import {
 interface TrackerResponse extends TrackerDisplayProps { }
 
 const CONTINUE_PROMPT =
-  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, and optionMaps (if needed) are all filled. Add any missing parts from where you left off.'
+  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, optionTables and optionMaps (so that every options/multiselect field has an option source) are all filled. Add any missing parts from where you left off.'
 
 const MAX_AUTO_CONTINUES = 3
 

@@ -16,7 +16,7 @@ import { ChevronDown } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
+  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -162,18 +162,32 @@ function KanbanCard({
   )
 }
 
+/** Drop zone for empty column */
 function DroppableEmptyColumn({ id }: { id: string }) {
   const { setNodeRef, isOver } = useDroppable({ id })
-
   return (
     <div
       ref={setNodeRef}
-      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
-        }`}
+      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${
+        isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
+      }`}
     >
-      <p className="text-xs text-muted-foreground text-center px-4">
-        Drop here
-      </p>
+      <p className="text-xs text-muted-foreground text-center px-4">Drop here</p>
+    </div>
+  )
+}
+
+/** Drop zone for empty space below cards - must have min height so collision detection finds it */
+function ColumnDropZone({ id }: { id: string }) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-[80px] rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${
+        isOver ? 'border-primary bg-primary/10' : 'border-muted/50 bg-muted/10'
+      }`}
+    >
+      <p className="text-xs text-muted-foreground">{isOver ? 'Drop here' : ''}</p>
     </div>
   )
 }
@@ -242,8 +256,14 @@ export function TrackerKanbanGrid({
   // Try to find explicit options if available (optionMapId or optionsMappingId)
   const options = resolveFieldOptions(groupingField!, optionTables, optionMaps, gridData)
   
+  // Use same key as form/store so row[groupByFieldId] matches group.id (must match fieldMetadata option id below)
+  const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
+    String(o.id ?? o.value ?? o.label ?? '').trim()
   if (options && options.length > 0) {
-      groups = options.map(o => ({ id: String(o.value ?? o.id ?? o.label), label: o.label }))
+      groups = options.map(o => ({
+        id: toOptionId(o),
+        label: o.label ?? '',
+      }))
   } else {
       // Distinct values from rows as fallback
       const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? ''))))
@@ -259,6 +279,13 @@ export function TrackerKanbanGrid({
   if (!hasEmptyGroup) {
     groups = [...groups, { id: '', label: 'Uncategorized' }]
   }
+  // Dedupe by id so each column has a unique id and drops always match exactly one column
+  const seenIds = new Set<string>()
+  groups = groups.filter(g => {
+    if (seenIds.has(g.id)) return false
+    seenIds.add(g.id)
+    return true
+  })
 
   // Fields to display on card (simple mapping for display)
   // Mapping to format expected by KanbanCard: { id, dataType, label }
@@ -273,7 +300,7 @@ export function TrackerKanbanGrid({
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
-      options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
+      options: opts?.map((o) => ({ id: toOptionId(o), label: o.label ?? '' })),
       config: field.config,
     }
   })
@@ -308,10 +335,14 @@ export function TrackerKanbanGrid({
       nextGroupId = overId.slice(firstDash + 1)
     }
 
-    // Update the row's groupBy field so the item moves to the new column (e.g. status -> "In Progress")
+    // Only update if the drop target is a valid column id (so the card doesn't "disappear")
+    const nextGroupIdTrimmed = nextGroupId.trim()
+    const validGroupIds = new Set(groups.map(g => g.id))
+    if (!validGroupIds.has(nextGroupIdTrimmed)) return
+
     const currentGroup = currentCard?.[groupByFieldId!]
-    if (String(currentGroup ?? '') !== nextGroupId) {
-      onUpdate(cardIdx, groupByFieldId!, nextGroupId)
+    if (String(currentGroup ?? '').trim() !== nextGroupIdTrimmed) {
+      onUpdate(cardIdx, groupByFieldId!, nextGroupIdTrimmed)
     }
   }
 
@@ -333,7 +364,7 @@ export function TrackerKanbanGrid({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCorners}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -356,7 +387,7 @@ export function TrackerKanbanGrid({
           fieldOrder={fieldOrder}
           initialValues={
             groupByFieldId && groups.length > 0
-              ? { [groupByFieldId]: groups[0].id }
+              ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
               : {}
           }
           onSave={handleAddSave}
@@ -375,7 +406,7 @@ export function TrackerKanbanGrid({
         {groups.map((group) => {
           const cardsInGroup = rows
             .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
-            .filter((ex) => String(ex[groupByFieldId!] ?? '') === group.id)
+            .filter((ex) => String(ex[groupByFieldId!] ?? '').trim() === group.id)
 
           return (
             <div key={group.id} className="shrink-0 w-80">
@@ -388,31 +419,34 @@ export function TrackerKanbanGrid({
                 </h3>
               </div>
 
-              <SortableContext
-                id={group.id}
-                items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="space-y-3 min-h-[100px]">
+              <div className="space-y-3 min-h-[100px] flex flex-col">
+                <SortableContext
+                  id={group.id}
+                  items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
+                  strategy={verticalListSortingStrategy}
+                >
                   {cardsInGroup.length === 0 ? (
                     <DroppableEmptyColumn id={group.id} />
                   ) : (
-                    cardsInGroup.map((card) => (
-                      <SortableCard
-                        key={`${card._originalIdx}-${group.id}`}
-                        id={`${card._originalIdx}-${group.id}`}
-                        card={card}
-                        cardFields={cardFieldsDisplay}
-                        optionTables={optionTables}
-                        optionMaps={optionMaps}
-                        gridData={gridData}
-                        fields={fields}
-                        onEditRow={setEditRowIndex}
-                      />
-                    ))
+                    <>
+                      {cardsInGroup.map((card) => (
+                        <SortableCard
+                          key={`${card._originalIdx}-${group.id}`}
+                          id={`${card._originalIdx}-${group.id}`}
+                          card={card}
+                          cardFields={cardFieldsDisplay}
+                          optionTables={optionTables}
+                          optionMaps={optionMaps}
+                          gridData={gridData}
+                          fields={fields}
+                          onEditRow={setEditRowIndex}
+                        />
+                      ))}
+                      <ColumnDropZone id={group.id} />
+                    </>
                   )}
-                </div>
-              </SortableContext>
+                </SortableContext>
+              </div>
             </div>
           )
         })}

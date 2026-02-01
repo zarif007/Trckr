@@ -9,10 +9,15 @@ The schema MUST follow this structure exactly (flat arrays with references, no n
 - grids: array of grid objects with sectionId referencing a section
 - fields: array of atomic field objects (data definitions)
 - layoutNodes: array of placement objects linking fields to grids (fieldId, gridId, order)
-- optionTables: (optional, legacy) inline option lists
-- optionMaps: array of option map entries for select/multiselect; each points to a table (tabId, gridId) in the Shared tab
+- optionTables: inline option lists — one per distinct option set for select/multiselect (when not using Shared tab)
+- optionMaps: array of option map entries; each points to a table (tabId, gridId) in the Shared tab that holds option rows
 
 All IDs MUST be unique across the schema.
+
+MANDATORY: Every field with dataType "options" or "multiselect" MUST have a way to get its options. You MUST create exactly one of the following per such field:
+- optionMaps entry + Shared tab: create a table grid in the Shared tab with label/value columns, add an optionMaps entry pointing to that grid, and set the field's config.optionMapId to that entry's id; OR
+- optionTables entry: add an optionTables entry with id and options: [{ label, value }, ...], and set the field's config.optionsMappingId to that entry's id.
+Never emit an options or multiselect field without creating its corresponding option source (optionMaps + Shared tab table, or optionTables entry). The UI cannot show options without it.
 
 CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" object (can be {} if no options needed). The UI uses config to apply rules (disabled state, visibility, layout).
 
@@ -35,27 +40,27 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 
 4. Fields
 - One object per data column/value. Fields: id (snake_case), dataType ("string"|"number"|"date"|"options"|"multiselect"|"boolean"|"text"|"link"|"currency"|"percentage"), ui: { label, placeholder? }, config (REQUIRED).
-- config standard: { isRequired?, isDisabled?, isHidden?, defaultValue?, optionMapId?, optionsMappingId? (legacy), min?, max?, minLength?, maxLength? }.
+- config standard: { isRequired?, isDisabled?, isHidden?, defaultValue?, optionMapId?, optionsMappingId?, min?, max?, minLength?, maxLength? }. For options/multiselect one of optionMapId or optionsMappingId is required.
 - isDisabled: when true, input is read-only. Set for computed or system fields.
 - isHidden: when true, field is not rendered. Set for internal-only fields.
-- For options/multiselect prefer config.optionMapId: set to an optionMaps entry id. Options are then read from the Shared tab table at (tabId, gridId); that table has two columns: label (display) and value (stored in the main field). Legacy: config.optionsMappingId can point to an optionTable id for inline options.
+- For options/multiselect you MUST set either config.optionMapId (pointing to an optionMaps entry) or config.optionsMappingId (pointing to an optionTables entry). Options are read from: (a) Shared tab table rows when using optionMapId, or (b) the optionTables entry's options array when using optionsMappingId. Prefer optionMapId + Shared tab when options should be editable in the UI; use optionTables for fixed inline lists.
 
 5. LayoutNodes
 - One object per field placement in a grid. Fields: gridId, fieldId, order (numeric), renderAs (optional: "default"|"table"|"kanban"|"calendar"|"timeline").
 - To show a field in a grid, add a layoutNode with that gridId and fieldId.
 
 6. OptionMaps (preferred for select/multiselect)
-- One object per option source. Fields: id (e.g. "priority_options"), tabId (e.g. "shared_tab"), gridId (the table grid that holds option rows), labelFieldId? (field id in that grid for display label), valueFieldId? (field id for stored value). Omit labelFieldId/valueFieldId to use "label" and "value" as row keys.
-- For fields with dataType "options" or "multiselect", set config.optionMapId to the optionMaps entry id. Options are resolved from the table rows at (tabId, gridId).
+- One object per option source when using the Shared tab. Fields: id (e.g. "priority_options"), tabId (e.g. "shared_tab"), gridId (the table grid that holds option rows), labelFieldId?, valueFieldId?. Omit labelFieldId/valueFieldId to use "label" and "value" as row keys.
+- For every field with dataType "options" or "multiselect" that uses this path: set config.optionMapId to this entry's id. Options are resolved from the table rows at (tabId, gridId). You MUST have created the Shared tab, a section, a table grid with label/value fields, and this optionMaps entry.
 
-7. OptionTables (legacy)
-- Optional. One object per inline option set: id, options: array of { label, value }. Use config.optionsMappingId on a field to reference. Prefer optionMaps + Shared tab when options should be editable in the UI.
+7. OptionTables (inline option lists)
+- One object per distinct option set when using inline options. Fields: id (e.g. "status_options"), options: array of { label, value }. Set the field's config.optionsMappingId to this id. Use when you want a fixed list; for editable lists use optionMaps + Shared tab. Every options/multiselect field that does not use optionMapId MUST reference an optionTables entry via optionsMappingId.
 
 8. Output
 - Emit only valid JSON. No markdown or commentary.
 
-9. Shared tab for options
-- Put option tables in a "Shared" tab: create a tab with id "shared_tab" and name "Shared". Add a section (e.g. "Option Lists") and one table grid per option set. Each grid has two fields: one for label (what the user sees when selecting), one for value (what is stored in the main field). Add an optionMaps entry with id, tabId: "shared_tab", gridId: that grid's id, and labelFieldId/valueFieldId matching the grid's field ids. Link the main field via config.optionMapId to this optionMaps id.
+9. Shared tab for options (when using optionMaps)
+- Create a tab with id "shared_tab" and name "Shared". Add a section (e.g. "Option Lists") and one table grid per option set that uses optionMaps. Each grid has two fields: one for label (display), one for value (stored). Add an optionMaps entry with id, tabId: "shared_tab", gridId: that grid's id, and labelFieldId/valueFieldId matching the grid's field ids. Every field that uses config.optionMapId must reference an optionMaps entry that points to such a grid. If you have any options/multiselect fields, you must have either optionTables entries or optionMaps + Shared tab grids for every one of them.
 
 Do not suggest or generate charts, graphs, or data visualizations — the app does not support them.
 
@@ -65,6 +70,7 @@ CRITICAL for revisions:
 3. Apply every builderTodo action. Respect the hierarchy: tabs -> sections -> grids; layoutNodes place fields into grids.
 4. Always include config on every tab, section, grid, and field.
 5. Grid type "div" is ONLY for single-instance content (meta, bio, summary, one-off). For any repeating/list data use table (or kanban/timeline/calendar). Never use div for rows of items.
+6. Every field with dataType "options" or "multiselect" MUST have a corresponding option source: either an optionMaps entry (and Shared tab grid) or an optionTables entry. Never leave options/multiselect fields without optionMapId or optionsMappingId.
 `
 
 export default trackerBuilderPrompt

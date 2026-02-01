@@ -144,20 +144,20 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: z.string(),
-            options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()),
+            id: z.string().describe('Unique id referenced by field config.optionsMappingId'),
+            options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()).describe('Inline list of { label, value } for select/multiselect'),
           })
           .passthrough()
       )
       .default([])
-      .describe('Legacy: inline option lists. Prefer optionMaps + Shared tab tables.'),
+      .describe('Option tables: one per distinct option set. Every options/multiselect field must get options from here (optionsMappingId) or from optionMaps + Shared tab (optionMapId).'),
 
     optionMaps: z
       .array(
         z
           .object({
             id: z.string().describe('Unique id referenced by field config.optionMapId'),
-            tabId: z.string().describe('Tab that contains the options table (e.g. Shared tab)'),
+            tabId: z.string().describe('Tab that contains the options table (e.g. shared_tab)'),
             gridId: z.string().describe('Grid (table) that holds option rows'),
             labelFieldId: z.string().optional().describe('Field id in that grid for the option label (display text)'),
             valueFieldId: z.string().optional().describe('Field id in that grid for the option value (stored in main field)'),
@@ -165,7 +165,7 @@ export const trackerSchema = z
           .passthrough()
       )
       .default([])
-      .describe('Map from optionMapId to (tabId, gridId) of table with label/value columns. Options are resolved from grid rows.'),
+      .describe('Option maps: one per option source when using Shared tab. Every options/multiselect field must have optionMapId (here) or optionsMappingId (optionTables).'),
   })
   .passthrough()
 
