@@ -17,7 +17,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { format } from 'date-fns'
-import { FieldType } from './utils'
+import { FieldType, FieldConfig } from './utils'
 import { cn } from '@/lib/utils'
 import { MultiSelect } from '@/components/ui/multi-select'
 
@@ -26,6 +26,7 @@ interface DataTableInputProps {
   onChange: (value: any) => void
   type: FieldType
   options?: (string | { id: string; label: string })[]
+  config?: FieldConfig | null
   className?: string
   autoFocus?: boolean
 }
@@ -35,6 +36,7 @@ export function DataTableInput({
   onChange,
   type,
   options,
+  config: _config,
   className,
   autoFocus,
 }: DataTableInputProps) {
@@ -48,10 +50,7 @@ export function DataTableInput({
         <Input
           type={type === 'number' ? 'number' : 'text'}
           value={value ?? ''}
-          onChange={(e) => {
-            const val = e.target.value
-            onChange(type === 'number' ? (val === '' ? '' : Number(val)) : val)
-          }}
+          onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
         />
@@ -79,7 +78,6 @@ export function DataTableInput({
               onSelect={(date) => {
                 if (date) {
                   const newDate = new Date(date)
-                  // Adjust for timezone offset to prevent date shifting
                   newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
                   onChange(newDate.toISOString())
                 }
@@ -111,9 +109,10 @@ export function DataTableInput({
           />
         </div>
       )
-    case 'options':
+    case 'options': {
+      const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
       return (
-        <Select value={value ?? ''} onValueChange={onChange}>
+        <Select value={selectValue} onValueChange={(v) => onChange(v === '__empty__' ? '' : v)}>
           <SelectTrigger
             className={cn(
               inlineInputClass,
@@ -127,8 +126,9 @@ export function DataTableInput({
           </SelectTrigger>
           <SelectContent>
             {options?.map((option) => {
-              const optValue = typeof option === 'string' ? option : option.id
+              const optValueRaw = typeof option === 'string' ? option : option.id
               const optLabel = typeof option === 'string' ? option : option.label
+              const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
               return (
                 <SelectItem key={optValue} value={optValue}>
                   {optLabel}
@@ -138,6 +138,7 @@ export function DataTableInput({
           </SelectContent>
         </Select>
       )
+    }
     case 'multiselect':
       return (
         <MultiSelect
@@ -165,10 +166,7 @@ export function DataTableInput({
         <Input
           type="number"
           value={value ?? ''}
-          onChange={(e) => {
-            const val = e.target.value
-            onChange(val === '' ? '' : Number(val))
-          }}
+          onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
         />
@@ -177,5 +175,3 @@ export function DataTableInput({
       return <span className="px-2">{String(value)}</span>
   }
 }
-
-

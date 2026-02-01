@@ -595,7 +595,6 @@ export default function TrackerPage() {
                 fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
                 layoutNodes={(object.tracker.layoutNodes || []) as any}
                 optionTables={(object.tracker.optionTables || []) as any}
-                gridData={(object.tracker.gridData || {}) as any}
               />
             ) : activeTrackerData ? (
               <TrackerDisplay
@@ -605,7 +604,6 @@ export default function TrackerPage() {
                 fields={activeTrackerData.fields}
                 layoutNodes={activeTrackerData.layoutNodes}
                 optionTables={activeTrackerData.optionTables}
-                gridData={activeTrackerData.gridData}
               />
             ) : error ? (
               <div className="h-full flex flex-col items-center justify-center text-red-500 gap-4">

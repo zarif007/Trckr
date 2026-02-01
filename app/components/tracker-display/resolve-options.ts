@@ -1,33 +1,27 @@
-import type { TrackerField, TrackerOption } from './types'
-
-type GridRow = Record<string, unknown> & { label?: unknown; value?: unknown }
-type GridData = Record<string, Array<GridRow>> | undefined
+import type { TrackerField, TrackerOption, TrackerOptionTable } from './types'
 
 function toStringOrEmpty(v: unknown): string {
   if (v === null || v === undefined) return ''
   return String(v)
 }
 
-/**
- * Resolves selectable options for a field.
- */
 export function resolveFieldOptions(
   field: TrackerField,
-  gridData?: GridData
+  optionTables?: TrackerOptionTable[]
 ): TrackerOption[] | undefined {
-  const optionsMappingId = field.config?.optionsMappingId
-  if (optionsMappingId && gridData?.[optionsMappingId]) {
-    const rows = gridData[optionsMappingId] ?? []
-    const resolved = rows
-      .map((row) => {
-        const id = toStringOrEmpty(row.value)
-        const label = toStringOrEmpty(row.label)
-        return id && label ? ({ id, label, value: id } satisfies TrackerOption) : null
-      })
-      .filter(Boolean) as TrackerOption[]
-
-    return resolved.length > 0 ? resolved : undefined
+  const optionsMappingId = field.config?.optionsMappingId as string | undefined
+  if (optionsMappingId && optionTables?.length) {
+    const table = optionTables.find((t) => t.id === optionsMappingId)
+    if (table?.options?.length) {
+      return table.options.map((opt) => ({
+        ...opt,
+        id: opt.id ?? toStringOrEmpty(opt.value),
+        label: opt.label ?? toStringOrEmpty(opt.value),
+        value: opt.value,
+      }))
+    }
   }
-
-  return field.config?.options
+  const opts = field.config?.options
+  if (Array.isArray(opts)) return opts as TrackerOption[]
+  return undefined
 }

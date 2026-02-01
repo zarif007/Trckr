@@ -45,14 +45,13 @@ export function TrackerTableGrid({
   layoutNodes,
   fields,
   optionTables,
-  gridData,
+  gridData = {},
   onUpdate,
   onAddEntry,
   onDeleteEntries,
 }: TrackerTableGridProps) {
-  // Find fields connected to this grid
   const connectedFieldNodes = layoutNodes
-    .filter((n) => n.gridId === grid.id && n.refType === 'field')
+    .filter((n) => n.gridId === grid.id)
     .sort((a, b) => a.order - b.order)
 
   if (connectedFieldNodes.length === 0) {
@@ -65,14 +64,13 @@ export function TrackerTableGrid({
   }
 
   const tableFields = connectedFieldNodes
-    .map((node) => fields.find((f) => f.id === node.refId))
-    .filter((f): f is TrackerField => !!f)
+    .map((node) => fields.find((f) => f.id === node.fieldId))
+    .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
 
   if (tableFields.length === 0)
     return <div className="p-4 text-red-500">Missing Field Definitions</div>
 
-  // Rows come from gridData[grid.id]
-  const rows = gridData?.[grid.id] ?? []
+  const rows = gridData[grid.id] ?? []
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
@@ -84,6 +82,7 @@ export function TrackerTableGrid({
         optionTables,
         field.config?.optionsMappingId,
       ),
+      config: field.config,
     }
   })
 
@@ -93,8 +92,8 @@ export function TrackerTableGrid({
       id: field.id,
       accessorKey: field.id,
       header: field.ui.label,
-      cell: ({ row }) => {
-        const value = row.getValue(field.id)
+      cell: function Cell({ row }) {
+        const value = row.getValue(field.id);
         return (
           <TrackerCell
             value={value}
@@ -105,10 +104,10 @@ export function TrackerTableGrid({
               field.config?.optionsMappingId,
             )}
           />
-        )
+        );
       },
-    }),
-  )
+    })
+  );
 
   return (
     <DataTable
@@ -120,5 +119,5 @@ export function TrackerTableGrid({
       onDeleteEntries={onDeleteEntries}
       config={grid.config}
     />
-  )
+  );
 }

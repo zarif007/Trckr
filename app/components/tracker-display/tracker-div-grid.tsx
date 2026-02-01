@@ -30,25 +30,24 @@ export function TrackerDivGrid({
   layoutNodes,
   fields,
   optionTables,
-  gridData,
+  gridData = {},
   onUpdate,
 }: TrackerDivGridProps) {
-  // Div Grid primarily renders individual fields connected via layoutNodes
-  const fieldNodes = layoutNodes.filter(n => n.refType === 'field').sort((a,b) => a.order - b.order)
-  
-  // Also support single-row data from gridData (index 0)
+  const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
+
   const data = gridData?.[grid.id]?.[0] || {}
 
   if (fieldNodes.length === 0) return null
-  
-  const isVertical = (grid.config as { layout?: 'vertical' | 'horizontal' } | undefined)?.layout === 'vertical'
+
+  const isVertical = grid.config?.layout === 'vertical'
 
   return (
     <div className={`grid gap-4 ${isVertical ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
       {fieldNodes.map((node) => {
-        const field = fields.find(f => f.id === node.refId)
+        const field = fields.find(f => f.id === node.fieldId)
         if (!field) return null
-        
+        if (field.config?.isHidden) return null
+
         // Resolve options if needed
         let options: Array<{ label: string; value: any; id?: string }> | undefined = undefined
         if (field.dataType === 'options' || field.dataType === 'multiselect') {
@@ -86,20 +85,27 @@ export function TrackerDivGrid({
                 )
               case 'options': {
                 const opts = options ?? []
+                const toItemValue = (v: unknown) => {
+                  const s = String(v ?? '').trim()
+                  return s === '' ? '__empty__' : s
+                }
                 return (
                   <Select
-                    value={typeof value === 'string' ? value : ''}
-                    onValueChange={(val) => onUpdate?.(0, field.id, val)}
+                    value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
+                    onValueChange={(val) => onUpdate?.(0, field.id, val === '__empty__' ? '' : val)}
                   >
                     <SelectTrigger className="w-full bg-secondary/10 border-border/50">
                       <SelectValue placeholder={`Select ${field.ui.label}`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {opts.map((option) => (
-                        <SelectItem key={option.id || String(option.value) || option.label} value={String(option.value ?? option.id ?? option.label)}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
+                      {opts.map((option) => {
+                        const itemValue = toItemValue(option.value ?? option.id ?? option.label)
+                        return (
+                          <SelectItem key={option.id ?? itemValue} value={itemValue}>
+                            {option.label}
+                          </SelectItem>
+                        )
+                      })}
                     </SelectContent>
                   </Select>
                 )

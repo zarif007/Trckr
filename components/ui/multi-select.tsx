@@ -25,6 +25,9 @@ interface MultiSelectProps {
   className?: string
   isInline?: boolean
   autoFocus?: boolean
+  required?: boolean
+  disabled?: boolean
+  'aria-invalid'?: boolean
 }
 
 export function MultiSelect({
@@ -35,6 +38,9 @@ export function MultiSelect({
   className = '',
   isInline = false,
   autoFocus = false,
+  required = false,
+  disabled = false,
+  'aria-invalid': ariaInvalid = false,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(autoFocus)
 
@@ -66,6 +72,9 @@ export function MultiSelect({
           type="button"
           className={triggerClasses}
           aria-expanded={open}
+          aria-required={required}
+          aria-invalid={ariaInvalid}
+          disabled={disabled}
         >
           <span className="truncate flex-1 text-left">{displayText}</span>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />

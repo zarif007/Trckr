@@ -12,126 +12,113 @@ const snakeCaseId = () =>
     .string()
     .describe('Immutable, DB-safe identifier (snake_case preferred)')
 
+// --- Config standards (required for LLM output; components enforce these) ---
+
+/** Config is lenient so LLM output always passes; UI handles missing/wrong keys. */
+const anyConfig = () => z.record(z.string(), z.any()).nullish()
+
+/** Field config: lenient so LLM output passes; UI handles missing/wrong keys. */
+export const fieldConfigSchema = z
+  .record(z.string(), z.any())
+  .optional()
+  .nullable()
+
+/** Tab config */
+export const tabConfigSchema = anyConfig()
+
+/** Section config */
+export const sectionConfigSchema = anyConfig()
+
+/** Grid config */
+export const gridConfigSchema = anyConfig()
+
 export const trackerSchema = z.object({
   tabs: z
     .array(
       z.object({
         id: fieldName(),
-        name: z.string().describe('Human-friendly tab title'),
-        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
+        name: z.string(),
+        placeId: z.coerce.number(),
+        config: tabConfigSchema,
       })
     )
-    .describe('Array of independent tab objects'),
+    .describe('Array of tab objects. Tabs are top-level pages.'),
 
   sections: z
     .array(
       z.object({
         id: fieldName(),
-        name: z.string().describe('Section display name'),
-        tabId: z.string().describe('id of the tab this section belongs to'),
-        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
+        name: z.string(),
+        tabId: z.string(),
+        placeId: z.coerce.number(),
+        config: sectionConfigSchema,
       })
     )
-    .describe('Array of independent section objects linked to tabs via tabId'),
+    .describe('Array of section objects. Sections group grids within a tab.'),
 
   grids: z
     .array(
       z.object({
         id: snakeCaseId(),
-        name: z.string().describe('Display name of the grid'),
+        name: z.string(),
         type: z
           .enum(['div', 'table', 'kanban', 'timeline', 'calendar'])
-          .describe('Layout type for this grid'),
-        sectionId: z.string().describe('id of the section this grid belongs to'),
-        placeId: z.number().describe('Sorting identifier (smaller numbers appear first)'),
-        config: z.record(z.string(), z.any()).optional().describe('Type-specific configuration (e.g. { groupBy: "status" })'),
+          .describe(
+            'div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.'
+          ),
+        sectionId: z.string(),
+        placeId: z.coerce.number(),
+        config: gridConfigSchema,
       })
     )
-    .describe('Array of independent grid objects linked to sections via sectionId'),
+    .describe(
+      'Array of grid objects. Use div only for one-per-view content; use table (or kanban/timeline/calendar) for repeating data.'
+    ),
 
   fields: z
     .array(
       z.object({
         id: snakeCaseId(),
-        dataType: z
-          .enum([
-            'string',
-            'number',
-            'date',
-            'options',
-            'multiselect',
-            'boolean',
-            'text',
-             'link',
-             'currency',
-             'percentage'
-          ])
-          .describe('Semantic data type of the field.'),
+        dataType: z.enum([
+          'string',
+          'number',
+          'date',
+          'options',
+          'multiselect',
+          'boolean',
+          'text',
+          'link',
+          'currency',
+          'percentage',
+        ]),
         ui: z.object({
-            label: z.string().describe('Human-readable label for the field'),
-            placeholder: z.string().optional(),
+          label: z.string(),
+          placeholder: z.string().optional(),
         }),
-        config: z
-          .object({
-            required: z.boolean().optional(),
-            defaultValue: z.any().optional(),
-            optionsMappingId: z.string().optional().describe('For options/multiselect fields: the mapping id to resolve options.'),
-             binding: z.object({
-                 tableName: z.string(),
-                 fieldName: z.string(),
-             }).optional().describe('Dynamic binding info for advanced use cases'),
-          })
-          .optional(),
+        config: fieldConfigSchema,
       })
     )
-    .describe('Array of atomic data fields (columns in collection / individual values in div)'),
+    .describe('Array of atomic field definitions. Referenced by layoutNodes to place into grids.'),
 
   layoutNodes: z
     .array(
-        z.object({
-            gridId: z.string().describe('the container grid id where this node renders'),
-            refType: z.enum(['field', 'collection']).describe('What to render: a simple field or a multi-row collection'),
-            refId: z.string().describe('id of the field or collection'),
-            order: z.number().describe('position in grid'),
-            renderAs: z.enum(['default', 'table', 'kanban', 'calendar', 'timeline']).optional().describe('How to render this node (mostly for collections)'),
-        })
+      z.object({
+        gridId: z.string(),
+        fieldId: z.string(),
+        order: z.coerce.number(),
+        renderAs: z.enum(['default', 'table', 'kanban', 'calendar', 'timeline']).optional(),
+      })
     )
-    .describe('Glue: connects fields/collections -> grids. Defines placement & order in UI'),
-
-  collections: z
-    .array(
-        z.object({
-            id: snakeCaseId(),
-            name: z.string().describe('Entity name (e.g. "Sales Order Items")'),
-            fields: z.array(
-                z.object({
-                    id: snakeCaseId(),
-                    dataType: z.enum(['string', 'number', 'link', 'currency', 'percentage']),
-                    label: z.string(),
-                })
-            ).describe('Array of atomic fields for each row in this collection'),
-        })
-    )
-    .describe('Multi-row child entities (like sales_order_item)'),
+    .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
   optionTables: z
     .array(
-        z.object({
-            id: z.string(),
-            options: z.array(
-                z.object({
-                    label: z.string(),
-                    value: z.any(),
-                }).passthrough()
-            )
-        })
+      z.object({
+        id: z.string(),
+        options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()),
+      })
     )
-    .describe('Dynamic tables for select / multi-select field options'),
-
-  gridData: z
-    .record(z.string(), z.array(z.record(z.string(), z.any())))
-    .optional()
-    .describe('Optional per-grid/collection datasets keyed by gridId or collectionId.'),
+    .describe('Lookup tables for options/multiselect fields. Referenced by config.optionsMappingId.'),
 })
 
 export type TrackerSchema = z.infer<typeof trackerSchema>

@@ -10,10 +10,24 @@ export type TrackerFieldType =
   | 'currency'
   | 'percentage'
 
+/** Tab config: isHidden, etc. */
+export type TrackerTabConfig = {
+  isHidden?: boolean
+  [key: string]: unknown
+}
+
 export type TrackerTab = {
   id: string
   name: string
   placeId: number
+  config?: TrackerTabConfig
+}
+
+/** Section config: isHidden, isCollapsedByDefault, etc. */
+export type TrackerSectionConfig = {
+  isHidden?: boolean
+  isCollapsedByDefault?: boolean
+  [key: string]: unknown
 }
 
 export type TrackerSection = {
@@ -21,9 +35,17 @@ export type TrackerSection = {
   name: string
   tabId: string
   placeId: number
+  config?: TrackerSectionConfig
 }
 
 export type GridType = 'div' | 'table' | 'kanban' | 'timeline' | 'calendar'
+
+/** Grid config: layout (div), groupBy (kanban), etc. */
+export type TrackerGridConfig = {
+  layout?: 'vertical' | 'horizontal'
+  groupBy?: string
+  [key: string]: unknown
+}
 
 export type TrackerGrid = {
   id: string
@@ -31,7 +53,22 @@ export type TrackerGrid = {
   type: GridType
   sectionId: string
   placeId: number
-  config?: any // Using any for flexibility as per schema union
+  config?: TrackerGridConfig
+}
+
+/** Field config: isRequired (show "*", validate), isDisabled, isHidden; plus type-specific. */
+export type TrackerFieldConfig = {
+  isRequired?: boolean
+  isDisabled?: boolean
+  isHidden?: boolean
+  defaultValue?: unknown
+  optionsMappingId?: string
+  min?: number
+  max?: number
+  minLength?: number
+  maxLength?: number
+  binding?: { tableName: string; fieldName: string }
+  [key: string]: unknown
 }
 
 export type TrackerField = {
@@ -41,27 +78,26 @@ export type TrackerField = {
     label: string
     placeholder?: string
   }
-  config?: any
+  config?: TrackerFieldConfig
 }
 
 export type TrackerLayoutNode = {
-    gridId: string
-    refType: 'field' | 'collection'
-    refId: string
-    order: number
-    renderAs?: 'default' | 'table' | 'kanban' | 'calendar' | 'timeline'
+  gridId: string
+  fieldId: string
+  order: number
+  renderAs?: 'default' | 'table' | 'kanban' | 'calendar' | 'timeline'
 }
 
 export type TrackerOption = {
-    label: string
-    value: any
-    id?: string
-    [key: string]: any
+  label: string
+  value: unknown
+  id?: string
+  [key: string]: unknown
 }
 
 export type TrackerOptionTable = {
-    id: string
-    options: Array<TrackerOption>
+  id: string
+  options: Array<TrackerOption>
 }
 
 export interface TrackerDisplayProps {
@@ -71,5 +107,4 @@ export interface TrackerDisplayProps {
   fields: TrackerField[]
   layoutNodes?: TrackerLayoutNode[]
   optionTables?: TrackerOptionTable[]
-  gridData?: any
 }

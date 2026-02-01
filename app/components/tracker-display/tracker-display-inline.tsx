@@ -20,10 +20,11 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   optionTables = [],
-  gridData,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
-    return (tabs ?? []).sort((a, b) => a.placeId - b.placeId)
+    return (tabs ?? [])
+      .filter((tab) => !tab.config?.isHidden)
+      .sort((a, b) => a.placeId - b.placeId)
   }, [tabs])
 
   const [activeTabId, setActiveTabId] = useState(
@@ -43,11 +44,7 @@ export function TrackerDisplayInline({
 
   const [localGridData, setLocalGridData] = useState<
     Record<string, Array<Record<string, unknown>>>
-  >(gridData ?? {})
-
-  useEffect(() => {
-    setLocalGridData(gridData ?? {})
-  }, [gridData])
+  >({})
 
   const handleUpdate = (
     gridId: string,
@@ -156,7 +153,7 @@ function TrackerTabContent({
 }) {
   const tabSections = useMemo(() => {
     return sections
-      .filter((section) => section.tabId === tab.id)
+      .filter((section) => section.tabId === tab.id && !section.config?.isHidden)
       .sort((a, b) => a.placeId - b.placeId)
       .map((section) => ({
         ...section,

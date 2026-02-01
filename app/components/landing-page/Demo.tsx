@@ -171,22 +171,19 @@ export default function Demo() {
       },
     ],
     layoutNodes: [
-      // Assignment List Nodes
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'assignment_name', order: 1 },
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'course_name', order: 2 },
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'due_date', order: 3 },
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'priority', order: 4 },
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'status', order: 5 },
-      { gridId: 'assignment_list', refType: 'field' as const, refId: 'is_completed', order: 6 },
-      // By Status Nodes
-      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_assignment', order: 1 },
-      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_course', order: 2 },
-      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_due_date', order: 3 },
-      { gridId: 'by_status', refType: 'field' as const, refId: 'kb_status', order: 4 },
-      // Books & Links Nodes
-      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_title', order: 1 },
-      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_type', order: 2 },
-      { gridId: 'books_links', refType: 'field' as const, refId: 'resource_link', order: 3 },
+      { gridId: 'assignment_list', fieldId: 'assignment_name', order: 1 },
+      { gridId: 'assignment_list', fieldId: 'course_name', order: 2 },
+      { gridId: 'assignment_list', fieldId: 'due_date', order: 3 },
+      { gridId: 'assignment_list', fieldId: 'priority', order: 4 },
+      { gridId: 'assignment_list', fieldId: 'status', order: 5 },
+      { gridId: 'assignment_list', fieldId: 'is_completed', order: 6 },
+      { gridId: 'by_status', fieldId: 'kb_assignment', order: 1 },
+      { gridId: 'by_status', fieldId: 'kb_course', order: 2 },
+      { gridId: 'by_status', fieldId: 'kb_due_date', order: 3 },
+      { gridId: 'by_status', fieldId: 'kb_status', order: 4 },
+      { gridId: 'books_links', fieldId: 'resource_title', order: 1 },
+      { gridId: 'books_links', fieldId: 'resource_type', order: 2 },
+      { gridId: 'books_links', fieldId: 'resource_link', order: 3 },
     ],
     optionTables: [
       {
@@ -215,27 +212,6 @@ export default function Demo() {
         ],
       },
     ],
-    gridData: {
-      assignment_list: examples.map((ex) => ({
-        assignment_name: ex.assignment,
-        course_name: ex.course,
-        due_date: ex.dueDate,
-        priority: ex.priority,
-        status: ex.status,
-        is_completed: ex.completed,
-      })),
-      by_status: examples.map((ex) => ({
-        kb_assignment: ex.assignment,
-        kb_course: ex.course,
-        kb_due_date: ex.dueDate,
-        kb_status: ex.status,
-      })),
-      books_links: examples.map((ex) => ({
-        resource_title: ex.title,
-        resource_type: ex.type,
-        resource_link: ex.link,
-      })),
-    },
   }
 
   return (

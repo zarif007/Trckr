@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { Settings2, ChevronDown, ChevronUp } from 'lucide-react'
-import { FieldMetadata, getFieldIcon } from './utils'
+import { FieldMetadata, getFieldIcon, getValidationError, sanitizeValue } from './utils'
 import { DataTableCell } from './data-table-cell'
 import { DataTableInput } from './data-table-input'
 
@@ -59,6 +59,8 @@ export function DataTable<TData, TValue>({
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newRowData, setNewRowData] = useState<Record<string, any>>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
+  const [rowDetailsTouchedFields, setRowDetailsTouchedFields] = useState<Set<string>>(new Set())
 
   const selectedRows = Object.keys(rowSelection)
     .map(Number)
@@ -171,79 +173,17 @@ export function DataTable<TData, TValue>({
             </DialogContent>
           </Dialog>
         ),
-        cell: ({ row, table }) => {
+        cell: ({ row }) => {
           return (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 p-0">
-                  <ChevronDown className="h-4 w-4" />
-                  <span className="sr-only">View full details</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                  <DialogTitle>Row Details</DialogTitle>
-                </DialogHeader>
-                <div className="grid grid-cols-1 gap-4 py-4 max-h-[70vh] overflow-y-auto">
-                  {table
-                    .getAllColumns()
-                    .filter(
-                      (col) => col.id !== 'select' && col.id !== 'actions',
-                    )
-                    .map((col) => {
-                      const cell = row
-                        .getAllCells()
-                        .find((c) => c.column.id === col.id)
-                      const meta = table.options.meta as any
-                      const fieldMetadata = meta?.fieldMetadata
-                      const fieldInfo = fieldMetadata?.[col.id]
-                      const value = cell
-                        ? cell.getValue()
-                        : row.getValue(col.id)
-
-                      return (
-                        <div
-                          key={col.id}
-                          className="flex flex-col space-y-1.5 border-b border-border/40 pb-3 last:border-0 last:pb-0"
-                        >
-                          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            {typeof col.columnDef.header === 'string'
-                              ? col.columnDef.header
-                              : col.id}
-                          </span>
-                          <div className="text-sm">
-                            {fieldInfo ? (
-                              <div className="rounded-md border border-border/40 bg-muted/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 transition-all">
-                                <DataTableInput
-                                  value={value}
-                                  onChange={(newValue) => {
-                                    const updateData = meta?.updateData
-                                    updateData?.(row.index, col.id, newValue)
-                                  }}
-                                  type={fieldInfo.type}
-                                  options={fieldInfo.options}
-                                  className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
-                                />
-                              </div>
-                            ) : cell ? (
-                              <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext(),
-                                )}
-                              </div>
-                            ) : (
-                              <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
-                                {String(value)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
-              </DialogContent>
-            </Dialog>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 p-0"
+              onClick={() => setRowDetailsOpenForIndex(row.index)}
+            >
+              <ChevronDown className="h-4 w-4" />
+              <span className="sr-only">View full details</span>
+            </Button>
           )
         },
       } as ColumnDef<TData, TValue>,
@@ -284,6 +224,28 @@ export function DataTable<TData, TValue>({
     setRowSelection({})
     setDeleteConfirmOpen(false)
   }
+
+  const rowDetailsRow =
+    rowDetailsOpenForIndex != null
+      ? table.getRowModel().rows[rowDetailsOpenForIndex]
+      : null
+
+  useEffect(() => {
+    setRowDetailsTouchedFields(new Set())
+  }, [rowDetailsOpenForIndex])
+
+  const addEntryHasError = useMemo(() => {
+    if (!fieldMetadata) return false
+    return Object.keys(newRowData).some((columnId) => {
+      const fieldInfo = fieldMetadata[columnId]
+      if (!fieldInfo) return false
+      return !!getValidationError(
+        newRowData[columnId],
+        fieldInfo.type,
+        fieldInfo.config,
+      )
+    })
+  }, [newRowData, fieldMetadata])
 
   return (
     <div className="w-full space-y-4">
@@ -328,7 +290,11 @@ export function DataTable<TData, TValue>({
               Add Entry
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent
+            className="sm:max-w-[500px]"
+            onInteractOutside={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
             <DialogHeader>
               <DialogTitle>Add New Entry</DialogTitle>
             </DialogHeader>
@@ -340,22 +306,47 @@ export function DataTable<TData, TValue>({
 
                 if (!fieldInfo) return null
 
+                const addValue = newRowData[columnId] ?? ''
+                const addError =
+                  columnId in newRowData
+                    ? getValidationError(
+                        newRowData[columnId],
+                        fieldInfo.type,
+                        fieldInfo.config
+                      )
+                    : null
+                const addShowError = !!addError
+
                 return (
                   <div key={columnId} className="flex flex-col space-y-1.5">
                     <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                       {typeof col.header === 'string' ? col.header : columnId}
                     </span>
-                    <div className="rounded-md border border-border/40 bg-muted/5 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+                    <div
+                      className={cn(
+                        'rounded-md border bg-muted/5 focus-within:bg-background focus-within:ring-1 transition-all',
+                        addShowError
+                          ? 'border-destructive focus-within:ring-destructive/20'
+                          : 'border-border/40 focus-within:ring-primary/20'
+                      )}
+                      title={addError ?? undefined}
+                    >
                       <DataTableInput
-                        value={newRowData[columnId] ?? ''}
-                        onChange={(value) =>
+                        value={addValue}
+                        onChange={(value) => {
+                          const sanitized = sanitizeValue(
+                            value,
+                            fieldInfo.type,
+                            fieldInfo.config
+                          )
                           setNewRowData((prev) => ({
                             ...prev,
-                            [columnId]: value,
+                            [columnId]: sanitized,
                           }))
-                        }
+                        }}
                         type={fieldInfo.type}
                         options={fieldInfo.options}
+                        config={fieldInfo.config}
                         className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
                         autoFocus={
                           columnId === (columns[0] as any)?.id ||
@@ -363,6 +354,9 @@ export function DataTable<TData, TValue>({
                         }
                       />
                     </div>
+                    {addShowError && addError && (
+                      <p className="text-destructive text-xs">{addError}</p>
+                    )}
                   </div>
                 )
               })}
@@ -377,8 +371,124 @@ export function DataTable<TData, TValue>({
               >
                 Cancel
               </Button>
-              <Button onClick={handleAddEntry}>Add Entry</Button>
+              <Button
+                onClick={handleAddEntry}
+                disabled={addEntryHasError}
+              >
+                Add Entry
+              </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog
+          open={rowDetailsOpenForIndex !== null}
+          onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
+        >
+          <DialogContent
+            className="sm:max-w-[500px]"
+            onInteractOutside={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle>Row Details</DialogTitle>
+            </DialogHeader>
+            {rowDetailsRow && (
+              <div className="grid grid-cols-1 gap-4 py-4 max-h-[70vh] overflow-y-auto">
+                {table
+                  .getAllColumns()
+                  .filter(
+                    (col) => col.id !== 'select' && col.id !== 'actions',
+                  )
+                  .map((col) => {
+                    const cell = rowDetailsRow
+                      .getAllCells()
+                      .find((c) => c.column.id === col.id)
+                    const meta = table.options.meta as any
+                    const fieldMetadata = meta?.fieldMetadata
+                    const fieldInfo = fieldMetadata?.[col.id]
+                    const value = cell
+                      ? cell.getValue()
+                      : rowDetailsRow.getValue(col.id)
+                    const detailsTouched = rowDetailsTouchedFields.has(col.id)
+                    const detailsError = fieldInfo
+                      ? getValidationError(
+                          value,
+                          fieldInfo.type,
+                          fieldInfo.config
+                        )
+                      : null
+                    const detailsShowError = detailsTouched && !!detailsError
+
+                    return (
+                      <div
+                        key={col.id}
+                        className="flex flex-col space-y-1.5 border-b border-border/40 pb-3 last:border-0 last:pb-0"
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {typeof col.columnDef.header === 'string'
+                            ? col.columnDef.header
+                            : col.id}
+                        </span>
+                        <div className="text-sm">
+                          {fieldInfo ? (
+                            <>
+                              <div
+                                className={cn(
+                                  'rounded-md border bg-muted/5 focus-within:bg-background focus-within:ring-1 transition-all',
+                                  detailsShowError
+                                    ? 'border-destructive focus-within:ring-destructive/20'
+                                    : 'border-border/40 focus-within:ring-primary/20'
+                                )}
+                                title={detailsError ?? undefined}
+                              >
+                                <DataTableInput
+                                  value={value}
+                                  onChange={(newValue) => {
+                                    setRowDetailsTouchedFields((prev) =>
+                                      new Set([...prev, col.id])
+                                    )
+                                    const sanitized = sanitizeValue(
+                                      newValue,
+                                      fieldInfo.type,
+                                      fieldInfo.config
+                                    )
+                                    const updateData = meta?.updateData
+                                    updateData?.(
+                                      rowDetailsRow.index,
+                                      col.id,
+                                      sanitized,
+                                    )
+                                  }}
+                                  type={fieldInfo.type}
+                                  options={fieldInfo.options}
+                                  config={fieldInfo.config}
+                                  className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
+                                />
+                              </div>
+                              {detailsShowError && detailsError && (
+                                <p className="text-destructive text-xs mt-1">
+                                  {detailsError}
+                                </p>
+                              )}
+                            </>
+                          ) : cell ? (
+                            <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </div>
+                          ) : (
+                            <div className="rounded-md border border-border/40 px-3 py-2 bg-muted/20">
+                              {String(value)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

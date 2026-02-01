@@ -47,21 +47,21 @@ export async function POST(request: Request) {
               sections = [],
               grids = [],
               fields = [],
-              gridData,
             } = msg.trackerData
 
-            // Create a clean, minimal JSON summary of the current tracker state
             const currentTrackerState = {
               tabs: tabs.map((t: any) => ({
                 id: t.id,
                 name: t.name,
                 placeId: t.placeId,
+                config: t.config ?? {},
               })),
               sections: sections.map((s: any) => ({
                 id: s.id,
                 name: s.name,
                 tabId: s.tabId,
                 placeId: s.placeId,
+                config: s.config ?? {},
               })),
               grids: grids.map((g: any) => ({
                 id: g.id,
@@ -69,18 +69,16 @@ export async function POST(request: Request) {
                 type: g.type,
                 sectionId: g.sectionId,
                 placeId: g.placeId,
-                config: g.config,
+                config: g.config ?? {},
               })),
               fields: fields.map((f: any) => ({
                 id: f.id,
                 dataType: f.dataType,
                 ui: f.ui,
-                config: f.config,
+                config: f.config ?? {}, // validations (min, max, minLength, maxLength), isRequired, isDisabled, isHidden, optionsMappingId, etc.
               })),
               layoutNodes: (msg.trackerData as any).layoutNodes || [],
-              collections: (msg.trackerData as any).collections || [],
               optionTables: (msg.trackerData as any).optionTables || [],
-              gridDataKeys: gridData ? Object.keys(gridData) : [],
             }
 
             assistantMsgParts.push(

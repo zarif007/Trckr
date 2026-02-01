@@ -132,7 +132,7 @@ export function TrackerKanbanGrid({
     layoutNodes,
     fields,
     optionTables,
-    gridData,
+    gridData = {},
     onUpdate 
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -148,25 +148,24 @@ export function TrackerKanbanGrid({
     })
   )
 
-  // Find fields connected to this grid
   const connectedFieldNodes = layoutNodes
-    .filter(n => n.gridId === grid.id && n.refType === 'field')
+    .filter(n => n.gridId === grid.id)
     .sort((a, b) => a.order - b.order)
 
   const kanbanFields = connectedFieldNodes
-    .map(node => fields.find(f => f.id === node.refId))
-    .filter((f): f is TrackerField => !!f)
+    .map(node => fields.find(f => f.id === node.fieldId))
+    .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
   
   if (kanbanFields.length === 0) {
       if (layoutNodes.length === 0) return null
       return <div className="p-4 text-muted-foreground">Empty Kanban (No Fields linked)</div>
   }
 
-  const rows = gridData?.[grid.id] ?? []
+  const rows = gridData[grid.id] ?? []
   if (rows.length === 0) return null
 
   // Determine grouping field
-  let groupByFieldId = (grid.config as { groupBy?: string } | undefined)?.groupBy
+  let groupByFieldId = grid.config?.groupBy
   
   if (!groupByFieldId) {
       // Fallback: finding first options field
