@@ -16,9 +16,11 @@ export const managerSchema = z.object({
   })).optional().describe('A strict Todo list for the Builder Agent to execute. Derived from comparing the User Request with the Previous Tracker.')
 })
 
-export const multiAgentSchema = z.object({
-  manager: managerSchema.optional(),
-  tracker: trackerSchema
-})
+export const multiAgentSchema = z
+  .object({
+    manager: managerSchema.optional(),
+    tracker: trackerSchema.optional(),
+  })
+  .passthrough()
 
 export type MultiAgentSchema = z.infer<typeof multiAgentSchema>

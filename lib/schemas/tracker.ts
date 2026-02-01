@@ -32,107 +32,141 @@ export const sectionConfigSchema = anyConfig()
 /** Grid config */
 export const gridConfigSchema = anyConfig()
 
-export const trackerSchema = z.object({
-  tabs: z
-    .array(
-      z.object({
-        id: fieldName(),
-        name: z.string(),
-        placeId: z.coerce.number(),
-        config: tabConfigSchema,
-      })
-    )
-    .describe('Array of tab objects. Tabs are top-level pages.'),
+const gridTypeEnum = z
+  .enum(['div', 'table', 'kanban', 'timeline', 'calendar'])
+  .catch('table')
+  .describe(
+    'div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.'
+  )
 
-  sections: z
-    .array(
-      z.object({
-        id: fieldName(),
-        name: z.string(),
-        tabId: z.string(),
-        placeId: z.coerce.number(),
-        config: sectionConfigSchema,
-      })
-    )
-    .describe('Array of section objects. Sections group grids within a tab.'),
+const fieldDataTypeEnum = z
+  .enum([
+    'string',
+    'number',
+    'date',
+    'options',
+    'multiselect',
+    'boolean',
+    'text',
+    'link',
+    'currency',
+    'percentage',
+  ])
+  .catch('string')
 
-  grids: z
-    .array(
-      z.object({
-        id: snakeCaseId(),
-        name: z.string(),
-        type: z
-          .enum(['div', 'table', 'kanban', 'timeline', 'calendar'])
-          .describe(
-            'div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.'
-          ),
-        sectionId: z.string(),
-        placeId: z.coerce.number(),
-        config: gridConfigSchema,
-      })
-    )
-    .describe(
-      'Array of grid objects. Use div only for one-per-view content; use table (or kanban/timeline/calendar) for repeating data.'
-    ),
+const renderAsEnum = z
+  .enum(['default', 'table', 'kanban', 'calendar', 'timeline'])
+  .optional()
 
-  fields: z
-    .array(
-      z.object({
-        id: snakeCaseId(),
-        dataType: z.enum([
-          'string',
-          'number',
-          'date',
-          'options',
-          'multiselect',
-          'boolean',
-          'text',
-          'link',
-          'currency',
-          'percentage',
-        ]),
-        ui: z.object({
-          label: z.string(),
-          placeholder: z.string().optional(),
-        }),
-        config: fieldConfigSchema,
-      })
-    )
-    .describe('Array of atomic field definitions. Referenced by layoutNodes to place into grids.'),
+export const trackerSchema = z
+  .object({
+    tabs: z
+      .array(
+        z
+          .object({
+            id: fieldName(),
+            name: z.string(),
+            placeId: z.coerce.number(),
+            config: tabConfigSchema,
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Array of tab objects. Tabs are top-level pages.'),
 
-  layoutNodes: z
-    .array(
-      z.object({
-        gridId: z.string(),
-        fieldId: z.string(),
-        order: z.coerce.number(),
-        renderAs: z.enum(['default', 'table', 'kanban', 'calendar', 'timeline']).optional(),
-      })
-    )
-    .describe('Places fields into grids. Each node links one field to one grid with an order.'),
+    sections: z
+      .array(
+        z
+          .object({
+            id: fieldName(),
+            name: z.string(),
+            tabId: z.string(),
+            placeId: z.coerce.number(),
+            config: sectionConfigSchema,
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Array of section objects. Sections group grids within a tab.'),
 
-  optionTables: z
-    .array(
-      z.object({
-        id: z.string(),
-        options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()),
-      })
-    )
-    .optional()
-    .describe('Legacy: inline option lists. Prefer optionMaps + Shared tab tables.'),
+    grids: z
+      .array(
+        z
+          .object({
+            id: snakeCaseId(),
+            name: z.string(),
+            type: gridTypeEnum,
+            sectionId: z.string(),
+            placeId: z.coerce.number(),
+            config: gridConfigSchema,
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe(
+        'Array of grid objects. Use div only for one-per-view content; use table (or kanban/timeline/calendar) for repeating data.'
+      ),
 
-  optionMaps: z
-    .array(
-      z.object({
-        id: z.string().describe('Unique id referenced by field config.optionMapId'),
-        tabId: z.string().describe('Tab that contains the options table (e.g. Shared tab)'),
-        gridId: z.string().describe('Grid (table) that holds option rows'),
-        labelFieldId: z.string().optional().describe('Field id in that grid for the option label (display text)'),
-        valueFieldId: z.string().optional().describe('Field id in that grid for the option value (stored in main field)'),
-      })
-    )
-    .optional()
-    .describe('Map from optionMapId to (tabId, gridId) of table with label/value columns. Options are resolved from grid rows.'),
-})
+    fields: z
+      .array(
+        z
+          .object({
+            id: snakeCaseId(),
+            dataType: fieldDataTypeEnum,
+            ui: z
+              .object({
+                label: z.string(),
+                placeholder: z.string().optional(),
+              })
+              .passthrough(),
+            config: fieldConfigSchema,
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Array of atomic field definitions. Referenced by layoutNodes to place into grids.'),
+
+    layoutNodes: z
+      .array(
+        z
+          .object({
+            gridId: z.string(),
+            fieldId: z.string(),
+            order: z.coerce.number(),
+            renderAs: renderAsEnum,
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Places fields into grids. Each node links one field to one grid with an order.'),
+
+    optionTables: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()),
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Legacy: inline option lists. Prefer optionMaps + Shared tab tables.'),
+
+    optionMaps: z
+      .array(
+        z
+          .object({
+            id: z.string().describe('Unique id referenced by field config.optionMapId'),
+            tabId: z.string().describe('Tab that contains the options table (e.g. Shared tab)'),
+            gridId: z.string().describe('Grid (table) that holds option rows'),
+            labelFieldId: z.string().optional().describe('Field id in that grid for the option label (display text)'),
+            valueFieldId: z.string().optional().describe('Field id in that grid for the option value (stored in main field)'),
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Map from optionMapId to (tabId, gridId) of table with label/value columns. Options are resolved from grid rows.'),
+  })
+  .passthrough()
 
 export type TrackerSchema = z.infer<typeof trackerSchema>

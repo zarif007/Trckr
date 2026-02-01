@@ -19,6 +19,11 @@ import {
 
 interface TrackerResponse extends TrackerDisplayProps {}
 
+const CONTINUE_PROMPT =
+  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, and optionMaps (if needed) are all filled. Add any missing parts from where you left off.'
+
+const MAX_AUTO_CONTINUES = 3
+
 interface Message {
   role: 'user' | 'assistant'
   content?: string
@@ -35,8 +40,13 @@ export default function TrackerPage() {
   const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, setActiveTrackerData] = useState<TrackerResponse | null>(null)
+  const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
+  const [pendingContinue, setPendingContinue] = useState(false)
+  const [resumingAfterError, setResumingAfterError] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const continueCountRef = useRef(0)
+  const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
 
   const springConfig = { damping: 25, stiffness: 150 }
   const mouseXSpring = useSpring(0, springConfig)
@@ -54,32 +64,84 @@ export default function TrackerPage() {
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
     schema: multiAgentSchema,
-    onFinish: ({ object }: { object?: MultiAgentSchema }) => {
-      if (object) {
+    onFinish: ({ object: finishedObject }: { object?: MultiAgentSchema }) => {
+      setGenerationErrorMessage(null)
+      setResumingAfterError(false)
+      if (finishedObject) {
+        const hasValidTracker =
+          finishedObject.tracker &&
+          Array.isArray(finishedObject.tracker.tabs) &&
+          finishedObject.tracker.tabs.length > 0
         const assistantMessage: Message = {
           role: 'assistant',
-          trackerData: object.tracker as TrackerResponse,
-          managerData: object.manager,
+          trackerData: finishedObject.tracker as TrackerResponse,
+          managerData: finishedObject.manager,
         }
-        console.log(object.tracker)
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
-        if (object.tracker) {
-          setActiveTrackerData(object.tracker as TrackerResponse)
+        if (hasValidTracker) {
+          continueCountRef.current = 0
+          setActiveTrackerData(finishedObject.tracker as TrackerResponse)
+        } else {
+          // Incomplete: we have partial state (manager and/or partial tracker) – try auto-continue
+          if (continueCountRef.current < MAX_AUTO_CONTINUES) {
+            setPendingContinue(true)
+          } else {
+            continueCountRef.current = 0
+            setGenerationErrorMessage(
+              'The AI responded but did not produce a complete tracker (missing or empty tabs). You can click "Continue" to try again from where it left off.'
+            )
+          }
         }
+      } else {
+        setPendingQuery(null)
+        setGenerationErrorMessage(
+          'The AI did not return a valid response. Please try again or rephrase your request.'
+        )
       }
     },
     onError: (err: Error) => {
-      const errorMessage = err.message || 'An unknown error occurred'
-      const errorMessageObj: Message = {
-        role: 'assistant',
-        content: `Sorry, I encountered an error: ${errorMessage}. Please try again.`,
+      const partial = lastObjectRef.current
+      const hasPartial =
+        partial &&
+        (partial.manager ||
+          (partial.tracker &&
+            ((Array.isArray(partial.tracker.tabs) && partial.tracker.tabs.length > 0) ||
+              (Array.isArray(partial.tracker.sections) && partial.tracker.sections.length > 0) ||
+              (Array.isArray(partial.tracker.fields) && partial.tracker.fields.length > 0))))
+
+      if (hasPartial && partial) {
+        // Connection failed but we have partial state – add it to conversation and start a new request to continue
+        setResumingAfterError(true)
+        setGenerationErrorMessage(
+          'Connection failed. Starting a new request to continue from where you left off…'
+        )
+        const assistantMessage: Message = {
+          role: 'assistant',
+          trackerData: partial.tracker as TrackerResponse,
+          managerData: partial.manager,
+        }
+        setMessages((prev) => [...prev, assistantMessage])
+        setPendingQuery(null)
+        setPendingContinue(true)
+        continueCountRef.current = 0
+      } else {
+        setGenerationErrorMessage(err.message || 'An unknown error occurred')
+        const errorMessageObj: Message = {
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${err.message || 'An unknown error occurred'}. Please try again.`,
+        }
+        setMessages((prev) => [...prev, errorMessageObj])
+        setPendingQuery(null)
       }
-      setMessages((prev) => [...prev, errorMessageObj])
-      setPendingQuery(null)
       console.error('Error generating tracker:', err)
     },
   })
+
+  // Keep ref in sync so we have partial state when connection fails (streamed object may be partial)
+  useEffect(() => {
+    lastObjectRef.current = object as MultiAgentSchema | undefined
+  }, [object])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -92,6 +154,7 @@ export default function TrackerPage() {
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return
 
+    continueCountRef.current = 0
     const userMessage = input.trim()
     setInput('')
     setPendingQuery(userMessage)
@@ -109,14 +172,42 @@ export default function TrackerPage() {
     })
   }
 
+  const handleContinue = () => {
+    setGenerationErrorMessage(null)
+    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
+    const nextMessages = [...messages, continueMessage]
+    setMessages(nextMessages)
+    submit({ query: CONTINUE_PROMPT, messages: nextMessages })
+    continueCountRef.current = 0
+  }
+
+  // Auto-continue when response is incomplete (partial tracker) or after connection error – new request from where we left off
+  useEffect(() => {
+    if (!pendingContinue || isLoading || continueCountRef.current >= MAX_AUTO_CONTINUES) return
+
+    setResumingAfterError(false)
+    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
+    const nextMessages = [...messages, continueMessage]
+    setMessages(nextMessages)
+    submit({ query: CONTINUE_PROMPT, messages: nextMessages })
+    setPendingContinue(false)
+    continueCountRef.current += 1
+  }, [pendingContinue, isLoading, messages])
+
+  // Open dialog only when builder has started (tracker streaming) or when we need to show an error
   useEffect(() => {
     if (isLoading && object?.tracker) {
       setIsDialogOpen(true)
-    }
-    if (!isLoading) {
-      // Don't auto-close, but we reset active data on finish which is handled in onFinish
+      setGenerationErrorMessage(null)
     }
   }, [isLoading, object?.tracker])
+
+  // When request finishes with error or no tracker, open dialog so user sees the message
+  useEffect(() => {
+    if (!isLoading && (error || generationErrorMessage)) {
+      setIsDialogOpen(true)
+    }
+  }, [isLoading, error, generationErrorMessage])
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -571,7 +662,13 @@ export default function TrackerPage() {
       </div>
 
       {/* Dialog for Tracker Display */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog
+        open={isDialogOpen}
+        onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (!open) setGenerationErrorMessage(null)
+        }}
+      >
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
           <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
             <DialogTitle className="flex items-center gap-3 text-sm md:text-xl font-bold tracking-tight">
@@ -607,16 +704,23 @@ export default function TrackerPage() {
                 optionTables={activeTrackerData.optionTables}
                 optionMaps={activeTrackerData.optionMaps}
               />
-            ) : error ? (
+            ) : error && !isLoading ? (
               <div className="h-full flex flex-col items-center justify-center text-red-500 gap-4">
                 <div className="p-3 rounded-full bg-red-500/10">
                   <AlertTriangle className="w-8 h-8" />
                 </div>
-                <div className="text-center max-w-md">
-                   <p className="font-bold">Generation Failed</p>
-                   <p className="text-sm text-muted-foreground">{error.message || "An error occurred while generating the tracker."}</p>
+                <div className="text-center max-w-md space-y-2">
+                  <p className="font-bold">{resumingAfterError ? 'Connection failed' : 'Generation Failed'}</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                    {generationErrorMessage || error.message || 'An error occurred while generating the tracker.'}
+                  </p>
                 </div>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button variant="outline" onClick={handleContinue}>
+                    Continue from where it left off
+                  </Button>
+                  <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                </div>
               </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">
@@ -625,11 +729,18 @@ export default function TrackerPage() {
                       <div className="p-3 rounded-full bg-amber-500/10">
                         <AlertTriangle className="w-8 h-8" />
                       </div>
-                      <div className="text-center max-w-md">
+                      <div className="text-center max-w-md space-y-2">
                         <p className="font-bold">No Tracker Generated</p>
-                        <p className="text-sm text-muted-foreground">The AI responded but did not generate a valid tracker configuration.</p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                          {generationErrorMessage || 'The AI responded but did not generate a valid tracker configuration.'}
+                        </p>
                       </div>
-                      <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        <Button variant="outline" onClick={handleContinue}>
+                          Continue from where it left off
+                        </Button>
+                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                      </div>
                    </div>
                 ) : (
                     <>

@@ -4,12 +4,35 @@ import { multiAgentSchema } from '@/lib/schemas/multi-agent'
 import { deepseek } from '@ai-sdk/deepseek'
 import { streamObject } from 'ai'
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'string') return error
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return 'An unexpected error occurred'
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const { query, messages } = await request.json()
+    let body: { query?: unknown; messages?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return Response.json(
+        { error: 'Invalid request body. Expected JSON with "query" and optional "messages".' },
+        { status: 400 },
+      )
+    }
+
+    const { query, messages } = body
 
     if (!query || typeof query !== 'string') {
-      return Response.json({ error: 'Query is required' }, { status: 400 })
+      return Response.json(
+        { error: 'Query is required and must be a non-empty string.' },
+        { status: 400 },
+      )
     }
 
     if (!process.env.DEEPSEEK_API_KEY) {
@@ -100,8 +123,9 @@ export async function POST(request: Request) {
       conversationContext = contextParts.join('\n\n') + '\n\n'
     }
 
+    const hasMessages = Array.isArray(messages) && messages.length > 0
     const fullPrompt = conversationContext
-      ? `${conversationContext}User: ${query}\n\nBased on our conversation, ${messages && messages.length > 0 ? 'update or modify' : 'create'} the tracker according to the user's latest request.`
+      ? `${conversationContext}User: ${query}\n\nBased on our conversation, ${hasMessages ? 'update or modify' : 'create'} the tracker according to the user's latest request.`
       : query
 
     const combinedSystemPrompt = `
@@ -130,12 +154,10 @@ export async function POST(request: Request) {
 
     return result.toTextStreamResponse()
   } catch (error) {
-    console.error('Error generating tracker:', error)
+    const message = getErrorMessage(error)
+    console.error('Error generating tracker:', message, error)
     return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : 'Failed to generate tracker',
-      },
+      { error: message || 'Failed to generate tracker. Please try again.' },
       { status: 500 },
     )
   }
