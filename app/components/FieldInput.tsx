@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
-import { TrackerField, TrackerOptionTable } from './tracker-display/types'
+import { TrackerField, TrackerOptionMap, TrackerOptionTable } from './tracker-display/types'
 import { resolveFieldOptions } from './tracker-display/resolve-options'
 
 function getFieldValidationError(
@@ -74,6 +74,8 @@ interface FieldInputProps {
   isInline?: boolean
   autoFocus?: boolean
   optionTables?: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
+  gridData?: Record<string, Array<Record<string, unknown>>>
 }
 
 export function FieldInput({
@@ -84,12 +86,14 @@ export function FieldInput({
   isInline = false,
   autoFocus = false,
   optionTables = [],
+  optionMaps = [],
+  gridData,
 }: FieldInputProps) {
   const normalInputClass = `bg-background text-foreground ${className}`
   const inlineInputClass =
     'border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2'
 
-  const resolvedOptions = resolveFieldOptions(field, optionTables)
+  const resolvedOptions = resolveFieldOptions(field, optionTables, optionMaps, gridData)
   const config = field.config ?? {}
   const isDisabled = config.isDisabled
   const isHidden = config.isHidden

@@ -13,14 +13,17 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
+  TrackerOptionMap,
   TrackerOptionTable,
 } from './types'
+import { resolveFieldOptions } from './resolve-options'
 
 interface TrackerDivGridProps {
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   optionTables: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
@@ -30,6 +33,7 @@ export function TrackerDivGrid({
   layoutNodes,
   fields,
   optionTables,
+  optionMaps = [],
   gridData = {},
   onUpdate,
 }: TrackerDivGridProps) {
@@ -48,14 +52,10 @@ export function TrackerDivGrid({
         if (!field) return null
         if (field.config?.isHidden) return null
 
-        // Resolve options if needed
-        let options: Array<{ label: string; value: any; id?: string }> | undefined = undefined
-        if (field.dataType === 'options' || field.dataType === 'multiselect') {
-            const mappingId = field.config?.optionsMappingId
-            if (mappingId) {
-                options = optionTables.find(t => t.id === mappingId)?.options
-            }
-        }
+        // Resolve options (optionMapId → grid rows, or optionsMappingId → optionTables, or config.options)
+        const options = (field.dataType === 'options' || field.dataType === 'multiselect')
+          ? resolveFieldOptions(field, optionTables, optionMaps, gridData)
+          : undefined
         
         const value = data[field.id]
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)

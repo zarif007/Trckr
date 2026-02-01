@@ -4,9 +4,11 @@ import {
   TrackerFieldType,
   TrackerField,
   TrackerLayoutNode,
+  TrackerOptionMap,
   TrackerOptionTable,
 } from './types'
 import { TrackerCell } from './tracker-cell'
+import { resolveFieldOptions } from './resolve-options'
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +36,7 @@ interface TrackerKanbanGridProps {
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   optionTables: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
@@ -43,11 +46,17 @@ function SortableCard({
   card,
   cardFields,
   optionTables,
+  optionMaps,
+  gridData,
+  fields,
 }: {
   id: string
   card: Record<string, unknown>
-  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string; }>
+  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   optionTables: TrackerOptionTable[]
+  optionMaps: TrackerOptionMap[]
+  gridData: Record<string, Array<Record<string, unknown>>>
+  fields: TrackerField[]
 }) {
   const {
     attributes,
@@ -66,7 +75,7 @@ function SortableCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <KanbanCard card={card} cardFields={cardFields} optionTables={optionTables} />
+      <KanbanCard card={card} cardFields={cardFields} optionTables={optionTables} optionMaps={optionMaps} gridData={gridData} fields={fields} />
     </div>
   )
 }
@@ -76,11 +85,17 @@ function KanbanCard({
   card,
   cardFields,
   optionTables,
+  optionMaps,
+  gridData,
+  fields,
   isOverlay = false,
 }: {
   card: Record<string, unknown>
-  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string; }>
+  cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   optionTables: TrackerOptionTable[]
+  optionMaps: TrackerOptionMap[]
+  gridData: Record<string, Array<Record<string, unknown>>>
+  fields: TrackerField[]
   isOverlay?: boolean
 }) {
   return (
@@ -88,24 +103,24 @@ function KanbanCard({
       className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''}`}
     >
       {cardFields.map((field) => {
-         // Resolve options if needed (similar to other grids)
-         // Assuming collection fields might simple, but for proper display we need options
-         // Since generic collection field doesn't map options easily, we might need a workaround or assume standard mapping?
-         // For now, pass undefined or minimal options.
-         return (
-            <div key={field.id} className="mb-2 last:mb-0">
+        const fullField = fields.find((f) => f.id === field.id)
+        const options = fullField
+          ? resolveFieldOptions(fullField, optionTables, optionMaps, gridData)
+          : undefined
+        return (
+          <div key={field.id} className="mb-2 last:mb-0">
             <p className="text-xs text-muted-foreground font-medium">
-                {field.label}
+              {field.label}
             </p>
             <div className="text-sm text-foreground">
-                <TrackerCell
+              <TrackerCell
                 value={card[field.id]}
                 type={field.dataType}
-                // options={...}
-                />
+                options={options}
+              />
             </div>
-            </div>
-         )
+          </div>
+        )
       })}
     </Card>
   )
@@ -127,13 +142,14 @@ function DroppableEmptyColumn({ id }: { id: string }) {
   )
 }
 
-export function TrackerKanbanGrid({ 
+export function TrackerKanbanGrid({
     grid,
     layoutNodes,
     fields,
     optionTables,
+    optionMaps = [],
     gridData = {},
-    onUpdate 
+    onUpdate,
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
 
@@ -185,8 +201,8 @@ export function TrackerKanbanGrid({
   
   let groups: Array<{ id: string, label: string }> = []
   
-  // Try to find explicit options if available
-  const options = resolveFieldOptions(groupingField!, optionTables, groupingField?.config?.optionsMappingId)
+  // Try to find explicit options if available (optionMapId or optionsMappingId)
+  const options = resolveFieldOptions(groupingField!, optionTables, optionMaps, gridData)
   
   if (options && options.length > 0) {
       groups = options.map(o => ({ id: String(o.value ?? o.id ?? o.label), label: o.label }))
@@ -276,6 +292,9 @@ export function TrackerKanbanGrid({
                         card={card}
                         cardFields={cardFieldsDisplay}
                         optionTables={optionTables}
+                        optionMaps={optionMaps}
+                        gridData={gridData}
+                        fields={fields}
                       />
                     ))
                   )}
@@ -295,24 +314,17 @@ export function TrackerKanbanGrid({
         }),
       }}>
         {activeCard ? (
-          <KanbanCard card={activeCard} cardFields={cardFieldsDisplay} optionTables={optionTables} isOverlay />
+          <KanbanCard
+            card={activeCard}
+            cardFields={cardFieldsDisplay}
+            optionTables={optionTables}
+            optionMaps={optionMaps}
+            gridData={gridData}
+            fields={fields}
+            isOverlay
+          />
         ) : null}
       </DragOverlay>
     </DndContext>
   )
-}
-// Helper to look up options from optionTables (Duplicated from table grid or shared?)
-// Ideally should be imported. For now defining locally or assuming it's available.
-// I need to make sure resolveFieldOptions is available or implemented here. 
-function resolveFieldOptions(
-    field: TrackerField,
-    optionTables: TrackerOptionTable[],
-    optionsMappingId?: string
-) {
-    if (field.dataType !== 'options' && field.dataType !== 'multiselect') return undefined
-    if (!optionsMappingId) return undefined
-    
-    const table = optionTables.find(t => t.id === optionsMappingId)
-    if (!table) return undefined
-    return table.options
 }

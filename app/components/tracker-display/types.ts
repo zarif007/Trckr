@@ -62,7 +62,10 @@ export type TrackerFieldConfig = {
   isDisabled?: boolean
   isHidden?: boolean
   defaultValue?: unknown
+  /** Legacy: inline option table id. Prefer optionMapId. */
   optionsMappingId?: string
+  /** Points to optionMaps[id]. Options come from grid rows at (tabId, gridId). */
+  optionMapId?: string
   min?: number
   max?: number
   minLength?: number
@@ -100,6 +103,15 @@ export type TrackerOptionTable = {
   options: Array<TrackerOption>
 }
 
+/** Map entry: options for select/multiselect come from grid rows at (tabId, gridId). */
+export type TrackerOptionMap = {
+  id: string
+  tabId: string
+  gridId: string
+  labelFieldId?: string
+  valueFieldId?: string
+}
+
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
   sections: TrackerSection[]
@@ -107,4 +119,5 @@ export interface TrackerDisplayProps {
   fields: TrackerField[]
   layoutNodes?: TrackerLayoutNode[]
   optionTables?: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
 }

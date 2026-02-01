@@ -3,6 +3,7 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
+  TrackerOptionMap,
   TrackerOptionTable,
 } from './types'
 import { TrackerTableGrid } from './tracker-table-grid'
@@ -15,6 +16,7 @@ interface TrackerSectionProps {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   optionTables: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (
     gridId: string,
@@ -32,6 +34,7 @@ export function TrackerSection({
   fields,
   layoutNodes,
   optionTables,
+  optionMaps = [],
   gridData,
   onUpdate,
   onAddEntry,
@@ -69,6 +72,7 @@ export function TrackerSection({
                             layoutNodes={gridLayoutNodes}
                             fields={fields}
                             optionTables={optionTables}
+                            optionMaps={optionMaps}
                             gridData={gridData}
                             onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
                             onAddEntry={onAddEntry ? (newRow) => onAddEntry(grid.id, newRow) : undefined}
@@ -81,6 +85,7 @@ export function TrackerSection({
                             layoutNodes={gridLayoutNodes}
                             fields={fields}
                             optionTables={optionTables}
+                            optionMaps={optionMaps}
                             gridData={gridData}
                             onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
                          />
@@ -91,6 +96,7 @@ export function TrackerSection({
                             layoutNodes={gridLayoutNodes}
                             fields={fields}
                             optionTables={optionTables}
+                            optionMaps={optionMaps}
                             gridData={gridData}
                             onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
                         />

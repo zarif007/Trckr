@@ -9,7 +9,8 @@ The schema MUST follow this structure exactly (flat arrays with references, no n
 - grids: array of grid objects with sectionId referencing a section
 - fields: array of atomic field objects (data definitions)
 - layoutNodes: array of placement objects linking fields to grids (fieldId, gridId, order)
-- optionTables: array of option lists for select/multiselect fields
+- optionTables: (optional, legacy) inline option lists
+- optionMaps: array of option map entries for select/multiselect; each points to a table (tabId, gridId) in the Shared tab
 
 All IDs MUST be unique across the schema.
 
@@ -34,25 +35,27 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 
 4. Fields
 - One object per data column/value. Fields: id (snake_case), dataType ("string"|"number"|"date"|"options"|"multiselect"|"boolean"|"text"|"link"|"currency"|"percentage"), ui: { label, placeholder? }, config (REQUIRED).
-- config standard: { isRequired?: boolean, isDisabled?: boolean, isHidden?: boolean, defaultValue?, optionsMappingId?, min?, max?, minLength?, maxLength? }.
+- config standard: { isRequired?, isDisabled?, isHidden?, defaultValue?, optionMapId?, optionsMappingId? (legacy), min?, max?, minLength?, maxLength? }.
 - isDisabled: when true, input is read-only. Set for computed or system fields.
 - isHidden: when true, field is not rendered. Set for internal-only fields.
-- For options/multiselect set config.optionsMappingId to the optionTable id.
+- For options/multiselect prefer config.optionMapId: set to an optionMaps entry id. Options are then read from the Shared tab table at (tabId, gridId); that table has two columns: label (display) and value (stored in the main field). Legacy: config.optionsMappingId can point to an optionTable id for inline options.
 
 5. LayoutNodes
 - One object per field placement in a grid. Fields: gridId, fieldId, order (numeric), renderAs (optional: "default"|"table"|"kanban"|"calendar"|"timeline").
 - To show a field in a grid, add a layoutNode with that gridId and fieldId.
 
-6. OptionTables
-- One object per option set. Fields: id (e.g. "priority_ops"), options: array of { label, value }.
-- For fields with dataType "options" or "multiselect", set config.optionsMappingId to the optionTable id.
+6. OptionMaps (preferred for select/multiselect)
+- One object per option source. Fields: id (e.g. "priority_options"), tabId (e.g. "shared_tab"), gridId (the table grid that holds option rows), labelFieldId? (field id in that grid for display label), valueFieldId? (field id for stored value). Omit labelFieldId/valueFieldId to use "label" and "value" as row keys.
+- For fields with dataType "options" or "multiselect", set config.optionMapId to the optionMaps entry id. Options are resolved from the table rows at (tabId, gridId).
 
-7. Output
+7. OptionTables (legacy)
+- Optional. One object per inline option set: id, options: array of { label, value }. Use config.optionsMappingId on a field to reference. Prefer optionMaps + Shared tab when options should be editable in the UI.
+
+8. Output
 - Emit only valid JSON. No markdown or commentary.
 
-8. Options and Shared tab
-- If you create fields with dataType "options" or "multiselect", create a corresponding optionTable and set the field's config.optionsMappingId.
-- Optionally create a "Shared" tab (id: "shared_tab", name: "Shared") with a section "Option Lists" and table grids if the user should manage options in the UI; link those grids to fields via layoutNodes using the same optionTable-backed fields or dedicated admin grids as needed.
+9. Shared tab for options
+- Put option tables in a "Shared" tab: create a tab with id "shared_tab" and name "Shared". Add a section (e.g. "Option Lists") and one table grid per option set. Each grid has two fields: one for label (what the user sees when selecting), one for value (what is stored in the main field). Add an optionMaps entry with id, tabId: "shared_tab", gridId: that grid's id, and labelFieldId/valueFieldId matching the grid's field ids. Link the main field via config.optionMapId to this optionMaps id.
 
 CRITICAL for revisions:
 1. Read manager.builderTodo and the user's latest query.

@@ -118,7 +118,21 @@ export const trackerSchema = z.object({
         options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()),
       })
     )
-    .describe('Lookup tables for options/multiselect fields. Referenced by config.optionsMappingId.'),
+    .optional()
+    .describe('Legacy: inline option lists. Prefer optionMaps + Shared tab tables.'),
+
+  optionMaps: z
+    .array(
+      z.object({
+        id: z.string().describe('Unique id referenced by field config.optionMapId'),
+        tabId: z.string().describe('Tab that contains the options table (e.g. Shared tab)'),
+        gridId: z.string().describe('Grid (table) that holds option rows'),
+        labelFieldId: z.string().optional().describe('Field id in that grid for the option label (display text)'),
+        valueFieldId: z.string().optional().describe('Field id in that grid for the option value (stored in main field)'),
+      })
+    )
+    .optional()
+    .describe('Map from optionMapId to (tabId, gridId) of table with label/value columns. Options are resolved from grid rows.'),
 })
 
 export type TrackerSchema = z.infer<typeof trackerSchema>

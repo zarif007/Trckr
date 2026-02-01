@@ -9,6 +9,7 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
+  TrackerOptionMap,
   TrackerOptionTable,
 } from './types'
 import { TrackerSection } from './tracker-section'
@@ -20,6 +21,7 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   optionTables = [],
+  optionMaps = [],
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
     return (tabs ?? [])
@@ -112,6 +114,7 @@ export function TrackerDisplayInline({
             fields={fields}
             layoutNodes={layoutNodes}
             optionTables={optionTables}
+            optionMaps={optionMaps}
             localGridData={localGridData}
             handleUpdate={handleUpdate}
             handleAddEntry={handleAddEntry}
@@ -130,6 +133,7 @@ function TrackerTabContent({
   fields,
   layoutNodes,
   optionTables,
+  optionMaps,
   localGridData,
   handleUpdate,
   handleAddEntry,
@@ -141,6 +145,7 @@ function TrackerTabContent({
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   optionTables: TrackerOptionTable[]
+  optionMaps: TrackerOptionMap[]
   localGridData: Record<string, Array<Record<string, unknown>>>
   handleUpdate: (
     gridId: string,
@@ -181,6 +186,7 @@ function TrackerTabContent({
             fields={fields}
             layoutNodes={layoutNodes}
             optionTables={optionTables}
+            optionMaps={optionMaps}
             gridData={localGridData}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}

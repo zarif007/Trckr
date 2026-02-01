@@ -12,7 +12,11 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
   if (value === null || value === undefined) return <span>-</span>
 
   const getLabel = (val: string) => {
-    return options?.find((o) => o.id === val)?.label || val
+    if (!options?.length) return val
+    const byValue = options.find((o) => String(o.value) === val)
+    if (byValue) return byValue.label ?? val
+    const byId = options.find((o) => o.id === val)
+    return byId?.label ?? val
   }
 
   switch (type) {

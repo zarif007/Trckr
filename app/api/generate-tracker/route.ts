@@ -75,10 +75,11 @@ export async function POST(request: Request) {
                 id: f.id,
                 dataType: f.dataType,
                 ui: f.ui,
-                config: f.config ?? {}, // validations (min, max, minLength, maxLength), isRequired, isDisabled, isHidden, optionsMappingId, etc.
+                config: f.config ?? {}, // validations, isRequired, isDisabled, isHidden, optionMapId, optionsMappingId, etc.
               })),
               layoutNodes: (msg.trackerData as any).layoutNodes || [],
               optionTables: (msg.trackerData as any).optionTables || [],
+              optionMaps: (msg.trackerData as any).optionMaps || [],
             }
 
             assistantMsgParts.push(

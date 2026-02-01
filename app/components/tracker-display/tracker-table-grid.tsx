@@ -5,35 +5,18 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
+  TrackerOptionMap,
   TrackerOptionTable,
 } from './types'
 import { TrackerCell } from './tracker-cell'
-// import { resolveOptions } from './resolve-options' // Updated import name if needed, assuming resolveFieldOptions was renamed or I should rewrite it
-
-// Helper to look up options from optionTables
-function resolveFieldOptions(
-  field: { id: string; dataType: string },
-  optionTables: TrackerOptionTable[],
-  optionsMappingId?: string,
-) {
-  if (field.dataType !== 'options' && field.dataType !== 'multiselect')
-    return undefined
-  if (!optionsMappingId) return undefined
-
-  const table = optionTables.find((t) => t.id === optionsMappingId)
-  if (!table || !table.options) return undefined
-
-  return table.options.map((opt) => ({
-    ...opt,
-    id: opt.id ?? String(opt.value),
-  }))
-}
+import { resolveFieldOptions } from './resolve-options'
 
 interface TrackerTableGridProps {
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   optionTables: TrackerOptionTable[]
+  optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -45,6 +28,7 @@ export function TrackerTableGrid({
   layoutNodes,
   fields,
   optionTables,
+  optionMaps = [],
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -74,14 +58,11 @@ export function TrackerTableGrid({
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
+    const opts = resolveFieldOptions(field, optionTables, optionMaps, gridData)
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
-      options: resolveFieldOptions(
-        field,
-        optionTables,
-        field.config?.optionsMappingId,
-      ),
+      options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
       config: field.config,
     }
   })
@@ -98,11 +79,7 @@ export function TrackerTableGrid({
           <TrackerCell
             value={value}
             type={field.dataType}
-            options={resolveFieldOptions(
-              field,
-              optionTables,
-              field.config?.optionsMappingId,
-            )}
+            options={resolveFieldOptions(field, optionTables, optionMaps, gridData)}
           />
         );
       },
