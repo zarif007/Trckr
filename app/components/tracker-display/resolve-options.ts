@@ -20,11 +20,12 @@ function normalizeOption(opt: { label?: string; value?: unknown; id?: string }):
 }
 
 export function resolveFieldOptions(
-  field: TrackerField,
+  field: TrackerField | undefined | null,
   optionTables?: TrackerOptionTable[],
   optionMaps?: TrackerOptionMap[],
   gridData?: Record<string, Array<Record<string, unknown>>>
 ): TrackerOption[] | undefined {
+  if (field == null) return undefined
   const config = field.config ?? {}
 
   // 1. optionMapId: resolve from Shared tab table rows (gridData)

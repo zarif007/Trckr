@@ -57,6 +57,8 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 9. Shared tab for options
 - Put option tables in a "Shared" tab: create a tab with id "shared_tab" and name "Shared". Add a section (e.g. "Option Lists") and one table grid per option set. Each grid has two fields: one for label (what the user sees when selecting), one for value (what is stored in the main field). Add an optionMaps entry with id, tabId: "shared_tab", gridId: that grid's id, and labelFieldId/valueFieldId matching the grid's field ids. Link the main field via config.optionMapId to this optionMaps id.
 
+Do not suggest or generate charts, graphs, or data visualizations — the app does not support them.
+
 CRITICAL for revisions:
 1. Read manager.builderTodo and the user's latest query.
 2. Follow instructions strictly. Do not assume beyond what is specified.

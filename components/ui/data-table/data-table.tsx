@@ -31,10 +31,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
-import { Settings2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Settings2, ChevronDown } from 'lucide-react'
 import { FieldMetadata, getFieldIcon, getValidationError, sanitizeValue } from './utils'
 import { DataTableCell } from './data-table-cell'
 import { DataTableInput } from './data-table-input'
+import { EntryFormDialog } from './entry-form-dialog'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -57,7 +58,6 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [showAddDialog, setShowAddDialog] = useState(false)
-  const [newRowData, setNewRowData] = useState<Record<string, any>>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
   const [rowDetailsTouchedFields, setRowDetailsTouchedFields] = useState<Set<string>>(new Set())
@@ -213,9 +213,8 @@ export function DataTable<TData, TValue>({
 
   const fixedWidth = '34px'
 
-  const handleAddEntry = () => {
-    onAddEntry?.(newRowData)
-    setNewRowData({})
+  const handleAddEntry = (values: Record<string, any>) => {
+    onAddEntry?.(values)
     setShowAddDialog(false)
   }
 
@@ -234,18 +233,16 @@ export function DataTable<TData, TValue>({
     setRowDetailsTouchedFields(new Set())
   }, [rowDetailsOpenForIndex])
 
-  const addEntryHasError = useMemo(() => {
-    if (!fieldMetadata) return false
-    return Object.keys(newRowData).some((columnId) => {
-      const fieldInfo = fieldMetadata[columnId]
-      if (!fieldInfo) return false
-      return !!getValidationError(
-        newRowData[columnId],
-        fieldInfo.type,
-        fieldInfo.config,
-      )
-    })
-  }, [newRowData, fieldMetadata])
+  const addFieldOrder = useMemo(
+    () =>
+      columns.map(
+        (col) =>
+          (col as { id?: string; accessorKey?: string }).id ||
+          (col as { id?: string; accessorKey?: string }).accessorKey ||
+          ''
+      ),
+    [columns]
+  )
 
   return (
     <div className="w-full space-y-4">
@@ -284,102 +281,23 @@ export function DataTable<TData, TValue>({
             </div>
           </DialogContent>
         </Dialog>
-        <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline">
-              Add Entry
-            </Button>
-          </DialogTrigger>
-          <DialogContent
-            className="sm:max-w-[500px]"
-            onInteractOutside={(e) => e.preventDefault()}
-            onPointerDownOutside={(e) => e.preventDefault()}
-          >
-            <DialogHeader>
-              <DialogTitle>Add New Entry</DialogTitle>
-            </DialogHeader>
-            <div className="grid grid-cols-1 gap-4 py-4 max-h-[60vh] overflow-y-auto">
-              {columns.map((col) => {
-                // @ts-ignore
-                const columnId = col.id || col.accessorKey
-                const fieldInfo = fieldMetadata?.[columnId]
-
-                if (!fieldInfo) return null
-
-                const addValue = newRowData[columnId] ?? ''
-                const addError =
-                  columnId in newRowData
-                    ? getValidationError(
-                        newRowData[columnId],
-                        fieldInfo.type,
-                        fieldInfo.config
-                      )
-                    : null
-                const addShowError = !!addError
-
-                return (
-                  <div key={columnId} className="flex flex-col space-y-1.5">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      {typeof col.header === 'string' ? col.header : columnId}
-                    </span>
-                    <div
-                      className={cn(
-                        'rounded-md border bg-muted/5 focus-within:bg-background focus-within:ring-1 transition-all',
-                        addShowError
-                          ? 'border-destructive focus-within:ring-destructive/20'
-                          : 'border-border/40 focus-within:ring-primary/20'
-                      )}
-                      title={addError ?? undefined}
-                    >
-                      <DataTableInput
-                        value={addValue}
-                        onChange={(value) => {
-                          const sanitized = sanitizeValue(
-                            value,
-                            fieldInfo.type,
-                            fieldInfo.config
-                          )
-                          setNewRowData((prev) => ({
-                            ...prev,
-                            [columnId]: sanitized,
-                          }))
-                        }}
-                        type={fieldInfo.type}
-                        options={fieldInfo.options}
-                        config={fieldInfo.config}
-                        className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0"
-                        autoFocus={
-                          columnId === (columns[0] as any)?.id ||
-                          (columns[0] as any)?.accessorKey
-                        }
-                      />
-                    </div>
-                    {addShowError && addError && (
-                      <p className="text-destructive text-xs">{addError}</p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDialog(false)
-                  setNewRowData({})
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAddEntry}
-                disabled={addEntryHasError}
-              >
-                Add Entry
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddDialog(true)}
+        >
+          Add Entry
+        </Button>
+        <EntryFormDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          title="Add New Entry"
+          submitLabel="Add Entry"
+          fieldMetadata={fieldMetadata ?? {}}
+          fieldOrder={addFieldOrder}
+          initialValues={{}}
+          onSave={handleAddEntry}
+        />
         <Dialog
           open={rowDetailsOpenForIndex !== null}
           onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}

@@ -1,4 +1,5 @@
 import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import {
   TrackerGrid,
   TrackerFieldType,
@@ -9,6 +10,9 @@ import {
 } from './types'
 import { TrackerCell } from './tracker-cell'
 import { resolveFieldOptions } from './resolve-options'
+import type { FieldMetadata } from '@/components/ui/data-table/utils'
+import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
+import { ChevronDown } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -39,6 +43,7 @@ interface TrackerKanbanGridProps {
   optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
+  onAddEntry?: (newRow: Record<string, unknown>) => void
 }
 
 function SortableCard({
@@ -49,14 +54,16 @@ function SortableCard({
   optionMaps,
   gridData,
   fields,
+  onEditRow,
 }: {
   id: string
-  card: Record<string, unknown>
+  card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   optionTables: TrackerOptionTable[]
   optionMaps: TrackerOptionMap[]
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
+  onEditRow?: (rowIndex: number) => void
 }) {
   const {
     attributes,
@@ -75,7 +82,15 @@ function SortableCard({
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <KanbanCard card={card} cardFields={cardFields} optionTables={optionTables} optionMaps={optionMaps} gridData={gridData} fields={fields} />
+      <KanbanCard
+        card={card}
+        cardFields={cardFields}
+        optionTables={optionTables}
+        optionMaps={optionMaps}
+        gridData={gridData}
+        fields={fields}
+        onEditRow={onEditRow}
+      />
     </div>
   )
 }
@@ -89,19 +104,40 @@ function KanbanCard({
   gridData,
   fields,
   isOverlay = false,
+  onEditRow,
 }: {
-  card: Record<string, unknown>
+  card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   optionTables: TrackerOptionTable[]
   optionMaps: TrackerOptionMap[]
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   isOverlay?: boolean
+  onEditRow?: (rowIndex: number) => void
 }) {
+  const rowIndex = card._originalIdx
+  const showEditButton = !isOverlay && onEditRow != null && typeof rowIndex === 'number'
+
   return (
     <Card
-      className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''}`}
+      className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative ${isOverlay ? 'shadow-xl' : ''}`}
     >
+      {showEditButton && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 p-0 absolute top-2 right-2"
+          onClick={(e) => {
+            e.stopPropagation()
+            e.preventDefault()
+            onEditRow?.(rowIndex)
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <ChevronDown className="h-4 w-4" />
+          <span className="sr-only">Edit entry</span>
+        </Button>
+      )}
       {cardFields.map((field) => {
         const fullField = fields.find((f) => f.id === field.id)
         const options = fullField
@@ -150,8 +186,11 @@ export function TrackerKanbanGrid({
     optionMaps = [],
     gridData = {},
     onUpdate,
+    onAddEntry,
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -178,7 +217,6 @@ export function TrackerKanbanGrid({
   }
 
   const rows = gridData[grid.id] ?? []
-  if (rows.length === 0) return null
 
   // Determine grouping field
   let groupByFieldId = grid.config?.groupBy
@@ -208,8 +246,18 @@ export function TrackerKanbanGrid({
       groups = options.map(o => ({ id: String(o.value ?? o.id ?? o.label), label: o.label }))
   } else {
       // Distinct values from rows as fallback
-      const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? 'Uncategorized'))))
-      groups = distinctValues.map(v => ({ id: v, label: v }))
+      const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? ''))))
+      groups = distinctValues.filter(Boolean).map(v => ({ id: v, label: v }))
+  }
+
+  // When no groups (e.g. empty data, no options), show at least one column
+  if (groups.length === 0) {
+    groups = [{ id: '', label: 'Uncategorized' }]
+  }
+  // Always include a fallback for rows with empty/undefined groupBy (e.g. newly added entries)
+  const hasEmptyGroup = groups.some(g => g.id === '')
+  if (!hasEmptyGroup) {
+    groups = [...groups, { id: '', label: 'Uncategorized' }]
   }
 
   // Fields to display on card (simple mapping for display)
@@ -217,6 +265,19 @@ export function TrackerKanbanGrid({
   const cardFieldsDisplay = kanbanFields
     .filter(f => f.id !== groupByFieldId)
     .map(f => ({ id: f.id, dataType: f.dataType, label: f.ui.label }))
+
+  // Field metadata for Add/Edit dialog (same shape as table)
+  const fieldMetadata: FieldMetadata = {}
+  kanbanFields.forEach((field) => {
+    const opts = resolveFieldOptions(field, optionTables, optionMaps, gridData)
+    fieldMetadata[field.id] = {
+      name: field.ui.label,
+      type: field.dataType,
+      options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
+      config: field.config,
+    }
+  })
+  const fieldOrder = kanbanFields.map((f) => f.id)
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -226,31 +287,48 @@ export function TrackerKanbanGrid({
     setActiveId(null)
     const { active, over } = event
 
-    if (!over) return
+    if (!over || !onUpdate) return
 
     const cardId = active.id as string
-    const overId = over.id as string
+    const overId = String(over.id)
 
-    // cardId is in format `idx-currentGroup`
-    const [cardIdxStr] = cardId.split('-')
-    const cardIdx = parseInt(cardIdxStr)
+    // cardId is in format `idx-currentGroup` (e.g. "0-todo")
+    const dashAt = cardId.indexOf('-')
+    if (dashAt < 0) return
+    const cardIdx = parseInt(cardId.slice(0, dashAt), 10)
+    if (Number.isNaN(cardIdx) || cardIdx < 0 || cardIdx >= rows.length) return
+
     const currentCard = rows[cardIdx]
 
-    // overId can be a group ID (if dropping into an empty column) or another card's ID
+    // overId is either: (1) group.id when dropping on empty column, or (2) card id "rowIndex-groupId"
     let nextGroupId = overId
-    if (overId.includes('-')) {
-      const parts = overId.split('-')
-      // If it's a card ID, the group ID is the last part
-      nextGroupId = parts[parts.length - 1]
+    const firstDash = overId.indexOf('-')
+    if (firstDash >= 0) {
+      // Dropped on another card: overId is "rowIndex-groupId" (groupId may contain hyphens)
+      nextGroupId = overId.slice(firstDash + 1)
     }
 
+    // Update the row's groupBy field so the item moves to the new column (e.g. status -> "In Progress")
     const currentGroup = currentCard?.[groupByFieldId!]
-    if (String(currentGroup ?? '') !== nextGroupId && onUpdate) {
+    if (String(currentGroup ?? '') !== nextGroupId) {
       onUpdate(cardIdx, groupByFieldId!, nextGroupId)
     }
   }
 
   const activeCard = activeId ? rows[parseInt(activeId.split('-')[0])] : null
+
+  const handleAddSave = (values: Record<string, unknown>) => {
+    onAddEntry?.(values)
+    setShowAddDialog(false)
+  }
+
+  const handleEditSave = (values: Record<string, unknown>) => {
+    if (editRowIndex == null || !onUpdate) return
+    Object.entries(values).forEach(([columnId, value]) => {
+      onUpdate(editRowIndex, columnId, value)
+    })
+    setEditRowIndex(null)
+  }
 
   return (
     <DndContext
@@ -259,7 +337,41 @@ export function TrackerKanbanGrid({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+      <div className="w-full space-y-4">
+        <div className="flex justify-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowAddDialog(true)}
+          >
+            Add Entry
+          </Button>
+        </div>
+        <EntryFormDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          title="Add New Entry"
+          submitLabel="Add Entry"
+          fieldMetadata={fieldMetadata}
+          fieldOrder={fieldOrder}
+          initialValues={
+            groupByFieldId && groups.length > 0
+              ? { [groupByFieldId]: groups[0].id }
+              : {}
+          }
+          onSave={handleAddSave}
+        />
+        <EntryFormDialog
+          open={editRowIndex !== null}
+          onOpenChange={(open) => !open && setEditRowIndex(null)}
+          title="Row Details"
+          submitLabel="Update Entry"
+          fieldMetadata={fieldMetadata}
+          fieldOrder={fieldOrder}
+          initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
+          onSave={handleEditSave}
+        />
+        <div className="flex gap-4 overflow-x-auto pb-4 items-start">
         {groups.map((group) => {
           const cardsInGroup = rows
             .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
@@ -295,6 +407,7 @@ export function TrackerKanbanGrid({
                         optionMaps={optionMaps}
                         gridData={gridData}
                         fields={fields}
+                        onEditRow={setEditRowIndex}
                       />
                     ))
                   )}
@@ -303,6 +416,7 @@ export function TrackerKanbanGrid({
             </div>
           )
         })}
+        </div>
       </div>
       <DragOverlay dropAnimation={{
         sideEffects: defaultDropAnimationSideEffects({

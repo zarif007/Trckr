@@ -17,7 +17,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-interface TrackerResponse extends TrackerDisplayProps {}
+interface TrackerResponse extends TrackerDisplayProps { }
 
 const CONTINUE_PROMPT =
   'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, and optionMaps (if needed) are all filled. Add any missing parts from where you left off.'
@@ -77,6 +77,7 @@ export default function TrackerPage() {
           trackerData: finishedObject.tracker as TrackerResponse,
           managerData: finishedObject.manager,
         }
+        console.log('assistantMessage', assistantMessage.trackerData)
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
         if (hasValidTracker) {
@@ -226,8 +227,8 @@ export default function TrackerPage() {
     {
       icon: Zap,
       title: 'Personal Fitness Logger',
-      desc: 'Track workouts, weights, and progress with charts',
-      query: 'Create a personal fitness tracker to log daily workouts, sets, reps, and body weight progress with visualization.',
+      desc: 'Track workouts, weights, and progress over time',
+      query: 'Create a personal fitness tracker to log daily workouts, sets, reps, and body weight progress.',
       gradient: 'from-orange-500/20 to-red-500/20',
       iconColor: 'text-orange-500'
     },
@@ -409,8 +410,8 @@ export default function TrackerPage() {
                       {message.content && (
                         <div
                           className={`rounded-md px-4 py-2.5 shadow-sm font-medium ${message.role === 'user'
-                              ? 'bg-primary text-primary-foreground text-sm leading-relaxed'
-                              : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-sm leading-relaxed'
+                            ? 'bg-primary text-primary-foreground text-sm leading-relaxed'
+                            : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-sm leading-relaxed'
                             }`}
                         >
                           <p className="whitespace-pre-wrap">{message.content}</p>
@@ -457,8 +458,8 @@ export default function TrackerPage() {
                                           {message.managerData.builderTodo.map((todo, i) => (
                                             <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded border border-border/20">
                                               <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-green-500' :
-                                                  todo.action === 'update' ? 'bg-blue-500' :
-                                                    todo.action === 'delete' ? 'bg-red-500' : 'bg-muted-foreground'
+                                                todo.action === 'update' ? 'bg-blue-500' :
+                                                  todo.action === 'delete' ? 'bg-red-500' : 'bg-muted-foreground'
                                                 }`} />
                                               <div>
                                                 <span className="opacity-60">{todo.action} </span>
@@ -644,8 +645,8 @@ export default function TrackerPage() {
                     onClick={handleSubmit}
                     disabled={!input.trim() || isLoading}
                     className={`shrink-0 h-10 w-10 rounded-[8px] transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${input.trim() && !isLoading
-                        ? 'bg-foreground text-background hover:bg-foreground/90'
-                        : 'bg-secondary text-muted-foreground'
+                      ? 'bg-foreground text-background hover:bg-foreground/90'
+                      : 'bg-secondary text-muted-foreground'
                       }`}
                   >
                     {isLoading ? (
@@ -725,31 +726,31 @@ export default function TrackerPage() {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">
                 {messages.length > 0 && !isLoading ? (
-                   <div className="flex flex-col items-center gap-4 text-amber-500">
-                      <div className="p-3 rounded-full bg-amber-500/10">
-                        <AlertTriangle className="w-8 h-8" />
-                      </div>
-                      <div className="text-center max-w-md space-y-2">
-                        <p className="font-bold">No Tracker Generated</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
-                          {generationErrorMessage || 'The AI responded but did not generate a valid tracker configuration.'}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-center">
-                        <Button variant="outline" onClick={handleContinue}>
-                          Continue from where it left off
-                        </Button>
-                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Close</Button>
-                      </div>
-                   </div>
+                  <div className="flex flex-col items-center gap-4 text-amber-500">
+                    <div className="p-3 rounded-full bg-amber-500/10">
+                      <AlertTriangle className="w-8 h-8" />
+                    </div>
+                    <div className="text-center max-w-md space-y-2">
+                      <p className="font-bold">No Tracker Generated</p>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+                        {generationErrorMessage || 'The AI responded but did not generate a valid tracker configuration.'}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      <Button variant="outline" onClick={handleContinue}>
+                        Continue from where it left off
+                      </Button>
+                      <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Close</Button>
+                    </div>
+                  </div>
                 ) : (
-                    <>
-                        <div className="relative">
-                        <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl animate-pulse" />
-                        <Loader2 className="w-12 h-12 animate-spin text-primary relative" />
-                        </div>
-                        <p className="text-lg font-bold tracking-tight animate-pulse">Initializing Interface...</p>
-                    </>
+                  <>
+                    <div className="relative">
+                      <div className="absolute -inset-4 rounded-full bg-primary/20 blur-xl animate-pulse" />
+                      <Loader2 className="w-12 h-12 animate-spin text-primary relative" />
+                    </div>
+                    <p className="text-lg font-bold tracking-tight animate-pulse">Initializing Interface...</p>
+                  </>
                 )}
               </div>
             )}

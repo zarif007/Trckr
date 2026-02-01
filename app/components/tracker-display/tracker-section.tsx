@@ -88,6 +88,7 @@ export function TrackerSection({
                             optionMaps={optionMaps}
                             gridData={gridData}
                             onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                            onAddEntry={onAddEntry ? (newRow) => onAddEntry(grid.id, newRow) : undefined}
                          />
                     )}
                     {grid.type === 'div' && (
