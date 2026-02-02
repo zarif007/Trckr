@@ -1,6 +1,6 @@
 # Tracker schema
 
-Trckr uses a flat array-based schema: tabs, sections, grids, fields, layoutNodes, optionTables, optionMaps, bindings. Relationships are by ID references, not nesting.
+Trckr uses a flat array-based schema: tabs, sections, grids, fields, layoutNodes, bindings. Relationships are by ID references, not nesting. Every select/multiselect field must have a bindings entry.
 
 ## ID naming conventions
 
@@ -65,29 +65,25 @@ When user selects a product, the price field auto-populates. The value mapping h
 - **optionsGrid**: grid id only (e.g., `product_options_grid`)
 - **Field path**: `grid_id.field_id` (e.g., `product_options_grid.label`, `orders_grid.product`)
 
-## Legacy option sources (DEPRECATED)
+## Auto-fix and enrichment
 
-The following are deprecated. Use `bindings` instead:
+### buildBindingsFromSchema()
 
-- **optionMapId**: options come from a table grid in the Shared tab.
-- **optionTableId**: options come from an inline list in `optionTables`.
+Ensures every select/multiselect field has a bindings entry pointing to an options grid; creates missing options grids and Shared tab infrastructure. Preserves existing bindings' fieldMappings when present.
 
-These are kept for backward compatibility and will be auto-converted to bindings.
+### enrichBindingsFromSchema()
 
-## Auto-fix functions
+After bindings exist, infers additional fieldMappings: for each binding, adds mappings from option-grid fields to main-grid fields when both grids have a field with the same id (e.g. options grid has `price`, main grid has `price` → auto-populate on select). Options grids can have extra columns (price, taste, etc.); same-named main grid fields are auto-filled when the user selects an option.
 
 ### autoFixBindings()
 
-Creates missing bindings entries for select/multiselect fields:
-1. Converts legacy `optionMapId` references to bindings format
-2. Creates Shared tab infrastructure for fields without option sources
-3. Generates default bindings entries
+Creates missing bindings entries for select/multiselect fields: creates Shared tab infrastructure and default bindings (value mapping only). Run buildBindingsFromSchema and enrichBindingsFromSchema for full repair and auto-populate inference.
 
 ## Validation
 
 The `validateBindings()` function checks:
-- All binding keys reference existing tabs/grids/fields
-- All paths (optionsGrid, labelField, valueField, fieldMappings) are valid
-- All select/multiselect fields have bindings or legacy option sources
+- All binding keys reference existing grids/fields
+- All paths (optionsGrid, labelField, fieldMappings) are valid
+- All select/multiselect fields have a bindings entry
 
 Validation issues are returned as warnings (not errors) - invalid bindings are skipped at runtime.

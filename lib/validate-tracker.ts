@@ -23,8 +23,6 @@ export interface TrackerLike {
     config?: Record<string, unknown> | null
   }>
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
-  optionTables?: Array<{ id: string; options?: Array<{ label?: string; value?: unknown }> }>
-  optionMaps?: Array<{ id: string; tabId?: string; gridId?: string; labelFieldId?: string; valueFieldId?: string }>
   bindings?: Record<string, BindingEntry>
 }
 
@@ -203,11 +201,7 @@ function titleCase(str: string): string {
 
 /**
  * Auto-fix missing bindings entries for select/multiselect fields.
- * 
- * This function:
- * 1. Converts legacy optionMapId references to bindings format
- * 2. Creates default bindings with Shared tab infrastructure for fields without option sources
- * 
+ * Creates default bindings with Shared tab infrastructure for fields without a bindings entry.
  * Returns a new tracker object with the fixes applied (does not mutate input).
  */
 export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
@@ -220,8 +214,6 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
     grids: [...(tracker.grids ?? [])],
     fields: [...(tracker.fields ?? [])],
     layoutNodes: [...(tracker.layoutNodes ?? [])],
-    optionTables: [...(tracker.optionTables ?? [])],
-    optionMaps: [...(tracker.optionMaps ?? [])],
     bindings: { ...(tracker.bindings ?? {}) },
   }
 
@@ -232,7 +224,6 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
   const sections = fixed.sections!
   const grids = fixed.grids!
   const layoutNodes = fixed.layoutNodes!
-  const optionMaps = fixed.optionMaps!
 
   // Helper to get the grid a field is in
   const getFieldGridInfo = (fId: string): { tabId: string; gridId: string } | null => {
@@ -287,31 +278,7 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
     // Skip if binding already exists
     if (fixed.bindings![fieldPath]) continue
 
-    const config = field.config ?? {}
-    const optionMapId = config.optionMapId as string | undefined
-    const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
-
-    // Case 1: Has optionMapId - convert to bindings format (paths are grid.field)
-    if (optionMapId) {
-      const mapEntry = optionMaps.find((m) => m.id === optionMapId)
-      if (mapEntry && mapEntry.gridId) {
-        const valueFieldId = mapEntry.valueFieldId ?? 'value'
-        const valueFromPath = `${mapEntry.gridId}.${valueFieldId}`
-
-        fixed.bindings![fieldPath] = {
-          optionsGrid: mapEntry.gridId,
-          labelField: `${mapEntry.gridId}.${mapEntry.labelFieldId ?? 'label'}`,
-          fieldMappings: [{ from: valueFromPath, to: fieldPath }],
-        }
-        continue
-      }
-    }
-
-    // Case 2: Has optionTableId - we still need bindings but optionTables don't have a grid
-    // For now, skip these - they'll work via legacy resolution
-    if (optionTableId) continue
-
-    // Case 3: No option source - create Shared tab infrastructure and bindings
+    // No binding: create Shared tab infrastructure and default binding
     ensureSharedTabInfrastructure()
 
     const baseName = field.id.replace(/_/g, ' ')

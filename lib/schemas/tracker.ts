@@ -182,9 +182,6 @@ export const trackerSchema = z
       .default([])
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
-    optionTables: z.array(z.any()).default([]).optional().describe('Unused; bindings are the single source of truth.'),
-    optionMaps: z.array(z.any()).default([]).optional().describe('Unused; bindings are the single source of truth.'),
-
     bindings: bindingsSchema,
   })
   .passthrough()

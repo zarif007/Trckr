@@ -164,7 +164,10 @@ export function findOptionRow(
   }
 
   const rows = gridData[gridId] ?? []
-  return rows.find((row) => row[valueFieldId] === selectedValue)
+  // Use loose equality so string "123" matches number 123 (select components often stringify)
+  const match = (rowVal: unknown, sel: unknown) =>
+    rowVal === sel || String(rowVal) === String(sel)
+  return rows.find((row) => match(row[valueFieldId], selectedValue))
 }
 
 /**

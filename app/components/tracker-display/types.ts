@@ -62,18 +62,10 @@ export type TrackerFieldConfig = {
   isDisabled?: boolean
   isHidden?: boolean
   defaultValue?: unknown
-  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
-  optionTableId?: string
-  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
-  optionMapId?: string
-  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
-  optionsMappingId?: string
   min?: number
   max?: number
   minLength?: number
   maxLength?: number
-  /** @deprecated Use top-level bindings object instead. Old binding format. */
-  binding?: { tableName: string; fieldName: string }
   [key: string]: unknown
 }
 
@@ -99,23 +91,6 @@ export type TrackerOption = {
   value: unknown
   id?: string
   [key: string]: unknown
-}
-
-export type TrackerOptionTable = {
-  id: string
-  options: Array<TrackerOption>
-}
-
-/**
- * Map entry: options for select/multiselect come from grid rows at (tabId, gridId).
- * @deprecated Use bindings instead. Kept for backward compatibility.
- */
-export type TrackerOptionMap = {
-  id: string
-  tabId: string
-  gridId: string
-  labelFieldId?: string
-  valueFieldId?: string
 }
 
 // ============================================================================

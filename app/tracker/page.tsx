@@ -11,7 +11,7 @@ import {
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
-import { buildBindingsFromSchema } from '@/lib/build-bindings'
+import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/build-bindings'
 import {
   Dialog,
   DialogContent,
@@ -74,7 +74,8 @@ export default function TrackerPage() {
       if (finishedObject) {
         // Build/repair bindings from schema so every select/multiselect points to an options grid
         const rawTracker = finishedObject.tracker
-        const tracker = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
+        const built = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
+        const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
 
         // Validate after auto-fix (options/multiselect issues are warnings only, not blocking)
         const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }

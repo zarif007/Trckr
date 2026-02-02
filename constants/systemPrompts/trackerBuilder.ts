@@ -113,7 +113,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 
 1. Tabs
 - One object per tab. Fields: id (snake_case, MUST end with _tab), name (human title), placeId (numeric order), config (REQUIRED).
-- config standard: { isHidden?: boolean }. Use isHidden: true to hide a tab from the tab list.
+- config standard: { isHidden?: boolean }. Use isHidden: true to hide a tab from the tab list. Do NOT set isHidden on shared_tab — the Shared tab must remain visible so users can view and edit option lists.
 
 2. Sections
 - One object per section. Fields: id (snake_case, MUST end with _section), name, tabId (parent tab id), placeId (numeric order), config (REQUIRED).
@@ -167,6 +167,7 @@ CRITICAL for revisions:
 6. MANDATORY: Every field with dataType "options" or "multiselect" MUST have an entry in the bindings object. The bindings key is "<grid_id>.<field_id>" (no tab). Never leave options/multiselect fields without a bindings entry.
 7. When creating select fields that should auto-populate other fields (e.g., selecting a product fills in price), add fieldMappings to the bindings entry.
 8. The options grid in Shared tab can have additional fields beyond label/value (e.g., price, description) for use in fieldMappings.
+9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
 `
 
 export default trackerBuilderPrompt

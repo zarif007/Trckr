@@ -140,10 +140,17 @@ function isOptionsGrid(gridId: string): boolean {
   return gridId.endsWith('_options_grid')
 }
 
+/** Parse "grid_id.field_id" to get fieldId (last part). */
+function parsePathFieldId(path: string): string | null {
+  if (!path || typeof path !== 'string') return null
+  const parts = path.split('.')
+  return parts.length >= 2 ? parts[1]! : parts[0] ?? null
+}
+
 /**
  * Build or repair bindings from the tracker schema. For every select/multiselect field, ensures a binding exists
  * that points to an options grid (id ending with _options_grid), never to a main data grid. Creates missing
- * options grids and overwrites incorrect bindings.
+ * options grids. Preserves existing bindings' fieldMappings when present; only fills in missing value mapping.
  */
 export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   if (!tracker?.fields?.length) return tracker
@@ -209,12 +216,119 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
       }
     }
 
-    fixed.bindings![fieldPath] = {
-      optionsGrid: optionsGridId,
-      labelField: `${optionsGridId}.${labelFieldId}`,
-      fieldMappings: [{ from: `${optionsGridId}.${valueFieldId}`, to: fieldPath }],
+    const existing = fixed.bindings![fieldPath]
+    const valueMapping = { from: `${optionsGridId}.${valueFieldId}`, to: fieldPath }
+    if (existing?.fieldMappings?.length) {
+      const hasValueMapping = existing.fieldMappings.some((m) => m.to === fieldPath)
+      const fieldMappings = hasValueMapping
+        ? existing.fieldMappings
+        : [valueMapping, ...existing.fieldMappings]
+      fixed.bindings![fieldPath] = {
+        optionsGrid: existing.optionsGrid ?? optionsGridId,
+        labelField: existing.labelField ?? `${optionsGridId}.${labelFieldId}`,
+        fieldMappings,
+      }
+    } else {
+      fixed.bindings![fieldPath] = {
+        optionsGrid: optionsGridId,
+        labelField: `${optionsGridId}.${labelFieldId}`,
+        fieldMappings: [valueMapping],
+      }
     }
   }
 
+  // Ensure Shared tab exists and is visible when we have option grids (so users can see and edit option lists)
+  const hasOptionGrids = (fixed.grids ?? []).some((g) => isOptionsGrid(g.id))
+  const hasSharedTab = (fixed.tabs ?? []).some((t) => t.id === SHARED_TAB_ID)
+  if (hasOptionGrids && !hasSharedTab) {
+    const maxPlaceId = Math.max(0, ...(fixed.tabs ?? []).map((t) => t.placeId ?? 0))
+    fixed.tabs = [...(fixed.tabs ?? []), { id: SHARED_TAB_ID, name: 'Shared', placeId: maxPlaceId + 100, config: {} }]
+  }
+  if (fixed.tabs?.length) {
+    fixed.tabs = fixed.tabs.map((tab) =>
+      tab.id === SHARED_TAB_ID
+        ? { ...tab, config: { ...(tab.config ?? {}), isHidden: false } }
+        : tab
+    )
+  }
+
   return { ...tracker, ...fixed } as T
+}
+
+/**
+ * Enrich bindings by inferring fieldMappings: for each binding, add mappings from option-grid fields
+ * to main-grid fields when both grids have a field with the same id (label/value reserved for the
+ * select are excluded). Does not remove existing mappings.
+ */
+export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
+  if (!tracker?.bindings || !tracker?.layoutNodes?.length) return tracker
+
+  const layoutNodes = tracker.layoutNodes
+  const bindings = { ...tracker.bindings }
+
+  const getFieldIdsInGrid = (gridId: string): string[] =>
+    layoutNodes
+      .filter((n) => n.gridId === gridId)
+      .map((n) => n.fieldId)
+
+  let anyChanged = false
+  for (const [fieldPath, entry] of Object.entries(bindings)) {
+    const parts = fieldPath.split('.')
+    if (parts.length < 2) continue
+    const mainGridId = parts[0]!
+    const selectFieldId = parts[1]!
+
+    const optionsGridId = entry.optionsGrid?.includes('.')
+      ? entry.optionsGrid.split('.').pop()!
+      : entry.optionsGrid
+    if (!optionsGridId) continue
+
+    const optionFieldIds = getFieldIdsInGrid(optionsGridId)
+    const mainFieldIds = getFieldIdsInGrid(mainGridId)
+    const mainFieldIdSet = new Set(mainFieldIds)
+
+    const labelFieldId = parsePathFieldId(entry.labelField)
+    const valueMapping = (entry.fieldMappings ?? []).find((m) => m.to === fieldPath)
+    const valueFieldId = valueMapping ? parsePathFieldId(valueMapping.from) : null
+    const reserved = new Set([labelFieldId, valueFieldId].filter(Boolean) as string[])
+
+    const existingMappings = new Set(
+      (entry.fieldMappings ?? []).map((m) => `${m.from}\t${m.to}`)
+    )
+    const newMappings: Array<{ from: string; to: string }> = [...(entry.fieldMappings ?? [])]
+    let entryChanged = false
+
+    const addIfNew = (from: string, to: string) => {
+      if (existingMappings.has(`${from}\t${to}`)) return
+      newMappings.push({ from, to })
+      existingMappings.add(`${from}\t${to}`)
+      entryChanged = true
+    }
+
+    for (const optFieldId of optionFieldIds) {
+      if (reserved.has(optFieldId)) continue
+      const from = `${optionsGridId}.${optFieldId}`
+
+      // Same-id: option field id === main field id (e.g. price -> price)
+      if (mainFieldIdSet.has(optFieldId)) {
+        addIfNew(from, `${mainGridId}.${optFieldId}`)
+      }
+
+      // Prefix convention: option field id === selectFieldId_mainFieldId (e.g. supplier_warehouse -> warehouse)
+      for (const mainFieldId of mainFieldIds) {
+        if (optFieldId === `${selectFieldId}_${mainFieldId}`) {
+          addIfNew(from, `${mainGridId}.${mainFieldId}`)
+          break
+        }
+      }
+    }
+
+    if (entryChanged) {
+      bindings[fieldPath] = { ...entry, fieldMappings: newMappings }
+      anyChanged = true
+    }
+  }
+
+  if (!anyChanged) return tracker
+  return { ...tracker, bindings } as T
 }
