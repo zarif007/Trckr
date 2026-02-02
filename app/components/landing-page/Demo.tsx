@@ -117,13 +117,13 @@ export default function Demo() {
         id: 'priority',
         dataType: 'options' as const,
         ui: { label: 'Priority' },
-        config: { optionsMappingId: 'priority_options' },
+        config: { optionTableId: 'priority_options' },
       },
       {
         id: 'status',
         dataType: 'options' as const,
         ui: { label: 'Status' },
-        config: { optionsMappingId: 'status_options' },
+        config: { optionTableId: 'status_options' },
       },
       {
         id: 'is_completed',
@@ -150,7 +150,7 @@ export default function Demo() {
         id: 'kb_status',
         dataType: 'options' as const,
         ui: { label: 'Status' },
-        config: { optionsMappingId: 'status_options' },
+        config: { optionTableId: 'status_options' },
       },
       // Resource Fields
       {
@@ -162,7 +162,7 @@ export default function Demo() {
         id: 'resource_type',
         dataType: 'options' as const,
         ui: { label: 'Type' },
-        config: { optionsMappingId: 'resource_type_options' },
+        config: { optionTableId: 'resource_type_options' },
       },
       {
         id: 'resource_link',

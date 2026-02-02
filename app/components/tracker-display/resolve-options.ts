@@ -48,10 +48,10 @@ export function resolveFieldOptions(
     }
   }
 
-  // 2. Legacy: optionsMappingId → optionTables
-  const optionsMappingId = config.optionsMappingId as string | undefined
-  if (optionsMappingId && optionTables?.length) {
-    const table = optionTables.find((t) => t.id === optionsMappingId)
+  // 2. optionTableId (or legacy optionsMappingId) → optionTables
+  const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
+  if (optionTableId && optionTables?.length) {
+    const table = optionTables.find((t) => t.id === optionTableId)
     if (table?.options?.length) {
       return table.options.map(normalizeOption)
     }

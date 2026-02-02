@@ -10,6 +10,7 @@ import {
 } from '@/app/components/tracker-display/types'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
+import { validateTracker, autoFixOptionMaps, type TrackerLike } from '@/lib/validate-tracker'
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ export default function TrackerPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, setActiveTrackerData] = useState<TrackerResponse | null>(null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
   const [resumingAfterError, setResumingAfterError] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -67,14 +69,24 @@ export default function TrackerPage() {
     onFinish: ({ object: finishedObject }: { object?: MultiAgentSchema }) => {
       setGenerationErrorMessage(null)
       setResumingAfterError(false)
+      setValidationErrors([])
       if (finishedObject) {
+        // Auto-fix missing optionMaps entries and Shared tab infrastructure
+        const rawTracker = finishedObject.tracker
+        const tracker = rawTracker ? autoFixOptionMaps(rawTracker as TrackerLike) : rawTracker
+
+        // Validate after auto-fix (should have fewer/no errors now)
+        const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
+        if (!validation.valid) {
+          setValidationErrors(validation.errors)
+        }
         const hasValidTracker =
-          finishedObject.tracker &&
-          Array.isArray(finishedObject.tracker.tabs) &&
-          finishedObject.tracker.tabs.length > 0
+          tracker &&
+          Array.isArray(tracker.tabs) &&
+          tracker.tabs.length > 0
         const assistantMessage: Message = {
           role: 'assistant',
-          trackerData: finishedObject.tracker as TrackerResponse,
+          trackerData: tracker as TrackerResponse,
           managerData: finishedObject.manager,
         }
         console.log('assistantMessage', assistantMessage.trackerData)
@@ -82,7 +94,7 @@ export default function TrackerPage() {
         setPendingQuery(null)
         if (hasValidTracker) {
           continueCountRef.current = 0
-          setActiveTrackerData(finishedObject.tracker as TrackerResponse)
+          setActiveTrackerData(tracker as TrackerResponse)
         } else {
           // Incomplete: we have partial state (manager and/or partial tracker) – try auto-continue
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
@@ -667,7 +679,10 @@ export default function TrackerPage() {
         open={isDialogOpen}
         onOpenChange={(open) => {
           setIsDialogOpen(open)
-          if (!open) setGenerationErrorMessage(null)
+          if (!open) {
+            setGenerationErrorMessage(null)
+            setValidationErrors([])
+          }
         }}
       >
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
@@ -696,15 +711,31 @@ export default function TrackerPage() {
                 optionMaps={(object.tracker.optionMaps || []) as any}
               />
             ) : activeTrackerData ? (
-              <TrackerDisplay
-                tabs={activeTrackerData.tabs}
-                sections={activeTrackerData.sections}
-                grids={activeTrackerData.grids}
-                fields={activeTrackerData.fields}
-                layoutNodes={activeTrackerData.layoutNodes}
-                optionTables={activeTrackerData.optionTables}
-                optionMaps={activeTrackerData.optionMaps}
-              />
+              <div className="space-y-4 w-full max-w-4xl mx-auto">
+                {validationErrors.length > 0 && (
+                  <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200" role="alert">
+                    <p className="font-medium mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      Schema validation issues
+                    </p>
+                    <ul className="text-sm list-disc list-inside space-y-1">
+                      {validationErrors.map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                    <p className="text-xs mt-2 text-muted-foreground">You can ask the AI to fix these (e.g. add missing option sources or fix layout references).</p>
+                  </div>
+                )}
+                <TrackerDisplay
+                  tabs={activeTrackerData.tabs}
+                  sections={activeTrackerData.sections}
+                  grids={activeTrackerData.grids}
+                  fields={activeTrackerData.fields}
+                  layoutNodes={activeTrackerData.layoutNodes}
+                  optionTables={activeTrackerData.optionTables}
+                  optionMaps={activeTrackerData.optionMaps}
+                />
+              </div>
             ) : error && !isLoading ? (
               <div className="h-full flex flex-col items-center justify-center text-red-500 gap-4">
                 <div className="p-3 rounded-full bg-red-500/10">

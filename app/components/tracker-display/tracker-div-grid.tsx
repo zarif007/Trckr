@@ -52,7 +52,7 @@ export function TrackerDivGrid({
         if (!field) return null
         if (field.config?.isHidden) return null
 
-        // Resolve options (optionMapId → grid rows, or optionsMappingId → optionTables, or config.options)
+        // Resolve options (optionMapId → grid rows, or optionTableId → optionTables, or config.options)
         const options = (field.dataType === 'options' || field.dataType === 'multiselect')
           ? resolveFieldOptions(field, optionTables, optionMaps, gridData)
           : undefined

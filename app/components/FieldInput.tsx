@@ -49,13 +49,25 @@ function getFieldValidationError(
         return `At most ${maxLength} characters`
       return null
     }
-    case 'number': {
+    case 'number':
+    case 'currency':
+    case 'percentage': {
       if (value === '' || value === undefined || value === null) return null
       const n = typeof value === 'number' ? value : parseFloat(String(value))
       if (Number.isNaN(n)) return 'Enter a valid number'
       if (typeof min === 'number' && n < min) return `Must be at least ${min}`
       if (typeof max === 'number' && n > max) return `Must be at most ${max}`
       return null
+    }
+    case 'link': {
+      const s = typeof value === 'string' ? value : ''
+      if (s.length === 0) return null
+      try {
+        new URL(s)
+        return null
+      } catch {
+        return 'Enter a valid URL'
+      }
     }
     case 'date':
     case 'options':
@@ -162,6 +174,90 @@ export function FieldInput({
           max={config.max}
         />
       )
+    case 'link':
+      return wrapWithError(
+        <Input
+          type="url"
+          placeholder={isInline ? '' : field.ui.placeholder || field.ui.label || 'https://...'}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => handleChange(e.target.value)}
+          className={isInline ? inlineInputClass : normalInputClass}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+          required={isRequired}
+          aria-required={isRequired}
+          aria-invalid={showError}
+        />
+      )
+    case 'currency': {
+      const currencySymbol = (config.currencySymbol as string) ?? '$'
+      const numVal = value === '' || value === undefined || value === null ? '' : (typeof value === 'number' ? value : parseFloat(String(value)))
+      const displayVal = numVal === '' ? '' : (Number.isNaN(Number(numVal)) ? numVal : String(numVal))
+      return wrapWithError(
+        <div className={isInline ? 'flex items-center h-full' : 'relative'}>
+          {!isInline && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+              {currencySymbol}
+            </span>
+          )}
+          <Input
+            type="number"
+            step="any"
+            placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
+            value={displayVal}
+            onChange={(e) => {
+              const v = e.target.value
+              handleChange(v === '' ? '' : parseFloat(v))
+            }}
+            className={
+              isInline
+                ? inlineInputClass
+                : `pl-7 ${normalInputClass}`
+            }
+            autoFocus={autoFocus}
+            disabled={isDisabled}
+            required={isRequired}
+            aria-required={isRequired}
+            aria-invalid={showError}
+            min={config.min}
+            max={config.max}
+          />
+        </div>
+      )
+    }
+    case 'percentage': {
+      const numVal = value === '' || value === undefined || value === null ? '' : (typeof value === 'number' ? value : parseFloat(String(value)))
+      const displayVal = numVal === '' ? '' : (Number.isNaN(Number(numVal)) ? numVal : String(numVal))
+      return wrapWithError(
+        <div className={isInline ? 'flex items-center h-full' : 'relative'}>
+          <Input
+            type="number"
+            step="any"
+            placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
+            value={displayVal}
+            onChange={(e) => {
+              const v = e.target.value
+              handleChange(v === '' ? '' : parseFloat(v))
+            }}
+            className={
+              isInline ? inlineInputClass : `pr-8 ${normalInputClass}`
+            }
+            autoFocus={autoFocus}
+            disabled={isDisabled}
+            required={isRequired}
+            aria-required={isRequired}
+            aria-invalid={showError}
+            min={config.min ?? 0}
+            max={config.max ?? 100}
+          />
+          {!isInline && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+              %
+            </span>
+          )}
+        </div>
+      )
+    }
     case 'date':
       return wrapWithError(
         <Popover defaultOpen={autoFocus}>

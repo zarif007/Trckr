@@ -62,10 +62,12 @@ export type TrackerFieldConfig = {
   isDisabled?: boolean
   isHidden?: boolean
   defaultValue?: unknown
-  /** Legacy: inline option table id. Prefer optionMapId. */
-  optionsMappingId?: string
-  /** Points to optionMaps[id]. Options come from grid rows at (tabId, gridId). */
+  /** Points to optionTables[id]. Options come from inline list. Use for fixed lists. */
+  optionTableId?: string
+  /** Points to optionMaps[id]. Options come from Shared tab grid rows. Use for editable lists. */
   optionMapId?: string
+  /** @deprecated Use optionTableId. Kept for backward compatibility. */
+  optionsMappingId?: string
   min?: number
   max?: number
   minLength?: number

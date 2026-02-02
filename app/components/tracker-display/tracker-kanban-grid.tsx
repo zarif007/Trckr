@@ -168,9 +168,8 @@ function DroppableEmptyColumn({ id }: { id: string }) {
   return (
     <div
       ref={setNodeRef}
-      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${
-        isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
-      }`}
+      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
+        }`}
     >
       <p className="text-xs text-muted-foreground text-center px-4">Drop here</p>
     </div>
@@ -183,9 +182,8 @@ function ColumnDropZone({ id }: { id: string }) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[80px] rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${
-        isOver ? 'border-primary bg-primary/10' : 'border-muted/50 bg-muted/10'
-      }`}
+      className={`min-h-[80px] rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${isOver ? 'border-primary bg-primary/10' : 'border-muted/50 bg-muted/10'
+        }`}
     >
       <p className="text-xs text-muted-foreground">{isOver ? 'Drop here' : ''}</p>
     </div>
@@ -193,14 +191,14 @@ function ColumnDropZone({ id }: { id: string }) {
 }
 
 export function TrackerKanbanGrid({
-    grid,
-    layoutNodes,
-    fields,
-    optionTables,
-    optionMaps = [],
-    gridData = {},
-    onUpdate,
-    onAddEntry,
+  grid,
+  layoutNodes,
+  fields,
+  optionTables,
+  optionMaps = [],
+  gridData = {},
+  onUpdate,
+  onAddEntry,
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -224,21 +222,21 @@ export function TrackerKanbanGrid({
   const kanbanFields = connectedFieldNodes
     .map(node => fields.find(f => f.id === node.fieldId))
     .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
-  
+
   if (kanbanFields.length === 0) {
-      if (layoutNodes.length === 0) return null
-      return <div className="p-4 text-muted-foreground">Empty Kanban (No Fields linked)</div>
+    if (layoutNodes.length === 0) return null
+    return <div className="p-4 text-muted-foreground">Empty Kanban (No Fields linked)</div>
   }
 
   const rows = gridData[grid.id] ?? []
 
   // Determine grouping field
   let groupByFieldId = grid.config?.groupBy
-  
+
   if (!groupByFieldId) {
-      // Fallback: finding first options field
-      const optionField = kanbanFields.find(f => f.dataType === 'options' || f.dataType === 'multiselect')
-      if (optionField) groupByFieldId = optionField.id
+    // Fallback: finding first options field
+    const optionField = kanbanFields.find(f => f.dataType === 'options' || f.dataType === 'multiselect')
+    if (optionField) groupByFieldId = optionField.id
   }
 
   if (!groupByFieldId) {
@@ -248,26 +246,26 @@ export function TrackerKanbanGrid({
       </div>
     )
   }
-  
+
   const groupingField = kanbanFields.find(f => f.id === groupByFieldId)
-  
+
   let groups: Array<{ id: string, label: string }> = []
-  
-  // Try to find explicit options if available (optionMapId or optionsMappingId)
+
+  // Try to find explicit options if available (optionMapId or optionTableId)
   const options = resolveFieldOptions(groupingField!, optionTables, optionMaps, gridData)
-  
+
   // Use same key as form/store so row[groupByFieldId] matches group.id (must match fieldMetadata option id below)
   const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
     String(o.id ?? o.value ?? o.label ?? '').trim()
   if (options && options.length > 0) {
-      groups = options.map(o => ({
-        id: toOptionId(o),
-        label: o.label ?? '',
-      }))
+    groups = options.map(o => ({
+      id: toOptionId(o),
+      label: o.label ?? '',
+    }))
   } else {
-      // Distinct values from rows as fallback
-      const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? ''))))
-      groups = distinctValues.filter(Boolean).map(v => ({ id: v, label: v }))
+    // Distinct values from rows as fallback
+    const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? ''))))
+    groups = distinctValues.filter(Boolean).map(v => ({ id: v, label: v }))
   }
 
   // When no groups (e.g. empty data, no options), show at least one column
@@ -403,53 +401,53 @@ export function TrackerKanbanGrid({
           onSave={handleEditSave}
         />
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-        {groups.map((group) => {
-          const cardsInGroup = rows
-            .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
-            .filter((ex) => String(ex[groupByFieldId!] ?? '').trim() === group.id)
+          {groups.map((group) => {
+            const cardsInGroup = rows
+              .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
+              .filter((ex) => String(ex[groupByFieldId!] ?? '').trim() === group.id)
 
-          return (
-            <div key={group.id} className="shrink-0 w-80">
-              <div className="bg-muted/70 rounded-md p-4 mb-4">
-                <h3 className="font-semibold text-foreground flex items-center justify-between">
-                  {group.label}
-                  <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
-                    {cardsInGroup.length}
-                  </span>
-                </h3>
-              </div>
+            return (
+              <div key={group.id} className="shrink-0 w-80">
+                <div className="bg-muted/70 rounded-md p-4 mb-4">
+                  <h3 className="font-semibold text-foreground flex items-center justify-between">
+                    {group.label}
+                    <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
+                      {cardsInGroup.length}
+                    </span>
+                  </h3>
+                </div>
 
-              <div className="space-y-3 min-h-[100px] flex flex-col">
-                <SortableContext
-                  id={group.id}
-                  items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {cardsInGroup.length === 0 ? (
-                    <DroppableEmptyColumn id={group.id} />
-                  ) : (
-                    <>
-                      {cardsInGroup.map((card) => (
-                        <SortableCard
-                          key={`${card._originalIdx}-${group.id}`}
-                          id={`${card._originalIdx}-${group.id}`}
-                          card={card}
-                          cardFields={cardFieldsDisplay}
-                          optionTables={optionTables}
-                          optionMaps={optionMaps}
-                          gridData={gridData}
-                          fields={fields}
-                          onEditRow={setEditRowIndex}
-                        />
-                      ))}
-                      <ColumnDropZone id={group.id} />
-                    </>
-                  )}
-                </SortableContext>
+                <div className="space-y-3 min-h-[100px] flex flex-col">
+                  <SortableContext
+                    id={group.id}
+                    items={cardsInGroup.map(c => `${c._originalIdx}-${group.id}`)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {cardsInGroup.length === 0 ? (
+                      <DroppableEmptyColumn id={group.id} />
+                    ) : (
+                      <>
+                        {cardsInGroup.map((card) => (
+                          <SortableCard
+                            key={`${card._originalIdx}-${group.id}`}
+                            id={`${card._originalIdx}-${group.id}`}
+                            card={card}
+                            cardFields={cardFieldsDisplay}
+                            optionTables={optionTables}
+                            optionMaps={optionMaps}
+                            gridData={gridData}
+                            fields={fields}
+                            onEditRow={setEditRowIndex}
+                          />
+                        ))}
+                        <ColumnDropZone id={group.id} />
+                      </>
+                    )}
+                  </SortableContext>
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
         </div>
       </div>
       <DragOverlay dropAnimation={{

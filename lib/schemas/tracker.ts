@@ -7,6 +7,21 @@ const fieldName = () =>
       'CamelCase identifier for code usage (ids should be unique)'
     )
 
+const tabId = () =>
+  z
+    .string()
+    .describe('Unique tab id ending with _tab (e.g. overview_tab, shared_tab)')
+
+const sectionId = () =>
+  z
+    .string()
+    .describe('Unique section id ending with _section (e.g. main_section, option_lists_section)')
+
+const gridId = () =>
+  z
+    .string()
+    .describe('Unique grid id ending with _grid (e.g. tasks_grid, meta_grid)')
+
 const snakeCaseId = () =>
   z
     .string()
@@ -64,7 +79,7 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: fieldName(),
+            id: tabId(),
             name: z.string(),
             placeId: z.coerce.number(),
             config: tabConfigSchema,
@@ -78,7 +93,7 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: fieldName(),
+            id: sectionId(),
             name: z.string(),
             tabId: z.string(),
             placeId: z.coerce.number(),
@@ -93,7 +108,7 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: snakeCaseId(),
+            id: gridId(),
             name: z.string(),
             type: gridTypeEnum,
             sectionId: z.string(),
@@ -144,13 +159,13 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: z.string().describe('Unique id referenced by field config.optionsMappingId'),
+            id: z.string().describe('Unique id referenced by field config.optionTableId'),
             options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()).describe('Inline list of { label, value } for select/multiselect'),
           })
           .passthrough()
       )
       .default([])
-      .describe('Option tables: one per distinct option set. Every options/multiselect field must get options from here (optionsMappingId) or from optionMaps + Shared tab (optionMapId).'),
+      .describe('Option tables: one per distinct option set. Every options/multiselect field must get options from here (optionTableId) or from optionMaps + Shared tab (optionMapId).'),
 
     optionMaps: z
       .array(
@@ -165,7 +180,7 @@ export const trackerSchema = z
           .passthrough()
       )
       .default([])
-      .describe('Option maps: one per option source when using Shared tab. Every options/multiselect field must have optionMapId (here) or optionsMappingId (optionTables).'),
+      .describe('Option maps: one per option source when using Shared tab. Every options/multiselect field must have optionMapId (here) or optionTableId (optionTables).'),
   })
   .passthrough()
 
