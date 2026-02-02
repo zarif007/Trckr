@@ -1,9 +1,14 @@
 import type {
   TrackerField,
   TrackerOption,
-  TrackerOptionMap,
-  TrackerOptionTable,
+  TrackerBindings,
+  TrackerBindingEntry,
 } from './types'
+import {
+  getBindingForField,
+  resolveOptionsFromBinding,
+  buildFieldPath,
+} from '@/lib/resolve-bindings'
 
 function toStringOrEmpty(v: unknown): string {
   if (v === null || v === undefined) return ''
@@ -19,46 +24,51 @@ function normalizeOption(opt: { label?: string; value?: unknown; id?: string }):
   }
 }
 
-export function resolveFieldOptions(
+/**
+ * Resolve options from inline config.options only (no bindings).
+ */
+export function resolveFieldOptionsLegacy(
   field: TrackerField | undefined | null,
-  optionTables?: TrackerOptionTable[],
-  optionMaps?: TrackerOptionMap[],
   gridData?: Record<string, Array<Record<string, unknown>>>
 ): TrackerOption[] | undefined {
   if (field == null) return undefined
   const config = field.config ?? {}
-
-  // 1. optionMapId: resolve from Shared tab table rows (gridData)
-  const optionMapId = config.optionMapId as string | undefined
-  if (optionMapId && optionMaps?.length && gridData) {
-    const mapEntry = optionMaps.find((m) => m.id === optionMapId)
-    if (mapEntry) {
-      const rows = gridData[mapEntry.gridId] ?? []
-      const labelKey = mapEntry.labelFieldId ?? 'label'
-      const valueKey = mapEntry.valueFieldId ?? 'value'
-      if (rows.length) {
-        return rows.map((row, i) =>
-          normalizeOption({
-            id: row.id != null ? String(row.id) : `opt-${i}`,
-            label: row[labelKey] != null ? String(row[labelKey]) : '',
-            value: row[valueKey],
-          })
-        )
-      }
-    }
-  }
-
-  // 2. optionTableId (or legacy optionsMappingId) → optionTables
-  const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
-  if (optionTableId && optionTables?.length) {
-    const table = optionTables.find((t) => t.id === optionTableId)
-    if (table?.options?.length) {
-      return table.options.map(normalizeOption)
-    }
-  }
-
-  // 3. Inline config.options
   const opts = config.options
   if (Array.isArray(opts)) return (opts as TrackerOption[]).map(normalizeOption)
   return undefined
+}
+
+/**
+ * Resolve options for a field from bindings (and gridData). Fallback to inline config.options only.
+ */
+export function resolveFieldOptionsV2(
+  tabId: string,
+  gridId: string,
+  field: TrackerField | undefined | null,
+  bindings: TrackerBindings | undefined,
+  gridData: Record<string, Array<Record<string, unknown>>>
+): TrackerOption[] | undefined {
+  if (field == null) return undefined
+
+  const binding = getBindingForField(gridId, field.id, bindings, tabId)
+  if (binding) {
+    const selectFieldPath = buildFieldPath(gridId, field.id)
+    const options = resolveOptionsFromBinding(binding, gridData, selectFieldPath)
+    return options.map(normalizeOption)
+  }
+
+  return resolveFieldOptionsLegacy(field, gridData)
+}
+
+/**
+ * Get the binding entry for a field if it exists.
+ * Re-exported from resolve-bindings for convenience.
+ */
+export function getFieldBinding(
+  gridId: string,
+  fieldId: string,
+  bindings?: TrackerBindings,
+  tabId?: string
+): TrackerBindingEntry | undefined {
+  return getBindingForField(gridId, fieldId, bindings, tabId)
 }

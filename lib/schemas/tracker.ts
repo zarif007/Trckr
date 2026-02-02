@@ -73,6 +73,33 @@ const renderAsEnum = z
   .enum(['default', 'table', 'kanban', 'calendar', 'timeline'])
   .optional()
 
+// ============================================================================
+// BINDINGS SCHEMA - For select/multiselect field auto-population
+// ============================================================================
+
+/** Single field mapping: from source field in options grid to target field in main grid. Paths are grid_id.field_id */
+const fieldMappingSchema = z
+  .object({
+    from: z.string().describe('Path in options grid: grid_id.field_id'),
+    to: z.string().describe('Path in main grid: grid_id.field_id'),
+  })
+  .passthrough()
+
+/** Binding entry for a select/multiselect field. Value comes from fieldMappings (one mapping where "to" is this field). Paths use grid.field, no tab. */
+const bindingEntrySchema = z
+  .object({
+    optionsGrid: z.string().describe('Grid id containing options (e.g. product_options_grid)'),
+    labelField: z.string().describe('Path to label field: grid_id.field_id'),
+    fieldMappings: z.array(fieldMappingSchema).default([]).describe('Must include one mapping where "to" is this select field (the "from" is the stored value); other mappings auto-populate'),
+  })
+  .passthrough()
+
+/** Top-level bindings object. Key is full field path: tab_id.grid_id.field_id */
+export const bindingsSchema = z
+  .record(z.string(), bindingEntrySchema)
+  .default({})
+  .describe('Bindings for select/multiselect fields. Key is full field path. MANDATORY for all select/multiselect fields.')
+
 export const trackerSchema = z
   .object({
     tabs: z
@@ -155,32 +182,10 @@ export const trackerSchema = z
       .default([])
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
-    optionTables: z
-      .array(
-        z
-          .object({
-            id: z.string().describe('Unique id referenced by field config.optionTableId'),
-            options: z.array(z.object({ label: z.string().optional(), value: z.any().optional() }).passthrough()).describe('Inline list of { label, value } for select/multiselect'),
-          })
-          .passthrough()
-      )
-      .default([])
-      .describe('Option tables: one per distinct option set. Every options/multiselect field must get options from here (optionTableId) or from optionMaps + Shared tab (optionMapId).'),
+    optionTables: z.array(z.any()).default([]).optional().describe('Unused; bindings are the single source of truth.'),
+    optionMaps: z.array(z.any()).default([]).optional().describe('Unused; bindings are the single source of truth.'),
 
-    optionMaps: z
-      .array(
-        z
-          .object({
-            id: z.string().describe('Unique id referenced by field config.optionMapId'),
-            tabId: z.string().describe('Tab that contains the options table (e.g. shared_tab)'),
-            gridId: z.string().describe('Grid (table) that holds option rows'),
-            labelFieldId: z.string().optional().describe('Field id in that grid for the option label (display text)'),
-            valueFieldId: z.string().optional().describe('Field id in that grid for the option value (stored in main field)'),
-          })
-          .passthrough()
-      )
-      .default([])
-      .describe('Option maps: one per option source when using Shared tab. Every options/multiselect field must have optionMapId (here) or optionTableId (optionTables).'),
+    bindings: bindingsSchema,
   })
   .passthrough()
 

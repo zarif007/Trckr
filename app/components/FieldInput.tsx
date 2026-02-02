@@ -21,8 +21,9 @@ import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { format } from 'date-fns'
 import { CalendarIcon } from 'lucide-react'
-import { TrackerField, TrackerOptionMap, TrackerOptionTable } from './tracker-display/types'
-import { resolveFieldOptions } from './tracker-display/resolve-options'
+import { TrackerField, TrackerBindingEntry } from './tracker-display/types'
+import { resolveFieldOptionsLegacy } from './tracker-display/resolve-options'
+import { findOptionRow, applyBindings, parsePath, resolveOptionsFromBinding, buildFieldPath } from '@/lib/resolve-bindings'
 
 function getFieldValidationError(
   field: TrackerField,
@@ -78,6 +79,12 @@ function getFieldValidationError(
   }
 }
 
+/** Update for a bound field */
+export interface BindingUpdate {
+  fieldId: string
+  value: unknown
+}
+
 interface FieldInputProps {
   field: TrackerField
   value: unknown
@@ -85,9 +92,14 @@ interface FieldInputProps {
   className?: string
   isInline?: boolean
   autoFocus?: boolean
-  optionTables?: TrackerOptionTable[]
-  optionMaps?: TrackerOptionMap[]
   gridData?: Record<string, Array<Record<string, unknown>>>
+  /** Tab ID and grid ID for binding resolution (required when using binding) */
+  tabId?: string
+  gridId?: string
+  /** Binding entry for this field (if it's a select/multiselect) */
+  binding?: TrackerBindingEntry
+  /** Callback for binding updates when an option is selected */
+  onBindingUpdates?: (updates: BindingUpdate[]) => void
 }
 
 export function FieldInput({
@@ -97,15 +109,22 @@ export function FieldInput({
   className = '',
   isInline = false,
   autoFocus = false,
-  optionTables = [],
-  optionMaps = [],
   gridData,
+  tabId,
+  gridId,
+  binding,
+  onBindingUpdates,
 }: FieldInputProps) {
   const normalInputClass = `bg-background text-foreground ${className}`
   const inlineInputClass =
     'border-0 bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2'
 
-  const resolvedOptions = resolveFieldOptions(field, optionTables, optionMaps, gridData)
+  const selectFieldPath = gridId ? buildFieldPath(gridId, field.id) : ''
+
+  // Resolve options: prefer binding, fall back to inline config.options
+  const resolvedOptions = binding && gridData && selectFieldPath
+    ? resolveOptionsFromBinding(binding, gridData, selectFieldPath)
+    : resolveFieldOptionsLegacy(field, gridData)
   const config = field.config ?? {}
   const isDisabled = config.isDisabled
   const isHidden = config.isHidden
@@ -366,10 +385,36 @@ export function FieldInput({
         const s = String(v ?? '').trim()
         return s === '' ? SELECT_EMPTY_VALUE : s
       }
+
+      // Handle select change with binding support
+      const handleSelectChange = (v: string) => {
+        const selectedValue = v === SELECT_EMPTY_VALUE ? '' : v
+        handleChange(selectedValue)
+
+        // Apply bindings if present
+        if (binding && gridData && onBindingUpdates && selectFieldPath && selectedValue !== '') {
+          const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
+          if (optionRow) {
+            const updates = applyBindings(binding, optionRow, selectFieldPath)
+            // Convert full paths to local fieldIds
+            const localUpdates: BindingUpdate[] = updates
+              .map((u) => {
+                const { fieldId } = parsePath(u.targetPath)
+                return fieldId ? { fieldId, value: u.value } : null
+              })
+              .filter((u): u is BindingUpdate => u !== null)
+
+            if (localUpdates.length > 0) {
+              onBindingUpdates(localUpdates)
+            }
+          }
+        }
+      }
+
       return wrapWithError(
         <Select
           value={typeof value === 'string' ? (value.trim() === '' ? SELECT_EMPTY_VALUE : value) : SELECT_EMPTY_VALUE}
-          onValueChange={(v) => handleChange(v === SELECT_EMPTY_VALUE ? '' : v)}
+          onValueChange={handleSelectChange}
           defaultOpen={autoFocus}
           disabled={isDisabled}
         >
@@ -401,7 +446,38 @@ export function FieldInput({
         </Select>
       )
     }
-    case 'multiselect':
+    case 'multiselect': {
+      // Handle multiselect change with binding support
+      const handleMultiSelectChange = (selectedValues: string[]) => {
+        handleChange(selectedValues)
+
+        // Apply bindings for the last selected value (if any new selection)
+        // Note: For multiselect, bindings are applied for the most recently added value
+        if (binding && gridData && onBindingUpdates && selectFieldPath && selectedValues.length > 0) {
+          const currentValues = Array.isArray(value) ? value.map(String) : []
+          const newValues = selectedValues.filter((v) => !currentValues.includes(v))
+
+          if (newValues.length > 0) {
+            // Apply bindings for the first newly selected value
+            const newValue = newValues[0]
+            const optionRow = findOptionRow(gridData, binding, newValue, selectFieldPath)
+            if (optionRow) {
+              const updates = applyBindings(binding, optionRow, selectFieldPath)
+              const localUpdates: BindingUpdate[] = updates
+                .map((u) => {
+                  const { fieldId } = parsePath(u.targetPath)
+                  return fieldId ? { fieldId, value: u.value } : null
+                })
+                .filter((u): u is BindingUpdate => u !== null)
+
+              if (localUpdates.length > 0) {
+                onBindingUpdates(localUpdates)
+              }
+            }
+          }
+        }
+      }
+
       return wrapWithError(
         <MultiSelect
           options={
@@ -411,7 +487,7 @@ export function FieldInput({
             })) ?? []
           }
           value={Array.isArray(value) ? value.map(String) : []}
-          onChange={handleChange}
+          onChange={handleMultiSelectChange}
           placeholder={isInline ? '' : field.ui.placeholder || field.ui.label}
           className={isInline ? '' : normalInputClass}
           isInline={isInline}
@@ -421,6 +497,7 @@ export function FieldInput({
           aria-invalid={showError}
         />
       )
+    }
     default:
       return null
   }

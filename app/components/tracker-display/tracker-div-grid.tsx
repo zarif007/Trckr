@@ -13,27 +13,27 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
-  TrackerOptionMap,
-  TrackerOptionTable,
+  TrackerBindings,
 } from './types'
-import { resolveFieldOptions } from './resolve-options'
+import { resolveFieldOptionsV2 } from './resolve-options'
+import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 
 interface TrackerDivGridProps {
+  tabId: string
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
-  optionTables: TrackerOptionTable[]
-  optionMaps?: TrackerOptionMap[]
+  bindings?: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
 }
 
 export function TrackerDivGrid({
+  tabId,
   grid,
   layoutNodes,
   fields,
-  optionTables,
-  optionMaps = [],
+  bindings = {},
   gridData = {},
   onUpdate,
 }: TrackerDivGridProps) {
@@ -52,13 +52,36 @@ export function TrackerDivGrid({
         if (!field) return null
         if (field.config?.isHidden) return null
 
-        // Resolve options (optionMapId → grid rows, or optionTableId → optionTables, or config.options)
+        // Resolve options using bindings (with legacy fallback)
         const options = (field.dataType === 'options' || field.dataType === 'multiselect')
-          ? resolveFieldOptions(field, optionTables, optionMaps, gridData)
+          ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
           : undefined
 
         const value = data[field.id]
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
+
+        // Handle select/multiselect change with binding support
+        const handleSelectChange = (selectedValue: unknown) => {
+          onUpdate?.(0, field.id, selectedValue)
+
+          // Apply bindings if present
+          if (field.dataType === 'options' || field.dataType === 'multiselect') {
+            const binding = getBindingForField(grid.id, field.id, bindings, tabId)
+            if (binding && binding.fieldMappings.length > 0) {
+              const selectFieldPath = `${grid.id}.${field.id}`
+              const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
+              if (optionRow) {
+                const updates = applyBindings(binding, optionRow, selectFieldPath)
+                for (const update of updates) {
+                  const { fieldId } = parsePath(update.targetPath)
+                  if (fieldId) {
+                    onUpdate?.(0, fieldId, update.value)
+                  }
+                }
+              }
+            }
+          }
+        }
 
         const renderInput = () => {
           switch (field.dataType) {
@@ -92,7 +115,7 @@ export function TrackerDivGrid({
               return (
                 <Select
                   value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
-                  onValueChange={(val) => onUpdate?.(0, field.id, val === '__empty__' ? '' : val)}
+                  onValueChange={(val) => handleSelectChange(val === '__empty__' ? '' : val)}
                 >
                   <SelectTrigger className="w-full bg-secondary/10 border-border/50">
                     <SelectValue placeholder={`Select ${field.ui.label}`} />
@@ -118,7 +141,7 @@ export function TrackerDivGrid({
                 <MultiSelect
                   options={multiOpts}
                   value={Array.isArray(value) ? value.map(String) : []}
-                  onChange={(val) => onUpdate?.(0, field.id, val)}
+                  onChange={(val) => handleSelectChange(val)}
                   placeholder={`Select ${field.ui.label}`}
                   className="w-full bg-secondary/10 border-border/50"
                 />

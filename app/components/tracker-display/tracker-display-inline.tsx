@@ -9,10 +9,10 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
-  TrackerOptionMap,
-  TrackerOptionTable,
+  TrackerBindings,
 } from './types'
 import { TrackerSection } from './tracker-section'
+import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
 
 export function TrackerDisplayInline({
   tabs,
@@ -20,8 +20,7 @@ export function TrackerDisplayInline({
   grids,
   fields,
   layoutNodes = [],
-  optionTables = [],
-  optionMaps = [],
+  bindings = {},
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
     return (tabs ?? [])
@@ -47,6 +46,20 @@ export function TrackerDisplayInline({
   const [localGridData, setLocalGridData] = useState<
     Record<string, Array<Record<string, unknown>>>
   >({})
+
+  // Seed option grids from bindings so select dropdowns have options without user adding rows
+  const seedGridData = useMemo(
+    () => getInitialGridDataFromBindings(bindings ?? {}),
+    [bindings]
+  )
+  // Merge: seed as base. Use local data whenever the user has touched that grid (including empty—so they can delete all rows); only use seed when the grid has never been edited.
+  const gridData = useMemo(() => {
+    const merged = { ...seedGridData }
+    for (const [gridId, rows] of Object.entries(localGridData)) {
+      if (Array.isArray(rows)) merged[gridId] = rows
+    }
+    return merged
+  }, [seedGridData, localGridData])
 
   const handleUpdate = (
     gridId: string,
@@ -113,9 +126,9 @@ export function TrackerDisplayInline({
             grids={grids}
             fields={fields}
             layoutNodes={layoutNodes}
-            optionTables={optionTables}
-            optionMaps={optionMaps}
+            bindings={bindings}
             localGridData={localGridData}
+            gridData={gridData}
             handleUpdate={handleUpdate}
             handleAddEntry={handleAddEntry}
             handleDeleteEntries={handleDeleteEntries}
@@ -132,9 +145,9 @@ function TrackerTabContent({
   grids,
   fields,
   layoutNodes,
-  optionTables,
-  optionMaps,
+  bindings,
   localGridData,
+  gridData,
   handleUpdate,
   handleAddEntry,
   handleDeleteEntries,
@@ -144,9 +157,9 @@ function TrackerTabContent({
   grids: TrackerGrid[]
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
-  optionTables: TrackerOptionTable[]
-  optionMaps: TrackerOptionMap[]
+  bindings: TrackerBindings
   localGridData: Record<string, Array<Record<string, unknown>>>
+  gridData: Record<string, Array<Record<string, unknown>>>
   handleUpdate: (
     gridId: string,
     rowIndex: number,
@@ -181,13 +194,13 @@ function TrackerTabContent({
           style={{ animationDelay: `${index * 100}ms` }}
         >
           <TrackerSection
+            tabId={tab.id}
             section={section}
             grids={section.grids}
             fields={fields}
             layoutNodes={layoutNodes}
-            optionTables={optionTables}
-            optionMaps={optionMaps}
-            gridData={localGridData}
+            bindings={bindings}
+            gridData={gridData}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}
             onDeleteEntries={handleDeleteEntries}

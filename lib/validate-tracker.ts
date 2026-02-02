@@ -3,6 +3,15 @@
  * Ensures layoutNodes reference existing grids/fields and options/multiselect fields have an option source.
  */
 
+import { parsePath } from './resolve-bindings'
+
+/** Binding entry structure for validation (no valueField - value is in fieldMappings) */
+interface BindingEntry {
+  optionsGrid: string
+  labelField: string
+  fieldMappings: Array<{ from: string; to: string }>
+}
+
 export interface TrackerLike {
   tabs?: Array<{ id: string; name?: string; placeId?: number; config?: Record<string, unknown> }>
   sections?: Array<{ id: string; name?: string; tabId: string; placeId?: number; config?: Record<string, unknown> }>
@@ -16,6 +25,7 @@ export interface TrackerLike {
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
   optionTables?: Array<{ id: string; options?: Array<{ label?: string; value?: unknown }> }>
   optionMaps?: Array<{ id: string; tabId?: string; gridId?: string; labelFieldId?: string; valueFieldId?: string }>
+  bindings?: Record<string, BindingEntry>
 }
 
 export interface ValidationResult {
@@ -37,15 +47,11 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
   const grids = tracker.grids ?? []
   const fields = tracker.fields ?? []
   const layoutNodes = tracker.layoutNodes ?? []
-  const optionTables = tracker.optionTables ?? []
-  const optionMaps = tracker.optionMaps ?? []
 
   const tabIds = new Set(tabs.map((t) => t.id))
   const sectionIds = new Set(sections.map((s) => s.id))
   const gridIds = new Set(grids.map((g) => g.id))
   const fieldIds = new Set(fields.map((f) => f.id))
-  const optionTableIds = new Set(optionTables.map((t) => t.id))
-  const optionMapIds = new Set(optionMaps.map((m) => m.id))
 
   // LayoutNodes: every gridId must exist in grids, every fieldId must exist in fields
   for (const node of layoutNodes) {
@@ -71,181 +77,116 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
     }
   }
 
-  // Options/multiselect fields: must have optionMapId or optionTableId (or legacy optionsMappingId)
+  // Options/multiselect fields: must have bindings (buildBindingsFromSchema runs before validation).
+  const bindings = tracker.bindings ?? {}
   for (const field of fields) {
     if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
-    const config = field.config ?? {}
-    const optionMapId = config.optionMapId as string | undefined
-    const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
-    if (optionMapId && optionMapIds.has(optionMapId)) continue
-    if (optionTableId && optionTableIds.has(optionTableId)) continue
-    if (optionMapId && !optionMapIds.has(optionMapId)) {
-      errors.push(`field "${field.id}" (options/multiselect) has optionMapId "${optionMapId}" but no matching optionMaps entry`)
-    } else if (optionTableId && !optionTableIds.has(optionTableId)) {
-      errors.push(`field "${field.id}" (options/multiselect) has optionTableId "${optionTableId}" but no matching optionTables entry`)
-    } else {
-      errors.push(`field "${field.id}" (options/multiselect) has no option source; set config.optionMapId or config.optionTableId`)
+    const layoutNode = layoutNodes.find((n) => n.fieldId === field.id)
+    const grid = layoutNode ? grids.find((g) => g.id === layoutNode.gridId) : null
+    const fieldPath = grid ? `${grid.id}.${field.id}` : null
+    const hasBinding = fieldPath ? (bindings[fieldPath] !== undefined) : false
+    if (!hasBinding) {
+      warnings.push(`field "${field.id}" (options/multiselect) has no bindings entry; run buildBindingsFromSchema or ask AI to add bindings`)
     }
   }
+
+  // Validate bindings (warning-level only)
+  const bindingWarnings = validateBindings(tracker)
+  warnings.push(...bindingWarnings)
 
   const valid = errors.length === 0
   return { valid, errors, warnings }
 }
 
 /**
- * Auto-fix missing optionMaps entries and Shared tab infrastructure.
- * For every options/multiselect field with optionMapId that doesn't have a corresponding optionMaps entry,
- * this creates the full Shared tab infrastructure: tab, section, grid, fields, layoutNodes, and optionMaps entry.
- * 
- * Returns a new tracker object with the fixes applied (does not mutate input).
+ * Validate bindings entries.
+ * Returns warnings (not errors) for invalid bindings - they will be skipped at runtime.
  */
-export function autoFixOptionMaps<T extends TrackerLike>(tracker: T): T {
-  if (!tracker) return tracker
+export function validateBindings(tracker: TrackerLike): string[] {
+  const warnings: string[] = []
+  const bindings = tracker.bindings ?? {}
 
-  // Deep clone to avoid mutation
-  const fixed: TrackerLike = {
-    tabs: [...(tracker.tabs ?? [])],
-    sections: [...(tracker.sections ?? [])],
-    grids: [...(tracker.grids ?? [])],
-    fields: [...(tracker.fields ?? [])],
-    layoutNodes: [...(tracker.layoutNodes ?? [])],
-    optionTables: [...(tracker.optionTables ?? [])],
-    optionMaps: [...(tracker.optionMaps ?? [])],
+  // Build lookup sets
+  const tabIds = new Set((tracker.tabs ?? []).map((t) => t.id))
+  const gridIds = new Set((tracker.grids ?? []).map((g) => g.id))
+  const fieldIds = new Set((tracker.fields ?? []).map((f) => f.id))
+  const sections = tracker.sections ?? []
+  const grids = tracker.grids ?? []
+  const layoutNodes = tracker.layoutNodes ?? []
+
+  // Helper to get the grid a field is in
+  const getFieldGridInfo = (fId: string): { tabId: string; gridId: string } | null => {
+    const layoutNode = layoutNodes.find((n) => n.fieldId === fId)
+    if (!layoutNode) return null
+    const grid = grids.find((g) => g.id === layoutNode.gridId)
+    if (!grid) return null
+    const section = sections.find((s) => s.id === grid.sectionId)
+    if (!section) return null
+    return { tabId: section.tabId, gridId: grid.id }
   }
 
-  const optionMapIds = new Set(fixed.optionMaps!.map((m) => m.id))
-  const optionTableIds = new Set(fixed.optionTables!.map((t) => t.id))
-  const gridIds = new Set(fixed.grids!.map((g) => g.id))
-  const fieldIds = new Set(fixed.fields!.map((f) => f.id))
-  const tabIds = new Set(fixed.tabs!.map((t) => t.id))
-  const sectionIds = new Set(fixed.sections!.map((s) => s.id))
+  // Check each binding entry (key is grid.field)
+  for (const [fieldPath, entry] of Object.entries(bindings)) {
+    const { gridId, fieldId } = parsePath(fieldPath)
 
-  // Collect fields that need optionMaps created
-  const fieldsNeedingOptionMaps: Array<{ field: NonNullable<TrackerLike['fields']>[number]; optionMapId: string }> = []
+    // Validate the key (field path = grid_id.field_id)
+    if (!gridId || !gridIds.has(gridId)) {
+      warnings.push(`Binding key "${fieldPath}": grid "${gridId}" not found`)
+    }
+    if (!fieldId || !fieldIds.has(fieldId)) {
+      warnings.push(`Binding key "${fieldPath}": field "${fieldId}" not found`)
+    }
 
-  for (const field of fixed.fields!) {
+    // Validate optionsGrid (grid id only, or legacy tab.grid); must be an options grid (id ends with _options_grid)
+    const optGridId = entry.optionsGrid?.includes('.') ? entry.optionsGrid.split('.').pop()! : entry.optionsGrid
+    if (!optGridId || !gridIds.has(optGridId)) {
+      warnings.push(`Binding "${fieldPath}": optionsGrid "${entry.optionsGrid}" not found`)
+    } else if (!optGridId.endsWith('_options_grid')) {
+      warnings.push(`Binding "${fieldPath}": optionsGrid "${entry.optionsGrid}" should be an options grid (id ending with _options_grid), not a main data grid`)
+    }
+
+    // Validate labelField
+    const labelParsed = parsePath(entry.labelField)
+    if (!labelParsed.fieldId || !fieldIds.has(labelParsed.fieldId)) {
+      warnings.push(`Binding "${fieldPath}": labelField "${entry.labelField}" not found`)
+    }
+
+    // fieldMappings must include one where "to" === fieldPath (the value mapping)
+    const valueMapping = (entry.fieldMappings ?? []).find((m) => m.to === fieldPath)
+    if (!valueMapping) {
+      warnings.push(`Binding "${fieldPath}": fieldMappings must include one entry where "to" is "${fieldPath}" (the stored value)`)
+    }
+
+    // Validate fieldMappings
+    for (const mapping of entry.fieldMappings ?? []) {
+      const fromParsed = parsePath(mapping.from)
+      const toParsed = parsePath(mapping.to)
+
+      if (!fromParsed.fieldId || !fieldIds.has(fromParsed.fieldId)) {
+        warnings.push(`Binding "${fieldPath}": source field "${mapping.from}" not found`)
+      }
+      if (!toParsed.fieldId || !fieldIds.has(toParsed.fieldId)) {
+        warnings.push(`Binding "${fieldPath}": target field "${mapping.to}" not found`)
+      }
+    }
+  }
+
+  // Check for missing bindings on select/multiselect fields (key is grid.field)
+  for (const field of tracker.fields ?? []) {
     if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
-    const config = field.config ?? {}
-    const optionMapId = config.optionMapId as string | undefined
-    const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
 
-    // Skip if already has a valid option source
-    if (optionMapId && optionMapIds.has(optionMapId)) continue
-    if (optionTableId && optionTableIds.has(optionTableId)) continue
+    const gridInfo = getFieldGridInfo(field.id)
+    if (!gridInfo) continue
 
-    // If has optionMapId but no matching entry, add to fix list
-    if (optionMapId) {
-      fieldsNeedingOptionMaps.push({ field, optionMapId })
-    } else if (!optionTableId) {
-      // No option source at all - create an optionMapId and add to fix list
-      const generatedMapId = `${field.id}_map`
-      field.config = { ...config, optionMapId: generatedMapId }
-      fieldsNeedingOptionMaps.push({ field, optionMapId: generatedMapId })
+    const fieldPath = `${gridInfo.gridId}.${field.id}`
+
+    const hasBinding = bindings[fieldPath] !== undefined
+    if (!hasBinding) {
+      warnings.push(`Select field "${fieldPath}" has no bindings entry`)
     }
   }
 
-  if (fieldsNeedingOptionMaps.length === 0) {
-    return tracker // No fixes needed
-  }
-
-  // Ensure Shared tab exists
-  const SHARED_TAB_ID = 'shared_tab'
-  const SHARED_SECTION_ID = 'option_lists_section'
-
-  if (!tabIds.has(SHARED_TAB_ID)) {
-    const maxPlaceId = Math.max(0, ...fixed.tabs!.map((t) => t.placeId ?? 0))
-    fixed.tabs!.push({
-      id: SHARED_TAB_ID,
-      name: 'Shared',
-      placeId: maxPlaceId + 100, // Put at end
-      config: {},
-    })
-    tabIds.add(SHARED_TAB_ID)
-  }
-
-  // Ensure Shared section exists
-  if (!sectionIds.has(SHARED_SECTION_ID)) {
-    fixed.sections!.push({
-      id: SHARED_SECTION_ID,
-      name: 'Option Lists',
-      tabId: SHARED_TAB_ID,
-      placeId: 1,
-      config: {},
-    })
-    sectionIds.add(SHARED_SECTION_ID)
-  }
-
-  // Create infrastructure for each missing optionMap
-  let gridPlaceId = Math.max(0, ...fixed.grids!.filter((g) => g.sectionId === SHARED_SECTION_ID).map((g) => g.placeId ?? 0))
-
-  for (const { field, optionMapId } of fieldsNeedingOptionMaps) {
-    // Generate unique IDs based on optionMapId
-    const baseName = optionMapId.replace(/_map$/, '').replace(/_/g, ' ')
-    const gridId = `${optionMapId.replace(/_map$/, '')}_options_grid`
-    const labelFieldId = `${optionMapId.replace(/_map$/, '')}_opt_label`
-    const valueFieldId = `${optionMapId.replace(/_map$/, '')}_opt_value`
-
-    // Skip if grid already exists (partial fix)
-    if (gridIds.has(gridId)) continue
-
-    gridPlaceId++
-
-    // Create the options grid
-    fixed.grids!.push({
-      id: gridId,
-      name: `${titleCase(baseName)} Options`,
-      type: 'table',
-      sectionId: SHARED_SECTION_ID,
-      placeId: gridPlaceId,
-      config: {},
-    })
-    gridIds.add(gridId)
-
-    // Create label field
-    if (!fieldIds.has(labelFieldId)) {
-      fixed.fields!.push({
-        id: labelFieldId,
-        dataType: 'string',
-        ui: { label: 'Label', placeholder: 'Display text' },
-        config: { isRequired: true },
-      })
-      fieldIds.add(labelFieldId)
-    }
-
-    // Create value field
-    if (!fieldIds.has(valueFieldId)) {
-      fixed.fields!.push({
-        id: valueFieldId,
-        dataType: 'string',
-        ui: { label: 'Value', placeholder: 'Stored value' },
-        config: { isRequired: true },
-      })
-      fieldIds.add(valueFieldId)
-    }
-
-    // Create layoutNodes
-    const existingNodes = fixed.layoutNodes!.filter((n) => n.gridId === gridId)
-    if (!existingNodes.some((n) => n.fieldId === labelFieldId)) {
-      fixed.layoutNodes!.push({ gridId, fieldId: labelFieldId, order: 1 })
-    }
-    if (!existingNodes.some((n) => n.fieldId === valueFieldId)) {
-      fixed.layoutNodes!.push({ gridId, fieldId: valueFieldId, order: 2 })
-    }
-
-    // Create optionMaps entry
-    if (!optionMapIds.has(optionMapId)) {
-      fixed.optionMaps!.push({
-        id: optionMapId,
-        tabId: SHARED_TAB_ID,
-        gridId: gridId,
-        labelFieldId: labelFieldId,
-        valueFieldId: valueFieldId,
-      })
-      optionMapIds.add(optionMapId)
-    }
-  }
-
-  return { ...tracker, ...fixed } as T
+  return warnings
 }
 
 /** Convert snake_case or camelCase to Title Case */
@@ -258,4 +199,179 @@ function titleCase(str: string): string {
     .split(' ')
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
+}
+
+/**
+ * Auto-fix missing bindings entries for select/multiselect fields.
+ * 
+ * This function:
+ * 1. Converts legacy optionMapId references to bindings format
+ * 2. Creates default bindings with Shared tab infrastructure for fields without option sources
+ * 
+ * Returns a new tracker object with the fixes applied (does not mutate input).
+ */
+export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
+  if (!tracker) return tracker
+
+  // Deep clone to avoid mutation
+  const fixed: TrackerLike = {
+    tabs: [...(tracker.tabs ?? [])],
+    sections: [...(tracker.sections ?? [])],
+    grids: [...(tracker.grids ?? [])],
+    fields: [...(tracker.fields ?? [])],
+    layoutNodes: [...(tracker.layoutNodes ?? [])],
+    optionTables: [...(tracker.optionTables ?? [])],
+    optionMaps: [...(tracker.optionMaps ?? [])],
+    bindings: { ...(tracker.bindings ?? {}) },
+  }
+
+  const tabIds = new Set(fixed.tabs!.map((t) => t.id))
+  const sectionIds = new Set(fixed.sections!.map((s) => s.id))
+  const gridIds = new Set(fixed.grids!.map((g) => g.id))
+  const fieldIds = new Set(fixed.fields!.map((f) => f.id))
+  const sections = fixed.sections!
+  const grids = fixed.grids!
+  const layoutNodes = fixed.layoutNodes!
+  const optionMaps = fixed.optionMaps!
+
+  // Helper to get the grid a field is in
+  const getFieldGridInfo = (fId: string): { tabId: string; gridId: string } | null => {
+    const layoutNode = layoutNodes.find((n) => n.fieldId === fId)
+    if (!layoutNode) return null
+    const grid = grids.find((g) => g.id === layoutNode.gridId)
+    if (!grid) return null
+    const section = sections.find((s) => s.id === grid.sectionId)
+    if (!section) return null
+    return { tabId: section.tabId, gridId: grid.id }
+  }
+
+  // Ensure Shared tab exists
+  const SHARED_TAB_ID = 'shared_tab'
+  const SHARED_SECTION_ID = 'option_lists_section'
+
+  const ensureSharedTabInfrastructure = () => {
+    if (!tabIds.has(SHARED_TAB_ID)) {
+      const maxPlaceId = Math.max(0, ...fixed.tabs!.map((t) => t.placeId ?? 0))
+      fixed.tabs!.push({
+        id: SHARED_TAB_ID,
+        name: 'Shared',
+        placeId: maxPlaceId + 100,
+        config: {},
+      })
+      tabIds.add(SHARED_TAB_ID)
+    }
+
+    if (!sectionIds.has(SHARED_SECTION_ID)) {
+      fixed.sections!.push({
+        id: SHARED_SECTION_ID,
+        name: 'Option Lists',
+        tabId: SHARED_TAB_ID,
+        placeId: 1,
+        config: {},
+      })
+      sectionIds.add(SHARED_SECTION_ID)
+    }
+  }
+
+  let gridPlaceId = Math.max(0, ...fixed.grids!.filter((g) => g.sectionId === SHARED_SECTION_ID).map((g) => g.placeId ?? 0))
+
+  // Process each select/multiselect field
+  for (const field of fixed.fields!) {
+    if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
+
+    const gridInfo = getFieldGridInfo(field.id)
+    if (!gridInfo) continue // Field not placed in any grid
+
+    const fieldPath = `${gridInfo.gridId}.${field.id}`
+
+    // Skip if binding already exists
+    if (fixed.bindings![fieldPath]) continue
+
+    const config = field.config ?? {}
+    const optionMapId = config.optionMapId as string | undefined
+    const optionTableId = (config.optionTableId ?? config.optionsMappingId) as string | undefined
+
+    // Case 1: Has optionMapId - convert to bindings format (paths are grid.field)
+    if (optionMapId) {
+      const mapEntry = optionMaps.find((m) => m.id === optionMapId)
+      if (mapEntry && mapEntry.gridId) {
+        const valueFieldId = mapEntry.valueFieldId ?? 'value'
+        const valueFromPath = `${mapEntry.gridId}.${valueFieldId}`
+
+        fixed.bindings![fieldPath] = {
+          optionsGrid: mapEntry.gridId,
+          labelField: `${mapEntry.gridId}.${mapEntry.labelFieldId ?? 'label'}`,
+          fieldMappings: [{ from: valueFromPath, to: fieldPath }],
+        }
+        continue
+      }
+    }
+
+    // Case 2: Has optionTableId - we still need bindings but optionTables don't have a grid
+    // For now, skip these - they'll work via legacy resolution
+    if (optionTableId) continue
+
+    // Case 3: No option source - create Shared tab infrastructure and bindings
+    ensureSharedTabInfrastructure()
+
+    const baseName = field.id.replace(/_/g, ' ')
+    const optionsGridId = `${field.id}_options_grid`
+    const labelFieldId = `${field.id}_opt_label`
+    const valueFieldId = `${field.id}_opt_value`
+
+    // Create options grid if it doesn't exist
+    if (!gridIds.has(optionsGridId)) {
+      gridPlaceId++
+      fixed.grids!.push({
+        id: optionsGridId,
+        name: `${titleCase(baseName)} Options`,
+        type: 'table',
+        sectionId: SHARED_SECTION_ID,
+        placeId: gridPlaceId,
+        config: {},
+      })
+      gridIds.add(optionsGridId)
+    }
+
+    // Create label field if it doesn't exist
+    if (!fieldIds.has(labelFieldId)) {
+      fixed.fields!.push({
+        id: labelFieldId,
+        dataType: 'string',
+        ui: { label: 'Label', placeholder: 'Display text' },
+        config: { isRequired: true },
+      })
+      fieldIds.add(labelFieldId)
+    }
+
+    // Create value field if it doesn't exist
+    if (!fieldIds.has(valueFieldId)) {
+      fixed.fields!.push({
+        id: valueFieldId,
+        dataType: 'string',
+        ui: { label: 'Value', placeholder: 'Stored value' },
+        config: { isRequired: true },
+      })
+      fieldIds.add(valueFieldId)
+    }
+
+    // Create layoutNodes
+    const existingNodes = fixed.layoutNodes!.filter((n) => n.gridId === optionsGridId)
+    if (!existingNodes.some((n) => n.fieldId === labelFieldId)) {
+      fixed.layoutNodes!.push({ gridId: optionsGridId, fieldId: labelFieldId, order: 1 })
+    }
+    if (!existingNodes.some((n) => n.fieldId === valueFieldId)) {
+      fixed.layoutNodes!.push({ gridId: optionsGridId, fieldId: valueFieldId, order: 2 })
+    }
+
+    // Create bindings entry (paths are grid.field, no tab)
+    const valueFromPath = `${optionsGridId}.${valueFieldId}`
+    fixed.bindings![fieldPath] = {
+      optionsGrid: optionsGridId,
+      labelField: `${optionsGridId}.${labelFieldId}`,
+      fieldMappings: [{ from: valueFromPath, to: fieldPath }],
+    }
+  }
+
+  return { ...tracker, ...fixed } as T
 }

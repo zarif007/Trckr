@@ -5,11 +5,11 @@ import {
   TrackerFieldType,
   TrackerField,
   TrackerLayoutNode,
-  TrackerOptionMap,
-  TrackerOptionTable,
+  TrackerBindings,
 } from './types'
 import { TrackerCell } from './tracker-cell'
-import { resolveFieldOptions } from './resolve-options'
+import { resolveFieldOptionsV2 } from './resolve-options'
+import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
 import { ChevronDown } from 'lucide-react'
@@ -36,11 +36,11 @@ import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 
 interface TrackerKanbanGridProps {
+  tabId: string
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
-  optionTables: TrackerOptionTable[]
-  optionMaps?: TrackerOptionMap[]
+  bindings?: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -50,8 +50,9 @@ function SortableCard({
   id,
   card,
   cardFields,
-  optionTables,
-  optionMaps,
+  tabId,
+  gridId,
+  bindings,
   gridData,
   fields,
   onEditRow,
@@ -59,8 +60,9 @@ function SortableCard({
   id: string
   card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
-  optionTables: TrackerOptionTable[]
-  optionMaps: TrackerOptionMap[]
+  tabId: string
+  gridId: string
+  bindings: TrackerBindings
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   onEditRow?: (rowIndex: number) => void
@@ -85,8 +87,9 @@ function SortableCard({
       <KanbanCard
         card={card}
         cardFields={cardFields}
-        optionTables={optionTables}
-        optionMaps={optionMaps}
+        tabId={tabId}
+        gridId={gridId}
+        bindings={bindings}
         gridData={gridData}
         fields={fields}
         onEditRow={onEditRow}
@@ -99,8 +102,9 @@ function SortableCard({
 function KanbanCard({
   card,
   cardFields,
-  optionTables,
-  optionMaps,
+  tabId,
+  gridId,
+  bindings,
   gridData,
   fields,
   isOverlay = false,
@@ -108,8 +112,9 @@ function KanbanCard({
 }: {
   card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
-  optionTables: TrackerOptionTable[]
-  optionMaps: TrackerOptionMap[]
+  tabId: string
+  gridId: string
+  bindings: TrackerBindings
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   isOverlay?: boolean
@@ -141,7 +146,7 @@ function KanbanCard({
       {cardFields.map((field) => {
         const fullField = fields.find((f) => f.id === field.id)
         const options = fullField
-          ? resolveFieldOptions(fullField, optionTables, optionMaps, gridData)
+          ? resolveFieldOptionsV2(tabId, gridId, fullField, bindings, gridData)
           : undefined
         return (
           <div key={field.id} className="mb-2 last:mb-0">
@@ -191,11 +196,11 @@ function ColumnDropZone({ id }: { id: string }) {
 }
 
 export function TrackerKanbanGrid({
+  tabId,
   grid,
   layoutNodes,
   fields,
-  optionTables,
-  optionMaps = [],
+  bindings = {},
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -251,8 +256,8 @@ export function TrackerKanbanGrid({
 
   let groups: Array<{ id: string, label: string }> = []
 
-  // Try to find explicit options if available (optionMapId or optionTableId)
-  const options = resolveFieldOptions(groupingField!, optionTables, optionMaps, gridData)
+  // Try to find explicit options if available (using bindings)
+  const options = resolveFieldOptionsV2(tabId, grid.id, groupingField!, bindings, gridData)
 
   // Use same key as form/store so row[groupByFieldId] matches group.id (must match fieldMetadata option id below)
   const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
@@ -294,7 +299,7 @@ export function TrackerKanbanGrid({
   // Field metadata for Add/Edit dialog (same shape as table)
   const fieldMetadata: FieldMetadata = {}
   kanbanFields.forEach((field) => {
-    const opts = resolveFieldOptions(field, optionTables, optionMaps, gridData)
+    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
@@ -353,9 +358,33 @@ export function TrackerKanbanGrid({
 
   const handleEditSave = (values: Record<string, unknown>) => {
     if (editRowIndex == null || !onUpdate) return
+
+    // First, update all primary field values
     Object.entries(values).forEach(([columnId, value]) => {
       onUpdate(editRowIndex, columnId, value)
     })
+
+    // Then, apply bindings for any select/multiselect fields that changed
+    Object.entries(values).forEach(([columnId, value]) => {
+      const field = kanbanFields.find((f) => f.id === columnId)
+      if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
+        const binding = getBindingForField(grid.id, columnId, bindings, tabId)
+        if (binding && binding.fieldMappings.length > 0) {
+          const selectFieldPath = `${grid.id}.${columnId}`
+          const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+          if (optionRow) {
+            const updates = applyBindings(binding, optionRow, selectFieldPath)
+            for (const update of updates) {
+              const { fieldId } = parsePath(update.targetPath)
+              if (fieldId) {
+                onUpdate(editRowIndex, fieldId, update.value)
+              }
+            }
+          }
+        }
+      }
+    })
+
     setEditRowIndex(null)
   }
 
@@ -433,8 +462,9 @@ export function TrackerKanbanGrid({
                             id={`${card._originalIdx}-${group.id}`}
                             card={card}
                             cardFields={cardFieldsDisplay}
-                            optionTables={optionTables}
-                            optionMaps={optionMaps}
+                            tabId={tabId}
+                            gridId={grid.id}
+                            bindings={bindings}
                             gridData={gridData}
                             fields={fields}
                             onEditRow={setEditRowIndex}
@@ -463,8 +493,9 @@ export function TrackerKanbanGrid({
           <KanbanCard
             card={activeCard}
             cardFields={cardFieldsDisplay}
-            optionTables={optionTables}
-            optionMaps={optionMaps}
+            tabId={tabId}
+            gridId={grid.id}
+            bindings={bindings}
             gridData={gridData}
             fields={fields}
             isOverlay

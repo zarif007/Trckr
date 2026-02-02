@@ -55,6 +55,7 @@ export default function Demo() {
     tabs: [
       { id: 'assignments', name: 'My Assignments', placeId: 1 },
       { id: 'resources', name: 'Resources', placeId: 2 },
+      { id: 'shared_tab', name: 'Shared', placeId: 999, config: {} },
     ],
     sections: [
       {
@@ -68,6 +69,13 @@ export default function Demo() {
         name: 'Study Materials',
         tabId: 'resources',
         placeId: 1,
+      },
+      {
+        id: 'option_lists_section',
+        name: 'Option Lists',
+        tabId: 'shared_tab',
+        placeId: 1,
+        config: {},
       },
     ],
     grids: [
@@ -95,6 +103,30 @@ export default function Demo() {
         placeId: 1,
         config: {},
       },
+      {
+        id: 'priority_options_grid',
+        name: 'Priority Options',
+        type: 'table' as const,
+        sectionId: 'option_lists_section',
+        placeId: 1,
+        config: {},
+      },
+      {
+        id: 'status_options_grid',
+        name: 'Status Options',
+        type: 'table' as const,
+        sectionId: 'option_lists_section',
+        placeId: 2,
+        config: {},
+      },
+      {
+        id: 'resource_type_options_grid',
+        name: 'Resource Type Options',
+        type: 'table' as const,
+        sectionId: 'option_lists_section',
+        placeId: 3,
+        config: {},
+      },
     ],
     fields: [
       // Assignment Fields
@@ -117,13 +149,13 @@ export default function Demo() {
         id: 'priority',
         dataType: 'options' as const,
         ui: { label: 'Priority' },
-        config: { optionTableId: 'priority_options' },
+        config: {},
       },
       {
         id: 'status',
         dataType: 'options' as const,
         ui: { label: 'Status' },
-        config: { optionTableId: 'status_options' },
+        config: {},
       },
       {
         id: 'is_completed',
@@ -150,7 +182,7 @@ export default function Demo() {
         id: 'kb_status',
         dataType: 'options' as const,
         ui: { label: 'Status' },
-        config: { optionTableId: 'status_options' },
+        config: {},
       },
       // Resource Fields
       {
@@ -162,7 +194,7 @@ export default function Demo() {
         id: 'resource_type',
         dataType: 'options' as const,
         ui: { label: 'Type' },
-        config: { optionTableId: 'resource_type_options' },
+        config: {},
       },
       {
         id: 'resource_link',
@@ -184,34 +216,49 @@ export default function Demo() {
       { gridId: 'books_links', fieldId: 'resource_title', order: 1 },
       { gridId: 'books_links', fieldId: 'resource_type', order: 2 },
       { gridId: 'books_links', fieldId: 'resource_link', order: 3 },
+      { gridId: 'priority_options_grid', fieldId: 'priority_label', order: 1 },
+      { gridId: 'priority_options_grid', fieldId: 'priority_value', order: 2 },
+      { gridId: 'status_options_grid', fieldId: 'status_label', order: 1 },
+      { gridId: 'status_options_grid', fieldId: 'status_value', order: 2 },
+      { gridId: 'resource_type_options_grid', fieldId: 'resource_type_label', order: 1 },
+      { gridId: 'resource_type_options_grid', fieldId: 'resource_type_value', order: 2 },
     ],
-    optionTables: [
-      {
-        id: 'priority_options',
-        options: [
-          { id: 'high', label: 'High', value: 'high' },
-          { id: 'medium', label: 'Medium', value: 'medium' },
-          { id: 'low', label: 'Low', value: 'low' },
-        ],
+    bindings: {
+      'assignment_list.priority': {
+        optionsGrid: 'priority_options_grid',
+        labelField: 'priority_options_grid.priority_label',
+        fieldMappings: [{ from: 'priority_options_grid.priority_value', to: 'assignment_list.priority' }],
       },
-      {
-        id: 'status_options',
-        options: [
-          { id: 'not_started', label: 'Not Started', value: 'not_started' },
-          { id: 'in_progress', label: 'In Progress', value: 'in_progress' },
-          { id: 'completed', label: 'Completed', value: 'completed' },
-        ],
+      'assignment_list.status': {
+        optionsGrid: 'status_options_grid',
+        labelField: 'status_options_grid.status_label',
+        fieldMappings: [{ from: 'status_options_grid.status_value', to: 'assignment_list.status' }],
       },
-      {
-        id: 'resource_type_options',
-        options: [
-          { id: 'book', label: 'Book', value: 'book' },
-          { id: 'article', label: 'Article', value: 'article' },
-          { id: 'video', label: 'Video', value: 'video' },
-          { id: 'website', label: 'Website', value: 'website' },
-        ],
+      'by_status.kb_status': {
+        optionsGrid: 'status_options_grid',
+        labelField: 'status_options_grid.status_label',
+        fieldMappings: [{ from: 'status_options_grid.status_value', to: 'by_status.kb_status' }],
       },
-    ],
+      'books_links.resource_type': {
+        optionsGrid: 'resource_type_options_grid',
+        labelField: 'resource_type_options_grid.resource_type_label',
+        fieldMappings: [{ from: 'resource_type_options_grid.resource_type_value', to: 'books_links.resource_type' }],
+      },
+    },
+  }
+
+  // Option grid label/value fields for Shared tab
+  const optionFields = [
+    { id: 'priority_label', dataType: 'string' as const, ui: { label: 'Label' }, config: {} },
+    { id: 'priority_value', dataType: 'string' as const, ui: { label: 'Value' }, config: {} },
+    { id: 'status_label', dataType: 'string' as const, ui: { label: 'Label' }, config: {} },
+    { id: 'status_value', dataType: 'string' as const, ui: { label: 'Value' }, config: {} },
+    { id: 'resource_type_label', dataType: 'string' as const, ui: { label: 'Label' }, config: {} },
+    { id: 'resource_type_value', dataType: 'string' as const, ui: { label: 'Value' }, config: {} },
+  ]
+  const demoDataWithFields = {
+    ...demoData,
+    fields: [...demoData.fields, ...optionFields],
   }
 
   return (
@@ -229,7 +276,7 @@ export default function Demo() {
           </p>
         </div>
 
-        <TrackerDisplay {...demoData} />
+        <TrackerDisplay {...demoDataWithFields} />
       </div>
     </div>
   )

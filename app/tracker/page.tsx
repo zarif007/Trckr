@@ -10,7 +10,8 @@ import {
 } from '@/app/components/tracker-display/types'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
-import { validateTracker, autoFixOptionMaps, type TrackerLike } from '@/lib/validate-tracker'
+import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
+import { buildBindingsFromSchema } from '@/lib/build-bindings'
 import {
   Dialog,
   DialogContent,
@@ -21,7 +22,7 @@ import {
 interface TrackerResponse extends TrackerDisplayProps { }
 
 const CONTINUE_PROMPT =
-  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, optionTables and optionMaps (so that every options/multiselect field has an option source) are all filled. Add any missing parts from where you left off.'
+  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
 
 const MAX_AUTO_CONTINUES = 3
 
@@ -71,11 +72,11 @@ export default function TrackerPage() {
       setResumingAfterError(false)
       setValidationErrors([])
       if (finishedObject) {
-        // Auto-fix missing optionMaps entries and Shared tab infrastructure
+        // Build/repair bindings from schema so every select/multiselect points to an options grid
         const rawTracker = finishedObject.tracker
-        const tracker = rawTracker ? autoFixOptionMaps(rawTracker as TrackerLike) : rawTracker
+        const tracker = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
 
-        // Validate after auto-fix (should have fewer/no errors now)
+        // Validate after auto-fix (options/multiselect issues are warnings only, not blocking)
         const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
         if (!validation.valid) {
           setValidationErrors(validation.errors)
@@ -707,8 +708,7 @@ export default function TrackerPage() {
                 grids={(object.tracker.grids || []).filter((g: any) => g && typeof g === 'object' && g.name) as any}
                 fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
                 layoutNodes={(object.tracker.layoutNodes || []) as any}
-                optionTables={(object.tracker.optionTables || []) as any}
-                optionMaps={(object.tracker.optionMaps || []) as any}
+                bindings={(object.tracker.bindings || {}) as any}
               />
             ) : activeTrackerData ? (
               <div className="space-y-4 w-full max-w-4xl mx-auto">
@@ -732,8 +732,7 @@ export default function TrackerPage() {
                   grids={activeTrackerData.grids}
                   fields={activeTrackerData.fields}
                   layoutNodes={activeTrackerData.layoutNodes}
-                  optionTables={activeTrackerData.optionTables}
-                  optionMaps={activeTrackerData.optionMaps}
+                  bindings={activeTrackerData.bindings}
                 />
               </div>
             ) : error && !isLoading ? (

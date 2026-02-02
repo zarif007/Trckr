@@ -62,16 +62,17 @@ export type TrackerFieldConfig = {
   isDisabled?: boolean
   isHidden?: boolean
   defaultValue?: unknown
-  /** Points to optionTables[id]. Options come from inline list. Use for fixed lists. */
+  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
   optionTableId?: string
-  /** Points to optionMaps[id]. Options come from Shared tab grid rows. Use for editable lists. */
+  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
   optionMapId?: string
-  /** @deprecated Use optionTableId. Kept for backward compatibility. */
+  /** @deprecated Use top-level bindings object instead. Kept for backward compatibility. */
   optionsMappingId?: string
   min?: number
   max?: number
   minLength?: number
   maxLength?: number
+  /** @deprecated Use top-level bindings object instead. Old binding format. */
   binding?: { tableName: string; fieldName: string }
   [key: string]: unknown
 }
@@ -105,7 +106,10 @@ export type TrackerOptionTable = {
   options: Array<TrackerOption>
 }
 
-/** Map entry: options for select/multiselect come from grid rows at (tabId, gridId). */
+/**
+ * Map entry: options for select/multiselect come from grid rows at (tabId, gridId).
+ * @deprecated Use bindings instead. Kept for backward compatibility.
+ */
 export type TrackerOptionMap = {
   id: string
   tabId: string
@@ -114,12 +118,44 @@ export type TrackerOptionMap = {
   valueFieldId?: string
 }
 
+// ============================================================================
+// BINDINGS SYSTEM - Top-level bindings for select/multiselect fields
+// ============================================================================
+
+/** Dot-notation path: "grid_id.field_id" (no tab) */
+export type FieldPath = string
+
+/** Single field mapping for auto-population when an option is selected */
+export type FieldMapping = {
+  /** Path in options grid: "product_options_grid.price" */
+  from: FieldPath
+  /** Path in main grid: "orders_grid.price" */
+  to: FieldPath
+}
+
+/** Binding entry for a select/multiselect field */
+export type TrackerBindingEntry = {
+  /** Grid id containing options (e.g. "product_options_grid") */
+  optionsGrid: string
+  /** Path to label field: "product_options_grid.label" */
+  labelField: FieldPath
+  /**
+   * Field mappings: from option row field -> to main grid field.
+   * Must include one mapping where "to" is this select field path (that "from" is the stored value).
+   * Other mappings auto-populate when an option is selected.
+   */
+  fieldMappings: FieldMapping[]
+}
+
+/** Top-level bindings object. Key is "grid_id.field_id" */
+export type TrackerBindings = Record<FieldPath, TrackerBindingEntry>
+
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
   layoutNodes?: TrackerLayoutNode[]
-  optionTables?: TrackerOptionTable[]
-  optionMaps?: TrackerOptionMap[]
+  /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
+  bindings?: TrackerBindings
 }

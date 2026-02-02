@@ -5,18 +5,18 @@ import {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
-  TrackerOptionMap,
-  TrackerOptionTable,
+  TrackerBindings,
 } from './types'
 import { TrackerCell } from './tracker-cell'
-import { resolveFieldOptions } from './resolve-options'
+import { resolveFieldOptionsV2 } from './resolve-options'
+import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 
 interface TrackerTableGridProps {
+  tabId: string
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
-  optionTables: TrackerOptionTable[]
-  optionMaps?: TrackerOptionMap[]
+  bindings?: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -24,11 +24,11 @@ interface TrackerTableGridProps {
 }
 
 export function TrackerTableGrid({
+  tabId,
   grid,
   layoutNodes,
   fields,
-  optionTables,
-  optionMaps = [],
+  bindings = {},
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -58,7 +58,7 @@ export function TrackerTableGrid({
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
-    const opts = resolveFieldOptions(field, optionTables, optionMaps, gridData)
+    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
@@ -66,6 +66,33 @@ export function TrackerTableGrid({
       config: field.config,
     }
   })
+
+  // Handle cell update with binding support
+  const handleCellUpdate = (rowIndex: number, columnId: string, value: unknown) => {
+    if (!onUpdate) return
+
+    // First, update the primary field value
+    onUpdate(rowIndex, columnId, value)
+
+    // Check if this field has bindings and apply them
+    const field = tableFields.find((f) => f.id === columnId)
+    if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
+      const binding = getBindingForField(grid.id, columnId, bindings, tabId)
+      if (binding && binding.fieldMappings.length > 0) {
+        const selectFieldPath = `${grid.id}.${columnId}`
+        const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+        if (optionRow) {
+          const updates = applyBindings(binding, optionRow, selectFieldPath)
+          for (const update of updates) {
+            const { fieldId } = parsePath(update.targetPath)
+            if (fieldId) {
+              onUpdate(rowIndex, fieldId, update.value)
+            }
+          }
+        }
+      }
+    }
+  }
 
   // Columns from connected fields
   const columns: ColumnDef<Record<string, unknown>>[] = tableFields.map(
@@ -79,7 +106,7 @@ export function TrackerTableGrid({
           <TrackerCell
             value={value}
             type={field.dataType}
-            options={resolveFieldOptions(field, optionTables, optionMaps, gridData)}
+            options={resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)}
           />
         );
       },
@@ -91,7 +118,7 @@ export function TrackerTableGrid({
       columns={columns}
       data={rows}
       fieldMetadata={fieldMetadata}
-      onCellUpdate={onUpdate}
+      onCellUpdate={handleCellUpdate}
       onAddEntry={onAddEntry}
       onDeleteEntries={onDeleteEntries}
       config={grid.config}
