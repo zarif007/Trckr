@@ -44,6 +44,7 @@ interface TrackerKanbanGridProps {
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
+  onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
 }
 
 function SortableCard({
@@ -167,7 +168,6 @@ function KanbanCard({
   )
 }
 
-/** Drop zone for empty column */
 function DroppableEmptyColumn({ id }: { id: string }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
@@ -181,7 +181,6 @@ function DroppableEmptyColumn({ id }: { id: string }) {
   )
 }
 
-/** Drop zone for empty space below cards - must have min height so collision detection finds it */
 function ColumnDropZone({ id }: { id: string }) {
   const { setNodeRef, isOver } = useDroppable({ id })
   return (
@@ -204,6 +203,7 @@ export function TrackerKanbanGrid({
   gridData = {},
   onUpdate,
   onAddEntry,
+  onCrossGridUpdate,
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -235,11 +235,9 @@ export function TrackerKanbanGrid({
 
   const rows = gridData[grid.id] ?? []
 
-  // Determine grouping field
   let groupByFieldId = grid.config?.groupBy
 
   if (!groupByFieldId) {
-    // Fallback: finding first options field
     const optionField = kanbanFields.find(f => f.dataType === 'options' || f.dataType === 'multiselect')
     if (optionField) groupByFieldId = optionField.id
   }
@@ -256,10 +254,8 @@ export function TrackerKanbanGrid({
 
   let groups: Array<{ id: string, label: string }> = []
 
-  // Try to find explicit options if available (using bindings)
   const options = resolveFieldOptionsV2(tabId, grid.id, groupingField!, bindings, gridData)
 
-  // Use same key as form/store so row[groupByFieldId] matches group.id (must match fieldMetadata option id below)
   const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
     String(o.id ?? o.value ?? o.label ?? '').trim()
   if (options && options.length > 0) {
@@ -268,21 +264,17 @@ export function TrackerKanbanGrid({
       label: o.label ?? '',
     }))
   } else {
-    // Distinct values from rows as fallback
     const distinctValues = Array.from(new Set(rows.map(r => String(r[groupByFieldId!] ?? ''))))
     groups = distinctValues.filter(Boolean).map(v => ({ id: v, label: v }))
   }
 
-  // When no groups (e.g. empty data, no options), show at least one column
   if (groups.length === 0) {
     groups = [{ id: '', label: 'Uncategorized' }]
   }
-  // Always include a fallback for rows with empty/undefined groupBy (e.g. newly added entries)
   const hasEmptyGroup = groups.some(g => g.id === '')
   if (!hasEmptyGroup) {
     groups = [...groups, { id: '', label: 'Uncategorized' }]
   }
-  // Dedupe by id so each column has a unique id and drops always match exactly one column
   const seenIds = new Set<string>()
   groups = groups.filter(g => {
     if (seenIds.has(g.id)) return false
@@ -290,13 +282,10 @@ export function TrackerKanbanGrid({
     return true
   })
 
-  // Fields to display on card (simple mapping for display)
-  // Mapping to format expected by KanbanCard: { id, dataType, label }
   const cardFieldsDisplay = kanbanFields
     .filter(f => f.id !== groupByFieldId)
     .map(f => ({ id: f.id, dataType: f.dataType, label: f.ui.label }))
 
-  // Field metadata for Add/Edit dialog (same shape as table)
   const fieldMetadata: FieldMetadata = {}
   kanbanFields.forEach((field) => {
     const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
@@ -322,7 +311,6 @@ export function TrackerKanbanGrid({
     const cardId = active.id as string
     const overId = String(over.id)
 
-    // cardId is in format `idx-currentGroup` (e.g. "0-todo")
     const dashAt = cardId.indexOf('-')
     if (dashAt < 0) return
     const cardIdx = parseInt(cardId.slice(0, dashAt), 10)
@@ -330,15 +318,12 @@ export function TrackerKanbanGrid({
 
     const currentCard = rows[cardIdx]
 
-    // overId is either: (1) group.id when dropping on empty column, or (2) card id "rowIndex-groupId"
     let nextGroupId = overId
     const firstDash = overId.indexOf('-')
     if (firstDash >= 0) {
-      // Dropped on another card: overId is "rowIndex-groupId" (groupId may contain hyphens)
       nextGroupId = overId.slice(firstDash + 1)
     }
 
-    // Only update if the drop target is a valid column id (so the card doesn't "disappear")
     const nextGroupIdTrimmed = nextGroupId.trim()
     const validGroupIds = new Set(groups.map(g => g.id))
     if (!validGroupIds.has(nextGroupIdTrimmed)) return
@@ -356,15 +341,29 @@ export function TrackerKanbanGrid({
     setShowAddDialog(false)
   }
 
+  /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
+  const getBindingUpdates = (fieldId: string, value: unknown): Record<string, unknown> => {
+    const binding = getBindingForField(grid.id, fieldId, bindings, tabId)
+    if (!binding?.fieldMappings?.length) return {}
+    const selectFieldPath = `${grid.id}.${fieldId}`
+    const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+    if (!optionRow) return {}
+    const updates = applyBindings(binding, optionRow, selectFieldPath)
+    const result: Record<string, unknown> = {}
+    for (const u of updates) {
+      const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
+      if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
+    }
+    return result
+  }
+
   const handleEditSave = (values: Record<string, unknown>) => {
     if (editRowIndex == null || !onUpdate) return
 
-    // First, update all primary field values
     Object.entries(values).forEach(([columnId, value]) => {
       onUpdate(editRowIndex, columnId, value)
     })
 
-    // Then, apply bindings for any select/multiselect fields that changed
     Object.entries(values).forEach(([columnId, value]) => {
       const field = kanbanFields.find((f) => f.id === columnId)
       if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
@@ -375,9 +374,13 @@ export function TrackerKanbanGrid({
           if (optionRow) {
             const updates = applyBindings(binding, optionRow, selectFieldPath)
             for (const update of updates) {
-              const { fieldId } = parsePath(update.targetPath)
-              if (fieldId) {
-                onUpdate(editRowIndex, fieldId, update.value)
+              const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+              if (targetGridId && targetFieldId) {
+                if (onCrossGridUpdate) {
+                  onCrossGridUpdate(targetGridId, editRowIndex, targetFieldId, update.value)
+                } else if (targetGridId === grid.id) {
+                  onUpdate(editRowIndex, targetFieldId, update.value)
+                }
               }
             }
           }
@@ -418,6 +421,7 @@ export function TrackerKanbanGrid({
               : {}
           }
           onSave={handleAddSave}
+          getBindingUpdates={getBindingUpdates}
         />
         <EntryFormDialog
           open={editRowIndex !== null}

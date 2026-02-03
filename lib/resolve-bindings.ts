@@ -3,9 +3,38 @@
  * 
  * Handles dot-notation path parsing and safe value resolution for the bindings system.
  * All functions handle edge cases gracefully with warnings instead of errors.
+ * 
+ * Debug logging can be enabled by setting BINDING_DEBUG=true in localStorage or by calling enableBindingDebug()
  */
 
 import type { TrackerBindingEntry, FieldPath, TrackerBindings } from '@/app/components/tracker-display/types'
+
+const isDebugEnabled = (): boolean => {
+  if (typeof window === 'undefined') return false
+  return localStorage.getItem('BINDING_DEBUG') === 'true'
+}
+
+/** Enable binding debug logging (persists in localStorage) */
+export function enableBindingDebug(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('BINDING_DEBUG', 'true')
+    console.log('[Bindings] Debug mode enabled. Refresh to see detailed logs.')
+  }
+}
+
+/** Disable binding debug logging */
+export function disableBindingDebug(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('BINDING_DEBUG')
+    console.log('[Bindings] Debug mode disabled.')
+  }
+}
+
+const debugLog = (message: string, ...args: unknown[]): void => {
+  if (isDebugEnabled()) {
+    console.log(`[Bindings:DEBUG] ${message}`, ...args)
+  }
+}
 
 /**
  * Parsed path components. Path format is grid.field (no tab).
@@ -40,7 +69,6 @@ export function parsePath(path: string): ParsedPath {
     return { tabId: null, gridId: parts[0], fieldId: null }
   }
 
-  // Backward compat: allow old tab.grid.field (3 parts) - treat as grid.field by dropping first part
   if (parts.length === 3) {
     return { tabId: null, gridId: parts[1], fieldId: parts[2] }
   }
@@ -131,7 +159,6 @@ export function getValueFieldIdFromBinding(
     const { fieldId } = parsePath(valueMapping.from)
     return fieldId
   }
-  // Backward compat: legacy valueField
   if (binding.valueField) {
     const { fieldId } = parsePath(binding.valueField)
     return fieldId
@@ -154,20 +181,70 @@ export function findOptionRow(
   selectedValue: unknown,
   selectFieldPath: FieldPath
 ): Record<string, unknown> | undefined {
-  // optionsGrid: grid id only, or legacy "tab.grid" - gridData is keyed by grid id
   const gridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
   const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+  const { fieldId: labelFieldId } = parsePath(binding.labelField)
 
-  if (!gridId || !valueFieldId) {
-    console.warn(`[Bindings] Invalid binding - optionsGrid: "${binding.optionsGrid}" or no value mapping for "${selectFieldPath}"`)
+  debugLog('findOptionRow called', {
+    selectFieldPath,
+    selectedValue,
+    gridId,
+    valueFieldId,
+    binding: { optionsGrid: binding.optionsGrid, labelField: binding.labelField, mappingsCount: binding.fieldMappings?.length }
+  })
+
+  if (!gridId) {
+    console.warn(`[Bindings] Invalid binding - optionsGrid: "${binding.optionsGrid}"`)
     return undefined
+  }
+  if (!valueFieldId) {
+    console.warn(`[Bindings] No value mapping for "${selectFieldPath}". Falling back to label/id matching.`)
   }
 
   const rows = gridData[gridId] ?? []
-  // Use loose equality so string "123" matches number 123 (select components often stringify)
+  debugLog(`Options grid "${gridId}" has ${rows.length} rows`, rows)
+
   const match = (rowVal: unknown, sel: unknown) =>
     rowVal === sel || String(rowVal) === String(sel)
-  return rows.find((row) => match(row[valueFieldId], selectedValue))
+
+  const vf: string | null = valueFieldId
+  let foundRow =
+    vf != null ? rows.find((row) => match(row[vf], selectedValue)) : undefined
+
+  if (!foundRow && labelFieldId != null) {
+    const lbl = labelFieldId
+    foundRow = rows.find((row) => match(row[lbl], selectedValue))
+    if (foundRow) {
+      debugLog('Matched option row by label field', { labelFieldId, selectedValue })
+    }
+  }
+
+  if (!foundRow) {
+    const selectedString = String(selectedValue)
+    if (selectedString.startsWith('opt-')) {
+      const idx = Number(selectedString.slice(4))
+      if (!Number.isNaN(idx) && idx >= 0 && idx < rows.length) {
+        foundRow = rows[idx]
+        debugLog('Matched option row by fallback opt-* index', { idx, selectedValue })
+      }
+    }
+  }
+
+  if (!foundRow) {
+    foundRow = rows.find((row) => match((row as { id?: unknown }).id, selectedValue))
+    if (foundRow) {
+      debugLog('Matched option row by row.id', { selectedValue })
+    }
+  }
+
+  if (foundRow) {
+    debugLog('Found matching option row', foundRow)
+  } else {
+    debugLog(`No matching row found for value "${selectedValue}" in field "${vf}"`)
+    debugLog('Available values:', vf != null ? rows.map((r) => r[vf]) : rows)
+  }
+
+  return foundRow
 }
 
 /**
@@ -186,9 +263,17 @@ export function applyBindings(
 ): Array<{ targetPath: FieldPath; value: unknown }> {
   const updates: Array<{ targetPath: FieldPath; value: unknown }> = []
 
+  debugLog('applyBindings called', {
+    selectFieldPath,
+    optionRowKeys: Object.keys(optionRow),
+    mappingsCount: binding.fieldMappings?.length ?? 0
+  })
+
   for (const mapping of binding.fieldMappings ?? []) {
-    // Skip the "value" mapping (to === select field) - that is set by the select itself
-    if (mapping.to === selectFieldPath) continue
+    if (mapping.to === selectFieldPath) {
+      debugLog(`Skipping value mapping: ${mapping.from} -> ${mapping.to} (select field itself)`)
+      continue
+    }
 
     const { fieldId: sourceFieldId } = parsePath(mapping.from)
 
@@ -198,16 +283,20 @@ export function applyBindings(
     }
 
     if (!(sourceFieldId in optionRow)) {
-      console.warn(`[Bindings] Source field "${sourceFieldId}" not found in option row`)
+      console.warn(`[Bindings] Source field "${sourceFieldId}" not found in option row. Available fields: ${Object.keys(optionRow).join(', ')}`)
+      debugLog(`Missing source field "${sourceFieldId}" for mapping ${mapping.from} -> ${mapping.to}`)
       continue
     }
 
-    updates.push({
+    const update = {
       targetPath: mapping.to,
       value: optionRow[sourceFieldId],
-    })
+    }
+    debugLog(`Adding update: ${mapping.from} (${sourceFieldId}=${optionRow[sourceFieldId]}) -> ${mapping.to}`)
+    updates.push(update)
   }
 
+  debugLog(`applyBindings returning ${updates.length} updates`, updates)
   return updates
 }
 
@@ -225,30 +314,40 @@ export function resolveOptionsFromBinding(
   gridData: Record<string, Array<Record<string, unknown>>>,
   selectFieldPath: FieldPath
 ): Array<{ id: string; label: string; value: unknown }> {
-  // optionsGrid: grid id only, or legacy "tab.grid" - gridData is keyed by grid id
   const gridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
   const { fieldId: labelFieldId } = parsePath(binding.labelField)
   const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
 
+  debugLog('resolveOptionsFromBinding', {
+    selectFieldPath,
+    gridId,
+    labelFieldId,
+    valueFieldId,
+    availableGrids: Object.keys(gridData)
+  })
+
   if (!gridId || !labelFieldId || !valueFieldId) {
+    debugLog('Missing required fields for options resolution')
     return []
   }
 
   const rows = gridData[gridId] ?? []
+  const lbl = labelFieldId
+  const vf = valueFieldId
 
   if (rows.length === 0) {
-    return PLACEHOLDER_OPTIONS.map((opt, i) => ({
-      id: String(opt.value),
-      label: opt.label,
-      value: opt.value,
-    }))
+    debugLog('No rows in options grid, returning empty options')
+    return []
   }
 
-  return rows.map((row, i) => ({
+  const options = rows.map((row, i) => ({
     id: row.id != null ? String(row.id) : `opt-${i}`,
-    label: String(row[labelFieldId] ?? ''),
-    value: row[valueFieldId],
+    label: String(row[lbl] ?? ''),
+    value: row[vf],
   }))
+
+  debugLog(`Resolved ${options.length} options`, options)
+  return options
 }
 
 /**
@@ -265,7 +364,6 @@ export function getBindingForField(
 
   const fieldPath = buildFieldPath(gridId, fieldId)
   let entry = bindings[fieldPath]
-  // Backward compat: try tab.grid.field if grid.field not found
   if (!entry && tabId) {
     const legacyPath = `${tabId}.${gridId}.${fieldId}` as FieldPath
     entry = bindings[legacyPath]
@@ -297,14 +395,8 @@ export function getFullOptionRows(
   return gridData[gridId] ?? []
 }
 
-const PLACEHOLDER_OPTIONS = [
-  { label: 'Option 1', value: 'opt_1' },
-  { label: 'Option 2', value: 'opt_2' },
-  { label: 'Option 3', value: 'opt_3' },
-]
-
 /**
- * Build initial grid data for option grids from bindings only. Seeds placeholder rows so dropdowns show options; user can edit in Shared tab.
+ * Build initial grid data for option grids from bindings only. Option grids start empty; user adds options in Shared tab.
  */
 export function getInitialGridDataFromBindings(
   bindings: TrackerBindings
@@ -312,10 +404,8 @@ export function getInitialGridDataFromBindings(
   const result: Record<string, Array<Record<string, unknown>>> = {}
   if (!bindings || Object.keys(bindings).length === 0) return result
 
-  const gridMeta: Record<
-    string,
-    { labelFieldId: string; valueFieldId: string }
-  > = {}
+  const gridMeta: Record<string, { labelFieldId: string; valueFieldId: string }> = {}
+
   for (const [fieldPath, entry] of Object.entries(bindings)) {
     const optionsGridId = entry.optionsGrid?.includes('.') ? entry.optionsGrid.split('.').pop()! : entry.optionsGrid
     if (!optionsGridId) continue
@@ -330,13 +420,8 @@ export function getInitialGridDataFromBindings(
     }
   }
 
-  for (const [optionsGridId, meta] of Object.entries(gridMeta)) {
-    const { labelFieldId, valueFieldId } = meta
-    result[optionsGridId] = PLACEHOLDER_OPTIONS.map((opt) => ({
-      [labelFieldId]: opt.label,
-      [valueFieldId]: opt.value,
-      id: String(opt.value),
-    }))
+  for (const [optionsGridId] of Object.entries(gridMeta)) {
+    result[optionsGridId] = []
   }
   return result
 }

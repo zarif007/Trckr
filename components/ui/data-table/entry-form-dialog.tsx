@@ -22,6 +22,8 @@ export interface EntryFormDialogProps {
   fieldOrder?: string[]
   initialValues: Record<string, unknown>
   onSave: (values: Record<string, unknown>) => void
+  /** When a select/multiselect field changes, return extra field updates (e.g. from bindings) to merge into form. */
+  getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
 }
 
 export function EntryFormDialog({
@@ -33,6 +35,7 @@ export function EntryFormDialog({
   fieldOrder,
   initialValues,
   onSave,
+  getBindingUpdates,
 }: EntryFormDialogProps) {
   const orderedIds = fieldOrder ?? Object.keys(fieldMetadata)
   const [formData, setFormData] = useState<Record<string, unknown>>(initialValues)
@@ -111,9 +114,15 @@ export function EntryFormDialog({
                         fieldInfo.type,
                         fieldInfo.config
                       )
+                      const bindingUpdates =
+                        (fieldInfo.type === 'options' || fieldInfo.type === 'multiselect') &&
+                          getBindingUpdates
+                          ? getBindingUpdates(columnId, sanitized) ?? {}
+                          : {}
                       setFormData((prev) => ({
                         ...prev,
                         [columnId]: sanitized,
+                        ...bindingUpdates,
                       }))
                     }}
                     type={fieldInfo.type}

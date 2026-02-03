@@ -26,6 +26,7 @@ interface TrackerDivGridProps {
   bindings?: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
+  onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
 }
 
 export function TrackerDivGrid({
@@ -36,6 +37,7 @@ export function TrackerDivGrid({
   bindings = {},
   gridData = {},
   onUpdate,
+  onCrossGridUpdate,
 }: TrackerDivGridProps) {
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
 
@@ -52,7 +54,6 @@ export function TrackerDivGrid({
         if (!field) return null
         if (field.config?.isHidden) return null
 
-        // Resolve options using bindings (with legacy fallback)
         const options = (field.dataType === 'options' || field.dataType === 'multiselect')
           ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
           : undefined
@@ -60,11 +61,9 @@ export function TrackerDivGrid({
         const value = data[field.id]
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
 
-        // Handle select/multiselect change with binding support
         const handleSelectChange = (selectedValue: unknown) => {
           onUpdate?.(0, field.id, selectedValue)
 
-          // Apply bindings if present
           if (field.dataType === 'options' || field.dataType === 'multiselect') {
             const binding = getBindingForField(grid.id, field.id, bindings, tabId)
             if (binding && binding.fieldMappings.length > 0) {
@@ -73,9 +72,13 @@ export function TrackerDivGrid({
               if (optionRow) {
                 const updates = applyBindings(binding, optionRow, selectFieldPath)
                 for (const update of updates) {
-                  const { fieldId } = parsePath(update.targetPath)
-                  if (fieldId) {
-                    onUpdate?.(0, fieldId, update.value)
+                  const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+                  if (targetGridId && targetFieldId) {
+                    if (onCrossGridUpdate) {
+                      onCrossGridUpdate(targetGridId, 0, targetFieldId, update.value)
+                    } else if (targetGridId === grid.id) {
+                      onUpdate?.(0, targetFieldId, update.value)
+                    }
                   }
                 }
               }
@@ -135,7 +138,6 @@ export function TrackerDivGrid({
             }
             case 'multiselect': {
               const opts = options ?? []
-              // adapt options for MultiSelect which expects {id, label}
               const multiOpts = opts.map(o => ({ label: o.label, id: String(o.value ?? o.id ?? o.label) }))
               return (
                 <MultiSelect

@@ -16,9 +16,10 @@ function toStringOrEmpty(v: unknown): string {
 }
 
 function normalizeOption(opt: { label?: string; value?: unknown; id?: string }): TrackerOption {
+  const valueString = toStringOrEmpty(opt.value)
   return {
     ...opt,
-    id: opt.id ?? toStringOrEmpty(opt.value),
+    id: valueString !== '' ? valueString : (opt.id ?? ''),
     label: opt.label ?? toStringOrEmpty(opt.value),
     value: opt.value,
   }

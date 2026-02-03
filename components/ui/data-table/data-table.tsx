@@ -45,6 +45,8 @@ interface DataTableProps<TData, TValue> {
   onAddEntry?: (newRow: Record<string, any>) => void
   onDeleteEntries?: (rowIndices: number[]) => void
   config?: any
+  /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
+  getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +56,7 @@ export function DataTable<TData, TValue>({
   onCellUpdate,
   onAddEntry,
   onDeleteEntries,
+  getBindingUpdates,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -65,7 +68,6 @@ export function DataTable<TData, TValue>({
   const selectedRows = Object.keys(rowSelection)
     .map(Number)
     .filter((idx) => rowSelection[idx])
-  // Initialize column visibility: first 5 columns visible, others hidden
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     () => {
       const initialVisibility: VisibilityState = {}
@@ -80,7 +82,6 @@ export function DataTable<TData, TValue>({
     },
   )
 
-  // Memoize columns to prevent unnecessary re-renders that might close the dialog
   const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
     () => [
       {
@@ -297,6 +298,7 @@ export function DataTable<TData, TValue>({
           fieldOrder={addFieldOrder}
           initialValues={{}}
           onSave={handleAddEntry}
+          getBindingUpdates={getBindingUpdates}
         />
         <Dialog
           open={rowDetailsOpenForIndex !== null}
@@ -330,10 +332,10 @@ export function DataTable<TData, TValue>({
                     const detailsTouched = rowDetailsTouchedFields.has(col.id)
                     const detailsError = fieldInfo
                       ? getValidationError(
-                          value,
-                          fieldInfo.type,
-                          fieldInfo.config
-                        )
+                        value,
+                        fieldInfo.type,
+                        fieldInfo.config
+                      )
                       : null
                     const detailsShowError = detailsTouched && !!detailsError
 

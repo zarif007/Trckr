@@ -237,7 +237,6 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
     }
   }
 
-  // Ensure Shared tab exists and is visible when we have option grids (so users can see and edit option lists)
   const hasOptionGrids = (fixed.grids ?? []).some((g) => isOptionsGrid(g.id))
   const hasSharedTab = (fixed.tabs ?? []).some((t) => t.id === SHARED_TAB_ID)
   if (hasOptionGrids && !hasSharedTab) {
@@ -257,8 +256,14 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
 
 /**
  * Enrich bindings by inferring fieldMappings: for each binding, add mappings from option-grid fields
- * to main-grid fields when both grids have a field with the same id (label/value reserved for the
- * select are excluded). Does not remove existing mappings.
+ * to main-grid fields using multiple matching strategies. Does not remove existing mappings.
+ * 
+ * Matching strategies (in order of priority):
+ * 1. Exact match: option field id === main field id (e.g., price -> price)
+ * 2. Prefix convention: optFieldId === selectFieldId_mainFieldId (e.g., product_price -> price when select is "product")
+ * 3. Suffix match: optFieldId ends with _mainFieldId (e.g., unit_price -> price)
+ * 4. Core name extraction: strips common prefixes/suffixes to find matches
+ *    (e.g., opt_price, price_value, item_price_amount all match "price")
  */
 export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   if (!tracker?.bindings || !tracker?.layoutNodes?.length) return tracker
@@ -270,6 +275,25 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
     layoutNodes
       .filter((n) => n.gridId === gridId)
       .map((n) => n.fieldId)
+
+  const extractCoreName = (fieldId: string): string => {
+    let core = fieldId
+    const prefixes = ['opt_', 'option_', 'item_', 'product_', 'unit_', 'total_', 'base_']
+    for (const prefix of prefixes) {
+      if (core.startsWith(prefix)) {
+        core = core.slice(prefix.length)
+        break
+      }
+    }
+    const suffixes = ['_value', '_amount', '_val', '_opt', '_option', '_item', '_total', '_base']
+    for (const suffix of suffixes) {
+      if (core.endsWith(suffix)) {
+        core = core.slice(0, -suffix.length)
+        break
+      }
+    }
+    return core
+  }
 
   let anyChanged = false
   for (const [fieldPath, entry] of Object.entries(bindings)) {
@@ -295,13 +319,18 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
     const existingMappings = new Set(
       (entry.fieldMappings ?? []).map((m) => `${m.from}\t${m.to}`)
     )
+    const mappedTargets = new Set(
+      (entry.fieldMappings ?? []).map((m) => m.to)
+    )
     const newMappings: Array<{ from: string; to: string }> = [...(entry.fieldMappings ?? [])]
     let entryChanged = false
 
     const addIfNew = (from: string, to: string) => {
       if (existingMappings.has(`${from}\t${to}`)) return
+      if (mappedTargets.has(to)) return // Don't map multiple sources to same target
       newMappings.push({ from, to })
       existingMappings.add(`${from}\t${to}`)
+      mappedTargets.add(to)
       entryChanged = true
     }
 
@@ -309,14 +338,29 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
       if (reserved.has(optFieldId)) continue
       const from = `${optionsGridId}.${optFieldId}`
 
-      // Same-id: option field id === main field id (e.g. price -> price)
       if (mainFieldIdSet.has(optFieldId)) {
         addIfNew(from, `${mainGridId}.${optFieldId}`)
+        continue
       }
 
-      // Prefix convention: option field id === selectFieldId_mainFieldId (e.g. supplier_warehouse -> warehouse)
       for (const mainFieldId of mainFieldIds) {
         if (optFieldId === `${selectFieldId}_${mainFieldId}`) {
+          addIfNew(from, `${mainGridId}.${mainFieldId}`)
+          break
+        }
+      }
+
+      for (const mainFieldId of mainFieldIds) {
+        if (optFieldId.endsWith(`_${mainFieldId}`)) {
+          addIfNew(from, `${mainGridId}.${mainFieldId}`)
+          break
+        }
+      }
+
+      const optCore = extractCoreName(optFieldId)
+      for (const mainFieldId of mainFieldIds) {
+        const mainCore = extractCoreName(mainFieldId)
+        if (optCore === mainCore && optCore.length >= 3) { // Require at least 3 chars to avoid false matches
           addIfNew(from, `${mainGridId}.${mainFieldId}`)
           break
         }

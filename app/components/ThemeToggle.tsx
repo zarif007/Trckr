@@ -12,7 +12,6 @@ export default function ThemeToggle() {
     setMounted(true)
   }, [])
 
-  // Ensure data-theme attribute is set on mount
   useEffect(() => {
     if (mounted && theme) {
       document.documentElement.setAttribute('data-theme', theme)

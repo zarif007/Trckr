@@ -50,6 +50,7 @@ export default function TrackerPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const continueCountRef = useRef(0)
   const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
+  const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
 
   const springConfig = { damping: 25, stiffness: 150 }
   const mouseXSpring = useSpring(0, springConfig)
@@ -110,9 +111,15 @@ export default function TrackerPage() {
         }
       } else {
         setPendingQuery(null)
-        setGenerationErrorMessage(
+        const noResponseMessage =
           'The AI did not return a valid response. Please try again or rephrase your request.'
-        )
+        setGenerationErrorMessage(noResponseMessage)
+        // Add assistant message so the chat doesn't end on the user's revision with no reply
+        const errorMessageObj: Message = {
+          role: 'assistant',
+          content: noResponseMessage,
+        }
+        setMessages((prev) => [...prev, errorMessageObj])
       }
     },
     onError: (err: Error) => {
@@ -689,16 +696,32 @@ export default function TrackerPage() {
       >
         <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
           <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-sm md:text-xl font-bold tracking-tight">
-              <div className="p-2 rounded-md bg-foreground text-background">
-                <Sparkles className="w-5 h-5" />
+            <DialogTitle className="flex items-center justify-between gap-3 text-sm md:text-xl font-bold tracking-tight">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-md bg-foreground text-background">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                {isLoading && (
+                  <span className="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider animate-pulse border border-primary/20">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Generating...
+                  </span>
+                )}
               </div>
-              {isLoading && (
-                <span className="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider animate-pulse border border-primary/20">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Generating...
-                </span>
-              )}
+              {(isLoading && object?.tracker) || activeTrackerData ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const data = trackerDataRef.current?.()
+                    console.log('Tracker data (values):', data ?? {})
+                  }}
+                  className="shrink-0"
+                >
+                  See
+                </Button>
+              ) : null}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-8 lg:p-12">
@@ -710,6 +733,7 @@ export default function TrackerPage() {
                 fields={(object.tracker.fields || []).filter((f: any) => f && typeof f === 'object' && f.ui?.label) as any}
                 layoutNodes={(object.tracker.layoutNodes || []) as any}
                 bindings={(object.tracker.bindings || {}) as any}
+                getDataRef={trackerDataRef}
               />
             ) : activeTrackerData ? (
               <div className="space-y-4 w-full max-w-4xl mx-auto">
@@ -734,6 +758,7 @@ export default function TrackerPage() {
                   fields={activeTrackerData.fields}
                   layoutNodes={activeTrackerData.layoutNodes}
                   bindings={activeTrackerData.bindings}
+                  getDataRef={trackerDataRef}
                 />
               </div>
             ) : error && !isLoading ? (

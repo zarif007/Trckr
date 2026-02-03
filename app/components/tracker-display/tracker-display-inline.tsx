@@ -21,6 +21,7 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   bindings = {},
+  getDataRef,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
     return (tabs ?? [])
@@ -47,12 +48,10 @@ export function TrackerDisplayInline({
     Record<string, Array<Record<string, unknown>>>
   >({})
 
-  // Seed option grids from bindings so select dropdowns have options without user adding rows
   const seedGridData = useMemo(
     () => getInitialGridDataFromBindings(bindings ?? {}),
     [bindings]
   )
-  // Merge: seed as base. Use local data whenever the user has touched that grid (including empty—so they can delete all rows); only use seed when the grid has never been edited.
   const gridData = useMemo(() => {
     const merged = { ...seedGridData }
     for (const [gridId, rows] of Object.entries(localGridData)) {
@@ -60,6 +59,15 @@ export function TrackerDisplayInline({
     }
     return merged
   }, [seedGridData, localGridData])
+
+  useEffect(() => {
+    if (getDataRef) {
+      getDataRef.current = () => gridData
+      return () => {
+        getDataRef.current = null
+      }
+    }
+  }, [gridData, getDataRef])
 
   const handleUpdate = (
     gridId: string,
@@ -70,9 +78,9 @@ export function TrackerDisplayInline({
     setLocalGridData((prev) => {
       const current = prev?.[gridId] ?? []
       const next = [...current]
-      if (next[rowIndex]) {
-        next[rowIndex] = { ...next[rowIndex], [columnId]: value }
-      }
+      // Ensure row exists (div grids use rowIndex 0 and start with empty array)
+      while (next.length <= rowIndex) next.push({})
+      next[rowIndex] = { ...next[rowIndex], [columnId]: value }
       return { ...(prev ?? {}), [gridId]: next }
     })
   }
@@ -117,7 +125,6 @@ export function TrackerDisplayInline({
             ))}
           </TabsList>
         )}
-
         {normalizedTabs.map((tab) => (
           <TrackerTabContent
             key={tab.id}

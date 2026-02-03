@@ -21,6 +21,7 @@ interface TrackerTableGridProps {
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   onDeleteEntries?: (rowIndices: number[]) => void
+  onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
 }
 
 export function TrackerTableGrid({
@@ -33,6 +34,7 @@ export function TrackerTableGrid({
   onUpdate,
   onAddEntry,
   onDeleteEntries,
+  onCrossGridUpdate,
 }: TrackerTableGridProps) {
   const connectedFieldNodes = layoutNodes
     .filter((n) => n.gridId === grid.id)
@@ -67,14 +69,11 @@ export function TrackerTableGrid({
     }
   })
 
-  // Handle cell update with binding support
   const handleCellUpdate = (rowIndex: number, columnId: string, value: unknown) => {
     if (!onUpdate) return
 
-    // First, update the primary field value
     onUpdate(rowIndex, columnId, value)
 
-    // Check if this field has bindings and apply them
     const field = tableFields.find((f) => f.id === columnId)
     if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
       const binding = getBindingForField(grid.id, columnId, bindings, tabId)
@@ -84,9 +83,13 @@ export function TrackerTableGrid({
         if (optionRow) {
           const updates = applyBindings(binding, optionRow, selectFieldPath)
           for (const update of updates) {
-            const { fieldId } = parsePath(update.targetPath)
-            if (fieldId) {
-              onUpdate(rowIndex, fieldId, update.value)
+            const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+            if (targetGridId && targetFieldId) {
+              if (onCrossGridUpdate) {
+                onCrossGridUpdate(targetGridId, rowIndex, targetFieldId, update.value)
+              } else if (targetGridId === grid.id) {
+                onUpdate(rowIndex, targetFieldId, update.value)
+              }
             }
           }
         }
@@ -94,7 +97,22 @@ export function TrackerTableGrid({
     }
   }
 
-  // Columns from connected fields
+  /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
+  const getBindingUpdates = (fieldId: string, value: unknown): Record<string, unknown> => {
+    const binding = getBindingForField(grid.id, fieldId, bindings, tabId)
+    if (!binding?.fieldMappings?.length) return {}
+    const selectFieldPath = `${grid.id}.${fieldId}`
+    const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+    if (!optionRow) return {}
+    const updates = applyBindings(binding, optionRow, selectFieldPath)
+    const result: Record<string, unknown> = {}
+    for (const u of updates) {
+      const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
+      if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
+    }
+    return result
+  }
+
   const columns: ColumnDef<Record<string, unknown>>[] = tableFields.map(
     (field) => ({
       id: field.id,
@@ -121,6 +139,7 @@ export function TrackerTableGrid({
       onCellUpdate={handleCellUpdate}
       onAddEntry={onAddEntry}
       onDeleteEntries={onDeleteEntries}
+      getBindingUpdates={getBindingUpdates}
       config={grid.config}
     />
   );

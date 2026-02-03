@@ -39,11 +39,6 @@ export function TrackerSection({
   onAddEntry,
   onDeleteEntries,
 }: TrackerSectionProps) {
-  // Filter grids that belong to this section
-  // They are already filtered in the parent, but purely trusting props is fine too
-  // if the parent passed the correct subset.
-  // Based on current implementation, parent passes specific grids.
-
   return (
     <div className="space-y-4">
       <h3 className="text-2xl font-semibold text-foreground border-b pb-2">
@@ -51,7 +46,6 @@ export function TrackerSection({
       </h3>
       <div className="space-y-6">
         {grids.map((grid) => {
-          // Get layout nodes for this grid
           const gridLayoutNodes = layoutNodes
             .filter(node => node.gridId === grid.id)
             .sort((a, b) => a.order - b.order)
@@ -74,6 +68,7 @@ export function TrackerSection({
                   bindings={bindings}
                   gridData={gridData}
                   onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                  onCrossGridUpdate={onUpdate}
                   onAddEntry={onAddEntry ? (newRow) => onAddEntry(grid.id, newRow) : undefined}
                   onDeleteEntries={onDeleteEntries ? (rowIndices) => onDeleteEntries(grid.id, rowIndices) : undefined}
                 />
@@ -87,6 +82,7 @@ export function TrackerSection({
                   bindings={bindings}
                   gridData={gridData}
                   onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                  onCrossGridUpdate={onUpdate}
                   onAddEntry={onAddEntry ? (newRow) => onAddEntry(grid.id, newRow) : undefined}
                 />
               )}
@@ -99,6 +95,7 @@ export function TrackerSection({
                   bindings={bindings}
                   gridData={gridData}
                   onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(grid.id, rowIndex, columnId, value) : undefined}
+                  onCrossGridUpdate={onUpdate}
                 />
               )}
               {grid.type === 'calendar' && (

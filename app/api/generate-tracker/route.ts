@@ -14,6 +14,11 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
+const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+const MAX_OUTPUT_TOKENS = process.env.DEEPSEEK_MAX_OUTPUT_TOKENS
+  ? Math.min(65536, Math.max(1024, parseInt(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS, 10) || DEFAULT_MAX_OUTPUT_TOKENS))
+  : DEFAULT_MAX_OUTPUT_TOKENS
+
 export async function POST(request: Request) {
   try {
     let body: { query?: unknown; messages?: unknown }
@@ -42,80 +47,88 @@ export async function POST(request: Request) {
       )
     }
 
+    const MAX_CONTEXT_MESSAGES_PER_ROLE = 2
+
     let conversationContext = ''
 
     if (messages && Array.isArray(messages) && messages.length > 0) {
+      const userMessages = messages.filter((m: { role?: string }) => m.role === 'user')
+      const assistantMessages = messages.filter((m: { role?: string }) => m.role === 'assistant')
+
+      const lastUser = userMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE)
+      const lastAssistant = assistantMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE)
+
       const contextParts: string[] = []
 
-      for (const msg of messages) {
-        if (msg.role === 'user') {
-          contextParts.push(`User: ${msg.content}`)
-        } else if (msg.role === 'assistant') {
-          let assistantMsgParts = []
+      for (const msg of lastUser) {
+        contextParts.push(`User: ${msg.content}`)
+      }
 
-          if (msg.managerData) {
-            const { thinking, prd, builderTodo } = msg.managerData
-            assistantMsgParts.push(`Manager Thinking: ${thinking}`)
-            assistantMsgParts.push(`PRD: ${JSON.stringify(prd, null, 2)}`)
-            if (builderTodo && builderTodo.length > 0) {
-              assistantMsgParts.push(
-                `Builder Tasks: ${JSON.stringify(builderTodo, null, 2)}`,
-              )
-            }
-          }
+      for (const msg of lastAssistant) {
+        let assistantMsgParts = []
 
-          if (msg.trackerData) {
-            const {
-              tabs = [],
-              sections = [],
-              grids = [],
-              fields = [],
-            } = msg.trackerData
-
-            const currentTrackerState = {
-              tabs: tabs.map((t: any) => ({
-                id: t.id,
-                name: t.name,
-                placeId: t.placeId,
-                config: t.config ?? {},
-              })),
-              sections: sections.map((s: any) => ({
-                id: s.id,
-                name: s.name,
-                tabId: s.tabId,
-                placeId: s.placeId,
-                config: s.config ?? {},
-              })),
-              grids: grids.map((g: any) => ({
-                id: g.id,
-                name: g.name,
-                type: g.type,
-                sectionId: g.sectionId,
-                placeId: g.placeId,
-                config: g.config ?? {},
-              })),
-              fields: fields.map((f: any) => ({
-                id: f.id,
-                dataType: f.dataType,
-                ui: f.ui,
-                config: f.config ?? {}, // validations, isRequired, isDisabled, isHidden
-              })),
-              layoutNodes: (msg.trackerData as any).layoutNodes || [],
-              bindings: (msg.trackerData as any).bindings || {},
-            }
-
+        if (msg.managerData) {
+          const { thinking, prd, builderTodo } = msg.managerData
+          assistantMsgParts.push(`Manager Thinking: ${thinking}`)
+          assistantMsgParts.push(`PRD: ${JSON.stringify(prd, null, 2)}`)
+          if (builderTodo && builderTodo.length > 0) {
             assistantMsgParts.push(
-              `Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`,
+              `Builder Tasks: ${JSON.stringify(builderTodo, null, 2)}`,
             )
           }
+        }
 
-          if (msg.content) {
-            assistantMsgParts.push(msg.content)
+        if (msg.trackerData) {
+          const {
+            tabs = [],
+            sections = [],
+            grids = [],
+            fields = [],
+          } = msg.trackerData
+
+          const currentTrackerState = {
+            tabs: tabs.map((t: any) => ({
+              id: t.id,
+              name: t.name,
+              placeId: t.placeId,
+              config: t.config ?? {},
+            })),
+            sections: sections.map((s: any) => ({
+              id: s.id,
+              name: s.name,
+              tabId: s.tabId,
+              placeId: s.placeId,
+              config: s.config ?? {},
+            })),
+            grids: grids.map((g: any) => ({
+              id: g.id,
+              name: g.name,
+              type: g.type,
+              sectionId: g.sectionId,
+              placeId: g.placeId,
+              config: g.config ?? {},
+            })),
+            fields: fields.map((f: any) => ({
+              id: f.id,
+              dataType: f.dataType,
+              ui: f.ui,
+              config: f.config ?? {}, // validations, isRequired, isDisabled, isHidden
+            })),
+            layoutNodes: (msg.trackerData as any).layoutNodes || [],
+            bindings: (msg.trackerData as any).bindings || {},
           }
 
-          if (assistantMsgParts.length > 0) {
-            contextParts.push(`Assistant:\n${assistantMsgParts.join('\n')}`)
-          }
+          assistantMsgParts.push(
+            `Current Tracker State (JSON): ${JSON.stringify(currentTrackerState, null, 2)}`,
+          )
+        }
+
+        if (msg.content) {
+          assistantMsgParts.push(msg.content)
+        }
+
+        if (assistantMsgParts.length > 0) {
+          contextParts.push(`Assistant:\n${assistantMsgParts.join('\n')}`)
         }
       }
 
@@ -149,6 +162,16 @@ export async function POST(request: Request) {
       system: combinedSystemPrompt,
       prompt: fullPrompt,
       schema: multiAgentSchema,
+
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      onFinish: ({ object: finalObject, error: validationError }) => {
+        if (validationError) {
+          console.error('[generate-tracker] Final object failed validation:', validationError)
+        }
+        if (!finalObject?.tracker && !validationError) {
+          console.warn('[generate-tracker] Stream finished but no tracker in response (possible max tokens or empty output)')
+        }
+      },
     })
 
     return result.toTextStreamResponse()

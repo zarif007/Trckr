@@ -51,12 +51,11 @@ export function MultiSelect({
     onChange(newValue)
   }
 
-  // Use space separated values for display as requested
-  const displayText = value.length > 0 
+  const displayText = value.length > 0
     ? value.map(v => {
-        const option = options.find(o => (typeof o === 'string' ? o : o.id) === v)
-        return option ? (typeof option === 'string' ? option : option.label) : v
-      }).join(' ') 
+      const option = options.find(o => (typeof o === 'string' ? o : o.id) === v)
+      return option ? (typeof option === 'string' ? option : option.label) : v
+    }).join(' ')
     : placeholder
 
   const triggerClasses = cn(
