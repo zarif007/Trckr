@@ -54,6 +54,22 @@ const gridTypeEnum = z
     'div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.'
   )
 
+/** View id for shadow views (e.g. tasks_kanban_view). Optional _view suffix to avoid clashing with grid ids. */
+const viewId = () =>
+  z
+    .string()
+    .describe('Unique view id (e.g. tasks_kanban_view). Same data as parent grid; different type/config.')
+
+/** Shadow view: alternative representation of the same grid data (e.g. Kanban for a table grid). */
+export const gridViewSchema = z
+  .object({
+    id: viewId(),
+    name: z.string().describe('Tab label (e.g. "Kanban")'),
+    type: gridTypeEnum.describe('View type; use type-specific config (e.g. groupBy for kanban).'),
+    config: gridConfigSchema,
+  })
+  .passthrough()
+
 const fieldDataTypeEnum = z
   .enum([
     'string',
@@ -141,6 +157,7 @@ export const trackerSchema = z
             sectionId: z.string(),
             placeId: z.coerce.number(),
             config: gridConfigSchema,
+            views: z.array(gridViewSchema).default([]).optional().describe('Optional shadow views: same data, different representation (e.g. Table + Kanban tabs). Each view has its own type and config (e.g. groupBy for kanban).'),
           })
           .passthrough()
       )

@@ -107,6 +107,7 @@ export async function POST(request: Request) {
               sectionId: g.sectionId,
               placeId: g.placeId,
               config: g.config ?? {},
+              views: g.views ?? [],
             })),
             fields: fields.map((f: any) => ({
               id: f.id,

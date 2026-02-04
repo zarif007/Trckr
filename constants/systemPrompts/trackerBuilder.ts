@@ -125,7 +125,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
   - table: for repetitive data — rows of items, records, list entries (e.g. tasks, contacts, transactions).
   - kanban / timeline / calendar: for repetitive data with a specific view (grouped columns, time-based, etc.).
 - Rule: If the content repeats (many rows/items), use table (or kanban/timeline/calendar). If the content is one block per entity (meta, bio, summary), use div.
-- Fields: id (snake_case, MUST end with _grid), name, type, sectionId (parent section id), placeId, config (REQUIRED).
+- Fields: id (snake_case, MUST end with _grid), name, type, sectionId (parent section id), placeId, config (REQUIRED), views (OPTIONAL — see "Shadow views" below).
 - config standard: div = { layout?: "vertical" | "horizontal" }; kanban = { groupBy?: fieldId }; table/timeline/calendar = {} or type-specific keys.
 
 4. Fields
@@ -155,6 +155,14 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - Each options grid has at minimum: a label field (display text) and a value field (stored value).
 - You can add additional fields to options grids for auto-populate (e.g., price, category).
 - For EACH select/multiselect field, add an entry to the bindings object with optionsGrid pointing to the options grid (never to a main data grid).
+
+11. Shadow views (OPTIONAL)
+- A grid may have multiple representations of the SAME data (e.g. Table + Kanban tabs, like Notion). Add an optional "views" array on the grid object.
+- Structure: views: [{ id: "<grid_stem>_kanban_view", name: "Kanban", type: "kanban", config: { groupBy: "<field_id>" } }].
+- View ids: use a unique id per view; naming convention _view suffix (e.g. tasks_kanban_view) to avoid clashing with grid ids (_grid).
+- View-specific config: each view has its own "config" object. For kanban views, config.groupBy is REQUIRED (field id to group columns by). For table/timeline/calendar views, config can be {} or type-specific. Set the correct config per view type.
+- Views share the grid's data and layoutNodes — no extra layoutNodes or bindings for view ids. layoutNodes and bindings always use the primary grid id only.
+- Example: tasks_grid (type: "table") with views: [{ id: "tasks_kanban_view", name: "Kanban", type: "kanban", config: { groupBy: "status" } }] shows Table and Kanban tabs for the same task list.
 
 Do not suggest or generate charts, graphs, or data visualizations — the app does not support them.
 
