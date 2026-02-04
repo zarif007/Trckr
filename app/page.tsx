@@ -9,7 +9,7 @@ import Demo from './components/landing-page/Demo'
 
 export default function Home() {
   return (
-    <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
+    <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground">
       <div className="relative max-w-full mx-auto px-0 py-0 space-y-24 z-20">
         <Hero />
 

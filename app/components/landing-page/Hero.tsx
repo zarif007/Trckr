@@ -11,10 +11,10 @@ export default function Hero() {
         className="absolute inset-0 pointer-events-none"
         aria-hidden
       >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-foreground/[0.06] via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-1/4 w-[400px] h-[400px] bg-chart-2/10 dark:bg-chart-2/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-32 right-1/4 w-[300px] h-[300px] bg-chart-1/10 dark:bg-chart-1/5 rounded-full blur-3xl" />
-        <div className="absolute inset-0 bg-grid-small opacity-[0.4] dark:opacity-[0.25]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-foreground/[0.06] dark:from-foreground/[0.1] via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-1/4 w-[400px] h-[400px] bg-chart-2/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-32 right-1/4 w-[300px] h-[300px] bg-chart-1/10 rounded-full blur-3xl" />
+        <div className="absolute inset-0 bg-grid-small opacity-[0.4]" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background mask-radial" />
       </div>
 
@@ -24,7 +24,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="inline-flex items-center gap-2.5 rounded-full px-4 py-2 border border-border/60 bg-background/70 dark:bg-background/50 backdrop-blur-xl shadow-sm"
+          className="inline-flex items-center gap-2.5 rounded-md px-4 py-2 border border-border/60 bg-background/70 dark:bg-background/50 backdrop-blur-xl shadow-sm"
         >
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />

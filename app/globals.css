@@ -150,6 +150,9 @@ body {
 }
 
 @theme inline {
+  /* E2B-style: IBM Plex Sans + IBM Plex Mono (e2b.dev) */
+  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);

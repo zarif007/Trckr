@@ -21,6 +21,7 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   bindings = {},
+  initialGridData,
   getDataRef,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
@@ -44,14 +45,32 @@ export function TrackerDisplayInline({
     }
   }, [normalizedTabs, activeTabId])
 
+  const seedGridData = useMemo(() => {
+    const fromBindings = getInitialGridDataFromBindings(bindings ?? {})
+    const fromInitial = initialGridData ?? {}
+    const merged: Record<string, Array<Record<string, unknown>>> = {}
+    const allGridIds = new Set([
+      ...Object.keys(fromBindings),
+      ...Object.keys(fromInitial),
+    ])
+    for (const gridId of allGridIds) {
+      const initialRows = fromInitial[gridId]
+      const bindingRows = fromBindings[gridId]
+      if (initialRows && initialRows.length > 0) {
+        merged[gridId] = initialRows
+      } else if (Array.isArray(bindingRows)) {
+        merged[gridId] = bindingRows
+      } else {
+        merged[gridId] = []
+      }
+    }
+    return merged
+  }, [bindings, initialGridData])
+
   const [localGridData, setLocalGridData] = useState<
     Record<string, Array<Record<string, unknown>>>
-  >({})
+  >(() => ({}))
 
-  const seedGridData = useMemo(
-    () => getInitialGridDataFromBindings(bindings ?? {}),
-    [bindings]
-  )
   const gridData = useMemo(() => {
     const merged = { ...seedGridData }
     for (const [gridId, rows] of Object.entries(localGridData)) {
@@ -76,7 +95,7 @@ export function TrackerDisplayInline({
     value: unknown,
   ) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? []
+      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
       const next = [...current]
       // Ensure row exists (div grids use rowIndex 0 and start with empty array)
       while (next.length <= rowIndex) next.push({})
@@ -87,14 +106,14 @@ export function TrackerDisplayInline({
 
   const handleAddEntry = (gridId: string, newRow: Record<string, unknown>) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? []
+      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
       return { ...(prev ?? {}), [gridId]: [...current, newRow] }
     })
   }
 
   const handleDeleteEntries = (gridId: string, rowIndices: number[]) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? []
+      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
       const filtered = current.filter((_, index) => !rowIndices.includes(index))
       return { ...(prev ?? {}), [gridId]: filtered }
     })

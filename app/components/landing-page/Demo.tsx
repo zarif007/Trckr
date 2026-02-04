@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { TrackerDisplay } from '@/app/components/tracker-display'
 
 export default function Demo() {
@@ -261,6 +262,49 @@ export default function Demo() {
     fields: [...demoData.fields, ...optionFields],
   }
 
+  const initialGridData = useMemo(() => {
+    const assignmentListRows = examples.map((e) => ({
+      assignment_name: e.assignment,
+      course_name: e.course,
+      due_date: e.dueDate,
+      priority: e.priority,
+      status: e.status,
+      is_completed: e.completed,
+    }))
+    const kanbanRows = examples.map((e) => ({
+      kb_assignment: e.assignment,
+      kb_course: e.course,
+      kb_due_date: e.dueDate,
+      kb_status: e.status,
+    }))
+    const booksLinksRows = examples.map((e) => ({
+      resource_title: e.title,
+      resource_type: e.type,
+      resource_link: e.link,
+    }))
+    return {
+      assignment_list: assignmentListRows,
+      by_status: kanbanRows,
+      books_links: booksLinksRows,
+      priority_options_grid: [
+        { priority_label: 'High', priority_value: 'high' },
+        { priority_label: 'Medium', priority_value: 'medium' },
+        { priority_label: 'Low', priority_value: 'low' },
+      ],
+      status_options_grid: [
+        { status_label: 'Not Started', status_value: 'not_started' },
+        { status_label: 'In Progress', status_value: 'in_progress' },
+        { status_label: 'Completed', status_value: 'completed' },
+      ],
+      resource_type_options_grid: [
+        { resource_type_label: 'Article', resource_type_value: 'article' },
+        { resource_type_label: 'Book', resource_type_value: 'book' },
+        { resource_type_label: 'Video', resource_type_value: 'video' },
+        { resource_type_label: 'Website', resource_type_value: 'website' },
+      ],
+    }
+  }, [])
+
   return (
     <div
       id="demo"
@@ -276,7 +320,7 @@ export default function Demo() {
           </p>
         </div>
 
-        <TrackerDisplay {...demoDataWithFields} />
+        <TrackerDisplay {...demoDataWithFields} initialGridData={initialGridData} />
       </div>
     </div>
   )

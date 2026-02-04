@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono, Inter, Space_Grotesk } from 'next/font/google'
+import { Geist, Geist_Mono, IBM_Plex_Mono, IBM_Plex_Sans, Inter, Space_Grotesk } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import NavBar from './components/NavBar'
 import './globals.css'
@@ -24,6 +24,19 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+/* E2B-style: IBM Plex Sans + IBM Plex Mono */
+const ibmPlexSans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-ibm-plex-sans',
+})
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
+  variable: '--font-ibm-plex-mono',
+})
+
 export const metadata: Metadata = {
   title: 'Trckr — AI-generated, customizable trackers',
   description:
@@ -38,7 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${spaceGrotesk.variable} antialiased`}
+        className={`${ibmPlexSans.variable} ${ibmPlexMono.variable} ${geistSans.variable} ${geistMono.variable} ${inter.variable} ${spaceGrotesk.variable} antialiased overflow-x-hidden`}
       >
         <ThemeProvider
           attribute="data-theme"
