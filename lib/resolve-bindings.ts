@@ -7,7 +7,7 @@
  * Debug logging can be enabled by setting BINDING_DEBUG=true in localStorage or by calling enableBindingDebug()
  */
 
-import type { TrackerBindingEntry, FieldPath, TrackerBindings } from '@/app/components/tracker-display/types'
+import type { TrackerBindingEntry, FieldPath, TrackerBindings } from '@/lib/types/tracker-bindings'
 
 const isDebugEnabled = (): boolean => {
   if (typeof window === 'undefined') return false

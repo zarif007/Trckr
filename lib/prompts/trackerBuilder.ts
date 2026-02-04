@@ -174,7 +174,7 @@ CRITICAL for revisions:
 5. Grid type "div" is ONLY for single-instance content (meta, bio, summary, one-off). For any repeating/list data use table (or kanban/timeline/calendar). Never use div for rows of items.
 6. MANDATORY: Every field with dataType "options" or "multiselect" MUST have an entry in the bindings object. The bindings key is "<grid_id>.<field_id>" (no tab). Never leave options/multiselect fields without a bindings entry.
 7. When creating select fields that should auto-populate other fields (e.g., selecting a product fills in price), add fieldMappings to the bindings entry.
-8. The options grid in Shared tab can have additional fields beyond label/value (e.g., price, description) for use in fieldMappings.
+8. The options grid in Shared tab can have additional fields beyond label/value (e.g. price, description) for use in fieldMappings.
 9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
 `
 

@@ -1,21 +1,30 @@
-import type {
-  TrackerField,
-  TrackerOption,
-  TrackerBindings,
-  TrackerBindingEntry,
-} from './types'
+import type { TrackerBindings, TrackerBindingEntry } from '@/lib/types/tracker-bindings'
 import {
   getBindingForField,
   resolveOptionsFromBinding,
   buildFieldPath,
 } from '@/lib/resolve-bindings'
 
+/** Minimal field shape needed for option resolution (avoids importing from app). Accepts any field with id and optional config. */
+interface FieldWithOptions {
+  id: string
+  config?: unknown
+}
+
+/** Normalized option row (compatible with TrackerOption) */
+export interface ResolvedOption {
+  label: string
+  value: unknown
+  id?: string
+  [key: string]: unknown
+}
+
 function toStringOrEmpty(v: unknown): string {
   if (v === null || v === undefined) return ''
   return String(v)
 }
 
-function normalizeOption(opt: { label?: string; value?: unknown; id?: string }): TrackerOption {
+function normalizeOption(opt: { label?: string; value?: unknown; id?: string }): ResolvedOption {
   const valueString = toStringOrEmpty(opt.value)
   return {
     ...opt,
@@ -29,13 +38,13 @@ function normalizeOption(opt: { label?: string; value?: unknown; id?: string }):
  * Resolve options from inline config.options only (no bindings).
  */
 export function resolveFieldOptionsLegacy(
-  field: TrackerField | undefined | null,
+  field: FieldWithOptions | undefined | null,
   gridData?: Record<string, Array<Record<string, unknown>>>
-): TrackerOption[] | undefined {
+): ResolvedOption[] | undefined {
   if (field == null) return undefined
-  const config = field.config ?? {}
+  const config = (field.config ?? {}) as { options?: Array<{ label?: string; value?: unknown; id?: string }> }
   const opts = config.options
-  if (Array.isArray(opts)) return (opts as TrackerOption[]).map(normalizeOption)
+  if (Array.isArray(opts)) return opts.map(normalizeOption)
   return undefined
 }
 
@@ -45,10 +54,10 @@ export function resolveFieldOptionsLegacy(
 export function resolveFieldOptionsV2(
   tabId: string,
   gridId: string,
-  field: TrackerField | undefined | null,
+  field: FieldWithOptions | undefined | null,
   bindings: TrackerBindings | undefined,
   gridData: Record<string, Array<Record<string, unknown>>>
-): TrackerOption[] | undefined {
+): ResolvedOption[] | undefined {
   if (field == null) return undefined
 
   const binding = getBindingForField(gridId, field.id, bindings, tabId)

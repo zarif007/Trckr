@@ -1,5 +1,5 @@
-import managerPrompt from '@/constants/systemPrompts/manager'
-import trackerBuilderPrompt from '@/constants/systemPrompts/trackerBuilder'
+import managerPrompt from '@/lib/prompts/manager'
+import trackerBuilderPrompt from '@/lib/prompts/trackerBuilder'
 import { multiAgentSchema } from '@/lib/schemas/multi-agent'
 import { deepseek } from '@ai-sdk/deepseek'
 import { streamObject } from 'ai'

@@ -15,7 +15,7 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
 } from './types'
-import { resolveFieldOptionsV2 } from './resolve-options'
+import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 
 interface TrackerDivGridProps {

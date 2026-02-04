@@ -61,9 +61,9 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
         <span>
           {!isNaN(currencyValue)
             ? new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-              }).format(currencyValue)
+              style: 'currency',
+              currency: 'USD',
+            }).format(currencyValue)
             : String(value)}
         </span>
       )
