@@ -3,12 +3,7 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 
-interface HeroProps {
-  y1: any
-  y2: any
-}
-
-export default function Hero({ y1, y2 }: HeroProps) {
+export default function Hero() {
   return (
     <section className="relative pt-24 pb-48 overflow-hidden">
       {/* Ambient background */}
@@ -22,40 +17,6 @@ export default function Hero({ y1, y2 }: HeroProps) {
         <div className="absolute inset-0 bg-grid-small opacity-[0.4] dark:opacity-[0.25]" />
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background mask-radial" />
       </div>
-
-      {/* Floating ornaments */}
-      <motion.div
-        style={{ y: y1 }}
-        className="absolute -top-16 -right-16 w-[420px] h-[420px] opacity-[0.12] dark:opacity-[0.08] pointer-events-none hidden lg:block"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 60, repeat: Infinity, ease: 'linear' }}
-      >
-        <svg viewBox="0 0 200 200" className="w-full h-full text-foreground">
-          <path fill="none" stroke="currentColor" strokeWidth="0.5" d="M50 50L150 50L150 150L50 150Z" />
-          <path fill="none" stroke="currentColor" strokeWidth="0.5" d="M80 20L180 20L180 120L80 120Z" />
-          <path fill="none" stroke="currentColor" strokeWidth="0.5" d="M50 50L80 20M150 50L180 20M150 150L180 120M50 150L80 120" />
-        </svg>
-      </motion.div>
-
-      <motion.div
-        style={{ y: y2 }}
-        className="absolute top-1/2 -left-28 w-72 h-72 opacity-[0.08] dark:opacity-[0.06] pointer-events-none hidden lg:block"
-        animate={{ rotate: -360 }}
-        transition={{ duration: 45, repeat: Infinity, ease: 'linear' }}
-      >
-        <svg viewBox="0 0 200 200" className="w-full h-full text-foreground">
-          <rect x="20" y="20" width="50" height="160" rx="2" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="75" y="20" width="50" height="160" rx="2" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="130" y="20" width="50" height="160" rx="2" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="25" y="30" width="40" height="20" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="25" y="55" width="40" height="25" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="25" y="85" width="40" height="15" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="80" y="40" width="40" height="30" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="80" y="75" width="40" height="20" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="135" y="30" width="40" height="40" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-          <rect x="135" y="75" width="40" height="15" rx="1" fill="none" stroke="currentColor" strokeWidth="0.5" />
-        </svg>
-      </motion.div>
 
       <div className="relative z-10 text-center max-w-4xl mx-auto">
         {/* Badge */}
@@ -106,7 +67,7 @@ export default function Hero({ y1, y2 }: HeroProps) {
         >
           <Button
             size="lg"
-            className="group h-12 px-8 text-base font-semibold rounded-full bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-foreground/10 transition-all duration-200 hover:shadow-xl hover:shadow-foreground/15 hover:scale-[1.02] active:scale-[0.98]"
+            className="group h-12 px-8 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-foreground/10 transition-all duration-200 hover:shadow-xl hover:shadow-foreground/15 hover:scale-[1.02] active:scale-[0.98]"
             asChild
           >
             <a href="/tracker" className="inline-flex items-center">
@@ -117,22 +78,12 @@ export default function Hero({ y1, y2 }: HeroProps) {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 px-8 text-base font-medium rounded-full border-border/70 bg-background/50 hover:bg-muted/50 backdrop-blur-sm transition-all duration-200"
+            className="h-12 px-8 text-base font-medium rounded-md border-border/70 bg-background/50 hover:bg-muted/50 backdrop-blur-sm transition-all duration-200"
             asChild
           >
             <a href="#demo">Watch demo</a>
           </Button>
         </motion.div>
-
-        {/* Trust line */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.45 }}
-          className="mt-8 text-xs text-muted-foreground/70 font-inter"
-        >
-          No sign-up required · Start in seconds
-        </motion.p>
       </div>
     </section>
   )
