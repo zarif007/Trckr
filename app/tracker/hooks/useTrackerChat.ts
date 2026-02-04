@@ -125,14 +125,47 @@ export function useTrackerChat() {
         }
       } else {
         setPendingQuery(null)
-        const noResponseMessage =
-          'The AI did not return a valid response. Please try again or rephrase your request.'
-        setGenerationErrorMessage(noResponseMessage)
-        const errorMessageObj: Message = {
-          role: 'assistant',
-          content: noResponseMessage,
+        // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
+        const partial = lastObjectRef.current
+        const hasPartial =
+          partial &&
+          (partial.manager ||
+            (partial.tracker &&
+              ((Array.isArray(partial.tracker.tabs) && partial.tracker.tabs.length > 0) ||
+                (Array.isArray(partial.tracker.sections) && partial.tracker.sections.length > 0) ||
+                (Array.isArray(partial.tracker.fields) && partial.tracker.fields.length > 0))))
+        if (hasPartial && partial) {
+          const rawTracker = partial.tracker
+          const built = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
+          const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
+          const assistantMessage: Message = {
+            role: 'assistant',
+            trackerData: tracker as TrackerResponse,
+            managerData: partial.manager,
+          }
+          setMessages((prev) => [...prev, assistantMessage])
+          if (tracker) setActiveTrackerData(tracker as TrackerResponse)
+          if (continueCountRef.current < MAX_AUTO_CONTINUES) {
+            setPendingContinue(true)
+            setGenerationErrorMessage(
+              'The response was cut off (output limit). Click "Continue" to complete the tracker from where it left off.'
+            )
+          } else {
+            continueCountRef.current = 0
+            setGenerationErrorMessage(
+              'The response was cut off. You can click "Continue" to try again from where it left off.'
+            )
+          }
+        } else {
+          const noResponseMessage =
+            'The AI did not return a valid response. Please try again or rephrase your request.'
+          setGenerationErrorMessage(noResponseMessage)
+          const errorMessageObj: Message = {
+            role: 'assistant',
+            content: noResponseMessage,
+          }
+          setMessages((prev) => [...prev, errorMessageObj])
         }
-        setMessages((prev) => [...prev, errorMessageObj])
       }
     },
     onError: (err: Error) => {

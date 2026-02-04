@@ -1,12 +1,10 @@
 'use client'
 
-import { Loader2, Sparkles, AlertTriangle } from 'lucide-react'
+import { Loader2, AlertTriangle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog'
 import { TrackerDisplay } from '@/app/components/tracker-display'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
@@ -53,53 +51,47 @@ export function TrackerDialog({
     }
   }
 
+  const tracker = object?.tracker
+  const isStreaming = isLoading && !!tracker
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="!max-w-6xl w-[95vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col rounded-3xl border-border/50 bg-background/95 backdrop-blur-2xl transition-all">
-        <DialogHeader className="p-6 border-b border-border/50 bg-secondary/10 shrink-0">
-          <DialogTitle className="flex items-center justify-between gap-3 text-sm md:text-xl font-bold tracking-tight">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-foreground text-background">
-                <Sparkles className="w-5 h-5" />
-              </div>
-              {isLoading && (
-                <span className="flex items-center gap-2 ml-4 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider animate-pulse border border-primary/20">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Generating...
-                </span>
-              )}
-            </div>
-            {(isLoading && object?.tracker) || activeTrackerData ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const data = trackerDataRef.current?.()
-                  console.log('Tracker data (values):', data ?? {})
-                }}
-                className="shrink-0"
-              >
-                See
-              </Button>
-            ) : null}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 overflow-y-auto p-8 lg:p-12">
-          {(isLoading && object?.tracker) ? (
+      <DialogContent
+        showCloseButton={false}
+        className={`
+          !fixed !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2
+          !flex !flex-col !p-0 !gap-0
+          !max-w-[min(95vw,80rem)] !w-[min(95vw,80rem)] !h-fit !max-h-[75vh]
+          overflow-hidden relative z-50
+          bg-background/95 backdrop-blur-2xl
+          !border-none
+          ${isStreaming ? 'animate-border-blink' : ''}
+        `.trim()}
+      >
+        <Button
+          variant="secondary"
+          size="icon"
+          className="absolute top-3 right-3 z-50 h-9 w-9 rounded-full shadow-lg opacity-90 hover:opacity-100"
+          onClick={() => handleOpenChange(false)}
+          aria-label="Close preview"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {isStreaming && tracker ? (
             <TrackerDisplay
-              tabs={((object.tracker.tabs || []) as unknown[]).filter((t): t is TrackerResponse['tabs'][number] => !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name) as TrackerResponse['tabs']}
-              sections={((object.tracker.sections || []) as unknown[]).filter((s): s is TrackerResponse['sections'][number] => !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name) as TrackerResponse['sections']}
-              grids={((object.tracker.grids || []) as unknown[]).filter((g): g is TrackerResponse['grids'][number] => !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name) as TrackerResponse['grids']}
-              fields={((object.tracker.fields || []) as unknown[]).filter((f): f is TrackerResponse['fields'][number] => !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)) as TrackerResponse['fields']}
-              layoutNodes={(object.tracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
-              bindings={(object.tracker.bindings || {}) as TrackerResponse['bindings']}
+              tabs={((tracker.tabs || []) as unknown[]).filter((t): t is TrackerResponse['tabs'][number] => !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name) as TrackerResponse['tabs']}
+              sections={((tracker.sections || []) as unknown[]).filter((s): s is TrackerResponse['sections'][number] => !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name) as TrackerResponse['sections']}
+              grids={((tracker.grids || []) as unknown[]).filter((g): g is TrackerResponse['grids'][number] => !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name) as TrackerResponse['grids']}
+              fields={((tracker.fields || []) as unknown[]).filter((f): f is TrackerResponse['fields'][number] => !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)) as TrackerResponse['fields']}
+              layoutNodes={(tracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
+              bindings={(tracker.bindings || {}) as TrackerResponse['bindings']}
               getDataRef={trackerDataRef}
             />
           ) : activeTrackerData ? (
-            <div className="space-y-4 w-full max-w-4xl mx-auto">
+            <div className="w-full">
               {validationErrors.length > 0 && (
-                <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200" role="alert">
+                <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200" role="alert">
                   <p className="font-medium mb-2 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     Schema validation issues

@@ -14,9 +14,11 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
-const DEFAULT_MAX_OUTPUT_TOKENS = 8192
+// DeepSeek Chat max output is 8K; requesting more can cause truncation and invalid JSON
+const DEEPSEEK_CHAT_MAX_OUTPUT = 8192
+const DEFAULT_MAX_OUTPUT_TOKENS = DEEPSEEK_CHAT_MAX_OUTPUT
 const MAX_OUTPUT_TOKENS = process.env.DEEPSEEK_MAX_OUTPUT_TOKENS
-  ? Math.min(65536, Math.max(1024, parseInt(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS, 10) || DEFAULT_MAX_OUTPUT_TOKENS))
+  ? Math.min(DEEPSEEK_CHAT_MAX_OUTPUT, Math.max(1024, parseInt(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS, 10) || DEFAULT_MAX_OUTPUT_TOKENS))
   : DEFAULT_MAX_OUTPUT_TOKENS
 
 export async function POST(request: Request) {
@@ -156,6 +158,10 @@ export async function POST(request: Request) {
 
       NEVER stop after the manager object. The user will see an error if 'tracker' is missing.
       You MUST populate the 'tracker' object based on the manager's PRD.
+
+      OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).
+      Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,
+      output a complete but minimal tracker (fewer optional fields); the user can ask to add more.
     `
 
     const result = streamObject({

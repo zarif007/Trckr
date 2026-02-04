@@ -12,7 +12,7 @@ import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Plus } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -402,9 +402,11 @@ export function TrackerKanbanGrid({
         <div className="flex justify-end gap-2">
           <Button
             size="sm"
-            variant="outline"
+            variant="default"
             onClick={() => setShowAddDialog(true)}
+            className="shadow-sm font-medium"
           >
+            <Plus className="h-4 w-4 mr-1.5" />
             Add Entry
           </Button>
         </div>
@@ -426,12 +428,13 @@ export function TrackerKanbanGrid({
         <EntryFormDialog
           open={editRowIndex !== null}
           onOpenChange={(open) => !open && setEditRowIndex(null)}
-          title="Row Details"
+          title="Edit Entry"
           submitLabel="Update Entry"
           fieldMetadata={fieldMetadata}
           fieldOrder={fieldOrder}
           initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
           onSave={handleEditSave}
+          mode="edit"
         />
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {groups.map((group) => {

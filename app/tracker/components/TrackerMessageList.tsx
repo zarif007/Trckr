@@ -197,7 +197,7 @@ export function TrackerMessageList({
             <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
-            <div className="flex-1 flex-row space-x-3">
+            <div className="flex-1 space-y-3">
               <div className="flex items-center gap-2 rounded-md px-4 py-2.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 <p className="text-sm">
@@ -214,7 +214,7 @@ export function TrackerMessageList({
                   className="p-5 rounded-md bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">
+                    <div className="text-[10px] flex flex-row items-center justify-center font-black text-primary uppercase tracking-[0.2em]">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
