@@ -351,6 +351,36 @@ export function resolveOptionsFromBinding(
 }
 
 /**
+ * Build a new option row to add to an options grid.
+ * Uses binding's labelField and value field from fieldMappings.
+ *
+ * @param binding - The binding entry for the select field
+ * @param selectFieldPath - Full path to the select field (e.g. "tasks_grid.status")
+ * @param label - Display label for the new option
+ * @param value - Optional stored value; defaults to label if not provided
+ * @returns Object with optionsGridId and newRow to pass to onAddEntry(gridId, newRow)
+ */
+export function buildNewOptionRow(
+  binding: TrackerBindingEntry,
+  selectFieldPath: FieldPath,
+  label: string,
+  value?: string
+): { optionsGridId: string; newRow: Record<string, unknown> } {
+  const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+  const { fieldId: labelFieldId } = parsePath(binding.labelField)
+  const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+  const storedValue = value ?? label
+  if (!optionsGridId || !labelFieldId || !valueFieldId) {
+    return { optionsGridId: optionsGridId ?? '', newRow: {} }
+  }
+  const newRow: Record<string, unknown> = {
+    [labelFieldId]: label,
+    [valueFieldId]: storedValue,
+  }
+  return { optionsGridId, newRow }
+}
+
+/**
  * Get the binding entry for a specific field.
  * Key is "grid_id.field_id" (no tab). Also tries legacy "tab.grid.field" key if provided.
  */

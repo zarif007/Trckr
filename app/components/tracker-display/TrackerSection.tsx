@@ -34,6 +34,7 @@ function GridViewContent({
   grid,
   gridLike,
   gridLayoutNodes,
+  allLayoutNodes,
   fields,
   bindings,
   gridData,
@@ -45,6 +46,8 @@ function GridViewContent({
   grid: TrackerGrid
   gridLike: Pick<TrackerGrid, 'id' | 'name' | 'type' | 'config'>
   gridLayoutNodes: TrackerLayoutNode[]
+  /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
+  allLayoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -61,12 +64,14 @@ function GridViewContent({
         tabId={tabId}
         grid={g}
         layoutNodes={gridLayoutNodes}
+        allLayoutNodes={allLayoutNodes}
         fields={fields}
         bindings={bindings}
         gridData={gridData}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
         onAddEntry={onAddEntry ? (newRow) => onAddEntry(gridId, newRow) : undefined}
+        onAddEntryToGrid={onAddEntry}
         onDeleteEntries={onDeleteEntries ? (rowIndices) => onDeleteEntries(gridId, rowIndices) : undefined}
       />
     )
@@ -92,11 +97,13 @@ function GridViewContent({
         tabId={tabId}
         grid={g}
         layoutNodes={gridLayoutNodes}
+        allLayoutNodes={allLayoutNodes}
         fields={fields}
         bindings={bindings}
         gridData={gridData}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
+        onAddEntryToGrid={onAddEntry}
       />
     )
   }
@@ -157,6 +164,7 @@ export function TrackerSection({
                   grid={grid}
                   gridLike={{ id: grid.id, name: grid.name, type: grid.type, config: grid.config }}
                   gridLayoutNodes={gridLayoutNodes}
+                  allLayoutNodes={layoutNodes}
                   fields={fields}
                   bindings={bindings}
                   gridData={gridData}
@@ -195,6 +203,7 @@ export function TrackerSection({
                     grid={grid}
                     gridLike={{ id: grid.id, name: grid.name, type: grid.type, config: grid.config }}
                     gridLayoutNodes={gridLayoutNodes}
+                    allLayoutNodes={layoutNodes}
                     fields={fields}
                     bindings={bindings}
                     gridData={gridData}
@@ -210,6 +219,7 @@ export function TrackerSection({
                       grid={grid}
                       gridLike={{ id: grid.id, name: grid.name, type: view.type, config: view.config }}
                       gridLayoutNodes={gridLayoutNodes}
+                      allLayoutNodes={layoutNodes}
                       fields={fields}
                       bindings={bindings}
                       gridData={gridData}

@@ -214,7 +214,7 @@ export function TrackerMessageList({
                   className="p-5 rounded-md bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="text-[10px] flex flex-row items-center justify-center font-black text-primary uppercase tracking-[0.2em]">
+                    <div className="text-[10px] flex flex-row space-x-2 items-center justify-center font-black text-primary uppercase tracking-[0.2em]">
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>

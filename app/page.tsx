@@ -13,7 +13,7 @@ export default function Home() {
       <div className="relative max-w-full mx-auto px-0 py-0 space-y-24 z-20">
         <Hero />
 
-        <section className='max-w-7xl mx-auto flex flex-col space-y-20 md:space-y-40'>
+        <section className='max-w-7xl mx-auto flex flex-col space-y-20 px-4 md:space-y-40'>
           <Features />
           <Examples />
           <Protocol />

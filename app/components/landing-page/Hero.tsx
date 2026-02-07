@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 
 export default function Hero() {
   return (
-    <section className="relative pt-24 pb-48 overflow-hidden">
+    <section className="relative px-4 pt-24 md:py-32 overflow-hidden">
       {/* Ambient background */}
       <div
         className="absolute inset-0 pointer-events-none"

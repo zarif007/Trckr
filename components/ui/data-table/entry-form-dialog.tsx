@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button'
 import { getValidationError, sanitizeValue, getFieldIcon, type FieldMetadata } from './utils'
 import { DataTableInput } from './data-table-input'
 import { cn } from '@/lib/utils'
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, Check } from 'lucide-react'
 
 export interface EntryFormDialogProps {
@@ -46,10 +46,14 @@ export function EntryFormDialog({
   const orderedIds = fieldOrder ?? Object.keys(fieldMetadata)
   const [formData, setFormData] = useState<Record<string, unknown>>(initialValues)
 
+  // Only reset form when dialog opens; don't reset when parent re-renders (e.g. after "Add option")
+  // so that the newly selected option is preserved in the form.
+  const prevOpenRef = useRef(false)
   useEffect(() => {
-    if (open) {
-      setFormData(initialValues)
+    if (open && !prevOpenRef.current) {
+      setFormData(initialValues ?? {})
     }
+    prevOpenRef.current = open
   }, [open, initialValues])
 
   const hasError = useMemo(() => {
@@ -169,17 +173,18 @@ export function EntryFormDialog({
                 >
                   <DataTableInput
                     value={value}
-                    onChange={(newValue) => {
+                    onChange={(newValue, options) => {
                       const sanitized = sanitizeValue(
                         newValue,
                         fieldInfo.type,
                         fieldInfo.config
                       )
                       const bindingUpdates =
-                        (fieldInfo.type === 'options' || fieldInfo.type === 'multiselect') &&
+                        options?.bindingUpdates ??
+                        ((fieldInfo.type === 'options' || fieldInfo.type === 'multiselect') &&
                           getBindingUpdates
                           ? getBindingUpdates(columnId, sanitized) ?? {}
-                          : {}
+                          : {})
                       setFormData((prev) => ({
                         ...prev,
                         [columnId]: sanitized,
@@ -189,6 +194,9 @@ export function EntryFormDialog({
                     type={fieldInfo.type}
                     options={fieldInfo.options}
                     config={fieldInfo.config}
+                    onAddOption={fieldInfo.onAddOption}
+                    optionsGridFields={fieldInfo.optionsGridFields}
+                    getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
                     className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg"
                     autoFocus={index === 0}
                   />

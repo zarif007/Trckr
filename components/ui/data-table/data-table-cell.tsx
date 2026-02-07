@@ -29,10 +29,14 @@ export function DataTableCell<TData, TValue>({
     setValue(cell.getValue())
   }, [cell.getValue()])
 
-  const handleUpdate = (newValue: any) => {
+  const handleUpdate = (newValue: any, options?: { bindingUpdates?: Record<string, unknown> }) => {
     setDirty(true)
     setValue(newValue)
     meta?.updateData?.(row.index, cell.column.id, newValue)
+    const bindingUpdates = options?.bindingUpdates ?? {}
+    Object.entries(bindingUpdates).forEach(([fieldId, val]) =>
+      meta?.updateData?.(row.index, fieldId, val)
+    )
   }
 
   const validationError = fieldInfo
@@ -64,6 +68,9 @@ export function DataTableCell<TData, TValue>({
           type={fieldInfo.type}
           options={fieldInfo.options}
           config={fieldInfo.config}
+          onAddOption={fieldInfo.onAddOption}
+          optionsGridFields={fieldInfo.optionsGridFields}
+          getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
         />
       ) : (
         <div className="w-full h-full px-4 flex items-center text-[13px] text-foreground/90">

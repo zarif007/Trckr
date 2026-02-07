@@ -60,7 +60,7 @@ export default function RootLayout({
           storageKey="trckr-theme"
         >
           <NavBar />
-          <main className="max-w-full mx-auto pt-16">
+          <main className="max-w-full mx-auto">
             {children}
           </main>
         </ThemeProvider>

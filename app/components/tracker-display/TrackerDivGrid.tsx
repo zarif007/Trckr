@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -8,6 +9,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import {
   TrackerGrid,
@@ -16,30 +25,51 @@ import {
   TrackerBindings,
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
-import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
+import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
+import { Plus } from 'lucide-react'
+import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
+import { AddOptionFieldInput } from '@/components/ui/data-table/data-table-input'
+
+const ADD_OPTION_VALUE = '__add_option__'
 
 interface TrackerDivGridProps {
   tabId: string
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
+  /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
+  allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
+  /** Add a row to any grid (e.g. options grid). Used for "Add option" in select/multiselect. */
+  onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void
 }
 
 export function TrackerDivGrid({
   tabId,
   grid,
   layoutNodes,
+  allLayoutNodes,
   fields,
   bindings = {},
   gridData = {},
   onUpdate,
   onCrossGridUpdate,
+  onAddEntryToGrid,
 }: TrackerDivGridProps) {
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
+
+  const [addOptionOpen, setAddOptionOpen] = useState(false)
+  const [addOptionRow, setAddOptionRow] = useState<Record<string, unknown>>({})
+  const addOptionContextRef = useRef<{
+    fieldId: string
+    onAddOption: (row: Record<string, unknown>) => string
+    isMultiselect: boolean
+    currentValue: unknown
+    optionsGridFields: OptionsGridFieldDef[]
+  } | null>(null)
 
   const data = gridData?.[grid.id]?.[0] || {}
 
@@ -57,6 +87,35 @@ export function TrackerDivGrid({
         const options = (field.dataType === 'options' || field.dataType === 'multiselect')
           ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
           : undefined
+
+        const binding = (field.dataType === 'options' || field.dataType === 'multiselect') && onAddEntryToGrid
+          ? getBindingForField(grid.id, field.id, bindings, tabId)
+          : undefined
+        const selectFieldPath = `${grid.id}.${field.id}`
+        let optionsGridFields: OptionsGridFieldDef[] = []
+        let onAddOption: ((row: Record<string, unknown>) => string) | undefined
+        if (binding && onAddEntryToGrid) {
+          const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+          const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+          const { fieldId: labelFieldId } = parsePath(binding.labelField)
+          const allNodes = allLayoutNodes ?? layoutNodes
+          const optionLayoutNodes = allNodes.filter((n) => n.gridId === (optionsGridId ?? '')).sort((a, b) => a.order - b.order)
+          optionsGridFields = optionLayoutNodes
+            .map((n) => fields.find((f) => f.id === n.fieldId))
+            .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
+            .map((f) => ({
+              id: f.id,
+              label: f.ui.label,
+              type: f.dataType as OptionsGridFieldDef['type'],
+              config: f.config as OptionsGridFieldDef['config'],
+            }))
+          onAddOption = (row: Record<string, unknown>) => {
+            onAddEntryToGrid!(optionsGridId!, row)
+            const val = row[valueFieldId ?? '']
+            const label = labelFieldId ? row[labelFieldId] : undefined
+            return String(val ?? label ?? '')
+          }
+        }
 
         const value = data[field.id]
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
@@ -118,7 +177,19 @@ export function TrackerDivGrid({
               return (
                 <Select
                   value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
-                  onValueChange={(val) => handleSelectChange(val === '__empty__' ? '' : val)}
+                  onValueChange={(val) => {
+                    if (val === ADD_OPTION_VALUE && onAddOption) {
+                      const initial: Record<string, unknown> = {}
+                      optionsGridFields.forEach((f) => {
+                        initial[f.id] = f.type === 'number' ? undefined : f.type === 'boolean' ? false : ''
+                      })
+                      addOptionContextRef.current = { fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields }
+                      setAddOptionRow(initial)
+                      setAddOptionOpen(true)
+                      return
+                    }
+                    handleSelectChange(val === '__empty__' ? '' : val)
+                  }}
                 >
                   <SelectTrigger className="w-full bg-secondary/10 border-border/50">
                     <SelectValue placeholder={`Select ${field.ui.label}`} />
@@ -132,6 +203,12 @@ export function TrackerDivGrid({
                         </SelectItem>
                       )
                     })}
+                    {onAddOption && (
+                      <SelectItem value={ADD_OPTION_VALUE} className="text-muted-foreground border-t border-border/50">
+                        <Plus className="h-3.5 w-3.5 mr-1.5 inline" />
+                        Add option...
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               )
@@ -146,6 +223,15 @@ export function TrackerDivGrid({
                   onChange={(val) => handleSelectChange(val)}
                   placeholder={`Select ${field.ui.label}`}
                   className="w-full bg-secondary/10 border-border/50"
+                  onAddOptionClick={onAddOption ? () => {
+                    const initial: Record<string, unknown> = {}
+                    optionsGridFields.forEach((f) => {
+                      initial[f.id] = f.type === 'number' ? undefined : f.type === 'boolean' ? false : ''
+                    })
+                    addOptionContextRef.current = { fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields }
+                    setAddOptionRow(initial)
+                    setAddOptionOpen(true)
+                  } : undefined}
                 />
               )
             }
@@ -199,6 +285,49 @@ export function TrackerDivGrid({
           </div>
         )
       })}
+      {onAddEntryToGrid && (
+        <Dialog open={addOptionOpen} onOpenChange={setAddOptionOpen}>
+          <DialogContent className="sm:max-w-[400px]" onCloseAutoFocus={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle>Add option</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-2">
+              {(addOptionContextRef.current?.optionsGridFields ?? []).map((f) => (
+                <div key={f.id} className="space-y-1.5">
+                  {f.type !== 'boolean' && (
+                    <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
+                  )}
+                  <AddOptionFieldInput
+                    field={f}
+                    value={addOptionRow[f.id]}
+                    onChange={(val) => setAddOptionRow((prev) => ({ ...prev, [f.id]: val }))}
+                  />
+                </div>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setAddOptionOpen(false)}>Cancel</Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const ctx = addOptionContextRef.current
+                  if (!ctx) return
+                  const newValue = ctx.onAddOption(addOptionRow)
+                  if (ctx.isMultiselect) {
+                    const current = Array.isArray(ctx.currentValue) ? ctx.currentValue : []
+                    onUpdate?.(0, ctx.fieldId, [...current.map(String), newValue])
+                  } else {
+                    onUpdate?.(0, ctx.fieldId, newValue)
+                  }
+                  setAddOptionOpen(false)
+                }}
+              >
+                Add
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

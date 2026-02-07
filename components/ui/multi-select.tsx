@@ -28,6 +28,8 @@ interface MultiSelectProps {
   required?: boolean
   disabled?: boolean
   'aria-invalid'?: boolean
+  /** When set, shows "Add option..." in the list; callback is responsible for adding and optionally updating value. */
+  onAddOptionClick?: () => void
 }
 
 export function MultiSelect({
@@ -41,6 +43,7 @@ export function MultiSelect({
   required = false,
   disabled = false,
   'aria-invalid': ariaInvalid = false,
+  onAddOptionClick,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(autoFocus)
 
@@ -108,6 +111,15 @@ export function MultiSelect({
                   </CommandItem>
                 )
               })}
+              {onAddOptionClick && (
+                <CommandItem
+                  onSelect={() => onAddOptionClick()}
+                  className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
+                >
+                  <span className="mr-2">+</span>
+                  Add option...
+                </CommandItem>
+              )}
             </CommandGroup>
           </CommandList>
         </Command>

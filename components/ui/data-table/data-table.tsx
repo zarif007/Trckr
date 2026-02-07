@@ -392,7 +392,7 @@ export function DataTable<TData, TValue>({
                                 >
                                   <DataTableInput
                                     value={value}
-                                    onChange={(newValue) => {
+                                    onChange={(newValue, options) => {
                                       setRowDetailsTouchedFields((prev) =>
                                         new Set([...prev, col.id])
                                       )
@@ -402,15 +402,23 @@ export function DataTable<TData, TValue>({
                                         fieldInfo.config
                                       )
                                       const updateData = meta?.updateData
-                                      updateData?.(
-                                        rowDetailsRow.index,
-                                        col.id,
-                                        sanitized,
+                                      updateData?.(rowDetailsRow.index, col.id, sanitized)
+                                      const bindingUpdates =
+                                        options?.bindingUpdates ??
+                                        ((fieldInfo.type === 'options' || fieldInfo.type === 'multiselect') &&
+                                          getBindingUpdates
+                                          ? getBindingUpdates(col.id, sanitized) ?? {}
+                                          : {})
+                                      Object.entries(bindingUpdates).forEach(
+                                        ([fieldId, val]) => updateData?.(rowDetailsRow.index, fieldId, val)
                                       )
                                     }}
                                     type={fieldInfo.type}
                                     options={fieldInfo.options}
                                     config={fieldInfo.config}
+                                    onAddOption={fieldInfo.onAddOption}
+                                    optionsGridFields={fieldInfo.optionsGridFields}
+                                    getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
                                     className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg"
                                   />
                                 </div>

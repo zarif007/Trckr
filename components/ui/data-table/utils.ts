@@ -100,12 +100,26 @@ export function sanitizeValue(
   }
 }
 
+/** Field definition for the "Add option" form (one per column in the options grid). */
+export interface OptionsGridFieldDef {
+  id: string
+  label: string
+  type: FieldType
+  config?: FieldConfig
+}
+
 export interface FieldMetadata {
   [key: string]: {
     name: string
     type: FieldType
     options?: (string | { id: string; label: string })[]
     config?: FieldConfig
+    /** Fields to show in the Add Option form (columns of the options grid). When set with onAddOption, dialog collects all values. */
+    optionsGridFields?: OptionsGridFieldDef[]
+    /** When set, select/multiselect shows "Add option". Pass full row (all option grid field values); returns the new option value for the select. */
+    onAddOption?: (row: Record<string, unknown>) => string
+    /** When adding an option, compute binding updates from the new row (for auto-populate in Add Entry dialog). */
+    getBindingUpdatesFromRow?: (row: Record<string, unknown>) => Record<string, unknown>
   }
 }
 
