@@ -88,9 +88,9 @@ export function DataTable<TData, TValue>({
     () => [
       {
         id: 'select',
-        size: 34,
-        minSize: 34,
-        maxSize: 34,
+        size: 44,
+        minSize: 44,
+        maxSize: 44,
         header: ({ table }) => (
           <div className="flex items-center justify-center">
             <Checkbox
@@ -116,9 +116,9 @@ export function DataTable<TData, TValue>({
       ...columns,
       {
         id: 'actions',
-        size: 34,
-        minSize: 34,
-        maxSize: 34,
+        size: 44,
+        minSize: 44,
+        maxSize: 44,
         header: ({ table }) => (
           <Dialog>
             <DialogTrigger asChild>
@@ -214,7 +214,7 @@ export function DataTable<TData, TValue>({
     },
   })
 
-  const fixedWidth = '34px'
+  const fixedWidth = '44px'
 
   const handleAddEntry = (values: Record<string, any>) => {
     onAddEntry?.(values)
@@ -462,7 +462,7 @@ export function DataTable<TData, TValue>({
         </Dialog>
       </div>
       <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
-        <Table className="w-full border-collapse">
+        <Table className="w-full min-w-max border-collapse">
           <TableHeader className="">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
@@ -480,11 +480,12 @@ export function DataTable<TData, TValue>({
                       key={header.id}
                       style={{
                         width: isSelect || isActions ? fixedWidth : undefined,
+                        minWidth: isSelect || isActions ? fixedWidth : undefined,
                       }}
                       className={cn(
                         'h-9 text-muted-foreground font-medium text-[13px] border-r border-border/50 last:border-r-0',
                         isSelect || isActions
-                          ? 'p-0 text-center w-[34px]'
+                          ? 'p-0 text-center min-w-[44px] w-[44px]'
                           : 'px-4',
                       )}
                     >
@@ -528,7 +529,7 @@ export function DataTable<TData, TValue>({
                         <TableCell
                           key={cell.id}
                           style={{ width: fixedWidth, minWidth: fixedWidth }}
-                          className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0"
+                          className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
                         >
                           <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
                             {flexRender(
