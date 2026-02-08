@@ -6,6 +6,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/build-bindings'
+import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 
 export interface TrackerResponse extends TrackerDisplayProps { }
@@ -20,7 +21,7 @@ export interface Message {
 }
 
 const CONTINUE_PROMPT =
-  'Continue and complete the tracker. Do not stop until the full schema is complete: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
+  'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
 
 const MAX_AUTO_CONTINUES = 3
 
@@ -82,6 +83,47 @@ export function useTrackerChat() {
   const continueCountRef = useRef(0)
   const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
+  const messagesRef = useRef<Message[]>([])
+  const activeTrackerRef = useRef<TrackerResponse | null>(null)
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  useEffect(() => {
+    activeTrackerRef.current = activeTrackerData
+  }, [activeTrackerData])
+
+  const getBaseTracker = () => {
+    if (activeTrackerRef.current) return activeTrackerRef.current
+    const reversed = [...messagesRef.current].reverse()
+    return reversed.find((msg) => msg.trackerData)?.trackerData ?? null
+  }
+
+  const trackerHasAnyData = (tracker?: TrackerLike | null) => {
+    if (!tracker) return false
+    return Boolean(
+      (Array.isArray(tracker.tabs) && tracker.tabs.length > 0) ||
+      (Array.isArray(tracker.sections) && tracker.sections.length > 0) ||
+      (Array.isArray(tracker.grids) && tracker.grids.length > 0) ||
+      (Array.isArray(tracker.fields) && tracker.fields.length > 0),
+    )
+  }
+
+  const buildTrackerFromResponse = (response?: MultiAgentSchema) => {
+    if (!response) return null
+    const base = getBaseTracker()
+    let rawTracker = response.tracker as TrackerLike | undefined
+
+    if (!rawTracker && response.trackerPatch && base) {
+      rawTracker = applyTrackerPatch(base, response.trackerPatch) as TrackerLike
+    }
+
+    if (!rawTracker) return null
+    const built = buildBindingsFromSchema(rawTracker as TrackerLike)
+    const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
+    return tracker as TrackerResponse
+  }
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
@@ -91,10 +133,7 @@ export function useTrackerChat() {
       setResumingAfterError(false)
       setValidationErrors([])
       if (finishedObject) {
-        const rawTracker = finishedObject.tracker
-        const built = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
-        const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
-
+        const tracker = buildTrackerFromResponse(finishedObject)
         const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
         if (!validation.valid) {
           setValidationErrors(validation.errors)
@@ -128,24 +167,18 @@ export function useTrackerChat() {
         setPendingQuery(null)
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current
+        const partialTracker = buildTrackerFromResponse(partial)
         const hasPartial =
           partial &&
-          (partial.manager ||
-            (partial.tracker &&
-              ((Array.isArray(partial.tracker.tabs) && partial.tracker.tabs.length > 0) ||
-                (Array.isArray(partial.tracker.sections) && partial.tracker.sections.length > 0) ||
-                (Array.isArray(partial.tracker.fields) && partial.tracker.fields.length > 0))))
+          (partial.manager || trackerHasAnyData(partialTracker))
         if (hasPartial && partial) {
-          const rawTracker = partial.tracker
-          const built = rawTracker ? buildBindingsFromSchema(rawTracker as TrackerLike) : rawTracker
-          const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
           const assistantMessage: Message = {
             role: 'assistant',
-            trackerData: tracker as TrackerResponse,
+            trackerData: partialTracker ?? undefined,
             managerData: partial.manager,
           }
           setMessages((prev) => [...prev, assistantMessage])
-          if (tracker) setActiveTrackerData(tracker as TrackerResponse)
+          if (partialTracker) setActiveTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
             setPendingContinue(true)
             setGenerationErrorMessage(
@@ -171,13 +204,10 @@ export function useTrackerChat() {
     },
     onError: (err: Error) => {
       const partial = lastObjectRef.current
+      const partialTracker = buildTrackerFromResponse(partial)
       const hasPartial =
         partial &&
-        (partial.manager ||
-          (partial.tracker &&
-            ((Array.isArray(partial.tracker.tabs) && partial.tracker.tabs.length > 0) ||
-              (Array.isArray(partial.tracker.sections) && partial.tracker.sections.length > 0) ||
-              (Array.isArray(partial.tracker.fields) && partial.tracker.fields.length > 0))))
+        (partial.manager || trackerHasAnyData(partialTracker))
 
       if (hasPartial && partial) {
         setResumingAfterError(true)
@@ -186,7 +216,7 @@ export function useTrackerChat() {
         )
         const assistantMessage: Message = {
           role: 'assistant',
-          trackerData: partial.tracker as TrackerResponse,
+          trackerData: partialTracker ?? undefined,
           managerData: partial.manager,
         }
         setMessages((prev) => [...prev, assistantMessage])
@@ -261,11 +291,11 @@ export function useTrackerChat() {
   }, [pendingContinue, isLoading, messages])
 
   useEffect(() => {
-    if (isLoading && object?.tracker) {
+    if (isLoading && (object?.tracker || object?.trackerPatch)) {
       setIsDialogOpen(true)
       setGenerationErrorMessage(null)
     }
-  }, [isLoading, object?.tracker])
+  }, [isLoading, object?.tracker, object?.trackerPatch])
 
   useEffect(() => {
     if (!isLoading && (error || generationErrorMessage)) {

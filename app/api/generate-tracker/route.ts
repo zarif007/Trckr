@@ -153,10 +153,19 @@ export async function POST(request: Request) {
       
       CRITICAL: You are a unified system. You MUST generate a response containing TWO parts:
       1. "manager": The breakdown of requirements.
-      2. "tracker": The actual schema implementation.
+      2. Either "tracker" (full schema) OR "trackerPatch" (incremental changes).
 
-      NEVER stop after the manager object. The user will see an error if 'tracker' is missing.
-      You MUST populate the 'tracker' object based on the manager's PRD.
+      NEVER stop after the manager object. The user will see an error if neither 'tracker' nor 'trackerPatch' is present.
+      You MUST populate the 'tracker' object (first-time build) or 'trackerPatch' (incremental update) based on the manager's PRD.
+
+      PATCH MODE (when "Current Tracker State (JSON)" is present):
+      - Output ONLY "trackerPatch" (do not output the full "tracker").
+      - Include ONLY the items that changed.
+      - For tabs/sections/grids/fields/layoutNodes: include the item with its id (layoutNodes use gridId + fieldId).
+      - To delete an item, include it with "_delete": true.
+      - For new items, include all required fields (id, name, placeId, config, etc.).
+      - For updates, include only changed fields (plus id).
+      - For bindings, set keys in "bindings"; set a key to null to delete it. Optionally list keys in "bindingsRemove".
 
       OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).
       Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,
@@ -174,8 +183,8 @@ export async function POST(request: Request) {
         if (validationError) {
           console.error('[generate-tracker] Final object failed validation:', validationError)
         }
-        if (!finalObject?.tracker && !validationError) {
-          console.warn('[generate-tracker] Stream finished but no tracker in response (possible max tokens or empty output)')
+        if (!finalObject?.tracker && !finalObject?.trackerPatch && !validationError) {
+          console.warn('[generate-tracker] Stream finished but no tracker/patch in response (possible max tokens or empty output)')
         }
       },
     })

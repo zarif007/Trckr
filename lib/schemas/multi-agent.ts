@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { trackerSchema } from './tracker'
+import { gridViewSchema, trackerSchema } from './tracker'
 
 export const managerSchema = z.object({
   thinking: z.string().describe('Detailed thinking process or internal monologue of the manager'),
@@ -16,11 +16,88 @@ export const managerSchema = z.object({
   })).optional().describe('A strict Todo list for the Builder Agent to execute. Derived from comparing the User Request with the Previous Tracker.')
 })
 
+const patchConfigSchema = z.record(z.string(), z.any()).optional()
+
+const tabPatchSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().optional(),
+    placeId: z.coerce.number().optional(),
+    config: patchConfigSchema,
+    _delete: z.boolean().optional(),
+  })
+  .passthrough()
+
+const sectionPatchSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().optional(),
+    tabId: z.string().optional(),
+    placeId: z.coerce.number().optional(),
+    config: patchConfigSchema,
+    _delete: z.boolean().optional(),
+  })
+  .passthrough()
+
+const gridPatchSchema = z
+  .object({
+    id: z.string(),
+    name: z.string().optional(),
+    sectionId: z.string().optional(),
+    placeId: z.coerce.number().optional(),
+    config: patchConfigSchema,
+    views: z.array(gridViewSchema).optional(),
+    _delete: z.boolean().optional(),
+  })
+  .passthrough()
+
+const fieldPatchSchema = z
+  .object({
+    id: z.string(),
+    dataType: z.string().optional(),
+    ui: z
+      .object({
+        label: z.string().optional(),
+        placeholder: z.string().optional(),
+      })
+      .partial()
+      .optional(),
+    config: patchConfigSchema,
+    _delete: z.boolean().optional(),
+  })
+  .passthrough()
+
+const renderAsEnum = z.enum(['default', 'table', 'kanban', 'calendar', 'timeline']).optional()
+
+const layoutNodePatchSchema = z
+  .object({
+    gridId: z.string(),
+    fieldId: z.string(),
+    order: z.coerce.number().optional(),
+    renderAs: renderAsEnum,
+    _delete: z.boolean().optional(),
+  })
+  .passthrough()
+
+export const trackerPatchSchema = z
+  .object({
+    tabs: z.array(tabPatchSchema).optional(),
+    sections: z.array(sectionPatchSchema).optional(),
+    grids: z.array(gridPatchSchema).optional(),
+    fields: z.array(fieldPatchSchema).optional(),
+    layoutNodes: z.array(layoutNodePatchSchema).optional(),
+    bindings: z.record(z.string(), z.any()).optional(),
+    bindingsRemove: z.array(z.string()).optional(),
+  })
+  .passthrough()
+
 export const multiAgentSchema = z
   .object({
     manager: managerSchema.optional(),
     tracker: trackerSchema.optional(),
+    trackerPatch: trackerPatchSchema.optional(),
   })
   .passthrough()
 
 export type MultiAgentSchema = z.infer<typeof multiAgentSchema>
+export type TrackerPatchSchema = z.infer<typeof trackerPatchSchema>

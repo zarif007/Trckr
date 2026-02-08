@@ -77,6 +77,7 @@ export function TrackerMessageList({
   const object = streamedObject as {
     manager?: { thinking?: string; prd?: { name?: string; description?: string }; builderTodo?: Array<{ action?: string; target?: string; task?: string }> }
     tracker?: TrackerResponse
+    trackerPatch?: Record<string, unknown>
   } | undefined
   return (
     <motion.div
@@ -202,7 +203,7 @@ export function TrackerMessageList({
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 <p className="text-sm">
                   {!object?.manager ? 'Consulting Product Manager...' :
-                    !object?.tracker ? 'Architecting structure...' :
+                    !(object?.tracker || object?.trackerPatch) ? 'Architecting structure...' :
                       'Constructing your tracker...'}
                 </p>
               </div>
@@ -219,7 +220,7 @@ export function TrackerMessageList({
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
                       </span>
-                      Strategy Phase
+                      <p>Strategy Phase</p>
                     </div>
                   </div>
 
