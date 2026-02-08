@@ -10,7 +10,7 @@ import { TrackerDisplay } from '@/app/components/tracker-display'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
 
 /** Streamed object from useObject – typed loosely to accept PartialObject from AI SDK */
-type StreamedObject = { manager?: unknown; tracker?: unknown } | undefined
+type StreamedObject = { manager?: unknown; tracker?: unknown; trackerPatch?: unknown } | undefined
 
 interface TrackerDialogProps {
   open: boolean
@@ -43,7 +43,10 @@ export function TrackerDialog({
   trackerDataRef,
   messagesLength,
 }: TrackerDialogProps) {
-  const object = streamedObject as { tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown } } | undefined
+  const object = streamedObject as {
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown }
+    trackerPatch?: unknown
+  } | undefined
   const handleOpenChange = (next: boolean) => {
     onOpenChange(next)
     if (!next) {
@@ -52,7 +55,7 @@ export function TrackerDialog({
   }
 
   const tracker = object?.tracker
-  const isStreaming = isLoading && !!tracker
+  const isStreaming = isLoading
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
