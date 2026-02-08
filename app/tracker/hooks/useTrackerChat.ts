@@ -29,6 +29,7 @@ export const suggestions = [
   {
     icon: Zap,
     title: 'Personal Fitness Logger',
+    summary: 'Fitness log',
     desc: 'Track workouts, weights, and progress over time',
     query: 'Create a personal fitness tracker to log daily workouts, sets, reps, and body weight progress.',
     gradient: 'from-orange-500/20 to-red-500/20',
@@ -37,6 +38,7 @@ export const suggestions = [
   {
     icon: Target,
     title: 'Company Inventory',
+    summary: 'Inventory',
     desc: 'Manage stock levels, suppliers, and SKU details',
     query: 'Build a company inventory system to track stock levels, supplier contacts, and warehouse locations.',
     gradient: 'from-blue-500/20 to-cyan-500/20',
@@ -45,6 +47,7 @@ export const suggestions = [
   {
     icon: BookOpen,
     title: 'Recipe Collection',
+    summary: 'Recipe book',
     desc: 'Save favorite recipes with ingredients and cooking steps',
     query: 'Design a digital cookbook for saving recipes, including ingredient lists, difficulty ratings, and preparation time.',
     gradient: 'from-green-500/20 to-emerald-500/20',
@@ -53,6 +56,7 @@ export const suggestions = [
   {
     icon: CheckSquare,
     title: 'Project Task Manager',
+    summary: 'Project tasks',
     desc: 'Stay organized with deadlines, priorities, and status',
     query: 'Create a project management tracker with task deadlines, priority levels, and kanban stages.',
     gradient: 'from-purple-500/20 to-pink-500/20',

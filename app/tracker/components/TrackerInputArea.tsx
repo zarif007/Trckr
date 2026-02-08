@@ -15,6 +15,7 @@ interface TrackerInputAreaProps {
   isLoading: boolean
   isChatEmpty: boolean
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
+  variant?: 'default' | 'hero'
 }
 
 export function TrackerInputArea({
@@ -27,9 +28,11 @@ export function TrackerInputArea({
   isLoading,
   isChatEmpty,
   textareaRef,
+  variant = 'default',
 }: TrackerInputAreaProps) {
+  const isHero = variant === 'hero'
   return (
-    <div className="space-y-3">
+    <div className={isHero ? 'space-y-4' : 'space-y-3'}>
       {!isChatEmpty && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -53,11 +56,13 @@ export function TrackerInputArea({
 
       <div className="relative group">
         <motion.div
-          className={`absolute -inset-[1px] rounded-[14px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
+          className={`absolute -inset-[1px] rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-sm ${isFocused ? 'opacity-100' : ''}`}
         />
 
-        <div className="relative bg-card rounded-[12px] shadow-xl border border-border/50 overflow-hidden border-2 border-muted/100">
-          <div className="flex items-end gap-2 p-1.5">
+        <div
+          className={`relative bg-card rounded-md shadow-xl border border-border/50 overflow-hidden border-2 border-muted/100 ${isHero ? 'rounded-[18px] shadow-2xl border-border/70' : ''}`}
+        >
+          <div className={`flex items-end gap-2 ${isHero ? 'p-3 md:p-4' : 'p-1.5'}`}>
             <textarea
               ref={textareaRef}
               value={input}
@@ -76,21 +81,21 @@ export function TrackerInputArea({
               }}
               placeholder={isChatEmpty ? 'Describe your ideal tracker...' : 'Ask for changes or refinements...'}
               rows={1}
-              className="flex-1 px-3 py-3 bg-transparent resize-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50 focus:outline-none min-h-[44px] max-h-[200px]"
+              className={`flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground/50 focus:outline-none max-h-[200px] ${isHero ? 'px-3 py-4 text-base min-h-[72px]' : 'px-3 py-3 text-sm font-medium min-h-[44px]'}`}
             />
 
             <Button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className={`shrink-0 h-10 w-10 rounded-[8px] transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed ${input.trim() && !isLoading
+              className={`shrink-0 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed rounded-md ${isHero ? 'h-12 w-12' : 'h-10 w-10'} ${input.trim() && !isLoading
                 ? 'bg-foreground text-background hover:bg-foreground/90'
                 : 'bg-secondary text-muted-foreground'
                 }`}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className={`${isHero ? 'w-5 h-5' : 'w-4 h-4'} animate-spin`} />
               ) : (
-                <Send className="w-4 h-4" />
+                <Send className={isHero ? 'w-5 h-5' : 'w-4 h-4'} />
               )}
             </Button>
           </div>

@@ -1,14 +1,16 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
 import { suggestions } from '../hooks/useTrackerChat'
 
 interface TrackerEmptyStateProps {
   onApplySuggestion: (query: string) => void
+  inputSlot?: ReactNode
 }
 
-export function TrackerEmptyState({ onApplySuggestion }: TrackerEmptyStateProps) {
+export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmptyStateProps) {
   return (
     <motion.div
       key="empty-state"
@@ -16,7 +18,7 @@ export function TrackerEmptyState({ onApplySuggestion }: TrackerEmptyStateProps)
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-[60vh] space-y-12"
+      className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 md:space-y-10"
     >
       <div className="relative">
         <motion.div
@@ -42,30 +44,24 @@ export function TrackerEmptyState({ onApplySuggestion }: TrackerEmptyStateProps)
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-xl">
+      <div className="w-full max-w-3xl">
+        {inputSlot}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-center gap-2 w-full max-w-3xl">
         {suggestions.map((suggestion) => (
           <button
             key={suggestion.title}
             onClick={() => onApplySuggestion(suggestion.query)}
-            className="relative p-4 rounded-md border border-border/50 bg-card hover:bg-card/80 hover:border-primary/40 transition-all text-left group"
+            className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-card/70 hover:bg-card hover:border-primary/40 transition-all text-left shadow-sm"
           >
-            <div className="space-y-2">
-              <div className="flex items-start justify-between">
-                <div className={`p-2 rounded-md bg-background/50 backdrop-blur-sm ${suggestion.iconColor} border border-current/20`}>
-                  <suggestion.icon className="w-4 h-4" />
-                </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-1 transition-all duration-300" />
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                  {suggestion.title}
-                </h4>
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
-                  {suggestion.desc}
-                </p>
-              </div>
-            </div>
+            <span className={`text-xs ${suggestion.iconColor}`}>
+              <suggestion.icon className="w-3.5 h-3.5" />
+            </span>
+            <span className="text-[11px] font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
+              {suggestion.summary ?? suggestion.title}
+            </span>
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
           </button>
         ))}
       </div>
