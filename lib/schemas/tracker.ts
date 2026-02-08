@@ -47,25 +47,25 @@ export const sectionConfigSchema = anyConfig()
 /** Grid config */
 export const gridConfigSchema = anyConfig()
 
-const gridTypeEnum = z
+const viewTypeEnum = z
   .enum(['div', 'table', 'kanban', 'timeline', 'calendar'])
   .catch('table')
   .describe(
     'div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.'
   )
 
-/** View id for shadow views (e.g. tasks_kanban_view). Optional _view suffix to avoid clashing with grid ids. */
+/** View id for grid views (e.g. tasks_kanban_view). Optional _view suffix to avoid clashing with grid ids. */
 const viewId = () =>
   z
     .string()
     .describe('Unique view id (e.g. tasks_kanban_view). Same data as parent grid; different type/config.')
 
-/** Shadow view: alternative representation of the same grid data (e.g. Kanban for a table grid). */
+/** View: alternative representation of the same grid data (e.g. Kanban for a table grid). */
 export const gridViewSchema = z
   .object({
     id: viewId(),
     name: z.string().describe('Tab label (e.g. "Kanban")'),
-    type: gridTypeEnum.describe('View type; use type-specific config (e.g. groupBy for kanban).'),
+    type: viewTypeEnum.describe('View type; use type-specific config (e.g. groupBy for kanban).'),
     config: gridConfigSchema,
   })
   .passthrough()
@@ -110,11 +110,11 @@ const bindingEntrySchema = z
   })
   .passthrough()
 
-/** Top-level bindings object. Key is full field path: tab_id.grid_id.field_id */
+/** Top-level bindings object. Key is full field path: grid_id.field_id */
 export const bindingsSchema = z
   .record(z.string(), bindingEntrySchema)
   .default({})
-  .describe('Bindings for select/multiselect fields. Key is full field path. MANDATORY for all select/multiselect fields.')
+  .describe('Bindings for select/multiselect fields. Key is grid_id.field_id. MANDATORY for all select/multiselect fields.')
 
 export const trackerSchema = z
   .object({
@@ -153,17 +153,16 @@ export const trackerSchema = z
           .object({
             id: gridId(),
             name: z.string(),
-            type: gridTypeEnum,
             sectionId: z.string(),
             placeId: z.coerce.number(),
             config: gridConfigSchema,
-            views: z.array(gridViewSchema).default([]).optional().describe('Optional shadow views: same data, different representation (e.g. Table + Kanban tabs). Each view has its own type and config (e.g. groupBy for kanban).'),
+            views: z.array(gridViewSchema).default([]).describe('Views for this grid. Each view has its own type and config (e.g. groupBy for kanban).'),
           })
           .passthrough()
       )
       .default([])
       .describe(
-        'Array of grid objects. Use div only for one-per-view content; use table (or kanban/timeline/calendar) for repeating data.'
+        'Array of grid objects. Grid type is defined by views; use div view only for one-per-view content; use table/kanban/timeline/calendar views for repeating data.'
       ),
 
     fields: z

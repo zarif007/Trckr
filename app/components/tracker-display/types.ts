@@ -47,10 +47,10 @@ export type TrackerGridConfig = {
   [key: string]: unknown
 }
 
-/** Shadow view: same grid data, different type/config (e.g. Kanban tab with groupBy). */
+/** View: same grid data, different type/config (e.g. Kanban tab with groupBy). */
 export type TrackerGridView = {
-  id: string
-  name: string
+  id?: string
+  name?: string
   type: GridType
   config?: TrackerGridConfig
 }
@@ -58,12 +58,13 @@ export type TrackerGridView = {
 export type TrackerGrid = {
   id: string
   name: string
-  type: GridType
   sectionId: string
   placeId: number
   config?: TrackerGridConfig
-  /** Optional shadow views (e.g. Table | Kanban tabs); each has its own type and config. */
+  /** Required views (Table/Kanban/etc); each has its own type and config. */
   views?: TrackerGridView[]
+  /** Legacy: grid-level type (deprecated; use views instead). */
+  type?: GridType
 }
 
 /** Field config: isRequired (show "*", validate), isDisabled, isHidden; plus type-specific. */

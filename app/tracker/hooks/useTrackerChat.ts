@@ -108,6 +108,7 @@ export function useTrackerChat() {
           trackerData: tracker as TrackerResponse,
           managerData: finishedObject.manager,
         }
+        console.log('assistantMessage', assistantMessage)
         setMessages((prev) => [...prev, assistantMessage])
         setPendingQuery(null)
         if (hasValidTracker) {

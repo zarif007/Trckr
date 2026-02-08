@@ -105,7 +105,6 @@ export async function POST(request: Request) {
             grids: grids.map((g: any) => ({
               id: g.id,
               name: g.name,
-              type: g.type,
               sectionId: g.sectionId,
               placeId: g.placeId,
               config: g.config ?? {},

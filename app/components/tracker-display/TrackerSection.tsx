@@ -1,6 +1,7 @@
 import {
   TrackerSection as ITrackerSection,
   TrackerGrid,
+  GridType,
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
@@ -9,6 +10,38 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TrackerTableGrid } from './TrackerTableGrid'
 import { TrackerKanbanGrid } from './TrackerKanbanGrid'
 import { TrackerDivGrid } from './TrackerDivGrid'
+
+const viewLabelForType = (type: GridType) => {
+  if (type === 'div') return 'Form'
+  if (type === 'table') return 'Table'
+  if (type === 'kanban') return 'Kanban'
+  if (type === 'calendar') return 'Calendar'
+  if (type === 'timeline') return 'Timeline'
+  return 'View'
+}
+
+const normalizeViews = (grid: TrackerGrid) => {
+  const rawViews = Array.isArray(grid.views) ? grid.views : []
+  const fallbackViews =
+    rawViews.length > 0
+      ? rawViews
+      : grid.type
+        ? [{ type: grid.type, config: grid.config }]
+        : [{ type: 'table' as const, config: grid.config }]
+
+  return fallbackViews.map((view, index) => {
+    const type = view.type ?? 'table'
+    const name = view.name ?? viewLabelForType(type)
+    const id = view.id ?? `${grid.id}_${type}_view_${index}`
+    return {
+      ...view,
+      type,
+      name,
+      id,
+      config: view.config ?? {},
+    }
+  })
+}
 
 interface TrackerSectionProps {
   tabId: string
@@ -28,11 +61,11 @@ interface TrackerSectionProps {
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
 }
 
-/** Renders one grid view (primary or shadow) using grid.id for data; type/config from grid or view. */
+/** Renders one grid view using grid.id for data; type/config from the view. */
 function GridViewContent({
   tabId,
   grid,
-  gridLike,
+  view,
   gridLayoutNodes,
   allLayoutNodes,
   fields,
@@ -44,7 +77,7 @@ function GridViewContent({
 }: {
   tabId: string
   grid: TrackerGrid
-  gridLike: Pick<TrackerGrid, 'id' | 'name' | 'type' | 'config'>
+  view: { type: GridType; config?: TrackerGrid['config'] }
   gridLayoutNodes: TrackerLayoutNode[]
   /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
   allLayoutNodes: TrackerLayoutNode[]
@@ -56,9 +89,9 @@ function GridViewContent({
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
 }) {
   const gridId = grid.id
-  const g = { ...grid, type: gridLike.type, config: gridLike.config ?? {} }
+  const g = { ...grid, config: view.config ?? {} }
 
-  if (gridLike.type === 'table') {
+  if (view.type === 'table') {
     return (
       <TrackerTableGrid
         tabId={tabId}
@@ -76,7 +109,7 @@ function GridViewContent({
       />
     )
   }
-  if (gridLike.type === 'kanban') {
+  if (view.type === 'kanban') {
     return (
       <TrackerKanbanGrid
         tabId={tabId}
@@ -91,7 +124,7 @@ function GridViewContent({
       />
     )
   }
-  if (gridLike.type === 'div') {
+  if (view.type === 'div') {
     return (
       <TrackerDivGrid
         tabId={tabId}
@@ -107,14 +140,14 @@ function GridViewContent({
       />
     )
   }
-  if (gridLike.type === 'calendar') {
+  if (view.type === 'calendar') {
     return (
       <div className="p-4 border border-dashed rounded text-muted-foreground">
         Calendar Grid: {grid.name} (Not implemented)
       </div>
     )
   }
-  if (gridLike.type === 'timeline') {
+  if (view.type === 'timeline') {
     return (
       <div className="p-4 border border-dashed rounded text-muted-foreground">
         Timeline Grid: {grid.name} (Not implemented)
@@ -147,9 +180,9 @@ export function TrackerSection({
             .filter(node => node.gridId === grid.id)
             .sort((a, b) => a.order - b.order)
 
-          const hasViews = Array.isArray(grid.views) && grid.views.length > 0
+          const views = normalizeViews(grid)
 
-          if (!hasViews) {
+          if (views.length === 1) {
             return (
               <div key={grid.id} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -162,7 +195,7 @@ export function TrackerSection({
                 <GridViewContent
                   tabId={tabId}
                   grid={grid}
-                  gridLike={{ id: grid.id, name: grid.name, type: grid.type, config: grid.config }}
+                  view={views[0]}
                   gridLayoutNodes={gridLayoutNodes}
                   allLayoutNodes={layoutNodes}
                   fields={fields}
@@ -175,9 +208,7 @@ export function TrackerSection({
               </div>
             )
           }
-
-          const primaryLabel = grid.type === 'table' ? 'Table' : grid.type === 'kanban' ? 'Kanban' : grid.type === 'div' ? 'Form' : grid.type
-          const defaultTab = 'primary'
+          const defaultTab = views[0]?.id ?? `${grid.id}_view_0`
 
           return (
             <div key={grid.id} className="space-y-3">
@@ -190,34 +221,18 @@ export function TrackerSection({
               </div>
               <Tabs defaultValue={defaultTab} className="w-full">
                 <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
-                  <TabsTrigger value="primary">{primaryLabel}</TabsTrigger>
-                  {grid.views!.map((view) => (
+                  {views.map((view) => (
                     <TabsTrigger key={view.id} value={view.id}>
                       {view.name}
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                <TabsContent value="primary" className="mt-3">
-                  <GridViewContent
-                    tabId={tabId}
-                    grid={grid}
-                    gridLike={{ id: grid.id, name: grid.name, type: grid.type, config: grid.config }}
-                    gridLayoutNodes={gridLayoutNodes}
-                    allLayoutNodes={layoutNodes}
-                    fields={fields}
-                    bindings={bindings}
-                    gridData={gridData}
-                    onUpdate={onUpdate}
-                    onAddEntry={onAddEntry}
-                    onDeleteEntries={onDeleteEntries}
-                  />
-                </TabsContent>
-                {grid.views!.map((view) => (
+                {views.map((view) => (
                   <TabsContent key={view.id} value={view.id} className="mt-3">
                     <GridViewContent
                       tabId={tabId}
                       grid={grid}
-                      gridLike={{ id: grid.id, name: grid.name, type: view.type, config: view.config }}
+                      view={view}
                       gridLayoutNodes={gridLayoutNodes}
                       allLayoutNodes={layoutNodes}
                       fields={fields}

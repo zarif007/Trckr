@@ -63,11 +63,11 @@ export default function Hero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.28 }}
-          className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4"
+          className="mt-12 flex flex-row items-center justify-center gap-4"
         >
           <Button
             size="lg"
-            className="group h-12 px-8 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-foreground/10 transition-all duration-200 hover:shadow-xl hover:shadow-foreground/15 hover:scale-[1.02] active:scale-[0.98]"
+            className="group sm:h-12 px-6 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-foreground/10 transition-all duration-200 hover:shadow-xl hover:shadow-foreground/15 hover:scale-[1.02] active:scale-[0.98]"
             asChild
           >
             <a href="/tracker" className="inline-flex items-center">
@@ -78,7 +78,7 @@ export default function Hero() {
           <Button
             size="lg"
             variant="outline"
-            className="h-12 px-8 text-base font-medium rounded-md border-border/70 bg-background/50 hover:bg-muted/50 backdrop-blur-sm transition-all duration-200"
+            className="sm:h-12 px-6 text-base font-medium rounded-md border-border/70 bg-background/50 hover:bg-muted/50 backdrop-blur-sm transition-all duration-200"
             asChild
           >
             <a href="#demo">Watch demo</a>
