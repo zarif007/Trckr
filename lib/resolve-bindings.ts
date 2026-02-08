@@ -148,6 +148,7 @@ export function setValueByPath(
 /**
  * Get the option row field ID that provides the stored value for this select field.
  * The value is the "from" of the fieldMapping whose "to" equals the select field path.
+ * When label and value are the same field (single-field options), "from" equals labelField; fallback to labelField if no mapping.
  * Backward compat: if binding has valueField (deprecated), use that.
  */
 export function getValueFieldIdFromBinding(
@@ -163,7 +164,8 @@ export function getValueFieldIdFromBinding(
     const { fieldId } = parsePath(binding.valueField)
     return fieldId
   }
-  return null
+  const { fieldId: labelFieldId } = parsePath(binding.labelField)
+  return labelFieldId ?? null
 }
 
 /**
@@ -340,11 +342,15 @@ export function resolveOptionsFromBinding(
     return []
   }
 
-  const options = rows.map((row, i) => ({
-    id: row.id != null ? String(row.id) : `opt-${i}`,
-    label: String(row[lbl] ?? ''),
-    value: row[vf],
-  }))
+  const options = rows.map((row, i) => {
+    const val = row[vf]
+    const display = String(row[lbl] ?? val ?? '')
+    return {
+      id: row.id != null ? String(row.id) : `opt-${i}`,
+      label: display,
+      value: val,
+    }
+  })
 
   debugLog(`Resolved ${options.length} options`, options)
   return options

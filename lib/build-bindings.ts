@@ -25,7 +25,9 @@ function titleCase(str: string): string {
 }
 
 /**
- * Given an options grid id, return label and value field ids from layoutNodes (by order or naming).
+ * Given an options grid id, return the option field id(s). For single-field option grids (preferred),
+ * one field provides both display and value — we return it for both. For legacy two-field grids
+ * (_label/_value), we still support them.
  */
 export function getOptionGridLabelAndValueFieldIds(
   gridId: string,
@@ -34,7 +36,7 @@ export function getOptionGridLabelAndValueFieldIds(
   const nodes = layoutNodes
     .filter((n) => n.gridId === gridId)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-  if (nodes.length < 2) return null
+  if (nodes.length < 1) return null
 
   const fieldIds = nodes.map((n) => n.fieldId)
   const hasLabel = fieldIds.find((id) => id.endsWith('_label') || id.endsWith('_opt_label'))
@@ -42,12 +44,13 @@ export function getOptionGridLabelAndValueFieldIds(
   if (hasLabel && hasValue) {
     return { labelFieldId: hasLabel, valueFieldId: hasValue }
   }
-  return { labelFieldId: fieldIds[0], valueFieldId: fieldIds[1] }
+  const singleField = fieldIds[0]!
+  return { labelFieldId: singleField, valueFieldId: singleField }
 }
 
 /**
- * Ensure an options grid exists for the given field id. Creates Shared tab, section, grid, label/value fields, and layoutNodes if missing.
- * Returns the options grid id (always {fieldId}_options_grid). Mutates fixed in place.
+ * Ensure an options grid exists for the given field id. Creates Shared tab, section, grid, ONE option field
+ * (display = value), and layoutNodes if missing. Returns the options grid id (always {fieldId}_options_grid). Mutates fixed in place.
  */
 function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string {
   let tabs = [...(fixed.tabs ?? [])]
@@ -61,8 +64,7 @@ function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string 
   const fieldIds = new Set(fields.map((f) => f.id))
 
   const optionsGridId = `${fieldId}_options_grid`
-  const labelFieldId = `${fieldId}_opt_label`
-  const valueFieldId = `${fieldId}_opt_value`
+  const optionFieldId = fieldId
 
   if (gridIds.has(optionsGridId)) {
     return optionsGridId
@@ -93,36 +95,22 @@ function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string 
     },
   ]
 
-  if (!fieldIds.has(labelFieldId)) {
+  if (!fieldIds.has(optionFieldId)) {
     fields = [
       ...fields,
       {
-        id: labelFieldId,
+        id: optionFieldId,
         dataType: 'string',
-        ui: { label: 'Label', placeholder: 'Display text' },
+        ui: { label: titleCase(baseName), placeholder: 'Option name' },
         config: { isRequired: true },
       },
     ]
-    fieldIds.add(labelFieldId)
-  }
-  if (!fieldIds.has(valueFieldId)) {
-    fields = [
-      ...fields,
-      {
-        id: valueFieldId,
-        dataType: 'string',
-        ui: { label: 'Value', placeholder: 'Stored value' },
-        config: { isRequired: true },
-      },
-    ]
+    fieldIds.add(optionFieldId)
   }
 
   const existingNodes = layoutNodes.filter((n) => n.gridId === optionsGridId)
-  if (!existingNodes.some((n) => n.fieldId === labelFieldId)) {
-    layoutNodes = [...layoutNodes, { gridId: optionsGridId, fieldId: labelFieldId, order: 1 }]
-  }
-  if (!existingNodes.some((n) => n.fieldId === valueFieldId)) {
-    layoutNodes = [...layoutNodes, { gridId: optionsGridId, fieldId: valueFieldId, order: 2 }]
+  if (!existingNodes.some((n) => n.fieldId === optionFieldId)) {
+    layoutNodes = [...layoutNodes, { gridId: optionsGridId, fieldId: optionFieldId, order: 1 }]
   }
 
   fixed.tabs = tabs
@@ -205,14 +193,14 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
         } else {
           ensureOptionsGridForField(field.id, fixed)
           refreshOptionGridMeta()
-          labelFieldId = `${field.id}_opt_label`
-          valueFieldId = `${field.id}_opt_value`
+          labelFieldId = field.id
+          valueFieldId = field.id
         }
       } else {
         ensureOptionsGridForField(field.id, fixed)
         refreshOptionGridMeta()
-        labelFieldId = `${field.id}_opt_label`
-        valueFieldId = `${field.id}_opt_value`
+        labelFieldId = field.id
+        valueFieldId = field.id
       }
     }
 
@@ -313,7 +301,7 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
 
     const labelFieldId = parsePathFieldId(entry.labelField)
     const valueMapping = (entry.fieldMappings ?? []).find((m) => m.to === fieldPath)
-    const valueFieldId = valueMapping ? parsePathFieldId(valueMapping.from) : null
+    const valueFieldId = valueMapping ? parsePathFieldId(valueMapping.from) : labelFieldId
     const reserved = new Set([labelFieldId, valueFieldId].filter(Boolean) as string[])
 
     const existingMappings = new Set(

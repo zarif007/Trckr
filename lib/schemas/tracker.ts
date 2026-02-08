@@ -101,12 +101,12 @@ const fieldMappingSchema = z
   })
   .passthrough()
 
-/** Binding entry for a select/multiselect field. Value comes from fieldMappings (one mapping where "to" is this field). Paths use grid.field, no tab. */
+/** Binding entry for a select/multiselect field. Option display and stored value come from the same field (labelField). Paths use grid.field, no tab. */
 const bindingEntrySchema = z
   .object({
     optionsGrid: z.string().describe('Grid id containing options (e.g. product_options_grid)'),
-    labelField: z.string().describe('Path to label field: grid_id.field_id'),
-    fieldMappings: z.array(fieldMappingSchema).default([]).describe('Must include one mapping where "to" is this select field (the "from" is the stored value); other mappings auto-populate'),
+    labelField: z.string().describe('Path to the option field in options grid (grid_id.field_id). This field provides both display and stored value, e.g. exercise_options_grid.exercise'),
+    fieldMappings: z.array(fieldMappingSchema).default([]).describe('Must include one mapping where "to" is this select field and "from" is the same path as labelField; other mappings auto-populate'),
   })
   .passthrough()
 

@@ -283,8 +283,7 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
 
     const baseName = field.id.replace(/_/g, ' ')
     const optionsGridId = `${field.id}_options_grid`
-    const labelFieldId = `${field.id}_opt_label`
-    const valueFieldId = `${field.id}_opt_value`
+    const optionFieldId = field.id
 
     // Create options grid if it doesn't exist
     if (!gridIds.has(optionsGridId)) {
@@ -300,43 +299,29 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
       gridIds.add(optionsGridId)
     }
 
-    // Create label field if it doesn't exist
-    if (!fieldIds.has(labelFieldId)) {
+    // Create single option field if it doesn't exist (display = value)
+    if (!fieldIds.has(optionFieldId)) {
       fixed.fields!.push({
-        id: labelFieldId,
+        id: optionFieldId,
         dataType: 'string',
-        ui: { label: 'Label', placeholder: 'Display text' },
+        ui: { label: titleCase(baseName), placeholder: 'Option name' },
         config: { isRequired: true },
       })
-      fieldIds.add(labelFieldId)
+      fieldIds.add(optionFieldId)
     }
 
-    // Create value field if it doesn't exist
-    if (!fieldIds.has(valueFieldId)) {
-      fixed.fields!.push({
-        id: valueFieldId,
-        dataType: 'string',
-        ui: { label: 'Value', placeholder: 'Stored value' },
-        config: { isRequired: true },
-      })
-      fieldIds.add(valueFieldId)
-    }
-
-    // Create layoutNodes
+    // Create layoutNode for the option field
     const existingNodes = fixed.layoutNodes!.filter((n) => n.gridId === optionsGridId)
-    if (!existingNodes.some((n) => n.fieldId === labelFieldId)) {
-      fixed.layoutNodes!.push({ gridId: optionsGridId, fieldId: labelFieldId, order: 1 })
-    }
-    if (!existingNodes.some((n) => n.fieldId === valueFieldId)) {
-      fixed.layoutNodes!.push({ gridId: optionsGridId, fieldId: valueFieldId, order: 2 })
+    if (!existingNodes.some((n) => n.fieldId === optionFieldId)) {
+      fixed.layoutNodes!.push({ gridId: optionsGridId, fieldId: optionFieldId, order: 1 })
     }
 
-    // Create bindings entry (paths are grid.field, no tab)
-    const valueFromPath = `${optionsGridId}.${valueFieldId}`
+    // Create bindings entry: labelField = option field path (same field provides display and value)
+    const optionFieldPath = `${optionsGridId}.${optionFieldId}`
     fixed.bindings![fieldPath] = {
       optionsGrid: optionsGridId,
-      labelField: `${optionsGridId}.${labelFieldId}`,
-      fieldMappings: [{ from: valueFromPath, to: fieldPath }],
+      labelField: optionFieldPath,
+      fieldMappings: [{ from: optionFieldPath, to: fieldPath }],
     }
   }
 
