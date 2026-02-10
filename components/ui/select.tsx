@@ -2,9 +2,22 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 function Select({
   ...props
@@ -37,7 +50,7 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "input-field-height border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=sm]:h-8 data-[size=sm]:min-h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -64,7 +77,7 @@ function SelectContent({
         className={cn(
           "bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
           position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
         )}
         position={position}
@@ -76,7 +89,7 @@ function SelectContent({
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+            "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
           )}
         >
           {children}
@@ -176,7 +189,125 @@ function SelectScrollDownButton({
   )
 }
 
+type SearchableSelectOption = string | { value: string; label: string }
+
+interface SearchableSelectProps {
+  options: SearchableSelectOption[]
+  value?: string
+  onValueChange?: (value: string) => void
+  placeholder?: string
+  searchPlaceholder?: string
+  emptyMessage?: string
+  className?: string
+  disabled?: boolean
+  size?: "sm" | "default"
+  /** When set, shows "Add option..." at the bottom; callback is responsible for adding the new option. */
+  onAddOptionClick?: () => void
+  /** Label for the add-option action. Default "Add option..." */
+  addOptionLabel?: string
+}
+
+function SearchableSelect({
+  options,
+  value = "",
+  onValueChange,
+  placeholder = "",
+  searchPlaceholder = "Search options...",
+  emptyMessage = "No results found.",
+  className,
+  disabled = false,
+  size = "default",
+  onAddOptionClick,
+  addOptionLabel = "Add option...",
+}: SearchableSelectProps) {
+  const [open, setOpen] = React.useState(false)
+
+  const displayLabel = React.useMemo(() => {
+    if (!value || value === "__empty__") return null
+    const option = options.find(
+      (o) => (typeof o === "string" ? o : o.value) === value
+    )
+    return option ? (typeof option === "string" ? option : option.label) : value
+  }, [value, options])
+
+  const triggerClassName = cn(
+    "input-field-height border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    size === "sm" && "!h-8 !min-h-8",
+    className
+  )
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={triggerClassName}
+          aria-expanded={open}
+          disabled={disabled}
+        >
+          <span className="line-clamp-1 flex items-center gap-2">
+            {displayLabel ?? placeholder}
+          </span>
+          <ChevronDownIcon className="size-4 opacity-50" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]"
+        align="start"
+      >
+        <Command shouldFilter={true}>
+          <CommandInput placeholder={searchPlaceholder} className="h-8" />
+          <CommandList>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => {
+                const optValue = typeof option === "string" ? option : option.value
+                const optLabel = typeof option === "string" ? option : option.label
+                return (
+                  <CommandItem
+                    key={optValue}
+                    value={optLabel}
+                    onSelect={() => {
+                      onValueChange?.(optValue)
+                      setOpen(false)
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <span
+                      data-slot="select-item-indicator"
+                      className="mr-2 flex size-3.5 items-center justify-center"
+                    >
+                      {value === optValue ? (
+                        <CheckIcon className="size-4" />
+                      ) : null}
+                    </span>
+                    {optLabel}
+                  </CommandItem>
+                )
+              })}
+              {onAddOptionClick && (
+                <CommandItem
+                  value={addOptionLabel}
+                  onSelect={() => {
+                    onAddOptionClick()
+                    setOpen(false)
+                  }}
+                  className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
+                >
+                  <Plus className="mr-2 size-3.5" />
+                  {addOptionLabel}
+                </CommandItem>
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export {
+  SearchableSelect,
   Select,
   SelectContent,
   SelectGroup,
@@ -188,3 +319,4 @@ export {
   SelectTrigger,
   SelectValue,
 }
+export type { SearchableSelectOption, SearchableSelectProps }

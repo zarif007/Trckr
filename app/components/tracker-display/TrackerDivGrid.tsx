@@ -2,13 +2,7 @@ import { useState, useRef, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import {
@@ -20,7 +14,6 @@ import {
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
-import { Plus } from 'lucide-react'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
@@ -213,8 +206,13 @@ export function TrackerDivGrid({
                 const s = String(v ?? '').trim()
                 return s === '' ? '__empty__' : s
               }
+              const selectOptions = opts.map((option) => {
+                const itemValue = toItemValue(option.value ?? option.id ?? option.label)
+                return { value: itemValue, label: option.label }
+              })
               return (
-                <Select
+                <SearchableSelect
+                  options={selectOptions}
                   value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
                   onValueChange={(val) => {
                     if (val === ADD_OPTION_VALUE && onAddOption) {
@@ -224,27 +222,15 @@ export function TrackerDivGrid({
                     }
                     handleSelectChange(val === '__empty__' ? '' : val)
                   }}
-                >
-                  <SelectTrigger className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}>
-                    <SelectValue placeholder={`Select ${field.ui.label}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {opts.map((option) => {
-                      const itemValue = toItemValue(option.value ?? option.id ?? option.label)
-                      return (
-                        <SelectItem key={option.id ?? itemValue} value={itemValue}>
-                          {option.label}
-                        </SelectItem>
-                      )
-                    })}
-                    {onAddOption && (
-                      <SelectItem value={ADD_OPTION_VALUE} className="text-muted-foreground border-t border-border/50">
-                        <Plus className="h-3.5 w-3.5 mr-1.5 inline" />
-                        Add option...
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                  placeholder={`Select ${field.ui.label}`}
+                  searchPlaceholder="Search options..."
+                  className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  onAddOptionClick={onAddOption ? () => {
+                    setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
+                    setAddOptionOpen(true)
+                  } : undefined}
+                  addOptionLabel="Add option..."
+                />
               )
             }
             case 'multiselect': {

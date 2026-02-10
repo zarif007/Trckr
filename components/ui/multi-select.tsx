@@ -62,8 +62,8 @@ export function MultiSelect({
     : placeholder
 
   const triggerClasses = cn(
-    "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 h-9",
-    isInline && "h-full border-0 bg-transparent shadow-none px-2 focus-visible:ring-0 focus:ring-0",
+    "input-field-height border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+    isInline && "!h-full !min-h-0 border-0 bg-transparent shadow-none px-2 focus-visible:ring-0 focus:ring-0",
     className
   )
 
@@ -83,8 +83,8 @@ export function MultiSelect({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]" align="start">
-        <Command>
-          <CommandInput placeholder="Search..." className="h-8" />
+        <Command shouldFilter={true}>
+          <CommandInput placeholder="Search options..." className="h-8" />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
@@ -94,6 +94,7 @@ export function MultiSelect({
                 return (
                   <CommandItem
                     key={optValue}
+                    value={optLabel}
                     onSelect={() => handleSelect(optValue)}
                     className="cursor-pointer"
                   >
@@ -113,6 +114,7 @@ export function MultiSelect({
               })}
               {onAddOptionClick && (
                 <CommandItem
+                  value="Add option"
                   onSelect={() => onAddOptionClick()}
                   className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
                 >

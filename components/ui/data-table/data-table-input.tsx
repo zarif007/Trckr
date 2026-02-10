@@ -3,13 +3,7 @@
 import { useState, useRef, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
@@ -21,7 +15,6 @@ import { FieldType, FieldConfig, type FieldMetadata, type OptionsGridFieldDef } 
 import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS } from '@/lib/style-utils'
 import { MultiSelect } from '@/components/ui/multi-select'
-import { Plus } from 'lucide-react'
 import { EntryFormDialog } from './entry-form-dialog'
 
 interface DataTableInputProps {
@@ -177,9 +170,16 @@ export function DataTableInput({
       )
     case 'options': {
       const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
+      const selectOptions = (options ?? []).map((option) => {
+        const optValueRaw = typeof option === 'string' ? option : option.id
+        const optLabel = typeof option === 'string' ? option : option.label
+        const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
+        return { value: optValue, label: optLabel }
+      })
       return (
         <>
-          <Select
+          <SearchableSelect
+            options={selectOptions}
             value={selectValue}
             onValueChange={(v) => {
               if (v === ADD_OPTION_VALUE) {
@@ -188,37 +188,16 @@ export function DataTableInput({
               }
               onChange(v === '__empty__' ? '' : v)
             }}
-          >
-            <SelectTrigger
-              className={cn(
-                inlineInputClass,
-                className,
-                "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
-              )}
-            >
-              <div className="truncate">
-                <SelectValue />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              {options?.map((option) => {
-                const optValueRaw = typeof option === 'string' ? option : option.id
-                const optLabel = typeof option === 'string' ? option : option.label
-                const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
-                return (
-                  <SelectItem key={optValue} value={optValue}>
-                    {optLabel}
-                  </SelectItem>
-                )
-              })}
-              {onAddOption && (
-                <SelectItem value={ADD_OPTION_VALUE} className="text-muted-foreground border-t border-border/50">
-                  <Plus className="h-3.5 w-3.5 mr-1.5 inline" />
-                  Add option...
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+            placeholder=""
+            searchPlaceholder="Search options..."
+            className={cn(
+              inlineInputClass,
+              className,
+              "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
+            )}
+            onAddOptionClick={onAddOption ? () => openAddOptionDialog('select') : undefined}
+            addOptionLabel="Add option..."
+          />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog
               open={addOptionOpen}
