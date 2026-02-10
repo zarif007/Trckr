@@ -89,9 +89,53 @@ const renderAsEnum = z
   .enum(['default', 'table', 'kanban', 'calendar', 'timeline'])
   .optional()
 
-// ============================================================================
-// BINDINGS SCHEMA - For select/multiselect field auto-population
-// ============================================================================
+/** Style override tokens (optional). Resolved to Tailwind in style-utils. */
+export const styleOverridesSchema = z
+  .object({
+    fontSize: z
+      .enum(['xs', 'sm', 'base', 'lg', 'xl'])
+      .optional()
+      .describe('Font size token'),
+    fontWeight: z
+      .enum(['normal', 'medium', 'semibold', 'bold'])
+      .optional()
+      .describe('Font weight token'),
+    textColor: z
+      .enum(['default', 'muted', 'primary', 'blue', 'green', 'red', 'purple', 'amber', 'rose'])
+      .optional()
+      .describe('Text (font) color for cells and inputs'),
+    density: z
+      .enum(['compact', 'default', 'comfortable'])
+      .optional()
+      .describe('Controls cell padding and row height'),
+    accentColor: z
+      .enum(['default', 'blue', 'green', 'red', 'purple', 'amber', 'rose'])
+      .optional()
+      .describe('Accent / highlight colour'),
+    headerStyle: z
+      .enum(['default', 'muted', 'accent', 'bold'])
+      .optional()
+      .describe('Header appearance'),
+    stripedRows: z.boolean().optional().describe('Alternate row shading (table)'),
+    borderStyle: z
+      .enum(['none', 'default', 'strong'])
+      .optional()
+      .describe('Border weight'),
+    cardSize: z
+      .enum(['sm', 'md', 'lg'])
+      .optional()
+      .describe('Kanban card size'),
+    columnWidth: z.number().optional().describe('Kanban column width in px'),
+  })
+  .passthrough()
+
+export const stylesSchema = z
+  .record(z.string(), styleOverridesSchema)
+  .optional()
+  .default({})
+  .describe('Style overrides keyed by grid or view id. Only when user asks for visual changes.')
+
+// BINDINGS - select/multiselect auto-population
 
 /** Single field mapping: from source field in options grid to target field in main grid. Paths are grid_id.field_id */
 const fieldMappingSchema = z
@@ -199,7 +243,10 @@ export const trackerSchema = z
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
     bindings: bindingsSchema,
+
+    styles: stylesSchema,
   })
   .passthrough()
 
 export type TrackerSchema = z.infer<typeof trackerSchema>
+export type StyleOverrides = z.infer<typeof styleOverridesSchema>

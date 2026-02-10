@@ -19,6 +19,7 @@ import {
 import { format } from 'date-fns'
 import { FieldType, FieldConfig, type FieldMetadata, type OptionsGridFieldDef } from './utils'
 import { cn } from '@/lib/utils'
+import { DEFAULT_INPUT_FONT_CLASS } from '@/lib/style-utils'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { Plus } from 'lucide-react'
 import { EntryFormDialog } from './entry-form-dialog'
@@ -59,8 +60,7 @@ export function DataTableInput({
   optionsGridFields,
   getBindingUpdatesFromRow,
 }: DataTableInputProps) {
-  const inlineInputClass =
-    'border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full text-[13px] font-normal rounded-none transition-colors'
+  const inlineInputClass = `border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
   const addOptionModeRef = useRef<'select' | 'multiselect'>('select')
@@ -192,8 +192,8 @@ export function DataTableInput({
             <SelectTrigger
               className={cn(
                 inlineInputClass,
-                "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full",
-                className
+                className,
+                "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
               )}
             >
               <div className="truncate">

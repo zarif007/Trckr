@@ -6,6 +6,7 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  StyleOverrides,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
@@ -32,8 +33,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useDroppable } from '@dnd-kit/core'
+import { resolveKanbanStyles } from '@/lib/style-utils'
 
 interface TrackerKanbanGridProps {
   tabId: string
@@ -41,6 +43,8 @@ interface TrackerKanbanGridProps {
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  /** Optional style overrides for this kanban view. */
+  styleOverrides?: StyleOverrides
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -57,6 +61,11 @@ function SortableCard({
   gridData,
   fields,
   onEditRow,
+  cardPadding,
+  labelFontSize,
+  valueFontSize,
+  fontWeight,
+  valueTextColor,
 }: {
   id: string
   card: Record<string, unknown> & { _originalIdx?: number }
@@ -67,6 +76,11 @@ function SortableCard({
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   onEditRow?: (rowIndex: number) => void
+  cardPadding?: string
+  labelFontSize?: string
+  valueFontSize?: string
+  fontWeight?: string
+  valueTextColor?: string
 }) {
   const {
     attributes,
@@ -94,6 +108,11 @@ function SortableCard({
         gridData={gridData}
         fields={fields}
         onEditRow={onEditRow}
+        cardPadding={cardPadding}
+        labelFontSize={labelFontSize}
+        valueFontSize={valueFontSize}
+        fontWeight={fontWeight}
+        valueTextColor={valueTextColor}
       />
     </div>
   )
@@ -110,6 +129,11 @@ function KanbanCard({
   fields,
   isOverlay = false,
   onEditRow,
+  cardPadding,
+  labelFontSize,
+  valueFontSize,
+  fontWeight,
+  valueTextColor,
 }: {
   card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
@@ -120,13 +144,18 @@ function KanbanCard({
   fields: TrackerField[]
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
+  cardPadding?: string
+  labelFontSize?: string
+  valueFontSize?: string
+  fontWeight?: string
+  valueTextColor?: string
 }) {
   const rowIndex = card._originalIdx
   const showEditButton = !isOverlay && onEditRow != null && typeof rowIndex === 'number'
 
   return (
     <Card
-      className={`p-4 bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative ${isOverlay ? 'shadow-xl' : ''}`}
+      className={`${cardPadding ?? 'p-4'} bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative ${isOverlay ? 'shadow-xl' : ''} ${fontWeight ?? ''}`}
     >
       {showEditButton && (
         <Button
@@ -151,10 +180,10 @@ function KanbanCard({
           : undefined
         return (
           <div key={field.id} className="mb-2 last:mb-0">
-            <p className="text-xs text-muted-foreground font-medium">
+            <p className={`${labelFontSize ?? 'text-xs'} text-muted-foreground font-medium`}>
               {field.label}
             </p>
-            <div className="text-sm text-foreground">
+            <div className={`${valueFontSize ?? 'text-sm'} ${valueTextColor ?? 'text-foreground'}`}>
               <TrackerCell
                 value={card[field.id]}
                 type={field.dataType}
@@ -200,6 +229,7 @@ export function TrackerKanbanGrid({
   layoutNodes,
   fields,
   bindings = {},
+  styleOverrides,
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -208,6 +238,7 @@ export function TrackerKanbanGrid({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
+  const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -448,7 +479,7 @@ export function TrackerKanbanGrid({
               .filter((ex) => String(ex[groupByFieldId!] ?? '').trim() === group.id)
 
             return (
-              <div key={group.id} className="shrink-0 w-80">
+              <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
                 <div className="bg-muted/70 rounded-md p-4 mb-4">
                   <h3 className="font-semibold text-foreground flex items-center justify-between">
                     {group.label}
@@ -480,6 +511,11 @@ export function TrackerKanbanGrid({
                             gridData={gridData}
                             fields={fields}
                             onEditRow={setEditRowIndex}
+                            cardPadding={ks.cardPadding}
+                            labelFontSize={ks.labelFontSize}
+                            valueFontSize={ks.fontSize}
+                            fontWeight={ks.fontWeight}
+                            valueTextColor={ks.textColor}
                           />
                         ))}
                         <ColumnDropZone id={group.id} />
@@ -511,6 +547,11 @@ export function TrackerKanbanGrid({
             gridData={gridData}
             fields={fields}
             isOverlay
+            cardPadding={ks.cardPadding}
+            labelFontSize={ks.labelFontSize}
+            valueFontSize={ks.fontSize}
+            fontWeight={ks.fontWeight}
+            valueTextColor={ks.textColor}
           />
         ) : null}
       </DragOverlay>

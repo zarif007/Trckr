@@ -4,6 +4,7 @@ import { DataTableInput } from './data-table-input'
 import { FieldMetadata, getValidationError } from './utils'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { DEFAULT_INPUT_FONT_CLASS, type ResolvedTableStyles } from '@/lib/style-utils'
 
 interface DataTableCellProps<TData, TValue> {
   cell: Cell<TData, any>
@@ -20,7 +21,9 @@ export function DataTableCell<TData, TValue>({
   const fieldInfo = fieldMetadata?.[cell.column.id]
   const meta = cell.getContext().table.options.meta as {
     updateData?: (rowIndex: number, columnId: string, value: any) => void
+    tableStyles?: ResolvedTableStyles
   }
+  const tableStyles = meta?.tableStyles
 
   const [value, setValue] = useState(cell.getValue())
   const [dirty, setDirty] = useState(false)
@@ -71,9 +74,10 @@ export function DataTableCell<TData, TValue>({
           onAddOption={fieldInfo.onAddOption}
           optionsGridFields={fieldInfo.optionsGridFields}
           getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
+          className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
         />
       ) : (
-        <div className="w-full h-full px-4 flex items-center text-[13px] text-foreground/90">
+        <div className={cn('w-full h-full px-4 flex items-center text-foreground/90', tableStyles?.fontSize ?? DEFAULT_INPUT_FONT_CLASS, tableStyles?.fontWeight, tableStyles?.textColor)}>
           <span className="truncate">
             {flexRender(cell.column.columnDef.cell, cell.getContext())}
           </span>

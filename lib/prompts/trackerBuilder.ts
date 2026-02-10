@@ -175,6 +175,18 @@ CRITICAL for revisions:
 7. When creating select fields that should auto-populate other fields (e.g., selecting a product fills in price), add fieldMappings to the bindings entry.
 8. The options grid in Shared tab can have additional fields beyond the single option field (e.g. price, description) for use in fieldMappings.
 9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
+
+=== STYLES (only when user explicitly asks for visual changes) ===
+
+Top-level optional "styles": record keyed by grid id or view id. Do NOT add for structural changes.
+
+Rules: Only include requested tokens. Use stylesRemove in trackerPatch to reset.
+
+Tokens (all optional): fontSize ("xs"|"sm"|"base"|"lg"|"xl"), fontWeight, textColor, density, accentColor (border+background), headerStyle, stripedRows, borderStyle, cardSize, columnWidth.
+
+Example — "make the tasks table font bigger": styles: { "tasks_grid": { "fontSize": "lg" } }
+Example — "green accents on kanban": styles: { "tasks_kanban_view": { "accentColor": "green" } }
+Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `
 
 export default trackerBuilderPrompt

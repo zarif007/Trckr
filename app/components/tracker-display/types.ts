@@ -104,6 +104,9 @@ export type TrackerOption = {
   [key: string]: unknown
 }
 
+import type { StyleOverrides } from '@/lib/schemas/tracker'
+export type { StyleOverrides }
+
 // Re-export binding types from lib for backward compatibility
 export type {
   FieldPath,
@@ -122,6 +125,8 @@ export interface TrackerDisplayProps {
   layoutNodes?: TrackerLayoutNode[]
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings
+  /** Optional style overrides keyed by grid id or view id. */
+  styles?: Record<string, StyleOverrides>
   /** Optional initial grid data (e.g. for demos). Key is grid id, value is array of row objects. */
   initialGridData?: Record<string, Array<Record<string, unknown>>>
   /** Optional ref the display will set to a getter that returns current grid data (values only). */

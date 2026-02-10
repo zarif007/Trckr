@@ -16,6 +16,7 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  StyleOverrides,
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
@@ -23,6 +24,7 @@ import { Plus } from 'lucide-react'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
+import { resolveDivStyles } from '@/lib/style-utils'
 
 const ADD_OPTION_VALUE = '__add_option__'
 
@@ -34,6 +36,8 @@ interface TrackerDivGridProps {
   allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  /** Optional style overrides for this div view. */
+  styleOverrides?: StyleOverrides
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
@@ -48,11 +52,13 @@ export function TrackerDivGrid({
   allLayoutNodes,
   fields,
   bindings = {},
+  styleOverrides,
   gridData = {},
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
 }: TrackerDivGridProps) {
+  const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
@@ -177,12 +183,13 @@ export function TrackerDivGrid({
           }
         }
 
+        const inputTextClass = `${ds.fontSize} ${ds.fontWeight} ${ds.textColor}`.trim()
         const renderInput = () => {
           switch (field.dataType) {
             case 'text':
               return (
                 <Textarea
-                  className="min-h-[100px] text-sm leading-7 text-foreground/90 bg-secondary/20 border-border/50 focus-visible:ring-1"
+                  className={`min-h-[100px] leading-7 text-foreground/90 bg-secondary/20 border-border/50 focus-visible:ring-1 ${inputTextClass}`}
                   defaultValue={valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -218,7 +225,7 @@ export function TrackerDivGrid({
                     handleSelectChange(val === '__empty__' ? '' : val)
                   }}
                 >
-                  <SelectTrigger className="w-full bg-secondary/10 border-border/50">
+                  <SelectTrigger className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}>
                     <SelectValue placeholder={`Select ${field.ui.label}`} />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,7 +256,7 @@ export function TrackerDivGrid({
                   value={Array.isArray(value) ? value.map(String) : []}
                   onChange={(val) => handleSelectChange(val)}
                   placeholder={`Select ${field.ui.label}`}
-                  className="w-full bg-secondary/10 border-border/50"
+                  className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}
                   onAddOptionClick={onAddOption ? () => {
                     setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
                     setAddOptionOpen(true)
@@ -261,7 +268,7 @@ export function TrackerDivGrid({
               return (
                 <Input
                   type="date"
-                  className="bg-secondary/10 border-border/50"
+                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
                   defaultValue={
                     value
                       ? new Date(String(value)).toISOString().split('T')[0]
@@ -276,7 +283,7 @@ export function TrackerDivGrid({
               return (
                 <Input
                   type="number"
-                  className="bg-secondary/10 border-border/50"
+                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
                   defaultValue={typeof value === 'number' ? value : valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, Number(e.target.value))
@@ -286,7 +293,7 @@ export function TrackerDivGrid({
             default:
               return (
                 <Input
-                  className="bg-secondary/10 border-border/50"
+                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
                   defaultValue={valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -298,10 +305,10 @@ export function TrackerDivGrid({
 
         return (
           <div key={field.id} className="space-y-1.5">
-            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+            <label className={`${ds.labelFontSize} font-medium text-muted-foreground uppercase tracking-wider ${ds.fontWeight}`}>
               {field.ui.label}
             </label>
-            <div className={`bg-secondary/20 rounded-md border border-border/50 ${field.dataType === 'text' ? 'h-auto' : ''}`}>
+            <div className={`bg-secondary/20 rounded-md border ${ds.accentBorder} ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
               {renderInput()}
             </div>
           </div>

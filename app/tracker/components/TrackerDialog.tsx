@@ -44,7 +44,7 @@ export function TrackerDialog({
   messagesLength,
 }: TrackerDialogProps) {
   const object = streamedObject as {
-    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown }
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; styles?: unknown }
     trackerPatch?: unknown
   } | undefined
   const handleOpenChange = (next: boolean) => {
@@ -89,6 +89,7 @@ export function TrackerDialog({
               fields={((tracker.fields || []) as unknown[]).filter((f): f is TrackerResponse['fields'][number] => !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)) as TrackerResponse['fields']}
               layoutNodes={(tracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
               bindings={(tracker.bindings || {}) as TrackerResponse['bindings']}
+              styles={(tracker.styles || {}) as TrackerResponse['styles']}
               getDataRef={trackerDataRef}
             />
           ) : activeTrackerData ? (
@@ -114,6 +115,7 @@ export function TrackerDialog({
                 fields={activeTrackerData.fields}
                 layoutNodes={activeTrackerData.layoutNodes}
                 bindings={activeTrackerData.bindings}
+                styles={activeTrackerData.styles}
                 getDataRef={trackerDataRef}
               />
             </div>

@@ -5,6 +5,7 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  StyleOverrides,
 } from './types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TrackerTableGrid } from './TrackerTableGrid'
@@ -50,6 +51,7 @@ interface TrackerSectionProps {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
+  styles?: Record<string, StyleOverrides>
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (
     gridId: string,
@@ -70,6 +72,7 @@ function GridViewContent({
   allLayoutNodes,
   fields,
   bindings,
+  styleOverrides,
   gridData,
   onUpdate,
   onAddEntry,
@@ -77,12 +80,13 @@ function GridViewContent({
 }: {
   tabId: string
   grid: TrackerGrid
-  view: { type: GridType; config?: TrackerGrid['config'] }
+  view: { id?: string; type: GridType; config?: TrackerGrid['config'] }
   gridLayoutNodes: TrackerLayoutNode[]
   /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
   allLayoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings: TrackerBindings
+  styleOverrides?: StyleOverrides
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
@@ -100,6 +104,7 @@ function GridViewContent({
         allLayoutNodes={allLayoutNodes}
         fields={fields}
         bindings={bindings}
+        styleOverrides={styleOverrides}
         gridData={gridData}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
@@ -117,6 +122,7 @@ function GridViewContent({
         layoutNodes={gridLayoutNodes}
         fields={fields}
         bindings={bindings}
+        styleOverrides={styleOverrides}
         gridData={gridData}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
@@ -133,6 +139,7 @@ function GridViewContent({
         allLayoutNodes={allLayoutNodes}
         fields={fields}
         bindings={bindings}
+        styleOverrides={styleOverrides}
         gridData={gridData}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
@@ -164,6 +171,7 @@ export function TrackerSection({
   fields,
   layoutNodes,
   bindings = {},
+  styles,
   gridData,
   onUpdate,
   onAddEntry,
@@ -183,6 +191,7 @@ export function TrackerSection({
           const views = normalizeViews(grid)
 
           if (views.length === 1) {
+            const viewOverrides = (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined
             return (
               <div key={grid.id} className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -200,6 +209,7 @@ export function TrackerSection({
                   allLayoutNodes={layoutNodes}
                   fields={fields}
                   bindings={bindings}
+                  styleOverrides={viewOverrides}
                   gridData={gridData}
                   onUpdate={onUpdate}
                   onAddEntry={onAddEntry}
@@ -227,23 +237,27 @@ export function TrackerSection({
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                {views.map((view) => (
-                  <TabsContent key={view.id} value={view.id} className="mt-3">
-                    <GridViewContent
-                      tabId={tabId}
-                      grid={grid}
-                      view={view}
-                      gridLayoutNodes={gridLayoutNodes}
-                      allLayoutNodes={layoutNodes}
-                      fields={fields}
-                      bindings={bindings}
-                      gridData={gridData}
-                      onUpdate={onUpdate}
-                      onAddEntry={onAddEntry}
-                      onDeleteEntries={onDeleteEntries}
-                    />
-                  </TabsContent>
-                ))}
+                {views.map((view) => {
+                  const viewOverrides = (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined
+                  return (
+                    <TabsContent key={view.id} value={view.id} className="mt-3">
+                      <GridViewContent
+                        tabId={tabId}
+                        grid={grid}
+                        view={view}
+                        gridLayoutNodes={gridLayoutNodes}
+                        allLayoutNodes={layoutNodes}
+                        fields={fields}
+                        bindings={bindings}
+                        styleOverrides={viewOverrides}
+                        gridData={gridData}
+                        onUpdate={onUpdate}
+                        onAddEntry={onAddEntry}
+                        onDeleteEntries={onDeleteEntries}
+                      />
+                    </TabsContent>
+                  )
+                })}
               </Tabs>
             </div>
           )

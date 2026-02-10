@@ -38,6 +38,8 @@ import { FieldMetadata, getFieldIcon, getValidationError, sanitizeValue } from '
 import { DataTableCell } from './data-table-cell'
 import { DataTableInput } from './data-table-input'
 import { EntryFormDialog } from './entry-form-dialog'
+import type { StyleOverrides } from '@/app/components/tracker-display/types'
+import { resolveTableStyles } from '@/lib/style-utils'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -47,6 +49,8 @@ interface DataTableProps<TData, TValue> {
   onAddEntry?: (newRow: Record<string, any>) => void
   onDeleteEntries?: (rowIndices: number[]) => void
   config?: any
+  /** Optional style overrides for this table. */
+  styleOverrides?: StyleOverrides
   /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
 }
@@ -59,6 +63,7 @@ export function DataTable<TData, TValue>({
   onAddEntry,
   onDeleteEntries,
   getBindingUpdates,
+  styleOverrides,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -194,6 +199,8 @@ export function DataTable<TData, TValue>({
     [columns],
   )
 
+  const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
+
   const table = useReactTable({
     data: data,
     columns: columnsWithSelectionAndActions,
@@ -211,6 +218,7 @@ export function DataTable<TData, TValue>({
     meta: {
       updateData: onCellUpdate,
       fieldMetadata: fieldMetadata,
+      tableStyles: ts,
     },
   })
 
@@ -375,7 +383,7 @@ export function DataTable<TData, TValue>({
                             animationFillMode: 'both',
                           }}
                         >
-                          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                          <label className={cn('flex items-center gap-2 font-medium text-muted-foreground', ts.fontSize, ts.fontWeight, ts.textColor)}>
                             {Icon && (
                               <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
                             )}
@@ -384,7 +392,7 @@ export function DataTable<TData, TValue>({
                               <span className="text-destructive/80">*</span>
                             )}
                           </label>
-                          <div className="text-sm">
+                          <div className={cn('text-sm', ts.fontSize, ts.fontWeight, ts.textColor)}>
                             {fieldInfo ? (
                               <>
                                 <div
@@ -425,7 +433,7 @@ export function DataTable<TData, TValue>({
                                     onAddOption={fieldInfo.onAddOption}
                                     optionsGridFields={fieldInfo.optionsGridFields}
                                     getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-                                    className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg"
+                                    className={cn('h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg', ts.fontSizeForInput, ts.fontWeightForInput, ts.textColorForInput)}
                                   />
                                 </div>
                                 {detailsShowError && detailsError && (
@@ -467,9 +475,9 @@ export function DataTable<TData, TValue>({
           </DialogContent>
         </Dialog>
       </div>
-      <div className="rounded-md border-[1.5px] border-border/60 bg-card/50 overflow-x-auto">
-        <Table className="w-full min-w-max border-collapse">
-          <TableHeader className="">
+      <div className={cn('rounded-md overflow-x-auto', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
+        <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
+          <TableHeader className={ts.headerBg}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
@@ -489,10 +497,12 @@ export function DataTable<TData, TValue>({
                         minWidth: isSelect || isActions ? fixedWidth : undefined,
                       }}
                       className={cn(
-                        'h-9 text-muted-foreground font-medium text-[13px] border-r border-border/50 last:border-r-0',
+                        ts.headerHeight,
+                        'text-muted-foreground font-medium border-r border-border/50 last:border-r-0',
+                        ts.headerFontSize,
                         isSelect || isActions
                           ? 'p-0 text-center min-w-[44px] w-[44px]'
-                          : 'px-4',
+                          : ts.cellPadding,
                       )}
                     >
                       {header.isPlaceholder ? null : isSelect || isActions ? (
@@ -521,13 +531,17 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>
+          <TableBody className={ts.tableBg ? 'bg-transparent' : undefined}>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+              table.getRowModel().rows.map((row, rowIdx) => (
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className="group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent"
+                  className={cn(
+                    'group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent',
+                    ts.tableBg && '!bg-transparent',
+                    ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/30',
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => {
                     if (cell.column.id === 'actions') {

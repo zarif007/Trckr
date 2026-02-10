@@ -10,6 +10,7 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  StyleOverrides,
 } from './types'
 import { TrackerSection } from './TrackerSection'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
@@ -21,6 +22,7 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   bindings = {},
+  styles,
   initialGridData,
   getDataRef,
 }: TrackerDisplayProps) {
@@ -153,6 +155,7 @@ export function TrackerDisplayInline({
             fields={fields}
             layoutNodes={layoutNodes}
             bindings={bindings}
+            styles={styles}
             localGridData={localGridData}
             gridData={gridData}
             handleUpdate={handleUpdate}
@@ -172,6 +175,7 @@ function TrackerTabContent({
   fields,
   layoutNodes,
   bindings,
+  styles,
   localGridData,
   gridData,
   handleUpdate,
@@ -184,6 +188,7 @@ function TrackerTabContent({
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
+  styles?: Record<string, StyleOverrides>
   localGridData: Record<string, Array<Record<string, unknown>>>
   gridData: Record<string, Array<Record<string, unknown>>>
   handleUpdate: (
@@ -226,6 +231,7 @@ function TrackerTabContent({
             fields={fields}
             layoutNodes={layoutNodes}
             bindings={bindings}
+            styles={styles}
             gridData={gridData}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}

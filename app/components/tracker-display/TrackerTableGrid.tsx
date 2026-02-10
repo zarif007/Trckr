@@ -6,6 +6,7 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  StyleOverrides,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
@@ -20,6 +21,8 @@ interface TrackerTableGridProps {
   allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  /** Optional style overrides for this table view. */
+  styleOverrides?: StyleOverrides
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -36,6 +39,7 @@ export function TrackerTableGrid({
   allLayoutNodes,
   fields,
   bindings = {},
+  styleOverrides,
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -194,6 +198,7 @@ export function TrackerTableGrid({
       onDeleteEntries={onDeleteEntries}
       getBindingUpdates={getBindingUpdates}
       config={grid.config}
+      styleOverrides={styleOverrides}
     />
   );
 }
