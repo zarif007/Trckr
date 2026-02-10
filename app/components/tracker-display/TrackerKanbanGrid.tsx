@@ -336,9 +336,14 @@ export function TrackerKanbanGrid({
 
   const activeCard = activeId ? rows[parseInt(activeId.split('-')[0])] : null
 
-  const handleAddSave = (values: Record<string, unknown>) => {
+  const handleAddSaveAndClose = (values: Record<string, unknown>) => {
     onAddEntry?.(values)
     setShowAddDialog(false)
+  }
+
+  const handleAddSaveAndStayOpen = (values: Record<string, unknown>) => {
+    onAddEntry?.(values)
+    // Keep the dialog open for the next entry; EntryFormDialog will reset its form state.
   }
 
   /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
@@ -422,7 +427,8 @@ export function TrackerKanbanGrid({
               ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
               : {}
           }
-          onSave={handleAddSave}
+          onSave={handleAddSaveAndClose}
+          onSaveAnother={handleAddSaveAndStayOpen}
           getBindingUpdates={getBindingUpdates}
         />
         <EntryFormDialog

@@ -221,6 +221,11 @@ export function DataTable<TData, TValue>({
     setShowAddDialog(false)
   }
 
+  const handleAddEntryAndStayOpen = (values: Record<string, any>) => {
+    onAddEntry?.(values)
+    // Keep the dialog open for the next entry; EntryFormDialog will reset its form state.
+  }
+
   const handleDeleteSelected = () => {
     onDeleteEntries?.(selectedRows)
     setRowSelection({})
@@ -303,6 +308,7 @@ export function DataTable<TData, TValue>({
           fieldOrder={addFieldOrder}
           initialValues={{}}
           onSave={handleAddEntry}
+          onSaveAnother={handleAddEntryAndStayOpen}
           getBindingUpdates={getBindingUpdates}
         />
         <Dialog

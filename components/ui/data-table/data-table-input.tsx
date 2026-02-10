@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -17,86 +16,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
-import { FieldType, FieldConfig, type OptionsGridFieldDef } from './utils'
+import { FieldType, FieldConfig, type FieldMetadata, type OptionsGridFieldDef } from './utils'
 import { cn } from '@/lib/utils'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { Plus } from 'lucide-react'
-
-export function AddOptionFieldInput({
-  field,
-  value,
-  onChange,
-}: {
-  field: OptionsGridFieldDef
-  value: unknown
-  onChange: (value: unknown) => void
-}) {
-  const v = value ?? ''
-  switch (field.type) {
-    case 'number':
-    case 'currency':
-    case 'percentage':
-      return (
-        <Input
-          type="number"
-          value={typeof v === 'number' ? v : v === '' ? '' : String(v)}
-          onChange={(e) => {
-            const x = e.target.value
-            onChange(x === '' ? undefined : Number(x))
-          }}
-          placeholder={field.label}
-          className="h-9"
-        />
-      )
-    case 'boolean':
-      return (
-        <div className="flex items-center gap-2">
-          <Checkbox
-            checked={v === true}
-            onCheckedChange={(checked) => onChange(checked === true)}
-          />
-          <span className="text-sm text-muted-foreground">{field.label}</span>
-        </div>
-      )
-    case 'text':
-      return (
-        <Textarea
-          value={String(v)}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.label}
-          className="min-h-[60px]"
-        />
-      )
-    case 'date':
-      return (
-        <Input
-          type="date"
-          value={typeof v === 'string' && v ? new Date(v).toISOString().split('T')[0] : ''}
-          onChange={(e) => onChange(e.target.value || undefined)}
-          className="h-9"
-        />
-      )
-    default:
-      return (
-        <Input
-          type="text"
-          value={String(v)}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={field.label}
-          className="h-9"
-        />
-      )
-  }
-}
+import { EntryFormDialog } from './entry-form-dialog'
 
 interface DataTableInputProps {
   value: any
@@ -138,38 +63,50 @@ export function DataTableInput({
     'border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full text-[13px] font-normal rounded-none transition-colors'
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
-  const [addOptionRow, setAddOptionRow] = useState<Record<string, unknown>>({})
   const addOptionModeRef = useRef<'select' | 'multiselect'>('select')
 
-  const openAddOptionDialog = (mode: 'select' | 'multiselect') => {
-    addOptionModeRef.current = mode
+  const addOptionFieldMetadata: FieldMetadata = useMemo(() => {
+    const meta: FieldMetadata = {}
+    optionsGridFields?.forEach((f) => {
+      meta[f.id] = { name: f.label, type: f.type, config: f.config }
+    })
+    return meta
+  }, [optionsGridFields])
+
+  const addOptionFieldOrder = useMemo(
+    () => optionsGridFields?.map((f) => f.id) ?? [],
+    [optionsGridFields]
+  )
+
+  const initialOptionValues = useMemo(() => {
     const initial: Record<string, unknown> = {}
     optionsGridFields?.forEach((f) => {
       initial[f.id] = f.type === 'number' ? '' : f.type === 'boolean' ? false : ''
     })
-    setAddOptionRow(initial)
-    setAddOptionOpen(true)
-  }
+    return initial
+  }, [optionsGridFields])
 
-  const setAddOptionField = (fieldId: string, fieldValue: unknown) => {
-    setAddOptionRow((prev) => ({ ...prev, [fieldId]: fieldValue }))
-  }
-
-  const confirmAddOption = () => {
-    if (!onAddOption) return
-    const row = { ...addOptionRow }
-    optionsGridFields?.forEach((f) => {
-      if (row[f.id] === '' && (f.type === 'number' || f.type === 'string')) row[f.id] = f.type === 'number' ? undefined : ''
+  const applyAddOption = (row: Record<string, unknown>) => {
+    if (!onAddOption || !optionsGridFields) return
+    const normalized = { ...row }
+    optionsGridFields.forEach((f) => {
+      if (normalized[f.id] === '' && (f.type === 'number' || f.type === 'string')) {
+        normalized[f.id] = f.type === 'number' ? undefined : ''
+      }
     })
-    const newValue = onAddOption(row)
-    const bindingUpdates = getBindingUpdatesFromRow?.(row) ?? {}
+    const newValue = onAddOption(normalized)
+    const bindingUpdates = getBindingUpdatesFromRow?.(normalized) ?? {}
     if (addOptionModeRef.current === 'multiselect') {
       const current = Array.isArray(value) ? value : []
       onChange([...current, newValue], { bindingUpdates })
     } else {
       onChange(newValue, { bindingUpdates })
     }
-    setAddOptionOpen(false)
+  }
+
+  const openAddOptionDialog = (mode: 'select' | 'multiselect') => {
+    addOptionModeRef.current = mode
+    setAddOptionOpen(true)
   }
 
   switch (type) {
@@ -282,32 +219,19 @@ export function DataTableInput({
               )}
             </SelectContent>
           </Select>
-          {onAddOption && (
-            <Dialog open={addOptionOpen} onOpenChange={setAddOptionOpen}>
-              <DialogContent className="sm:max-w-[400px]" onCloseAutoFocus={(e) => e.preventDefault()}>
-                <DialogHeader>
-                  <DialogTitle>Add option</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-2">
-                  {optionsGridFields?.map((f) => (
-                    <div key={f.id} className="space-y-1.5">
-                      {f.type !== 'boolean' && (
-                        <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
-                      )}
-                      <AddOptionFieldInput
-                        field={f}
-                        value={addOptionRow[f.id]}
-                        onChange={(val) => setAddOptionField(f.id, val)}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" size="sm" onClick={() => setAddOptionOpen(false)}>Cancel</Button>
-                  <Button size="sm" onClick={confirmAddOption}>Add</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
+            <EntryFormDialog
+              open={addOptionOpen}
+              onOpenChange={setAddOptionOpen}
+              title="Add option"
+              submitLabel="Add"
+              fieldMetadata={addOptionFieldMetadata}
+              fieldOrder={addOptionFieldOrder}
+              initialValues={initialOptionValues}
+              onSave={applyAddOption}
+              onSaveAnother={applyAddOption}
+              mode="add"
+            />
           )}
         </>
       )
@@ -323,32 +247,19 @@ export function DataTableInput({
             className={cn(inlineInputClass, className)}
             onAddOptionClick={onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
           />
-          {onAddOption && (
-            <Dialog open={addOptionOpen} onOpenChange={setAddOptionOpen}>
-              <DialogContent className="sm:max-w-[400px]" onCloseAutoFocus={(e) => e.preventDefault()}>
-                <DialogHeader>
-                  <DialogTitle>Add option</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-2">
-                  {optionsGridFields?.map((f) => (
-                    <div key={f.id} className="space-y-1.5">
-                      {f.type !== 'boolean' && (
-                        <label className="text-xs font-medium text-muted-foreground">{f.label}</label>
-                      )}
-                      <AddOptionFieldInput
-                        field={f}
-                        value={addOptionRow[f.id]}
-                        onChange={(val) => setAddOptionField(f.id, val)}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" size="sm" onClick={() => setAddOptionOpen(false)}>Cancel</Button>
-                  <Button size="sm" onClick={confirmAddOption}>Add</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+          {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
+            <EntryFormDialog
+              open={addOptionOpen}
+              onOpenChange={setAddOptionOpen}
+              title="Add option"
+              submitLabel="Add"
+              fieldMetadata={addOptionFieldMetadata}
+              fieldOrder={addOptionFieldOrder}
+              initialValues={initialOptionValues}
+              onSave={applyAddOption}
+              onSaveAnother={applyAddOption}
+              mode="add"
+            />
           )}
         </>
       )

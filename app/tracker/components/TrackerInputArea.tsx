@@ -81,7 +81,7 @@ export function TrackerInputArea({
               }}
               placeholder={isChatEmpty ? 'Describe your ideal tracker...' : 'Ask for changes or refinements...'}
               rows={1}
-              className={`flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground/50 focus:outline-none max-h-[200px] ${isHero ? 'px-3 py-4 text-base min-h-[72px]' : 'px-3 py-3 text-sm font-medium min-h-[44px]'}`}
+              className={`flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground/50 focus:outline-none max-h-[200px] ${isHero ? 'text-base min-h-[72px]' : 'px-3 py-3 text-sm font-medium min-h-[44px]'}`}
             />
 
             <Button

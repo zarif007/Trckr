@@ -142,7 +142,6 @@ export function TrackerMessageList({
                         </p>
                         {message.managerData.prd && (
                           <div className="mt-2 pt-2 border-t border-border/20">
-                            <p className="text-sm font-bold text-primary">{message.managerData.prd.name}</p>
                             <p className="text-xs text-muted-foreground">{message.managerData.prd.description}</p>
                           </div>
                         )}
@@ -234,15 +233,11 @@ export function TrackerMessageList({
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="grid grid-cols-2 gap-3 mt-4"
+                      className="mt-4"
                     >
                       <div className="p-3 rounded-md bg-background/50 border border-border/30">
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Concept</p>
-                        <p className="text-xs font-bold truncate">{object.manager.prd.name || "Designing..."}</p>
-                      </div>
-                      <div className="p-3 rounded-md bg-background/50 border border-border/30">
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Target</p>
-                        <p className="text-xs font-bold truncate">{object.manager.prd.description || "Analyzing..."}</p>
+                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Summary</p>
+                        <p className="text-xs font-medium truncate">{object.manager.prd.description || "Analyzing..."}</p>
                       </div>
                     </motion.div>
                   )}
