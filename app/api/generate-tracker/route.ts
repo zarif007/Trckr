@@ -1,8 +1,8 @@
 import managerPrompt from '@/lib/prompts/manager'
 import trackerBuilderPrompt from '@/lib/prompts/trackerBuilder'
-import { multiAgentSchema } from '@/lib/schemas/multi-agent'
+import { multiAgentSchema, type MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { deepseek } from '@ai-sdk/deepseek'
-import { streamObject } from 'ai'
+import { generateObject, streamObject } from 'ai'
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message
@@ -20,6 +20,8 @@ const DEFAULT_MAX_OUTPUT_TOKENS = DEEPSEEK_CHAT_MAX_OUTPUT
 const MAX_OUTPUT_TOKENS = process.env.DEEPSEEK_MAX_OUTPUT_TOKENS
   ? Math.min(DEEPSEEK_CHAT_MAX_OUTPUT, Math.max(1024, parseInt(process.env.DEEPSEEK_MAX_OUTPUT_TOKENS, 10) || DEFAULT_MAX_OUTPUT_TOKENS))
   : DEFAULT_MAX_OUTPUT_TOKENS
+
+const MAX_FALLBACK_ATTEMPTS = 3
 
 export async function POST(request: Request) {
   try {
@@ -142,6 +144,13 @@ export async function POST(request: Request) {
       ? `${conversationContext}User: ${query}\n\nBased on our conversation, ${hasMessages ? 'update or modify' : 'create'} the tracker according to the user's latest request.`
       : query
 
+    // Fallback prompts (used when initial generation fails); max 3 fallbacks
+    const fallbackPrompts: string[] = [
+      `${conversationContext}User: ${query}\n\nSimplify the request: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Always include both "manager" and "tracker" in valid JSON.`,
+      `${conversationContext}User: ${query}\n\nOutput only a minimal valid tracker JSON: one tab, one section, one grid, and one text field. Include "manager" (brief) and "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.`,
+      'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings. Include a brief "manager" object with thinking, prd, and builderTodo.',
+    ]
+
     const combinedSystemPrompt = `
       ${managerPrompt}
       
@@ -172,24 +181,70 @@ export async function POST(request: Request) {
       output a complete but minimal tracker (fewer optional fields); the user can ask to add more.
     `
 
-    const result = streamObject({
-      model: deepseek('deepseek-chat'),
-      system: combinedSystemPrompt,
-      prompt: fullPrompt,
-      schema: multiAgentSchema,
+    const hasValidOutput = (obj: MultiAgentSchema | undefined) =>
+      obj != null && (obj.tracker != null || obj.trackerPatch != null)
 
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      onFinish: ({ object: finalObject, error: validationError }) => {
-        if (validationError) {
-          console.error('[generate-tracker] Final object failed validation:', validationError)
-        }
-        if (!finalObject?.tracker && !finalObject?.trackerPatch && !validationError) {
-          console.warn('[generate-tracker] Stream finished but no tracker/patch in response (possible max tokens or empty output)')
-        }
-      },
-    })
+    const returnAsStream = (object: MultiAgentSchema) => {
+      const json = JSON.stringify(object)
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(json)
+          controller.close()
+        },
+      })
+      return new Response(stream.pipeThrough(new TextEncoderStream()), {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      })
+    }
 
-    return result.toTextStreamResponse()
+    // Try streaming first for best UX; if it throws (e.g. API error), use generateObject fallbacks
+    try {
+      const result = streamObject({
+        model: deepseek('deepseek-chat'),
+        system: combinedSystemPrompt,
+        prompt: fullPrompt,
+        schema: multiAgentSchema,
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+        onFinish: ({ object: finalObject, error: validationError }) => {
+          if (validationError) {
+            console.error('[generate-tracker] Final object failed validation:', validationError)
+          }
+          if (!finalObject?.tracker && !finalObject?.trackerPatch && !validationError) {
+            console.warn('[generate-tracker] Stream finished but no tracker/patch in response (possible max tokens or empty output)')
+          }
+        },
+      })
+      return result.toTextStreamResponse()
+    } catch {
+      // Stream failed; run fallbacks with generateObject (so we can retry on invalid output)
+    }
+
+    // Fallback: up to MAX_FALLBACK_ATTEMPTS (3) with different prompts
+    let lastError: unknown = null
+    for (let i = 0; i < MAX_FALLBACK_ATTEMPTS; i++) {
+      try {
+        const { object } = await generateObject({
+          model: deepseek('deepseek-chat'),
+          system: combinedSystemPrompt,
+          prompt: fallbackPrompts[i],
+          schema: multiAgentSchema,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
+        })
+        if (hasValidOutput(object as MultiAgentSchema)) {
+          return returnAsStream(object as MultiAgentSchema)
+        }
+      } catch (err) {
+        lastError = err
+        console.warn(`[generate-tracker] Fallback ${i + 1}/${MAX_FALLBACK_ATTEMPTS} failed:`, getErrorMessage(err))
+      }
+    }
+
+    const message = lastError != null ? getErrorMessage(lastError) : 'Generation failed after initial try and all fallbacks (no valid tracker or trackerPatch).'
+    console.error('[generate-tracker] All attempts failed:', message)
+    return Response.json(
+      { error: message || 'Failed to generate tracker. Please try again.' },
+      { status: 500 },
+    )
   } catch (error) {
     const message = getErrorMessage(error)
     console.error('Error generating tracker:', message, error)

@@ -114,8 +114,8 @@ export function TrackerMessageList({
               </div>
             )}
             {message.managerData && (
-              <div className="w-full space-y-4">
-                <div className="flex flex-col gap-2 p-4 rounded-md bg-secondary/20 border border-border/40 backdrop-blur-sm">
+              <div className="w-full min-w-0 space-y-4">
+                <div className="flex flex-col gap-2 p-4 rounded-md bg-secondary/20 border border-border/40 backdrop-blur-sm min-w-0">
                   <button
                     onClick={() => {
                       setMessageThinkingOpen(idx, !message.isThinkingOpen)
@@ -136,26 +136,26 @@ export function TrackerMessageList({
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="pt-2 space-y-3">
-                        <p className="text-sm font-medium leading-relaxed italic text-foreground/80">
+                      <div className="pt-2 space-y-3 min-w-0">
+                        <p className="text-sm font-medium leading-relaxed italic text-foreground/80 break-words">
                           "{message.managerData.thinking}"
                         </p>
                         {message.managerData.prd && (
-                          <div className="mt-2 pt-2 border-t border-border/20">
-                            <p className="text-xs text-muted-foreground">{message.managerData.prd.description}</p>
+                          <div className="mt-2 pt-2 border-t border-border/20 min-w-0">
+                            <p className="text-xs text-muted-foreground break-words">{message.managerData.prd.description}</p>
                           </div>
                         )}
                         {message.managerData.builderTodo && message.managerData.builderTodo.length > 0 && (
-                          <div className="mt-3 space-y-2">
+                          <div className="mt-3 space-y-2 min-w-0">
                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Execution Plan</p>
                             <div className="flex flex-col gap-1.5">
                               {message.managerData.builderTodo.map((todo, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded border border-border/20">
+                                <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded border border-border/20 min-w-0">
                                   <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-green-500' :
                                     todo.action === 'update' ? 'bg-blue-500' :
                                       todo.action === 'delete' ? 'bg-red-500' : 'bg-muted-foreground'
                                     }`} />
-                                  <div>
+                                  <div className="min-w-0 break-words">
                                     <span className="opacity-60">{todo.action} </span>
                                     <span className="font-bold">{todo.target}</span>
                                     <span className="opacity-80">: {todo.task}</span>
@@ -197,7 +197,7 @@ export function TrackerMessageList({
             <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 min-w-0 space-y-3">
               <div className="flex items-center gap-2 rounded-md px-4 py-2.5 bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                 <p className="text-sm">
@@ -211,7 +211,7 @@ export function TrackerMessageList({
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="p-5 rounded-md bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3"
+                  className="p-5 rounded-md bg-secondary/10 border border-border/30 backdrop-blur-md space-y-3 min-w-0"
                 >
                   <div className="flex items-center justify-between">
                     <div className="text-[10px] flex flex-row space-x-2 items-center justify-center font-black text-primary uppercase tracking-[0.2em]">
@@ -224,7 +224,7 @@ export function TrackerMessageList({
                   </div>
 
                   {object.manager.thinking && (
-                    <p className="text-sm text-foreground/70 font-medium leading-relaxed border-l-2 border-primary/30 pl-4 py-1">
+                    <p className="text-sm text-foreground/70 font-medium leading-relaxed border-l-2 border-primary/30 pl-4 py-1 break-words min-w-0">
                       {object.manager.thinking}
                     </p>
                   )}
@@ -233,11 +233,11 @@ export function TrackerMessageList({
                     <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="mt-4"
+                      className="mt-4 min-w-0"
                     >
-                      <div className="p-3 rounded-md bg-background/50 border border-border/30">
+                      <div className="p-3 rounded-md bg-background/50 border border-border/30 min-w-0">
                         <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Summary</p>
-                        <p className="text-xs font-medium truncate">{object.manager.prd.description || "Analyzing..."}</p>
+                        <p className="text-xs font-medium break-words min-w-0">{object.manager.prd.description || "Analyzing..."}</p>
                       </div>
                     </motion.div>
                   )}
@@ -246,17 +246,17 @@ export function TrackerMessageList({
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="space-y-2 pt-2"
+                      className="space-y-2 pt-2 min-w-0"
                     >
                       <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Action Items</p>
                       <div className="flex flex-col gap-2">
                         {object.manager.builderTodo.map((todo, i) => (
-                          <div key={i} className="flex items-center gap-3 text-xs font-bold text-foreground bg-background/50 p-2.5 rounded-md border border-border/20 shadow-sm">
-                            {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />}
-                            {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                            {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
-                            {!todo?.action && <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
-                            <span className="flex-1 truncate">{todo?.task || "Preparing task..."}</span>
+                          <div key={i} className="flex items-center gap-3 text-xs font-bold text-foreground bg-background/50 p-2.5 rounded-md border border-border/20 shadow-sm min-w-0">
+                            {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" />}
+                            {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
+                            {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                            {!todo?.action && <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />}
+                            <span className="flex-1 min-w-0 break-words">{todo?.task || "Preparing task..."}</span>
                           </div>
                         ))}
                       </div>

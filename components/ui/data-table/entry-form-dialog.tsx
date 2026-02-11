@@ -125,14 +125,15 @@ export function EntryFormDialog({
               </label>
               <div
                 className={
-                  'rounded-lg border bg-muted/30 focus-within:bg-background focus-within:ring-2 focus-within:ring-offset-1 transition-all duration-200 ' +
+                  'rounded-lg border bg-muted/30 focus-within:bg-background transition-[color,box-shadow] ' +
                   (showError
-                    ? 'border-destructive/60 focus-within:ring-destructive/25'
-                    : 'border-border/50 focus-within:border-primary/30 focus-within:ring-primary/15')
+                    ? 'border-destructive/60'
+                    : 'border-input hover:border-ring focus-within:border-ring')
                 }
                 title={error ?? undefined}
               >
                 <DataTableInput
+                  formField
                   value={value}
                   onChange={(newValue, options) => {
                     const sanitized = sanitizeValue(
@@ -158,7 +159,7 @@ export function EntryFormDialog({
                   onAddOption={fieldInfo.onAddOption}
                   optionsGridFields={fieldInfo.optionsGridFields}
                   getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-                  className="h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg"
+                  className="h-10 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-lg"
                   autoFocus={index === 0}
                 />
               </div>

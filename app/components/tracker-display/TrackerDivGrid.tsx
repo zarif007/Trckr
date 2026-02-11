@@ -182,7 +182,7 @@ export function TrackerDivGrid({
             case 'text':
               return (
                 <Textarea
-                  className={`min-h-[100px] leading-7 text-foreground/90 bg-secondary/20 border-border/50 focus-visible:ring-1 ${inputTextClass}`}
+                  className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -222,9 +222,8 @@ export function TrackerDivGrid({
                     }
                     handleSelectChange(val === '__empty__' ? '' : val)
                   }}
-                  placeholder={`Select ${field.ui.label}`}
-                  searchPlaceholder="Search options..."
-                  className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  searchPlaceholder=""
+                  className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   onAddOptionClick={onAddOption ? () => {
                     setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
                     setAddOptionOpen(true)
@@ -241,8 +240,7 @@ export function TrackerDivGrid({
                   options={multiOpts}
                   value={Array.isArray(value) ? value.map(String) : []}
                   onChange={(val) => handleSelectChange(val)}
-                  placeholder={`Select ${field.ui.label}`}
-                  className={`w-full bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   onAddOptionClick={onAddOption ? () => {
                     setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
                     setAddOptionOpen(true)
@@ -254,7 +252,7 @@ export function TrackerDivGrid({
               return (
                 <Input
                   type="date"
-                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={
                     value
                       ? new Date(String(value)).toISOString().split('T')[0]
@@ -269,7 +267,7 @@ export function TrackerDivGrid({
               return (
                 <Input
                   type="number"
-                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={typeof value === 'number' ? value : valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, Number(e.target.value))
@@ -279,7 +277,7 @@ export function TrackerDivGrid({
             default:
               return (
                 <Input
-                  className={`bg-secondary/10 border-border/50 ${inputTextClass}`}
+                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -294,7 +292,7 @@ export function TrackerDivGrid({
             <label className={`${ds.labelFontSize} font-medium text-muted-foreground uppercase tracking-wider ${ds.fontWeight}`}>
               {field.ui.label}
             </label>
-            <div className={`bg-secondary/20 rounded-md border ${ds.accentBorder} ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
+            <div className={`rounded-md border border-input hover:border-ring transition-[color,box-shadow] ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
               {renderInput()}
             </div>
           </div>

@@ -36,7 +36,7 @@ export function MultiSelect({
   options,
   value = [],
   onChange,
-  placeholder = 'Select options...',
+  placeholder = '',
   className = '',
   isInline = false,
   autoFocus = false,
@@ -58,11 +58,13 @@ export function MultiSelect({
     ? value.map(v => {
       const option = options.find(o => (typeof o === 'string' ? o : o.id) === v)
       return option ? (typeof option === 'string' ? option : option.label) : v
-    }).join(' ')
+    }).join(', ')
     : placeholder
 
+  const isEmpty = value.length === 0
+
   const triggerClasses = cn(
-    "input-field-height border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+    "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 font-normal text-left",
     isInline && "!h-full !min-h-0 border-0 bg-transparent shadow-none px-2 focus-visible:ring-0 focus:ring-0",
     className
   )
@@ -72,19 +74,21 @@ export function MultiSelect({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={triggerClasses}
+          className={cn(triggerClasses, open && 'border-ring')}
           aria-expanded={open}
           aria-required={required}
           aria-invalid={ariaInvalid}
           disabled={disabled}
         >
-          <span className="truncate flex-1 text-left">{displayText}</span>
-          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+          <span className="truncate flex-1 min-w-0 text-left whitespace-nowrap">
+            {displayText}
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]" align="start">
         <Command shouldFilter={true}>
-          <CommandInput placeholder="Search options..." className="h-8" />
+          <CommandInput placeholder="" className="h-8" />
           <CommandList>
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>

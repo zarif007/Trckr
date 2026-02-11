@@ -32,6 +32,8 @@ interface DataTableInputProps {
   onAddOption?: (row: Record<string, unknown>) => string
   /** When adding an option, compute binding updates from the new row (for auto-populate in Add Entry dialog). */
   getBindingUpdatesFromRow?: (row: Record<string, unknown>) => Record<string, unknown>
+  /** When true, used inside a form (e.g. add/edit dialog); multiselect uses same styling as normal select. */
+  formField?: boolean
 }
 
 /** Options passed when onChange is called after adding an option (so dialog can apply auto-populate). */
@@ -52,6 +54,7 @@ export function DataTableInput({
   onAddOption,
   optionsGridFields,
   getBindingUpdatesFromRow,
+  formField = false,
 }: DataTableInputProps) {
   const inlineInputClass = `border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
@@ -189,7 +192,7 @@ export function DataTableInput({
               onChange(v === '__empty__' ? '' : v)
             }}
             placeholder=""
-            searchPlaceholder="Search options..."
+            searchPlaceholder=""
             className={cn(
               inlineInputClass,
               className,
@@ -222,8 +225,8 @@ export function DataTableInput({
             options={options ?? []}
             value={Array.isArray(value) ? value : []}
             onChange={onChange}
-            isInline={true}
-            className={cn(inlineInputClass, className)}
+            isInline={!formField}
+            className={formField ? cn(className, 'w-full text-left shadow-none') : cn(inlineInputClass, className)}
             onAddOptionClick={onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
@@ -249,7 +252,6 @@ export function DataTableInput({
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
-          placeholder="https://"
           autoFocus={autoFocus}
         />
       )
