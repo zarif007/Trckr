@@ -15,7 +15,7 @@ import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/l
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
 import { ChevronDown, Plus } from 'lucide-react'
-import { filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import {
   DndContext,
   DragOverlay,
@@ -251,9 +251,10 @@ export function TrackerKanbanGrid({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
+  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(
-    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
-    [dependsOn, grid.id]
+    () => getRulesForGrid(dependsOnIndex, grid.id),
+    [dependsOnIndex, grid.id]
   )
   const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
 

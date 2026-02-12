@@ -13,7 +13,7 @@ import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
-import { filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useMemo, useCallback } from 'react'
 
 interface TrackerTableGridProps {
@@ -52,31 +52,28 @@ export function TrackerTableGrid({
   onDeleteEntries,
   onCrossGridUpdate,
 }: TrackerTableGridProps) {
+  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(
-    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
-    [dependsOn, grid.id]
+    () => getRulesForGrid(dependsOnIndex, grid.id),
+    [dependsOnIndex, grid.id]
   )
   const connectedFieldNodes = layoutNodes
     .filter((n) => n.gridId === grid.id)
     .sort((a, b) => a.order - b.order)
-
-  if (connectedFieldNodes.length === 0) {
-    if (layoutNodes.length === 0) return null
-    return (
-      <div className="p-4 text-muted-foreground">
-        Empty Table (No Fields linked)
-      </div>
-    )
-  }
-
   const tableFields = connectedFieldNodes
     .map((node) => fields.find((f) => f.id === node.fieldId))
     .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
-
-  if (tableFields.length === 0)
-    return <div className="p-4 text-red-500">Missing Field Definitions</div>
-
   const rows = gridData[grid.id] ?? []
+
+  /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
+  const rowOverridesCache = useMemo(() => {
+    const out: Record<number, Record<string, import('@/lib/depends-on').FieldOverride>> = {}
+    const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
+    rowsToCompute.forEach((row, idx) => {
+      out[idx] = resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, idx, row)
+    })
+    return out
+  }, [dependsOnForGrid, gridData, grid.id])
 
   const hiddenTargetFields = useMemo(() => {
     const targets = new Set<string>()
@@ -95,22 +92,21 @@ export function TrackerTableGrid({
   const hiddenColumnIds = useMemo(() => {
     const hidden = new Set<string>()
     if (hiddenTargetFields.size === 0) return hidden
-    const rowsToCheck = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     hiddenTargetFields.forEach((fieldId) => {
       let anyVisible = false
-      rowsToCheck.forEach((row, idx) => {
-        const overrides = resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, idx, row)
-        const isHidden = overrides[fieldId]?.isHidden
-        if (isHidden !== true) anyVisible = true
+      Object.keys(rowOverridesCache).forEach((k) => {
+        const idx = Number(k)
+        const overrides = rowOverridesCache[idx]
+        if (overrides?.[fieldId]?.isHidden !== true) anyVisible = true
       })
       if (!anyVisible) hidden.add(fieldId)
     })
     return hidden
-  }, [hiddenTargetFields, rows, dependsOnForGrid, gridData, grid.id])
+  }, [hiddenTargetFields, rowOverridesCache])
+
   const getFieldOverrides = useCallback(
-    (rowIndex: number, fieldId: string) =>
-      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex)[fieldId],
-    [dependsOnForGrid, gridData, grid.id]
+    (rowIndex: number, fieldId: string) => rowOverridesCache[rowIndex]?.[fieldId],
+    [rowOverridesCache]
   )
   const getFieldOverridesForRow = useCallback(
     (rowIndex: number, rowData: Record<string, unknown>, fieldId: string) =>
@@ -122,6 +118,17 @@ export function TrackerTableGrid({
       resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex, values),
     [dependsOnForGrid, gridData, grid.id]
   )
+
+  if (connectedFieldNodes.length === 0) {
+    if (layoutNodes.length === 0) return null
+    return (
+      <div className="p-4 text-muted-foreground">
+        Empty Table (No Fields linked)
+      </div>
+    )
+  }
+  if (tableFields.length === 0)
+    return <div className="p-4 text-red-500">Missing Field Definitions</div>
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
@@ -257,6 +264,7 @@ export function TrackerTableGrid({
       getBindingUpdates={getBindingUpdates}
       config={grid.config}
       styleOverrides={styleOverrides}
+      addable={grid.config?.addable !== false}
     />
   );
 }

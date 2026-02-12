@@ -58,7 +58,10 @@ export function EntryFormDialog({
       const fieldInfo = fieldMetadata[columnId]
       if (!fieldInfo) return false
       const overrides = getFieldOverrides?.(formData, columnId)
-      const effectiveConfig = applyFieldOverrides(fieldInfo.config, overrides)
+      const effectiveConfig = applyFieldOverrides(
+        fieldInfo.config as Record<string, unknown> | null | undefined,
+        overrides
+      )
       if (effectiveConfig?.isHidden || effectiveConfig?.isDisabled) return false
       return !!getValidationError(
         formData[columnId],
@@ -106,7 +109,10 @@ export function EntryFormDialog({
           const fieldInfo = fieldMetadata[columnId]
           if (!fieldInfo) return null
           const overrides = getFieldOverrides?.(formData, columnId)
-          const effectiveConfig = applyFieldOverrides(fieldInfo.config, overrides)
+          const effectiveConfig = applyFieldOverrides(
+            fieldInfo.config as Record<string, unknown> | null | undefined,
+            overrides
+          )
           if (effectiveConfig?.isHidden) return null
 
           const value = formData[columnId] ?? ''

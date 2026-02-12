@@ -15,7 +15,7 @@ import {
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
-import { applyFieldOverrides, filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { applyFieldOverrides, buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
@@ -56,9 +56,10 @@ export function TrackerDivGrid({
   onAddEntryToGrid,
 }: TrackerDivGridProps) {
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
+  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(
-    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
-    [dependsOn, grid.id]
+    () => getRulesForGrid(dependsOnIndex, grid.id),
+    [dependsOnIndex, grid.id]
   )
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
 
@@ -161,9 +162,12 @@ export function TrackerDivGrid({
           }
         }
 
-        const value = data[field.id]
+        const rawValue = data[field.id]
+        const value = (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
+          ? (effectiveConfig as { value: unknown }).value
+          : rawValue
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
-        const isDisabled = !!effectiveConfig?.isDisabled
+        const isDisabled = !!effectiveConfig?.isDisabled || (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
 
         const handleSelectChange = (selectedValue: unknown) => {
           onUpdate?.(0, field.id, selectedValue)

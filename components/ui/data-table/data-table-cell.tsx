@@ -34,16 +34,24 @@ export function DataTableCell<TData, TValue>({
   const overrides =
     meta?.getFieldOverridesForRow?.(row.index, row.original as Record<string, unknown>, cell.column.id) ??
     meta?.getFieldOverrides?.(row.index, cell.column.id)
-  const effectiveConfig = fieldInfo ? applyFieldOverrides(fieldInfo.config, overrides) : undefined
+  const effectiveConfig = fieldInfo
+    ? applyFieldOverrides(
+      fieldInfo.config as Record<string, unknown> | null | undefined,
+      overrides
+    )
+    : undefined
   const isHidden = !!effectiveConfig?.isHidden
   const isDisabled = !!effectiveConfig?.isDisabled
+  const overrideValue = overrides && 'value' in overrides ? (overrides as { value?: unknown }).value : undefined
 
-  const [value, setValue] = useState(cell.getValue())
+  const [value, setValue] = useState(() =>
+    overrideValue !== undefined ? overrideValue : cell.getValue()
+  )
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
-    setValue(cell.getValue())
-  }, [cell.getValue()])
+    setValue(overrideValue !== undefined ? overrideValue : cell.getValue())
+  }, [cell.getValue(), overrideValue])
 
   const handleUpdate = (newValue: any, options?: { bindingUpdates?: Record<string, unknown> }) => {
     setDirty(true)
@@ -85,7 +93,7 @@ export function DataTableCell<TData, TValue>({
             type={fieldInfo.type}
             options={fieldInfo.options}
             config={effectiveConfig}
-            disabled={isDisabled}
+            disabled={isDisabled || overrideValue !== undefined}
             onAddOption={fieldInfo.onAddOption}
             optionsGridFields={fieldInfo.optionsGridFields}
             getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}

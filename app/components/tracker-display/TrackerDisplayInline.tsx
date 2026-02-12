@@ -15,6 +15,7 @@ import {
 } from './types'
 import { TrackerSection } from './TrackerSection'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
+import { ensureDependsOnOptionGrids, SHARED_TAB_ID } from '@/lib/depends-on-options'
 
 export function TrackerDisplayInline({
   tabs,
@@ -75,13 +76,42 @@ export function TrackerDisplayInline({
     Record<string, Array<Record<string, unknown>>>
   >(() => ({}))
 
-  const gridData = useMemo(() => {
+  const hasSharedTab = (tabs ?? []).some((t) => t.id === SHARED_TAB_ID)
+  const dependsOnAug = useMemo(() => {
+    if (!hasSharedTab) return null
+    return ensureDependsOnOptionGrids({
+      sections: sections ?? [],
+      grids: grids ?? [],
+      fields: fields ?? [],
+      layoutNodes: layoutNodes ?? [],
+      bindings: bindings ?? {},
+      dependsOn: dependsOn ?? [],
+    })
+  }, [hasSharedTab, sections, grids, fields, layoutNodes, bindings, dependsOn])
+
+  const effectiveSections = dependsOnAug ? dependsOnAug.sections : (sections ?? [])
+  const effectiveGrids = dependsOnAug ? dependsOnAug.grids : (grids ?? [])
+  const effectiveFields = dependsOnAug ? dependsOnAug.fields : (fields ?? [])
+  const effectiveLayoutNodes = dependsOnAug ? dependsOnAug.layoutNodes : (layoutNodes ?? [])
+  const effectiveBindings = dependsOnAug ? dependsOnAug.bindings : (bindings ?? {})
+
+  const baseGridData = useMemo(() => {
     const merged = { ...seedGridData }
+    if (dependsOnAug) {
+      for (const [gridId, rows] of Object.entries(dependsOnAug.seedGridData)) {
+        merged[gridId] = rows
+      }
+    }
+    return merged
+  }, [seedGridData, dependsOnAug])
+
+  const gridData = useMemo(() => {
+    const merged = { ...baseGridData }
     for (const [gridId, rows] of Object.entries(localGridData)) {
       if (Array.isArray(rows)) merged[gridId] = rows
     }
     return merged
-  }, [seedGridData, localGridData])
+  }, [baseGridData, localGridData])
 
   useEffect(() => {
     if (getDataRef) {
@@ -99,7 +129,7 @@ export function TrackerDisplayInline({
     value: unknown,
   ) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
+      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
       const next = [...current]
       // Ensure row exists (div grids use rowIndex 0 and start with empty array)
       while (next.length <= rowIndex) next.push({})
@@ -110,14 +140,14 @@ export function TrackerDisplayInline({
 
   const handleAddEntry = (gridId: string, newRow: Record<string, unknown>) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
+      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
       return { ...(prev ?? {}), [gridId]: [...current, newRow] }
     })
   }
 
   const handleDeleteEntries = (gridId: string, rowIndices: number[]) => {
     setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? seedGridData[gridId] ?? []
+      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
       const filtered = current.filter((_, index) => !rowIndices.includes(index))
       return { ...(prev ?? {}), [gridId]: filtered }
     })
@@ -152,11 +182,11 @@ export function TrackerDisplayInline({
           <TrackerTabContent
             key={tab.id}
             tab={tab}
-            sections={sections}
-            grids={grids}
-            fields={fields}
-            layoutNodes={layoutNodes}
-            bindings={bindings}
+            sections={effectiveSections}
+            grids={effectiveGrids}
+            fields={effectiveFields}
+            layoutNodes={effectiveLayoutNodes}
+            bindings={effectiveBindings}
             styles={styles}
             dependsOn={dependsOn}
             localGridData={localGridData}

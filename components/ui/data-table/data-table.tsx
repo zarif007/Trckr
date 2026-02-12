@@ -66,6 +66,8 @@ interface DataTableProps<TData, TValue> {
   getFieldOverridesForAdd?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
   /** Force-hide specific columns (e.g., conditional visibility). */
   hiddenColumns?: string[]
+  /** When false, hide Add Entry button and add-dialog. Default true. */
+  addable?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -81,6 +83,7 @@ export function DataTable<TData, TValue>({
   getFieldOverridesForRow,
   getFieldOverridesForAdd,
   hiddenColumns,
+  addable = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -326,28 +329,32 @@ export function DataTable<TData, TValue>({
             </div>
           </DialogContent>
         </Dialog>
-        <Button
-          size="sm"
-          variant="default"
-          onClick={() => setShowAddDialog(true)}
-          className="shadow-sm font-medium"
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          Add Entry
-        </Button>
-        <EntryFormDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-          title="Add New Entry"
-          submitLabel="Add Entry"
-          fieldMetadata={fieldMetadata ?? {}}
-          fieldOrder={addFieldOrder}
-          initialValues={{}}
-          onSave={handleAddEntry}
-          onSaveAnother={handleAddEntryAndStayOpen}
-          getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={getFieldOverridesForAdd}
-        />
+        {addable && (
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setShowAddDialog(true)}
+              className="shadow-sm font-medium"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Entry
+            </Button>
+            <EntryFormDialog
+              open={showAddDialog}
+              onOpenChange={setShowAddDialog}
+              title="Add New Entry"
+              submitLabel="Add Entry"
+              fieldMetadata={fieldMetadata ?? {}}
+              fieldOrder={addFieldOrder}
+              initialValues={{}}
+              onSave={handleAddEntry}
+              onSaveAnother={handleAddEntryAndStayOpen}
+              getBindingUpdates={getBindingUpdates}
+              getFieldOverrides={getFieldOverridesForAdd}
+            />
+          </>
+        )}
         <Dialog
           open={rowDetailsOpenForIndex !== null}
           onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
@@ -391,7 +398,12 @@ export function DataTable<TData, TValue>({
                           rowDetailsRow.original as Record<string, unknown>,
                           col.id
                         ) ?? meta?.getFieldOverrides?.(rowDetailsRow.index, col.id)
-                      const effectiveConfig = fieldInfo ? applyFieldOverrides(fieldInfo.config, overrides) : undefined
+                      const effectiveConfig = fieldInfo
+                        ? applyFieldOverrides(
+                          fieldInfo.config as Record<string, unknown> | null | undefined,
+                          overrides
+                        )
+                        : undefined
                       const isHidden = !!effectiveConfig?.isHidden
                       const isDisabled = !!effectiveConfig?.isDisabled
                       const value = cell
@@ -428,7 +440,7 @@ export function DataTable<TData, TValue>({
                               <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
                             )}
                             {label}
-                            {effectiveConfig?.isRequired && (
+                            {!!effectiveConfig?.isRequired && (
                               <span className="text-destructive/80">*</span>
                             )}
                           </label>
