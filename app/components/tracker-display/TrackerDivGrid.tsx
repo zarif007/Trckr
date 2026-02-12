@@ -11,9 +11,11 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
+  DependsOnRules,
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
+import { applyFieldOverrides, filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
@@ -31,6 +33,7 @@ interface TrackerDivGridProps {
   bindings?: TrackerBindings
   /** Optional style overrides for this div view. */
   styleOverrides?: StyleOverrides
+  dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
@@ -46,12 +49,17 @@ export function TrackerDivGrid({
   fields,
   bindings = {},
   styleOverrides,
+  dependsOn,
   gridData = {},
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
 }: TrackerDivGridProps) {
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
+  const dependsOnForGrid = useMemo(
+    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
+    [dependsOn, grid.id]
+  )
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
@@ -103,6 +111,10 @@ export function TrackerDivGrid({
   }
 
   const data = gridData?.[grid.id]?.[0] || {}
+  const fieldOverrides = useMemo(
+    () => resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, data),
+    [dependsOnForGrid, gridData, grid.id, data]
+  )
 
   if (fieldNodes.length === 0) return null
 
@@ -113,7 +125,8 @@ export function TrackerDivGrid({
       {fieldNodes.map((node) => {
         const field = fields.find(f => f.id === node.fieldId)
         if (!field) return null
-        if (field.config?.isHidden) return null
+        const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
+        if (effectiveConfig?.isHidden) return null
 
         const options = (field.dataType === 'options' || field.dataType === 'multiselect')
           ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
@@ -150,6 +163,7 @@ export function TrackerDivGrid({
 
         const value = data[field.id]
         const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
+        const isDisabled = !!effectiveConfig?.isDisabled
 
         const handleSelectChange = (selectedValue: unknown) => {
           onUpdate?.(0, field.id, selectedValue)
@@ -184,6 +198,7 @@ export function TrackerDivGrid({
                 <Textarea
                   className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
+                  disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
                   }
@@ -194,6 +209,7 @@ export function TrackerDivGrid({
                 <div className="flex items-center min-h-[2.5rem]">
                   <Checkbox
                     checked={value === true}
+                    disabled={isDisabled}
                     onCheckedChange={(checked) =>
                       onUpdate?.(0, field.id, checked)
                     }
@@ -214,6 +230,7 @@ export function TrackerDivGrid({
                 <SearchableSelect
                   options={selectOptions}
                   value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
+                  disabled={isDisabled}
                   onValueChange={(val) => {
                     if (val === ADD_OPTION_VALUE && onAddOption) {
                       setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
@@ -240,6 +257,7 @@ export function TrackerDivGrid({
                   options={multiOpts}
                   value={Array.isArray(value) ? value.map(String) : []}
                   onChange={(val) => handleSelectChange(val)}
+                  disabled={isDisabled}
                   className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   onAddOptionClick={onAddOption ? () => {
                     setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
@@ -258,6 +276,7 @@ export function TrackerDivGrid({
                       ? new Date(String(value)).toISOString().split('T')[0]
                       : undefined
                   }
+                  disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
                   }
@@ -269,6 +288,7 @@ export function TrackerDivGrid({
                   type="number"
                   className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={typeof value === 'number' ? value : valueString}
+                  disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, Number(e.target.value))
                   }
@@ -279,6 +299,7 @@ export function TrackerDivGrid({
                 <Input
                   className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
+                  disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
                   }
@@ -291,6 +312,9 @@ export function TrackerDivGrid({
           <div key={field.id} className="space-y-1.5">
             <label className={`${ds.labelFontSize} font-medium text-muted-foreground uppercase tracking-wider ${ds.fontWeight}`}>
               {field.ui.label}
+              {effectiveConfig?.isRequired && (
+                <span className="text-destructive/80 ml-1">*</span>
+              )}
             </label>
             <div className={`rounded-md border border-input hover:border-ring transition-[color,box-shadow] ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
               {renderInput()}

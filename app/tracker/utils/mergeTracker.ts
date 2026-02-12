@@ -157,6 +157,7 @@ export function applyTrackerPatch(
     fields,
     layoutNodes,
     bindings,
+    dependsOn: patch.dependsOn ?? base.dependsOn,
     styles,
   }
 }

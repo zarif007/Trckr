@@ -115,7 +115,10 @@ export type {
   TrackerBindings,
 } from '@/lib/types/tracker-bindings'
 
+export type { DependsOnRule, DependsOnRules, FieldOverride } from '@/lib/depends-on'
+
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
+import type { DependsOnRules } from '@/lib/depends-on'
 
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
@@ -123,6 +126,8 @@ export interface TrackerDisplayProps {
   grids: TrackerGrid[]
   fields: TrackerField[]
   layoutNodes?: TrackerLayoutNode[]
+  /** Conditional field actions (hide/require/disable). */
+  dependsOn?: DependsOnRules
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings
   /** Optional style overrides keyed by grid id or view id. */

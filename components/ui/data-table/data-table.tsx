@@ -40,6 +40,7 @@ import { DataTableInput } from './data-table-input'
 import { EntryFormDialog } from './entry-form-dialog'
 import type { StyleOverrides } from '@/app/components/tracker-display/types'
 import { resolveTableStyles } from '@/lib/style-utils'
+import { applyFieldOverrides } from '@/lib/depends-on'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -53,6 +54,18 @@ interface DataTableProps<TData, TValue> {
   styleOverrides?: StyleOverrides
   /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
+  /** For table cells/row details: resolve per-row field overrides (hidden/required/disabled). */
+  getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
+  /** For table cells/row details: resolve overrides using the current row values. */
+  getFieldOverridesForRow?: (
+    rowIndex: number,
+    rowData: Record<string, unknown>,
+    fieldId: string
+  ) => Record<string, unknown> | undefined
+  /** For Add Entry dialog: resolve field overrides based on current form values. */
+  getFieldOverridesForAdd?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
+  /** Force-hide specific columns (e.g., conditional visibility). */
+  hiddenColumns?: string[]
 }
 
 export function DataTable<TData, TValue>({
@@ -64,6 +77,10 @@ export function DataTable<TData, TValue>({
   onDeleteEntries,
   getBindingUpdates,
   styleOverrides,
+  getFieldOverrides,
+  getFieldOverridesForRow,
+  getFieldOverridesForAdd,
+  hiddenColumns,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -88,6 +105,15 @@ export function DataTable<TData, TValue>({
       return initialVisibility
     },
   )
+
+  const forcedHidden = useMemo(() => new Set(hiddenColumns ?? []), [hiddenColumns])
+  const effectiveVisibility = useMemo(() => {
+    const next: VisibilityState = { ...columnVisibility }
+    forcedHidden.forEach((colId) => {
+      next[colId] = false
+    })
+    return next
+  }, [columnVisibility, forcedHidden])
 
   const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
     () => [
@@ -213,12 +239,14 @@ export function DataTable<TData, TValue>({
     state: {
       sorting,
       rowSelection,
-      columnVisibility,
+      columnVisibility: effectiveVisibility,
     },
     meta: {
       updateData: onCellUpdate,
       fieldMetadata: fieldMetadata,
       tableStyles: ts,
+      getFieldOverrides,
+      getFieldOverridesForRow,
     },
   })
 
@@ -318,6 +346,7 @@ export function DataTable<TData, TValue>({
           onSave={handleAddEntry}
           onSaveAnother={handleAddEntryAndStayOpen}
           getBindingUpdates={getBindingUpdates}
+          getFieldOverrides={getFieldOverridesForAdd}
         />
         <Dialog
           open={rowDetailsOpenForIndex !== null}
@@ -356,6 +385,15 @@ export function DataTable<TData, TValue>({
                       const meta = table.options.meta as any
                       const fieldMetadata = meta?.fieldMetadata
                       const fieldInfo = fieldMetadata?.[col.id]
+                      const overrides =
+                        meta?.getFieldOverridesForRow?.(
+                          rowDetailsRow.index,
+                          rowDetailsRow.original as Record<string, unknown>,
+                          col.id
+                        ) ?? meta?.getFieldOverrides?.(rowDetailsRow.index, col.id)
+                      const effectiveConfig = fieldInfo ? applyFieldOverrides(fieldInfo.config, overrides) : undefined
+                      const isHidden = !!effectiveConfig?.isHidden
+                      const isDisabled = !!effectiveConfig?.isDisabled
                       const value = cell
                         ? cell.getValue()
                         : rowDetailsRow.getValue(col.id)
@@ -364,7 +402,7 @@ export function DataTable<TData, TValue>({
                         ? getValidationError(
                           value,
                           fieldInfo.type,
-                          fieldInfo.config
+                          effectiveConfig
                         )
                         : null
                       const detailsShowError = detailsTouched && !!detailsError
@@ -373,6 +411,8 @@ export function DataTable<TData, TValue>({
                         typeof col.columnDef.header === 'string'
                           ? col.columnDef.header
                           : col.id
+
+                      if (isHidden) return null
 
                       return (
                         <div
@@ -388,7 +428,7 @@ export function DataTable<TData, TValue>({
                               <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
                             )}
                             {label}
-                            {fieldInfo?.config?.isRequired && (
+                            {effectiveConfig?.isRequired && (
                               <span className="text-destructive/80">*</span>
                             )}
                           </label>
@@ -413,7 +453,7 @@ export function DataTable<TData, TValue>({
                                       const sanitized = sanitizeValue(
                                         newValue,
                                         fieldInfo.type,
-                                        fieldInfo.config
+                                        effectiveConfig
                                       )
                                       const updateData = meta?.updateData
                                       updateData?.(rowDetailsRow.index, col.id, sanitized)
@@ -429,7 +469,8 @@ export function DataTable<TData, TValue>({
                                     }}
                                     type={fieldInfo.type}
                                     options={fieldInfo.options}
-                                    config={fieldInfo.config}
+                                    config={effectiveConfig}
+                                    disabled={isDisabled}
                                     onAddOption={fieldInfo.onAddOption}
                                     optionsGridFields={fieldInfo.optionsGridFields}
                                     getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}

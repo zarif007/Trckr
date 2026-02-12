@@ -135,6 +135,29 @@ export const stylesSchema = z
   .default({})
   .describe('Style overrides keyed by grid or view id. Only when user asks for visual changes.')
 
+// DEPENDS-ON (conditional field actions)
+
+const dependsOnActionEnum = z
+  .enum(['isHidden', 'isRequired', 'isDisabled'])
+  .catch('isHidden')
+
+export const dependsOnRuleSchema = z
+  .object({
+    source: z.string().describe('Source field path (grid_id.field_id)'),
+    operator: z.string().optional().describe('Comparison operator (e.g. =, !=, >, contains, in, is_empty)'),
+    value: z.any().optional().describe('Value to compare against'),
+    action: dependsOnActionEnum.describe('Target field property to set'),
+    set: z.boolean().optional().describe('Value to set on the target property (default true)'),
+    targets: z.array(z.string()).default([]).describe('Target field paths (grid_id.field_id)'),
+    priority: z.coerce.number().optional().describe('Priority for conflict resolution; higher wins'),
+  })
+  .passthrough()
+
+export const dependsOnSchema = z
+  .array(dependsOnRuleSchema)
+  .default([])
+  .describe('Conditional field actions: evaluate source field, apply action to targets.')
+
 // BINDINGS - select/multiselect auto-population
 
 /** Single field mapping: from source field in options grid to target field in main grid. Paths are grid_id.field_id */
@@ -241,6 +264,8 @@ export const trackerSchema = z
       )
       .default([])
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
+
+    dependsOn: dependsOnSchema,
 
     bindings: bindingsSchema,
 

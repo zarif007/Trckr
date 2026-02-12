@@ -7,11 +7,14 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
+  DependsOnRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
+import { filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { useMemo, useCallback } from 'react'
 
 interface TrackerTableGridProps {
   tabId: string
@@ -23,6 +26,7 @@ interface TrackerTableGridProps {
   bindings?: TrackerBindings
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
+  dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -40,6 +44,7 @@ export function TrackerTableGrid({
   fields,
   bindings = {},
   styleOverrides,
+  dependsOn,
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -47,6 +52,10 @@ export function TrackerTableGrid({
   onDeleteEntries,
   onCrossGridUpdate,
 }: TrackerTableGridProps) {
+  const dependsOnForGrid = useMemo(
+    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
+    [dependsOn, grid.id]
+  )
   const connectedFieldNodes = layoutNodes
     .filter((n) => n.gridId === grid.id)
     .sort((a, b) => a.order - b.order)
@@ -68,6 +77,51 @@ export function TrackerTableGrid({
     return <div className="p-4 text-red-500">Missing Field Definitions</div>
 
   const rows = gridData[grid.id] ?? []
+
+  const hiddenTargetFields = useMemo(() => {
+    const targets = new Set<string>()
+    dependsOnForGrid.forEach((rule) => {
+      if (!rule?.targets || !rule.action) return
+      const action = String(rule.action).toLowerCase()
+      if (!action.includes('hidden')) return
+      rule.targets.forEach((target) => {
+        const { gridId, fieldId } = parsePath(target)
+        if (gridId === grid.id && fieldId) targets.add(fieldId)
+      })
+    })
+    return targets
+  }, [dependsOnForGrid, grid.id])
+
+  const hiddenColumnIds = useMemo(() => {
+    const hidden = new Set<string>()
+    if (hiddenTargetFields.size === 0) return hidden
+    const rowsToCheck = rows.length > 0 ? rows : [{} as Record<string, unknown>]
+    hiddenTargetFields.forEach((fieldId) => {
+      let anyVisible = false
+      rowsToCheck.forEach((row, idx) => {
+        const overrides = resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, idx, row)
+        const isHidden = overrides[fieldId]?.isHidden
+        if (isHidden !== true) anyVisible = true
+      })
+      if (!anyVisible) hidden.add(fieldId)
+    })
+    return hidden
+  }, [hiddenTargetFields, rows, dependsOnForGrid, gridData, grid.id])
+  const getFieldOverrides = useCallback(
+    (rowIndex: number, fieldId: string) =>
+      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex)[fieldId],
+    [dependsOnForGrid, gridData, grid.id]
+  )
+  const getFieldOverridesForRow = useCallback(
+    (rowIndex: number, rowData: Record<string, unknown>, fieldId: string) =>
+      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex, rowData)[fieldId],
+    [dependsOnForGrid, gridData, grid.id]
+  )
+  const getFieldOverridesForValues = useCallback(
+    (values: Record<string, unknown>, rowIndex: number) =>
+      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex, values),
+    [dependsOnForGrid, gridData, grid.id]
+  )
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
@@ -193,6 +247,10 @@ export function TrackerTableGrid({
       columns={columns}
       data={rows}
       fieldMetadata={fieldMetadata}
+      getFieldOverrides={getFieldOverrides}
+      getFieldOverridesForRow={getFieldOverridesForRow}
+      hiddenColumns={[...hiddenColumnIds]}
+      getFieldOverridesForAdd={(values, fieldId) => getFieldOverridesForValues(values, 0)[fieldId]}
       onCellUpdate={handleCellUpdate}
       onAddEntry={onAddEntry}
       onDeleteEntries={onDeleteEntries}

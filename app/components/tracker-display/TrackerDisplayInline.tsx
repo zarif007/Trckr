@@ -11,6 +11,7 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
+  DependsOnRules,
 } from './types'
 import { TrackerSection } from './TrackerSection'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
@@ -25,6 +26,7 @@ export function TrackerDisplayInline({
   styles,
   initialGridData,
   getDataRef,
+  dependsOn,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(() => {
     return (tabs ?? [])
@@ -156,6 +158,7 @@ export function TrackerDisplayInline({
             layoutNodes={layoutNodes}
             bindings={bindings}
             styles={styles}
+            dependsOn={dependsOn}
             localGridData={localGridData}
             gridData={gridData}
             handleUpdate={handleUpdate}
@@ -176,6 +179,7 @@ function TrackerTabContent({
   layoutNodes,
   bindings,
   styles,
+  dependsOn,
   localGridData,
   gridData,
   handleUpdate,
@@ -189,6 +193,7 @@ function TrackerTabContent({
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
   styles?: Record<string, StyleOverrides>
+  dependsOn?: DependsOnRules
   localGridData: Record<string, Array<Record<string, unknown>>>
   gridData: Record<string, Array<Record<string, unknown>>>
   handleUpdate: (
@@ -232,6 +237,7 @@ function TrackerTabContent({
             layoutNodes={layoutNodes}
             bindings={bindings}
             styles={styles}
+            dependsOn={dependsOn}
             gridData={gridData}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}

@@ -4,6 +4,7 @@ import { getValidationError, sanitizeValue, getFieldIcon, type FieldMetadata } f
 import { DataTableInput } from './data-table-input'
 import { FormDialog } from './form-dialog'
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
+import { applyFieldOverrides } from '@/lib/depends-on'
 
 export interface EntryFormDialogProps {
   open: boolean
@@ -19,6 +20,8 @@ export interface EntryFormDialogProps {
   onSaveAnother?: (values: Record<string, unknown>) => void
   /** When a select/multiselect field changes, return extra field updates (e.g. from bindings) to merge into form. */
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
+  /** Resolve field overrides (hidden/required/disabled) based on current form values. */
+  getFieldOverrides?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
   /** Optional: "add" vs "edit" mode for different accents */
   mode?: 'add' | 'edit'
 }
@@ -34,6 +37,7 @@ export function EntryFormDialog({
   onSave,
   onSaveAnother,
   getBindingUpdates,
+  getFieldOverrides,
   mode = 'add',
 }: EntryFormDialogProps) {
   const orderedIds = fieldOrder ?? Object.keys(fieldMetadata)
@@ -53,13 +57,16 @@ export function EntryFormDialog({
     return orderedIds.some((columnId) => {
       const fieldInfo = fieldMetadata[columnId]
       if (!fieldInfo) return false
+      const overrides = getFieldOverrides?.(formData, columnId)
+      const effectiveConfig = applyFieldOverrides(fieldInfo.config, overrides)
+      if (effectiveConfig?.isHidden || effectiveConfig?.isDisabled) return false
       return !!getValidationError(
         formData[columnId],
         fieldInfo.type,
-        fieldInfo.config
+        effectiveConfig
       )
     })
-  }, [formData, fieldMetadata, orderedIds])
+  }, [formData, fieldMetadata, orderedIds, getFieldOverrides])
 
   const handleSave = useCallback(() => {
     onSave(formData)
@@ -98,12 +105,15 @@ export function EntryFormDialog({
         {orderedIds.map((columnId, index) => {
           const fieldInfo = fieldMetadata[columnId]
           if (!fieldInfo) return null
+          const overrides = getFieldOverrides?.(formData, columnId)
+          const effectiveConfig = applyFieldOverrides(fieldInfo.config, overrides)
+          if (effectiveConfig?.isHidden) return null
 
           const value = formData[columnId] ?? ''
           const error = getValidationError(
             formData[columnId],
             fieldInfo.type,
-            fieldInfo.config
+            effectiveConfig
           )
           const showError = columnId in formData ? !!error : false
           const Icon = getFieldIcon(fieldInfo.type)
@@ -118,8 +128,8 @@ export function EntryFormDialog({
                 {Icon && (
                   <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
                 )}
-                {fieldInfo.name}
-                {fieldInfo.config?.isRequired && (
+                {String(fieldInfo.name)}
+                {effectiveConfig?.isRequired === true && (
                   <span className="text-destructive/80">*</span>
                 )}
               </label>
@@ -139,7 +149,7 @@ export function EntryFormDialog({
                     const sanitized = sanitizeValue(
                       newValue,
                       fieldInfo.type,
-                      fieldInfo.config
+                      effectiveConfig
                     )
                     const bindingUpdates =
                       options?.bindingUpdates ??
@@ -155,7 +165,8 @@ export function EntryFormDialog({
                   }}
                   type={fieldInfo.type}
                   options={fieldInfo.options}
-                  config={fieldInfo.config}
+                  config={effectiveConfig}
+                  disabled={!!effectiveConfig?.isDisabled}
                   onAddOption={fieldInfo.onAddOption}
                   optionsGridFields={fieldInfo.optionsGridFields}
                   getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
@@ -175,4 +186,3 @@ export function EntryFormDialog({
     </FormDialog>
   )
 }
-

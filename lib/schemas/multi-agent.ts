@@ -86,6 +86,7 @@ export const trackerPatchSchema = z
     layoutNodes: z.array(layoutNodePatchSchema).optional(),
     bindings: z.record(z.string(), z.any()).optional(),
     bindingsRemove: z.array(z.string()).optional(),
+    dependsOn: z.array(z.any()).optional(),
     /** Patch style overrides keyed by grid/view id. Set a key to null to remove it. */
     styles: z.record(z.string(), z.any()).optional(),
     /** Array of grid/view ids whose style overrides should be removed. */

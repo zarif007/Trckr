@@ -5,6 +5,7 @@ import { FieldMetadata, getValidationError } from './utils'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS, type ResolvedTableStyles } from '@/lib/style-utils'
+import { applyFieldOverrides } from '@/lib/depends-on'
 
 interface DataTableCellProps<TData, TValue> {
   cell: Cell<TData, any>
@@ -22,8 +23,20 @@ export function DataTableCell<TData, TValue>({
   const meta = cell.getContext().table.options.meta as {
     updateData?: (rowIndex: number, columnId: string, value: any) => void
     tableStyles?: ResolvedTableStyles
+    getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
+    getFieldOverridesForRow?: (
+      rowIndex: number,
+      rowData: Record<string, unknown>,
+      fieldId: string
+    ) => Record<string, unknown> | undefined
   }
   const tableStyles = meta?.tableStyles
+  const overrides =
+    meta?.getFieldOverridesForRow?.(row.index, row.original as Record<string, unknown>, cell.column.id) ??
+    meta?.getFieldOverrides?.(row.index, cell.column.id)
+  const effectiveConfig = fieldInfo ? applyFieldOverrides(fieldInfo.config, overrides) : undefined
+  const isHidden = !!effectiveConfig?.isHidden
+  const isDisabled = !!effectiveConfig?.isDisabled
 
   const [value, setValue] = useState(cell.getValue())
   const [dirty, setDirty] = useState(false)
@@ -43,7 +56,7 @@ export function DataTableCell<TData, TValue>({
   }
 
   const validationError = fieldInfo
-    ? getValidationError(value, fieldInfo.type, fieldInfo.config)
+    ? getValidationError(value, fieldInfo.type, effectiveConfig)
     : null
   const showError = dirty && !!validationError
 
@@ -65,17 +78,20 @@ export function DataTableCell<TData, TValue>({
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
         </div>
       ) : fieldInfo ? (
-        <DataTableInput
-          value={value}
-          onChange={handleUpdate}
-          type={fieldInfo.type}
-          options={fieldInfo.options}
-          config={fieldInfo.config}
-          onAddOption={fieldInfo.onAddOption}
-          optionsGridFields={fieldInfo.optionsGridFields}
-          getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-          className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
-        />
+        isHidden ? null : (
+          <DataTableInput
+            value={value}
+            onChange={handleUpdate}
+            type={fieldInfo.type}
+            options={fieldInfo.options}
+            config={effectiveConfig}
+            disabled={isDisabled}
+            onAddOption={fieldInfo.onAddOption}
+            optionsGridFields={fieldInfo.optionsGridFields}
+            getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
+            className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
+          />
+        )
       ) : (
         <div className={cn('w-full h-full px-4 flex items-center text-foreground/90', tableStyles?.fontSize ?? DEFAULT_INPUT_FONT_CLASS, tableStyles?.fontWeight, tableStyles?.textColor)}>
           <span className="truncate">
@@ -86,4 +102,3 @@ export function DataTableCell<TData, TValue>({
     </TableCell>
   )
 }
-

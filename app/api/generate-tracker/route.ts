@@ -120,6 +120,7 @@ export async function POST(request: Request) {
             })),
             layoutNodes: (msg.trackerData as any).layoutNodes || [],
             bindings: (msg.trackerData as any).bindings || {},
+            dependsOn: (msg.trackerData as any).dependsOn || [],
           }
 
           assistantMsgParts.push(
@@ -175,6 +176,7 @@ export async function POST(request: Request) {
       - For new items, include all required fields (id, name, placeId, config, etc.).
       - For updates, include only changed fields (plus id).
       - For bindings, set keys in "bindings"; set a key to null to delete it. Optionally list keys in "bindingsRemove".
+      - For dependsOn, include the full updated dependsOn array if it changed.
 
       OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).
       Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,

@@ -7,6 +7,7 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
+  DependsOnRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
@@ -14,6 +15,7 @@ import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/l
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
 import { ChevronDown, Plus } from 'lucide-react'
+import { filterDependsOnRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import {
   DndContext,
   DragOverlay,
@@ -45,6 +47,7 @@ interface TrackerKanbanGridProps {
   bindings?: TrackerBindings
   /** Optional style overrides for this kanban view. */
   styleOverrides?: StyleOverrides
+  dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
@@ -60,6 +63,7 @@ function SortableCard({
   bindings,
   gridData,
   fields,
+  dependsOn,
   onEditRow,
   cardPadding,
   labelFontSize,
@@ -75,6 +79,7 @@ function SortableCard({
   bindings: TrackerBindings
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
+  dependsOn?: DependsOnRules
   onEditRow?: (rowIndex: number) => void
   cardPadding?: string
   labelFontSize?: string
@@ -107,6 +112,7 @@ function SortableCard({
         bindings={bindings}
         gridData={gridData}
         fields={fields}
+        dependsOn={dependsOn}
         onEditRow={onEditRow}
         cardPadding={cardPadding}
         labelFontSize={labelFontSize}
@@ -127,6 +133,7 @@ function KanbanCard({
   bindings,
   gridData,
   fields,
+  dependsOn,
   isOverlay = false,
   onEditRow,
   cardPadding,
@@ -142,6 +149,7 @@ function KanbanCard({
   bindings: TrackerBindings
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
+  dependsOn?: DependsOnRules
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
   cardPadding?: string
@@ -152,6 +160,9 @@ function KanbanCard({
 }) {
   const rowIndex = card._originalIdx
   const showEditButton = !isOverlay && onEditRow != null && typeof rowIndex === 'number'
+  const overrides = typeof rowIndex === 'number'
+    ? resolveDependsOnOverrides(dependsOn, gridData, gridId, rowIndex, card)
+    : {}
 
   return (
     <Card
@@ -174,6 +185,7 @@ function KanbanCard({
         </Button>
       )}
       {cardFields.map((field) => {
+        if (overrides[field.id]?.isHidden) return null
         const fullField = fields.find((f) => f.id === field.id)
         const options = fullField
           ? resolveFieldOptionsV2(tabId, gridId, fullField, bindings, gridData)
@@ -230,6 +242,7 @@ export function TrackerKanbanGrid({
   fields,
   bindings = {},
   styleOverrides,
+  dependsOn,
   gridData = {},
   onUpdate,
   onAddEntry,
@@ -238,6 +251,10 @@ export function TrackerKanbanGrid({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
+  const dependsOnForGrid = useMemo(
+    () => filterDependsOnRulesForGrid(dependsOn, grid.id),
+    [dependsOn, grid.id]
+  )
   const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
 
   const sensors = useSensors(
@@ -461,6 +478,9 @@ export function TrackerKanbanGrid({
           onSave={handleAddSaveAndClose}
           onSaveAnother={handleAddSaveAndStayOpen}
           getBindingUpdates={getBindingUpdates}
+          getFieldOverrides={(values, fieldId) =>
+            resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values)[fieldId]
+          }
         />
         <EntryFormDialog
           open={editRowIndex !== null}
@@ -471,6 +491,9 @@ export function TrackerKanbanGrid({
           fieldOrder={fieldOrder}
           initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
           onSave={handleEditSave}
+          getFieldOverrides={(values, fieldId) =>
+            resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, editRowIndex ?? 0, values)[fieldId]
+          }
         />
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {groups.map((group) => {
@@ -510,6 +533,7 @@ export function TrackerKanbanGrid({
                             bindings={bindings}
                             gridData={gridData}
                             fields={fields}
+                            dependsOn={dependsOnForGrid}
                             onEditRow={setEditRowIndex}
                             cardPadding={ks.cardPadding}
                             labelFontSize={ks.labelFontSize}
@@ -546,6 +570,7 @@ export function TrackerKanbanGrid({
             bindings={bindings}
             gridData={gridData}
             fields={fields}
+            dependsOn={dependsOnForGrid}
             isOverlay
             cardPadding={ks.cardPadding}
             labelFontSize={ks.labelFontSize}

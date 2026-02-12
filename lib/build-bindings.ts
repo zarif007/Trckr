@@ -15,6 +15,7 @@ export interface TrackerLike {
   }>
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
   bindings?: Record<string, { optionsGrid: string; labelField: string; fieldMappings: Array<{ from: string; to: string }> }>
+  dependsOn?: Array<Record<string, unknown>>
 }
 
 const SHARED_TAB_ID = 'shared_tab'

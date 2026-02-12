@@ -26,6 +26,7 @@ interface DataTableInputProps {
   config?: FieldConfig | null
   className?: string
   autoFocus?: boolean
+  disabled?: boolean
   /** Fields to show in the Add Option form (columns of the options grid). When set with onAddOption, dialog collects all values. */
   optionsGridFields?: OptionsGridFieldDef[]
   /** When set, select/multiselect shows "Add option". Pass full row; returns the new option value for the select. */
@@ -51,6 +52,7 @@ export function DataTableInput({
   config: _config,
   className,
   autoFocus,
+  disabled,
   onAddOption,
   optionsGridFields,
   getBindingUpdatesFromRow,
@@ -105,6 +107,9 @@ export function DataTableInput({
     setAddOptionOpen(true)
   }
 
+  const config = _config ?? undefined
+  const isDisabled = disabled ?? config?.isDisabled ?? false
+
   switch (type) {
     case 'string':
     case 'number':
@@ -115,6 +120,7 @@ export function DataTableInput({
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
+          disabled={isDisabled}
         />
       )
     case 'date':
@@ -125,6 +131,7 @@ export function DataTableInput({
               type="button"
               className={cn(inlineInputClass, "text-left flex items-center", className)}
               autoFocus={autoFocus}
+              disabled={isDisabled}
             >
               {value ? (
                 format(new Date(value), 'PPP')
@@ -138,6 +145,7 @@ export function DataTableInput({
               mode="single"
               selected={value ? new Date(value) : undefined}
               onSelect={(date) => {
+                if (isDisabled) return
                 if (date) {
                   const newDate = new Date(date)
                   newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
@@ -160,6 +168,7 @@ export function DataTableInput({
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
+          disabled={isDisabled}
         />
       )
     case 'boolean':
@@ -168,6 +177,7 @@ export function DataTableInput({
           <Checkbox
             checked={value === true}
             onCheckedChange={onChange}
+            disabled={isDisabled}
           />
         </div>
       )
@@ -198,6 +208,7 @@ export function DataTableInput({
               className,
               "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
             )}
+            disabled={isDisabled}
             onAddOptionClick={onAddOption ? () => openAddOptionDialog('select') : undefined}
             addOptionLabel="Add option..."
           />
@@ -227,6 +238,7 @@ export function DataTableInput({
             onChange={onChange}
             isInline={!formField}
             className={formField ? cn(className, 'w-full text-left shadow-none') : cn(inlineInputClass, className)}
+            disabled={isDisabled}
             onAddOptionClick={onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
@@ -253,6 +265,7 @@ export function DataTableInput({
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
+          disabled={isDisabled}
         />
       )
     case 'currency':
@@ -264,6 +277,7 @@ export function DataTableInput({
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
+          disabled={isDisabled}
         />
       )
     default:

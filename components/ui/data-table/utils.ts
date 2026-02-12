@@ -25,6 +25,8 @@ export type FieldType =
 
 export interface FieldConfig {
   isRequired?: boolean
+  isDisabled?: boolean
+  isHidden?: boolean
   min?: number
   max?: number
   minLength?: number
@@ -37,6 +39,7 @@ export function getValidationError(
   config?: FieldConfig | null
 ): string | null {
   if (!config) return null
+  if (config.isHidden || config.isDisabled) return null
   const { isRequired, min, max, minLength, maxLength } = config
   const isEmpty = (v: unknown) =>
     v === undefined ||
