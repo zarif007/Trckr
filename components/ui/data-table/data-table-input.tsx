@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
@@ -62,6 +62,18 @@ export function DataTableInput({
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
   const addOptionModeRef = useRef<'select' | 'multiselect'>('select')
+  // Debounce string/text inputs to avoid lag on every keystroke
+  const isStringOrText = type === 'string' || type === 'text'
+  const [localStringValue, setLocalStringValue] = useState(() => (isStringOrText ? (value ?? '') : ''))
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(() => {
+    if (isStringOrText) setLocalStringValue(value ?? '')
+  }, [isStringOrText, value])
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
 
   const addOptionFieldMetadata: FieldMetadata = useMemo(() => {
     const meta: FieldMetadata = {}
@@ -112,10 +124,34 @@ export function DataTableInput({
 
   switch (type) {
     case 'string':
-    case 'number':
+    case 'number': {
+      if (type === 'string') {
+        return (
+          <Input
+            type="text"
+            value={localStringValue}
+            onChange={(e) => {
+              const v = e.target.value
+              setLocalStringValue(v)
+              if (debounceRef.current) clearTimeout(debounceRef.current)
+              debounceRef.current = setTimeout(() => onChange(v), 250)
+            }}
+            onBlur={() => {
+              if (debounceRef.current) {
+                clearTimeout(debounceRef.current)
+                debounceRef.current = null
+              }
+              onChange(localStringValue)
+            }}
+            className={cn(inlineInputClass, className)}
+            autoFocus={autoFocus}
+            disabled={isDisabled}
+          />
+        )
+      }
       return (
         <Input
-          type={type === 'number' ? 'number' : 'text'}
+          type="number"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           className={cn(inlineInputClass, className)}
@@ -123,6 +159,7 @@ export function DataTableInput({
           disabled={isDisabled}
         />
       )
+    }
     case 'date':
       return (
         <Popover modal={true}>
@@ -164,8 +201,20 @@ export function DataTableInput({
       return (
         <Input
           type="text"
-          value={value ?? ''}
-          onChange={(e) => onChange(e.target.value)}
+          value={localStringValue}
+          onChange={(e) => {
+            const v = e.target.value
+            setLocalStringValue(v)
+            if (debounceRef.current) clearTimeout(debounceRef.current)
+            debounceRef.current = setTimeout(() => onChange(v), 250)
+          }}
+          onBlur={() => {
+            if (debounceRef.current) {
+              clearTimeout(debounceRef.current)
+              debounceRef.current = null
+            }
+            onChange(localStringValue)
+          }}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
           disabled={isDisabled}

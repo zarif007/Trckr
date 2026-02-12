@@ -164,7 +164,10 @@ export function DependsOnTable({
                   {formatRuleValue(rule.value)}
                 </TableCell>
                 <TableCell
-                  className={cn('border-r border-border/50 last:border-r-0', ts.cellPadding)}
+                  className={cn(
+                    'border-r border-border/50 last:border-r-0',
+                    ts.cellPadding
+                  )}
                 >
                   {rule.action ?? '—'}
                 </TableCell>

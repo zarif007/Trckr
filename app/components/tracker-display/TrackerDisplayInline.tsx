@@ -131,7 +131,6 @@ export function TrackerDisplayInline({
     setLocalGridData((prev) => {
       const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
       const next = [...current]
-      // Ensure row exists (div grids use rowIndex 0 and start with empty array)
       while (next.length <= rowIndex) next.push({})
       next[rowIndex] = { ...next[rowIndex], [columnId]: value }
       return { ...(prev ?? {}), [gridId]: next }
