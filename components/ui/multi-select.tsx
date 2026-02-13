@@ -74,7 +74,7 @@ export function MultiSelect({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={cn(triggerClasses, open && 'border-ring')}
+          className={cn(triggerClasses, open && 'border-ring', 'min-w-0 overflow-hidden')}
           aria-expanded={open}
           aria-required={required}
           aria-invalid={ariaInvalid}
@@ -86,7 +86,7 @@ export function MultiSelect({
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50 pointer-events-none" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]" align="start">
+      <PopoverContent className="min-w-48 max-w-64 w-[var(--radix-popover-trigger-width)] p-0 z-[60]" align="start">
         <Command shouldFilter={true}>
           <CommandInput placeholder="" className="h-8" />
           <CommandList>

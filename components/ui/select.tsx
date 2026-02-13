@@ -241,18 +241,18 @@ function SearchableSelect({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={cn(triggerClassName, open && 'border-ring')}
+          className={cn(triggerClassName, open && 'border-ring', 'min-w-0 overflow-hidden')}
           aria-expanded={open}
           disabled={disabled}
         >
-          <span className="line-clamp-1 flex items-center gap-2">
+          <span className="line-clamp-1 flex min-w-0 flex-1 items-center gap-2">
             {displayLabel ?? ''}
           </span>
           <ChevronDownIcon className="size-4 opacity-50" />
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[var(--radix-popover-trigger-width)] p-0 z-[60]"
+        className="min-w-48 max-w-64 w-[var(--radix-popover-trigger-width)] p-0 z-[60]"
         align="start"
       >
         <Command shouldFilter={true}>

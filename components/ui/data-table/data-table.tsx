@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -27,20 +27,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { cn } from '@/lib/utils'
 import { Settings2, ChevronDown, Plus } from 'lucide-react'
-import { FieldMetadata, getFieldIcon, getValidationError, sanitizeValue } from './utils'
+import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
-import { DataTableInput } from './data-table-input'
 import { EntryFormDialog } from './entry-form-dialog'
 import type { StyleOverrides } from '@/app/components/tracker-display/types'
 import { resolveTableStyles } from '@/lib/style-utils'
-import { applyFieldOverrides } from '@/lib/depends-on'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -99,7 +96,6 @@ export function DataTable<TData, TValue>({
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
-  const [rowDetailsTouchedFields, setRowDetailsTouchedFields] = useState<Set<string>>(new Set())
 
   const selectedRows = Object.keys(rowSelection)
     .map(Number)
@@ -291,9 +287,17 @@ export function DataTable<TData, TValue>({
       ? table.getRowModel().rows[rowDetailsOpenForIndex]
       : null
 
-  useEffect(() => {
-    setRowDetailsTouchedFields(new Set())
-  }, [rowDetailsOpenForIndex])
+  const handleEditSave = useCallback(
+    (values: Record<string, unknown>) => {
+      if (rowDetailsOpenForIndex == null) return
+      const updateData = (table.options.meta as any)?.updateData
+      Object.entries(values).forEach(([fieldId, val]) =>
+        updateData?.(rowDetailsOpenForIndex, fieldId, val)
+      )
+      setRowDetailsOpenForIndex(null)
+    },
+    [rowDetailsOpenForIndex, table.options.meta]
+  )
 
   const addFieldOrder = useMemo(
     () =>
@@ -372,178 +376,23 @@ export function DataTable<TData, TValue>({
             />
           </>
         )}
-        <Dialog
+        <EntryFormDialog
           open={rowDetailsOpenForIndex !== null}
           onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
-        >
-          <DialogContent
-            className="sm:max-w-[540px] p-0 gap-0 overflow-hidden border-border/60 shadow-xl [--tw-shadow-color:rgba(0,0,0,0.12)] dark:[--tw-shadow-color:rgba(0,0,0,0.4)]"
-            onInteractOutside={(e) => e.preventDefault()}
-            onPointerDownOutside={(e) => e.preventDefault()}
-          >
-            {/* Header with accent bar - edit mode */}
-            <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-muted/30 via-transparent to-transparent">
-              <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-lg bg-muted-foreground/40" />
-              <DialogHeader className="space-y-1">
-                <DialogTitle className="text-lg font-semibold tracking-tight">
-                  Row Details
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Edit inline · Changes save automatically
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-
-            {rowDetailsRow && (
-              <>
-                <div className="grid grid-cols-1 gap-4 px-6 py-5 max-h-[55vh] overflow-y-auto overscroll-contain">
-                  {table
-                    .getAllColumns()
-                    .filter(
-                      (col) => col.id !== 'select' && col.id !== 'actions',
-                    )
-                    .map((col, index) => {
-                      const cell = rowDetailsRow
-                        .getAllCells()
-                        .find((c) => c.column.id === col.id)
-                      const meta = table.options.meta as any
-                      const fieldMetadata = meta?.fieldMetadata
-                      const fieldInfo = fieldMetadata?.[col.id]
-                      const overrides =
-                        meta?.getFieldOverridesForRow?.(
-                          rowDetailsRow.index,
-                          rowDetailsRow.original as Record<string, unknown>,
-                          col.id
-                        ) ?? meta?.getFieldOverrides?.(rowDetailsRow.index, col.id)
-                      const effectiveConfig = fieldInfo
-                        ? applyFieldOverrides(
-                          fieldInfo.config as Record<string, unknown> | null | undefined,
-                          overrides
-                        )
-                        : undefined
-                      const isHidden = !!effectiveConfig?.isHidden
-                      const isDisabled = !!effectiveConfig?.isDisabled
-                      const value = cell
-                        ? cell.getValue()
-                        : rowDetailsRow.getValue(col.id)
-                      const detailsTouched = rowDetailsTouchedFields.has(col.id)
-                      const detailsError = fieldInfo
-                        ? getValidationError(
-                          value,
-                          fieldInfo.type,
-                          effectiveConfig
-                        )
-                        : null
-                      const detailsShowError = detailsTouched && !!detailsError
-                      const Icon = fieldInfo ? getFieldIcon(fieldInfo.type) : null
-                      const label =
-                        typeof col.columnDef.header === 'string'
-                          ? col.columnDef.header
-                          : col.id
-
-                      if (isHidden) return null
-
-                      return (
-                        <div
-                          key={col.id}
-                          className="flex flex-col space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-200"
-                          style={{
-                            animationDelay: `${index * 30}ms`,
-                            animationFillMode: 'both',
-                          }}
-                        >
-                          <label className={cn('flex items-center gap-2 font-medium text-muted-foreground', ts.fontSize, ts.fontWeight, ts.textColor)}>
-                            {Icon && (
-                              <Icon className="h-3.5 w-3.5 text-muted-foreground/70" />
-                            )}
-                            {label}
-                            {!!effectiveConfig?.isRequired && (
-                              <span className="text-destructive/80">*</span>
-                            )}
-                          </label>
-                          <div className={cn('text-sm', ts.fontSize, ts.fontWeight, ts.textColor)}>
-                            {fieldInfo ? (
-                              <>
-                                <div
-                                  className={cn(
-                                    'rounded-lg border bg-muted/30 focus-within:bg-background focus-within:ring-2 focus-within:ring-offset-1 transition-all duration-200',
-                                    detailsShowError
-                                      ? 'border-destructive/60 focus-within:ring-destructive/25'
-                                      : 'border-border/50 focus-within:border-primary/30 focus-within:ring-primary/15'
-                                  )}
-                                  title={detailsError ?? undefined}
-                                >
-                                  <DataTableInput
-                                    value={value}
-                                    onChange={(newValue, options) => {
-                                      setRowDetailsTouchedFields((prev) =>
-                                        new Set([...prev, col.id])
-                                      )
-                                      const sanitized = sanitizeValue(
-                                        newValue,
-                                        fieldInfo.type,
-                                        effectiveConfig
-                                      )
-                                      const updateData = meta?.updateData
-                                      updateData?.(rowDetailsRow.index, col.id, sanitized)
-                                      const bindingUpdates =
-                                        options?.bindingUpdates ??
-                                        ((fieldInfo.type === 'options' || fieldInfo.type === 'multiselect') &&
-                                          getBindingUpdates
-                                          ? getBindingUpdates(col.id, sanitized) ?? {}
-                                          : {})
-                                      Object.entries(bindingUpdates).forEach(
-                                        ([fieldId, val]) => updateData?.(rowDetailsRow.index, fieldId, val)
-                                      )
-                                    }}
-                                    type={fieldInfo.type}
-                                    options={fieldInfo.options}
-                                    config={effectiveConfig}
-                                    disabled={isDisabled}
-                                    onAddOption={fieldInfo.onAddOption}
-                                    optionsGridFields={fieldInfo.optionsGridFields}
-                                    getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-                                    className={cn('h-10 px-3 bg-transparent border-0 focus-visible:ring-0 rounded-lg', ts.fontSizeForInput, ts.fontWeightForInput, ts.textColorForInput)}
-                                  />
-                                </div>
-                                {detailsShowError && detailsError && (
-                                  <p className="text-destructive text-xs mt-1">
-                                    {detailsError}
-                                  </p>
-                                )}
-                              </>
-                            ) : cell ? (
-                              <div className="rounded-lg border border-border/50 px-3 py-2.5 bg-muted/20">
-                                {flexRender(
-                                  cell.column.columnDef.cell,
-                                  cell.getContext(),
-                                )}
-                              </div>
-                            ) : (
-                              <div className="rounded-lg border border-border/50 px-3 py-2.5 bg-muted/20">
-                                {String(value)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                </div>
-
-                <DialogFooter className="flex flex-row justify-end gap-2 px-6 py-4 border-t border-border/40 bg-muted/20">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setRowDetailsOpenForIndex(null)}
-                    className="min-w-[80px]"
-                  >
-                    Done
-                  </Button>
-                </DialogFooter>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
+          title="Row Details"
+          submitLabel="Done"
+          fieldMetadata={fieldMetadata ?? {}}
+          fieldOrder={addFieldOrder}
+          initialValues={
+            rowDetailsRow
+              ? { ...(rowDetailsRow.original as Record<string, unknown>) }
+              : {}
+          }
+          onSave={handleEditSave}
+          getBindingUpdates={getBindingUpdates}
+          getFieldOverrides={getFieldOverridesForAdd}
+          mode="edit"
+        />
       </div>
       <div className={cn('rounded-md overflow-x-auto', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
         <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>

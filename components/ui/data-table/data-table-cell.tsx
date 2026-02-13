@@ -69,16 +69,19 @@ export function DataTableCell<TData, TValue>({
     ? getValidationError(value, fieldInfo.type, effectiveConfig)
     : null
   const showError = dirty && !!validationError
+  const isMultiselect = fieldInfo?.type === 'multiselect' || fieldInfo?.type === 'dynamic_multiselect'
 
   return (
     <TableCell
       style={{
         width: isSelect ? '44px' : undefined,
         minWidth: isSelect ? '44px' : '150px',
+        ...(isMultiselect && { maxWidth: '150px' }),
       }}
       className={cn(
         "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",
         !isSelect && "cursor-text hover:bg-muted/50 focus-within:bg-muted",
+        isMultiselect && "overflow-hidden",
         showError && "ring-2 ring-destructive ring-inset"
       )}
       title={showError ? validationError! : undefined}
@@ -89,18 +92,20 @@ export function DataTableCell<TData, TValue>({
         </div>
       ) : fieldInfo ? (
         isHidden ? null : (
-          <DataTableInput
-            value={value}
-            onChange={handleUpdate}
-            type={fieldInfo.type}
-            options={fieldInfo.options}
-            config={effectiveConfig}
-            disabled={!isEditable || isDisabled || overrideValue !== undefined}
-            onAddOption={fieldInfo.onAddOption}
-            optionsGridFields={fieldInfo.optionsGridFields}
-            getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-            className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
-          />
+          <div className={cn(isMultiselect && "min-w-0 overflow-hidden w-full")}>
+            <DataTableInput
+              value={value}
+              onChange={handleUpdate}
+              type={fieldInfo.type}
+              options={fieldInfo.options}
+              config={effectiveConfig}
+              disabled={!isEditable || isDisabled || overrideValue !== undefined}
+              onAddOption={fieldInfo.onAddOption}
+              optionsGridFields={fieldInfo.optionsGridFields}
+              getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
+              className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
+            />
+          </div>
         )
       ) : (
         <div className={cn('w-full h-full px-4 flex items-center text-foreground/90', tableStyles?.fontSize ?? DEFAULT_INPUT_FONT_CLASS, tableStyles?.fontWeight, tableStyles?.textColor)}>

@@ -25,7 +25,7 @@ export const OPERATORS = [
   'is_empty', 'not_empty', 'starts_with', 'ends_with',
 ]
 /** Action ids for depends-on rules and dynamic option functions (e.g. all_actions). */
-export const ACTIONS = ['isHidden', 'isRequired', 'isDisabled', 'set'] as const
+export const ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as const
 
 export interface DependsOnOptionGridsInput {
   grids: TrackerGrid[]
