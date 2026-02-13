@@ -1,5 +1,10 @@
+/**
+ * Resolve options for select/multiselect fields: from bindings + gridData,
+ * dynamic option functions, or inline config.options.
+ */
+
 import type { TrackerBindings, TrackerBindingEntry } from '@/lib/types/tracker-bindings'
-import type { TrackerGrid, TrackerField } from '@/app/components/tracker-display/types'
+import type { TrackerContextForOptions, ResolvedOption } from './types'
 import {
   getBindingForField,
   resolveOptionsFromBinding,
@@ -7,28 +12,11 @@ import {
 } from '@/lib/resolve-bindings'
 import { getDynamicOptions } from '@/lib/dynamic-options'
 
-/** Minimal field shape needed for option resolution (avoids importing from app). Accepts any field with id and optional config. */
+/** Minimal field shape for option resolution. */
 interface FieldWithOptions {
   id: string
   dataType?: string
   config?: unknown
-}
-
-export interface TrackerContextForOptions {
-  grids: TrackerGrid[]
-  fields: TrackerField[]
-  /** Optional; when set, all_field_paths only returns paths that exist in layout. */
-  layoutNodes?: Array<{ gridId: string; fieldId: string }>
-  /** Optional; when set, all_field_paths excludes fields on Shared tab. */
-  sections?: Array<{ id: string; tabId: string }>
-}
-
-/** Normalized option row (compatible with TrackerOption) */
-export interface ResolvedOption {
-  label: string
-  value: unknown
-  id?: string
-  [key: string]: unknown
 }
 
 function toStringOrEmpty(v: unknown): string {
@@ -51,7 +39,7 @@ function normalizeOption(opt: { label?: string; value?: unknown; id?: string }):
  */
 export function resolveFieldOptionsLegacy(
   field: FieldWithOptions | undefined | null,
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  _gridData?: Record<string, Array<Record<string, unknown>>>
 ): ResolvedOption[] | undefined {
   if (field == null) return undefined
   const config = (field.config ?? {}) as { options?: Array<{ label?: string; value?: unknown; id?: string }> }
@@ -61,7 +49,7 @@ export function resolveFieldOptionsLegacy(
 }
 
 /**
- * Resolve options for a field from bindings (and gridData), or from a dynamic option function for dynamic_select/dynamic_multiselect. Fallback to inline config.options only.
+ * Resolve options for a field: bindings + gridData, or dynamic option function, or inline config.options.
  */
 export function resolveFieldOptionsV2(
   tabId: string,

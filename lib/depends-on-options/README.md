@@ -56,7 +56,7 @@ Column definitions (ids, labels, types, required, dynamic function id) live in *
 
 - **Tracker display types:** `TrackerGrid`, `TrackerField`, `TrackerSection`, `TrackerLayoutNode` from `@/app/components/tracker-display/types`.
 - **Depends-on types:** `DependsOnRule`, `DependsOnRules` from `@/lib/depends-on`.
-- **Dynamic options:** This package only imports **ids** (e.g. `DYNAMIC_OPTIONS_ALL_FIELD_PATHS`) from `@/lib/dynamic-options` to set `field.config.dynamicOptionsFunction`. Resolving options at runtime is done by `resolve-options` / UI using `getDynamicOptions`, so no circular dependency.
+- **Dynamic options:** This package only imports **ids** (e.g. `DYNAMIC_OPTIONS_ALL_FIELD_PATHS`) from `@/lib/dynamic-options` to set `field.config.dynamicOptionsFunction`. Resolving options at runtime is done by the **binding** module / UI using `getDynamicOptions`, so no circular dependency.
 
 ---
 

@@ -5,7 +5,7 @@ import { Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
-import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/build-bindings'
+import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 

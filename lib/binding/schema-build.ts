@@ -1,22 +1,9 @@
 /**
- * Binding builder: derives/repairs bindings from tracker schema.
- * Ensures every select/multiselect has a binding pointing to an options grid (never a main data grid).
+ * Build bindings from tracker schema: ensure every select/multiselect has a binding
+ * pointing to an options grid; create Shared tab and option grids when missing.
  */
 
-export interface TrackerLike {
-  tabs?: Array<{ id: string; name?: string; placeId?: number; config?: Record<string, unknown> }>
-  sections?: Array<{ id: string; name?: string; tabId: string; placeId?: number; config?: Record<string, unknown> }>
-  grids?: Array<{ id: string; name?: string; type?: string; sectionId: string; placeId?: number; config?: Record<string, unknown> }>
-  fields?: Array<{
-    id: string
-    dataType: string
-    ui?: { label?: string; placeholder?: string }
-    config?: Record<string, unknown> | null
-  }>
-  layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
-  bindings?: Record<string, { optionsGrid: string; labelField: string; fieldMappings: Array<{ from: string; to: string }> }>
-  dependsOn?: Array<Record<string, unknown>>
-}
+import type { TrackerLike } from './types'
 
 const SHARED_TAB_ID = 'shared_tab'
 const SHARED_SECTION_ID = 'option_lists_section'
@@ -26,9 +13,9 @@ function titleCase(str: string): string {
 }
 
 /**
- * Given an options grid id, return the option field id(s). For single-field option grids (preferred),
- * one field provides both display and value — we return it for both. For legacy two-field grids
- * (_label/_value), we still support them.
+ * Return label and value field ids for an options grid. Single-field grids (one field
+ * for both display and value) return the same id for both; legacy _label/_value grids
+ * return the two field ids.
  */
 export function getOptionGridLabelAndValueFieldIds(
   gridId: string,
@@ -49,9 +36,14 @@ export function getOptionGridLabelAndValueFieldIds(
   return { labelFieldId: singleField, valueFieldId: singleField }
 }
 
+function isOptionsGrid(gridId: string): boolean {
+  return gridId.endsWith('_options_grid')
+}
+
 /**
- * Ensure an options grid exists for the given field id. Creates Shared tab, section, grid, ONE option field
- * (display = value), and layoutNodes if missing. Returns the options grid id (always {fieldId}_options_grid). Mutates fixed in place.
+ * Ensure an options grid exists for the given field id: creates Shared tab, section,
+ * grid, one option field, and layoutNodes if missing. Mutates fixed in place.
+ * Returns the options grid id (always {fieldId}_options_grid).
  */
 function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string {
   let tabs = [...(fixed.tabs ?? [])]
@@ -123,23 +115,10 @@ function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string 
 }
 
 /**
- * A grid is an "options grid" if its id ends with _options_grid. Main data grids must never be used as optionsGrid.
- */
-function isOptionsGrid(gridId: string): boolean {
-  return gridId.endsWith('_options_grid')
-}
-
-/** Parse "grid_id.field_id" to get fieldId (last part). */
-function parsePathFieldId(path: string): string | null {
-  if (!path || typeof path !== 'string') return null
-  const parts = path.split('.')
-  return parts.length >= 2 ? parts[1]! : parts[0] ?? null
-}
-
-/**
- * Build or repair bindings from the tracker schema. For every select/multiselect field, ensures a binding exists
- * that points to an options grid (id ending with _options_grid), never to a main data grid. Creates missing
- * options grids. Preserves existing bindings' fieldMappings when present; only fills in missing value mapping.
+ * Build or repair bindings from the tracker schema. For every select/multiselect field,
+ * ensures a binding exists that points to an options grid (id ending with _options_grid).
+ * Creates missing option grids (Shared tab, section, grid, field, layoutNodes). Preserves
+ * existing bindings' fieldMappings when present; only adds missing value mapping.
  */
 export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   if (!tracker?.fields?.length) return tracker
@@ -241,127 +220,4 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   }
 
   return { ...tracker, ...fixed } as T
-}
-
-/**
- * Enrich bindings by inferring fieldMappings: for each binding, add mappings from option-grid fields
- * to main-grid fields using multiple matching strategies. Does not remove existing mappings.
- * 
- * Matching strategies (in order of priority):
- * 1. Exact match: option field id === main field id (e.g., price -> price)
- * 2. Prefix convention: optFieldId === selectFieldId_mainFieldId (e.g., product_price -> price when select is "product")
- * 3. Suffix match: optFieldId ends with _mainFieldId (e.g., unit_price -> price)
- * 4. Core name extraction: strips common prefixes/suffixes to find matches
- *    (e.g., opt_price, price_value, item_price_amount all match "price")
- */
-export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
-  if (!tracker?.bindings || !tracker?.layoutNodes?.length) return tracker
-
-  const layoutNodes = tracker.layoutNodes
-  const bindings = { ...tracker.bindings }
-
-  const getFieldIdsInGrid = (gridId: string): string[] =>
-    layoutNodes
-      .filter((n) => n.gridId === gridId)
-      .map((n) => n.fieldId)
-
-  const extractCoreName = (fieldId: string): string => {
-    let core = fieldId
-    const prefixes = ['opt_', 'option_', 'item_', 'product_', 'unit_', 'total_', 'base_']
-    for (const prefix of prefixes) {
-      if (core.startsWith(prefix)) {
-        core = core.slice(prefix.length)
-        break
-      }
-    }
-    const suffixes = ['_value', '_amount', '_val', '_opt', '_option', '_item', '_total', '_base']
-    for (const suffix of suffixes) {
-      if (core.endsWith(suffix)) {
-        core = core.slice(0, -suffix.length)
-        break
-      }
-    }
-    return core
-  }
-
-  let anyChanged = false
-  for (const [fieldPath, entry] of Object.entries(bindings)) {
-    const parts = fieldPath.split('.')
-    if (parts.length < 2) continue
-    const mainGridId = parts[0]!
-    const selectFieldId = parts[1]!
-
-    const optionsGridId = entry.optionsGrid?.includes('.')
-      ? entry.optionsGrid.split('.').pop()!
-      : entry.optionsGrid
-    if (!optionsGridId) continue
-
-    const optionFieldIds = getFieldIdsInGrid(optionsGridId)
-    const mainFieldIds = getFieldIdsInGrid(mainGridId)
-    const mainFieldIdSet = new Set(mainFieldIds)
-
-    const labelFieldId = parsePathFieldId(entry.labelField)
-    const valueMapping = (entry.fieldMappings ?? []).find((m) => m.to === fieldPath)
-    const valueFieldId = valueMapping ? parsePathFieldId(valueMapping.from) : labelFieldId
-    const reserved = new Set([labelFieldId, valueFieldId].filter(Boolean) as string[])
-
-    const existingMappings = new Set(
-      (entry.fieldMappings ?? []).map((m) => `${m.from}\t${m.to}`)
-    )
-    const mappedTargets = new Set(
-      (entry.fieldMappings ?? []).map((m) => m.to)
-    )
-    const newMappings: Array<{ from: string; to: string }> = [...(entry.fieldMappings ?? [])]
-    let entryChanged = false
-
-    const addIfNew = (from: string, to: string) => {
-      if (existingMappings.has(`${from}\t${to}`)) return
-      if (mappedTargets.has(to)) return // Don't map multiple sources to same target
-      newMappings.push({ from, to })
-      existingMappings.add(`${from}\t${to}`)
-      mappedTargets.add(to)
-      entryChanged = true
-    }
-
-    for (const optFieldId of optionFieldIds) {
-      if (reserved.has(optFieldId)) continue
-      const from = `${optionsGridId}.${optFieldId}`
-
-      if (mainFieldIdSet.has(optFieldId)) {
-        addIfNew(from, `${mainGridId}.${optFieldId}`)
-        continue
-      }
-
-      for (const mainFieldId of mainFieldIds) {
-        if (optFieldId === `${selectFieldId}_${mainFieldId}`) {
-          addIfNew(from, `${mainGridId}.${mainFieldId}`)
-          break
-        }
-      }
-
-      for (const mainFieldId of mainFieldIds) {
-        if (optFieldId.endsWith(`_${mainFieldId}`)) {
-          addIfNew(from, `${mainGridId}.${mainFieldId}`)
-          break
-        }
-      }
-
-      const optCore = extractCoreName(optFieldId)
-      for (const mainFieldId of mainFieldIds) {
-        const mainCore = extractCoreName(mainFieldId)
-        if (optCore === mainCore && optCore.length >= 3) { // Require at least 3 chars to avoid false matches
-          addIfNew(from, `${mainGridId}.${mainFieldId}`)
-          break
-        }
-      }
-    }
-
-    if (entryChanged) {
-      bindings[fieldPath] = { ...entry, fieldMappings: newMappings }
-      anyChanged = true
-    }
-  }
-
-  if (!anyChanged) return tracker
-  return { ...tracker, bindings } as T
 }

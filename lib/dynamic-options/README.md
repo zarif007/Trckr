@@ -10,7 +10,7 @@ Tech doc for the **dynamic options** system: how tracker fields of type `dynamic
 - **Solution:** A **registry** maps **function ids** (e.g. `all_field_paths`) to **functions** that take a **context** (grids, fields, optional layout/sections) and return a list of `{ value, label, id? }`.
 - **Usage:** A field’s config sets `dynamicOptionsFunction: 'all_field_paths'`. At resolve time, the app calls `getDynamicOptions('all_field_paths', context)` and uses the returned options for that field.
 
-No circular dependency: the registry and types live here; consumers (e.g. `resolve-options`, `depends-on-options`) only import **ids** or **getDynamicOptions**.
+No circular dependency: the registry and types live here; consumers (e.g. **binding**, depends-on-options) only import **ids** or **getDynamicOptions**.
 
 ---
 

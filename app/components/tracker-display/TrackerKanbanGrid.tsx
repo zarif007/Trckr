@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import type { TrackerContextForOptions } from '@/lib/resolve-options'
+import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
   TrackerFieldType,
@@ -11,7 +11,7 @@ import {
   DependsOnRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
-import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
+import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'

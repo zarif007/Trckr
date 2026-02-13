@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
-import type { TrackerContextForOptions } from '@/lib/resolve-options'
+import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
   TrackerField,
@@ -14,7 +14,7 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from './types'
-import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
+import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'

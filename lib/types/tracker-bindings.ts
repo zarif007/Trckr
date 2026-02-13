@@ -1,6 +1,6 @@
 /**
  * Domain types for the tracker bindings system.
- * Used by resolve-bindings, resolve-options, and UI components.
+ * Used by resolve-bindings, binding, and UI components.
  */
 
 /** Dot-notation path: "grid_id.field_id" (no tab) */
