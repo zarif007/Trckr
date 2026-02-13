@@ -141,7 +141,12 @@ export function DataTableInput({
                 clearTimeout(debounceRef.current)
                 debounceRef.current = null
               }
-              onChange(localStringValue)
+              const nextValue = localStringValue ?? ''
+              const currentValue = value ?? ''
+              if (nextValue !== currentValue) {
+                // Let focus move to the next clicked field before committing.
+                setTimeout(() => onChange(nextValue), 0)
+              }
             }}
             className={cn(inlineInputClass, className)}
             autoFocus={autoFocus}
@@ -213,7 +218,12 @@ export function DataTableInput({
               clearTimeout(debounceRef.current)
               debounceRef.current = null
             }
-            onChange(localStringValue)
+            const nextValue = localStringValue ?? ''
+            const currentValue = value ?? ''
+            if (nextValue !== currentValue) {
+              // Let focus move to the next clicked field before committing.
+              setTimeout(() => onChange(nextValue), 0)
+            }
           }}
           className={cn(inlineInputClass, className)}
           autoFocus={autoFocus}
@@ -311,7 +321,7 @@ export function DataTableInput({
             value={Array.isArray(value) ? value : []}
             onChange={onChange}
             isInline={!formField}
-            className={formField ? cn(className, 'w-full text-left shadow-none') : cn(inlineInputClass, className)}
+            className={formField ? cn(className, 'w-full text-left shadow-none dark:bg-transparent') : cn(inlineInputClass, className)}
             disabled={isDisabled}
             onAddOptionClick={type === 'multiselect' && onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
           />

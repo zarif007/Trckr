@@ -163,11 +163,21 @@ export function EntryFormDialog({
                         getBindingUpdates
                         ? getBindingUpdates(columnId, sanitized) ?? {}
                         : {})
-                    setFormData((prev) => ({
-                      ...prev,
-                      [columnId]: sanitized,
-                      ...bindingUpdates,
-                    }))
+                    setFormData((prev) => {
+                      let changed = !Object.is(prev[columnId], sanitized)
+                      const next: Record<string, unknown> = changed
+                        ? { ...prev, [columnId]: sanitized }
+                        : { ...prev }
+
+                      for (const [k, v] of Object.entries(bindingUpdates)) {
+                        if (!Object.is(next[k], v)) {
+                          next[k] = v
+                          changed = true
+                        }
+                      }
+
+                      return changed ? next : prev
+                    })
                   }}
                   type={fieldInfo.type}
                   options={fieldInfo.options}
@@ -176,7 +186,7 @@ export function EntryFormDialog({
                   onAddOption={fieldInfo.onAddOption}
                   optionsGridFields={fieldInfo.optionsGridFields}
                   getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-                  className="h-10 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-lg"
+                  className="h-10 w-full min-w-0 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-lg"
                   autoFocus={index === 0}
                 />
               </div>

@@ -112,6 +112,7 @@ export function FormDialog({
         className="sm:max-w-[540px] p-0 gap-0 overflow-hidden border-border/60 shadow-xl [--tw-shadow-color:rgba(0,0,0,0.12)] dark:[--tw-shadow-color:rgba(0,0,0,0.4)]"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
+        onOpenAutoFocus={(e) => e.preventDefault()}
         onKeyDown={handleKeyDown}
       >
         {/* Header with accent bar */}
