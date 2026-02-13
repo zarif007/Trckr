@@ -17,6 +17,7 @@ import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
 import { ChevronDown, Plus } from 'lucide-react'
 import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { useTrackerOptionsContext } from './tracker-options-context'
 import {
   DndContext,
   DragOverlay,
@@ -255,8 +256,11 @@ export function TrackerKanbanGrid({
   onUpdate,
   onAddEntry,
   onCrossGridUpdate,
-  trackerContext,
+  trackerContext: trackerContextProp,
 }: TrackerKanbanGridProps) {
+  const trackerOptionsFromContext = useTrackerOptionsContext()
+  const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)

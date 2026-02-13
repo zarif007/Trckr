@@ -15,6 +15,7 @@ import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { useTrackerOptionsContext } from './tracker-options-context'
 import { useMemo, useCallback } from 'react'
 
 interface TrackerTableGridProps {
@@ -54,8 +55,11 @@ export function TrackerTableGrid({
   onAddEntryToGrid,
   onDeleteEntries,
   onCrossGridUpdate,
-  trackerContext,
+  trackerContext: trackerContextProp,
 }: TrackerTableGridProps) {
+  const trackerOptionsFromContext = useTrackerOptionsContext()
+  const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+
   const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(
     () => getRulesForGrid(dependsOnIndex, grid.id),

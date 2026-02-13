@@ -17,6 +17,7 @@ import {
 import { resolveFieldOptionsV2 } from '@/lib/resolve-options'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { useTrackerOptionsContext } from './tracker-options-context'
 import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
 import { EntryFormDialog } from '@/components/ui/data-table/entry-form-dialog'
@@ -57,8 +58,11 @@ export function TrackerDivGrid({
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
-  trackerContext,
+  trackerContext: trackerContextProp,
 }: TrackerDivGridProps) {
+  const trackerOptionsFromContext = useTrackerOptionsContext()
+  const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(

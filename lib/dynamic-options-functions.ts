@@ -25,6 +25,10 @@ export interface DynamicOptionsContext {
   fields: TrackerField[]
 }
 
+/**
+ * From trackerData.fields (all fields) matched with all grids: build a list of options
+ * with value/label like gridId.fieldId and "Grid name → Field label".
+ */
 function allFieldPaths(context: DynamicOptionsContext): ResolvedOption[] {
   const { grids, fields } = context
   return grids.flatMap((g) =>

@@ -14,6 +14,7 @@ import {
   DependsOnRules,
 } from './types'
 import { TrackerSection } from './TrackerSection'
+import { TrackerOptionsProvider } from './tracker-options-context'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
 import { ensureDependsOnOptionGrids, SHARED_TAB_ID, DEPENDS_ON_RULES_GRID, rulesGridRowsToDependsOn } from '@/lib/depends-on-options'
 
@@ -164,46 +165,48 @@ export function TrackerDisplayInline({
   }
 
   return (
-    <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
-      <Tabs
-        value={activeTabId}
-        onValueChange={setActiveTabId}
-        className="w-full"
-      >
-        {normalizedTabs.length > 0 && (
-          <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
-            {normalizedTabs.map((tab, index) => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="animate-in fade-in-0 slide-in-from-left-2 duration-300"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                {tab.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        )}
-        {normalizedTabs.map((tab) => (
-          <TrackerTabContent
-            key={tab.id}
-            tab={tab}
-            sections={effectiveSections}
-            grids={effectiveGrids}
-            fields={effectiveFields}
-            layoutNodes={effectiveLayoutNodes}
-            bindings={effectiveBindings}
-            styles={styles}
-            dependsOn={effectiveDependsOn}
-            localGridData={localGridData}
-            gridData={gridData}
-            handleUpdate={handleUpdate}
-            handleAddEntry={handleAddEntry}
-            handleDeleteEntries={handleDeleteEntries}
-          />
-        ))}
-      </Tabs>
-    </div>
+    <TrackerOptionsProvider grids={effectiveGrids} fields={effectiveFields}>
+      <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
+        <Tabs
+          value={activeTabId}
+          onValueChange={setActiveTabId}
+          className="w-full"
+        >
+          {normalizedTabs.length > 0 && (
+            <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
+              {normalizedTabs.map((tab, index) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="animate-in fade-in-0 slide-in-from-left-2 duration-300"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {tab.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          )}
+          {normalizedTabs.map((tab) => (
+            <TrackerTabContent
+              key={tab.id}
+              tab={tab}
+              sections={effectiveSections}
+              grids={effectiveGrids}
+              fields={effectiveFields}
+              layoutNodes={effectiveLayoutNodes}
+              bindings={effectiveBindings}
+              styles={styles}
+              dependsOn={effectiveDependsOn}
+              localGridData={localGridData}
+              gridData={gridData}
+              handleUpdate={handleUpdate}
+              handleAddEntry={handleAddEntry}
+              handleDeleteEntries={handleDeleteEntries}
+            />
+          ))}
+        </Tabs>
+      </div>
+    </TrackerOptionsProvider>
   )
 }
 
