@@ -5,7 +5,7 @@ import {
   resolveOptionsFromBinding,
   buildFieldPath,
 } from '@/lib/resolve-bindings'
-import { getDynamicOptions } from '@/lib/dynamic-options-functions'
+import { getDynamicOptions } from '@/lib/dynamic-options'
 
 /** Minimal field shape needed for option resolution (avoids importing from app). Accepts any field with id and optional config. */
 interface FieldWithOptions {
@@ -17,6 +17,10 @@ interface FieldWithOptions {
 export interface TrackerContextForOptions {
   grids: TrackerGrid[]
   fields: TrackerField[]
+  /** Optional; when set, all_field_paths only returns paths that exist in layout. */
+  layoutNodes?: Array<{ gridId: string; fieldId: string }>
+  /** Optional; when set, all_field_paths excludes fields on Shared tab. */
+  sections?: Array<{ id: string; tabId: string }>
 }
 
 /** Normalized option row (compatible with TrackerOption) */

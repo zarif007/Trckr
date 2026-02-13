@@ -4,7 +4,7 @@
  */
 
 import { parsePath } from './resolve-bindings'
-import { KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS } from './dynamic-options-functions'
+import { KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS } from './dynamic-options'
 
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 interface BindingEntry {
