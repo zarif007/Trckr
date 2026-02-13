@@ -4,6 +4,8 @@ export type TrackerFieldType =
   | 'date'
   | 'options'
   | 'multiselect'
+  | 'dynamic_select'
+  | 'dynamic_multiselect'
   | 'boolean'
   | 'text'
   | 'link'
@@ -40,10 +42,18 @@ export type TrackerSection = {
 
 export type GridType = 'div' | 'table' | 'kanban' | 'timeline' | 'calendar'
 
-/** Grid config: layout (div), groupBy (kanban), etc. */
+/** Grid config: layout (div), groupBy (kanban), row/layout edit flags, etc. */
 export type TrackerGridConfig = {
   layout?: 'vertical' | 'horizontal'
   groupBy?: string
+  /** When false, hide Add Entry and disallow adding rows. Default true. */
+  isRowAddAble?: boolean
+  /** When false, cells and row details are read-only. Default true. */
+  isRowEditAble?: boolean
+  /** When false, hide Delete button and row selection. Default true. */
+  isRowDeleteAble?: boolean
+  /** When false, hide column visibility / grid layout settings. Default true. */
+  isEditAble?: boolean
   [key: string]: unknown
 }
 

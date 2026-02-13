@@ -1,26 +1,31 @@
 /**
- * Depends On option grids and rules grid for the Shared tab.
- * Creates section "Depends On options" with option grids (operator, action, field path)
- * and a virtual rules grid that uses DataTable with bindings to those options.
+ * Depends On rules grid for the Shared tab.
+ * Creates section "Depends On options" with a Rules table that uses dynamic_select/dynamic_multiselect
+ * (options from built-in functions: all_field_paths, all_operators, all_actions, all_rule_set_values).
  */
 
 import type { TrackerGrid, TrackerField, TrackerSection, TrackerLayoutNode } from '@/app/components/tracker-display/types'
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
-import type { DependsOnRules } from './depends-on'
+import type { DependsOnRule, DependsOnRules } from './depends-on'
+
+/** Function ids for Rules grid dynamic fields (must match lib/dynamic-options-functions.ts). */
+const ALL_FIELD_PATHS = 'all_field_paths'
+const ALL_OPERATORS = 'all_operators'
+const ALL_ACTIONS = 'all_actions'
+const ALL_RULE_SET_VALUES = 'all_rule_set_values'
 
 export const SHARED_TAB_ID = 'shared_tab'
 export const DEPENDS_ON_OPTIONS_SECTION_ID = 'depends_on_options_section'
-export const DEPENDS_ON_OPERATOR_OPTIONS_GRID = 'depends_on_operator_options_grid'
-export const DEPENDS_ON_ACTION_OPTIONS_GRID = 'depends_on_action_options_grid'
-export const DEPENDS_ON_FIELD_OPTIONS_GRID = 'depends_on_field_options_grid'
 export const DEPENDS_ON_RULES_GRID = 'depends_on_rules_grid'
 
-const OPERATORS = [
+/** Operator ids for depends-on rules and dynamic option functions (e.g. all_operators). */
+export const OPERATORS = [
   'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
   'in', 'not_in', 'contains', 'not_contains',
   'is_empty', 'not_empty', 'starts_with', 'ends_with',
 ]
-const ACTIONS = ['isHidden', 'isRequired', 'isDisabled', 'set'] as const
+/** Action ids for depends-on rules and dynamic option functions (e.g. all_actions). */
+export const ACTIONS = ['isHidden', 'isRequired', 'isDisabled', 'set'] as const
 
 export interface DependsOnOptionGridsInput {
   grids: TrackerGrid[]
@@ -70,86 +75,6 @@ export function ensureDependsOnOptionGrids(input: DependsOnOptionGridsInput): De
     sectionIds.add(DEPENDS_ON_OPTIONS_SECTION_ID)
   }
 
-  const addOptionGrid = (
-    gridId: string,
-    name: string,
-    optionFieldId: string,
-    optionFieldLabel: string,
-    rows: Array<Record<string, unknown>>
-  ) => {
-    if (!gridIds.has(gridId)) {
-      outGrids = [
-        ...outGrids,
-        {
-          id: gridId,
-          name,
-          sectionId: DEPENDS_ON_OPTIONS_SECTION_ID,
-          placeId: outGrids.filter((g) => g.sectionId === DEPENDS_ON_OPTIONS_SECTION_ID).length + 1,
-          config: {},
-          type: 'table',
-        },
-      ]
-      gridIds.add(gridId)
-    }
-    if (!fieldIds.has(optionFieldId)) {
-      outFields = [
-        ...outFields,
-        {
-          id: optionFieldId,
-          dataType: 'string' as const,
-          ui: { label: optionFieldLabel, placeholder: '' },
-          config: {},
-        },
-      ]
-      fieldIds.add(optionFieldId)
-    }
-    if (!outLayoutNodes.some((n) => n.gridId === gridId && n.fieldId === optionFieldId)) {
-      outLayoutNodes = [
-        ...outLayoutNodes,
-        { gridId, fieldId: optionFieldId, order: 1 },
-      ]
-    }
-    seedGridData[gridId] = rows
-  }
-
-  const OPERATOR_FIELD_ID = 'dot_operator'
-  const ACTION_FIELD_ID = 'dot_action'
-  const PATH_FIELD_ID = 'dot_path'
-
-  addOptionGrid(
-    DEPENDS_ON_OPERATOR_OPTIONS_GRID,
-    'Operator options',
-    OPERATOR_FIELD_ID,
-    'Operator',
-    OPERATORS.map((op) => ({ [OPERATOR_FIELD_ID]: op }))
-  )
-  addOptionGrid(
-    DEPENDS_ON_ACTION_OPTIONS_GRID,
-    'Action options',
-    ACTION_FIELD_ID,
-    'Action',
-    ACTIONS.map((a) => ({ [ACTION_FIELD_ID]: a }))
-  )
-
-  const fieldPathRows = grids.flatMap((g) =>
-    fields
-      .filter((f) => !f.config?.isHidden)
-      .map((f) => ({
-        [PATH_FIELD_ID]: `${g.id}.${f.id}`,
-        label: `${g.name ?? g.id} → ${f.ui?.label ?? f.id}`,
-      }))
-  )
-  const pathRows = fieldPathRows.length > 0
-    ? fieldPathRows.map((r) => ({ [PATH_FIELD_ID]: r[PATH_FIELD_ID] }))
-    : [{ [PATH_FIELD_ID]: '' }]
-  addOptionGrid(
-    DEPENDS_ON_FIELD_OPTIONS_GRID,
-    'Field options (source/targets)',
-    PATH_FIELD_ID,
-    'Field path',
-    pathRows
-  )
-
   if (!gridIds.has(DEPENDS_ON_RULES_GRID)) {
     outGrids = [
       ...outGrids,
@@ -165,25 +90,44 @@ export function ensureDependsOnOptionGrids(input: DependsOnOptionGridsInput): De
     gridIds.add(DEPENDS_ON_RULES_GRID)
   }
 
-  const rulesGridFieldIds = ['rule_source', 'rule_operator', 'rule_value', 'rule_action', 'rule_targets'] as const
+  const rulesGridFieldIds = ['rule_source', 'rule_operator', 'rule_value', 'rule_action', 'rule_set', 'rule_targets'] as const
   const rulesGridFieldLabels: Record<(typeof rulesGridFieldIds)[number], string> = {
     rule_source: 'Source',
     rule_operator: 'Operator',
     rule_value: 'Value',
     rule_action: 'Action',
+    rule_set: 'Set',
     rule_targets: 'Targets',
+  }
+  /** Dynamic option function per field (dynamic_select/dynamic_multiselect only). */
+  const rulesGridDynamicFunction: Partial<Record<(typeof rulesGridFieldIds)[number], string>> = {
+    rule_source: ALL_FIELD_PATHS,
+    rule_operator: ALL_OPERATORS,
+    rule_action: ALL_ACTIONS,
+    rule_set: ALL_RULE_SET_VALUES,
+    rule_targets: ALL_FIELD_PATHS,
   }
   for (let i = 0; i < rulesGridFieldIds.length; i++) {
     const fid = rulesGridFieldIds[i]
     if (!fieldIds.has(fid)) {
       const isMulti = fid === 'rule_targets'
+      const dynamicFunction = rulesGridDynamicFunction[fid]
+      const dataType: TrackerField['dataType'] =
+        fid === 'rule_value'
+          ? 'string'
+          : isMulti
+            ? 'dynamic_multiselect'
+            : 'dynamic_select'
       outFields = [
         ...outFields,
         {
           id: fid,
-          dataType: (isMulti ? 'multiselect' : fid === 'rule_value' ? 'string' : 'options') as TrackerField['dataType'],
+          dataType,
           ui: { label: rulesGridFieldLabels[fid], placeholder: '' },
-          config: {},
+          config: {
+            isRequired: fid !== 'rule_set' && fid !== 'rule_value',
+            ...(dynamicFunction ? { dynamicOptionsFunction: dynamicFunction } : {}),
+          },
         },
       ]
       fieldIds.add(fid)
@@ -196,33 +140,12 @@ export function ensureDependsOnOptionGrids(input: DependsOnOptionGridsInput): De
     }
   }
 
-  const rulesGridPath = (fieldId: string) => `${DEPENDS_ON_RULES_GRID}.${fieldId}`
-  outBindings[rulesGridPath('rule_source')] = {
-    optionsGrid: DEPENDS_ON_FIELD_OPTIONS_GRID,
-    labelField: `${DEPENDS_ON_FIELD_OPTIONS_GRID}.${PATH_FIELD_ID}`,
-    fieldMappings: [{ from: `${DEPENDS_ON_FIELD_OPTIONS_GRID}.${PATH_FIELD_ID}`, to: rulesGridPath('rule_source') }],
-  }
-  outBindings[rulesGridPath('rule_operator')] = {
-    optionsGrid: DEPENDS_ON_OPERATOR_OPTIONS_GRID,
-    labelField: `${DEPENDS_ON_OPERATOR_OPTIONS_GRID}.${OPERATOR_FIELD_ID}`,
-    fieldMappings: [{ from: `${DEPENDS_ON_OPERATOR_OPTIONS_GRID}.${OPERATOR_FIELD_ID}`, to: rulesGridPath('rule_operator') }],
-  }
-  outBindings[rulesGridPath('rule_action')] = {
-    optionsGrid: DEPENDS_ON_ACTION_OPTIONS_GRID,
-    labelField: `${DEPENDS_ON_ACTION_OPTIONS_GRID}.${ACTION_FIELD_ID}`,
-    fieldMappings: [{ from: `${DEPENDS_ON_ACTION_OPTIONS_GRID}.${ACTION_FIELD_ID}`, to: rulesGridPath('rule_action') }],
-  }
-  outBindings[rulesGridPath('rule_targets')] = {
-    optionsGrid: DEPENDS_ON_FIELD_OPTIONS_GRID,
-    labelField: `${DEPENDS_ON_FIELD_OPTIONS_GRID}.${PATH_FIELD_ID}`,
-    fieldMappings: [{ from: `${DEPENDS_ON_FIELD_OPTIONS_GRID}.${PATH_FIELD_ID}`, to: rulesGridPath('rule_targets') }],
-  }
-
   const rulesAsRows = dependsOn.map((r) => ({
     rule_source: r.source ?? '',
     rule_operator: r.operator ?? 'eq',
     rule_value: r.value,
     rule_action: r.action ?? 'isHidden',
+    rule_set: r.set !== undefined ? (typeof r.set === 'boolean' ? (r.set ? 'true' : 'false') : r.set) : 'true',
     rule_targets: Array.isArray(r.targets) ? r.targets : [],
   }))
   seedGridData[DEPENDS_ON_RULES_GRID] = rulesAsRows
@@ -235,4 +158,37 @@ export function ensureDependsOnOptionGrids(input: DependsOnOptionGridsInput): De
     bindings: outBindings,
     seedGridData,
   }
+}
+
+/**
+ * Convert rules grid rows (from gridData[DEPENDS_ON_RULES_GRID]) to DependsOnRule[].
+ * Used so that when the user adds/edits rows in the Rules table, those rules become the effective dependsOn.
+ * Rows missing source or targets are skipped.
+ */
+export function rulesGridRowsToDependsOn(
+  rows: Array<Record<string, unknown>> | undefined
+): DependsOnRule[] {
+  if (!Array.isArray(rows) || rows.length === 0) return []
+  const result: DependsOnRule[] = []
+  for (const row of rows) {
+    const source = row.rule_source
+    const targets = row.rule_targets
+    if (source == null || source === '' || !Array.isArray(targets) || targets.length === 0) continue
+    const setRaw = row.rule_set
+    const setValue =
+      setRaw === 'true' || setRaw === true
+        ? true
+        : setRaw === 'false' || setRaw === false
+          ? false
+          : setRaw
+    result.push({
+      source: String(source),
+      operator: (row.rule_operator as DependsOnRule['operator']) ?? 'eq',
+      value: row.rule_value,
+      action: (row.rule_action as DependsOnRule['action']) ?? 'isHidden',
+      set: setValue,
+      targets: targets.map(String),
+    })
+  }
+  return result
 }

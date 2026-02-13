@@ -17,6 +17,8 @@ export type FieldType =
   | 'date'
   | 'options'
   | 'multiselect'
+  | 'dynamic_select'
+  | 'dynamic_multiselect'
   | 'boolean'
   | 'text'
   | 'link'
@@ -139,8 +141,10 @@ export const getFieldIcon = (type: FieldType) => {
     case 'boolean':
       return CheckSquare
     case 'options':
+    case 'dynamic_select':
       return List
     case 'multiselect':
+    case 'dynamic_multiselect':
       return Tags
     case 'link':
       return Link

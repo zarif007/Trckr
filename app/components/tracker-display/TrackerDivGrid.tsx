@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
+import type { TrackerContextForOptions } from '@/lib/resolve-options'
 import {
   TrackerGrid,
   TrackerField,
@@ -39,6 +40,8 @@ interface TrackerDivGridProps {
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
   /** Add a row to any grid (e.g. options grid). Used for "Add option" in select/multiselect. */
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void
+  /** For dynamic_select/dynamic_multiselect option resolution (e.g. all_field_paths). */
+  trackerContext?: TrackerContextForOptions
 }
 
 export function TrackerDivGrid({
@@ -54,6 +57,7 @@ export function TrackerDivGrid({
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
+  trackerContext,
 }: TrackerDivGridProps) {
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
@@ -129,8 +133,8 @@ export function TrackerDivGrid({
         const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
         if (effectiveConfig?.isHidden) return null
 
-        const options = (field.dataType === 'options' || field.dataType === 'multiselect')
-          ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
+        const options = (field.dataType === 'options' || field.dataType === 'multiselect' || field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect')
+          ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
           : undefined
 
         const binding = (field.dataType === 'options' || field.dataType === 'multiselect') && onAddEntryToGrid

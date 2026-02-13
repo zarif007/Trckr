@@ -1,14 +1,22 @@
 import type { TrackerBindings, TrackerBindingEntry } from '@/lib/types/tracker-bindings'
+import type { TrackerGrid, TrackerField } from '@/app/components/tracker-display/types'
 import {
   getBindingForField,
   resolveOptionsFromBinding,
   buildFieldPath,
 } from '@/lib/resolve-bindings'
+import { getDynamicOptions } from '@/lib/dynamic-options-functions'
 
 /** Minimal field shape needed for option resolution (avoids importing from app). Accepts any field with id and optional config. */
 interface FieldWithOptions {
   id: string
+  dataType?: string
   config?: unknown
+}
+
+export interface TrackerContextForOptions {
+  grids: TrackerGrid[]
+  fields: TrackerField[]
 }
 
 /** Normalized option row (compatible with TrackerOption) */
@@ -49,16 +57,28 @@ export function resolveFieldOptionsLegacy(
 }
 
 /**
- * Resolve options for a field from bindings (and gridData). Fallback to inline config.options only.
+ * Resolve options for a field from bindings (and gridData), or from a dynamic option function for dynamic_select/dynamic_multiselect. Fallback to inline config.options only.
  */
 export function resolveFieldOptionsV2(
   tabId: string,
   gridId: string,
   field: FieldWithOptions | undefined | null,
   bindings: TrackerBindings | undefined,
-  gridData: Record<string, Array<Record<string, unknown>>>
+  gridData: Record<string, Array<Record<string, unknown>>>,
+  trackerContext?: TrackerContextForOptions
 ): ResolvedOption[] | undefined {
   if (field == null) return undefined
+
+  const dataType = field.dataType
+  if (dataType === 'dynamic_select' || dataType === 'dynamic_multiselect') {
+    const config = (field.config ?? {}) as { dynamicOptionsFunction?: string }
+    const functionId = config.dynamicOptionsFunction
+    if (functionId && trackerContext) {
+      const options = getDynamicOptions(functionId, trackerContext)
+      return options.map((opt) => normalizeOption(opt))
+    }
+    return []
+  }
 
   const binding = getBindingForField(gridId, field.id, bindings, tabId)
   if (binding) {

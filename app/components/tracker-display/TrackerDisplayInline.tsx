@@ -15,7 +15,7 @@ import {
 } from './types'
 import { TrackerSection } from './TrackerSection'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
-import { ensureDependsOnOptionGrids, SHARED_TAB_ID } from '@/lib/depends-on-options'
+import { ensureDependsOnOptionGrids, SHARED_TAB_ID, DEPENDS_ON_RULES_GRID, rulesGridRowsToDependsOn } from '@/lib/depends-on-options'
 
 export function TrackerDisplayInline({
   tabs,
@@ -113,6 +113,13 @@ export function TrackerDisplayInline({
     return merged
   }, [baseGridData, localGridData])
 
+  /** Derive dependsOn from the Rules grid when present so added/edited rows affect fields. */
+  const effectiveDependsOn = useMemo(() => {
+    if (!dependsOnAug) return dependsOn ?? []
+    const rulesRows = gridData[DEPENDS_ON_RULES_GRID]
+    return rulesGridRowsToDependsOn(rulesRows)
+  }, [dependsOnAug, gridData, dependsOn])
+
   useEffect(() => {
     if (getDataRef) {
       getDataRef.current = () => gridData
@@ -187,7 +194,7 @@ export function TrackerDisplayInline({
             layoutNodes={effectiveLayoutNodes}
             bindings={effectiveBindings}
             styles={styles}
-            dependsOn={dependsOn}
+            dependsOn={effectiveDependsOn}
             localGridData={localGridData}
             gridData={gridData}
             handleUpdate={handleUpdate}
@@ -262,6 +269,8 @@ function TrackerTabContent({
             tabId={tab.id}
             section={section}
             grids={section.grids}
+            allGrids={grids}
+            allFields={fields}
             fields={fields}
             layoutNodes={layoutNodes}
             bindings={bindings}

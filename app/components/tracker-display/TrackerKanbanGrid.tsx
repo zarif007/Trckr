@@ -1,5 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import type { TrackerContextForOptions } from '@/lib/resolve-options'
 import {
   TrackerGrid,
   TrackerFieldType,
@@ -52,6 +53,8 @@ interface TrackerKanbanGridProps {
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
+  /** For dynamic_select/dynamic_multiselect option resolution (e.g. all_field_paths). */
+  trackerContext?: TrackerContextForOptions
 }
 
 function SortableCard({
@@ -64,6 +67,7 @@ function SortableCard({
   gridData,
   fields,
   dependsOn,
+  trackerContext,
   onEditRow,
   cardPadding,
   labelFontSize,
@@ -80,6 +84,7 @@ function SortableCard({
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   dependsOn?: DependsOnRules
+  trackerContext?: TrackerContextForOptions
   onEditRow?: (rowIndex: number) => void
   cardPadding?: string
   labelFontSize?: string
@@ -113,6 +118,7 @@ function SortableCard({
         gridData={gridData}
         fields={fields}
         dependsOn={dependsOn}
+        trackerContext={trackerContext}
         onEditRow={onEditRow}
         cardPadding={cardPadding}
         labelFontSize={labelFontSize}
@@ -134,6 +140,7 @@ function KanbanCard({
   gridData,
   fields,
   dependsOn,
+  trackerContext,
   isOverlay = false,
   onEditRow,
   cardPadding,
@@ -150,6 +157,7 @@ function KanbanCard({
   gridData: Record<string, Array<Record<string, unknown>>>
   fields: TrackerField[]
   dependsOn?: DependsOnRules
+  trackerContext?: TrackerContextForOptions
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
   cardPadding?: string
@@ -188,7 +196,7 @@ function KanbanCard({
         if (overrides[field.id]?.isHidden) return null
         const fullField = fields.find((f) => f.id === field.id)
         const options = fullField
-          ? resolveFieldOptionsV2(tabId, gridId, fullField, bindings, gridData)
+          ? resolveFieldOptionsV2(tabId, gridId, fullField, bindings, gridData, trackerContext)
           : undefined
         return (
           <div key={field.id} className="mb-2 last:mb-0">
@@ -247,6 +255,7 @@ export function TrackerKanbanGrid({
   onUpdate,
   onAddEntry,
   onCrossGridUpdate,
+  trackerContext,
 }: TrackerKanbanGridProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -303,7 +312,7 @@ export function TrackerKanbanGrid({
 
   let groups: Array<{ id: string, label: string }> = []
 
-  const options = resolveFieldOptionsV2(tabId, grid.id, groupingField!, bindings, gridData)
+  const options = resolveFieldOptionsV2(tabId, grid.id, groupingField!, bindings, gridData, trackerContext)
 
   const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
     String(o.id ?? o.value ?? o.label ?? '').trim()
@@ -337,7 +346,7 @@ export function TrackerKanbanGrid({
 
   const fieldMetadata: FieldMetadata = {}
   kanbanFields.forEach((field) => {
-    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
+    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
     fieldMetadata[field.id] = {
       name: field.ui.label,
       type: field.dataType,
@@ -535,6 +544,7 @@ export function TrackerKanbanGrid({
                             gridData={gridData}
                             fields={fields}
                             dependsOn={dependsOnForGrid}
+                            trackerContext={trackerContext}
                             onEditRow={setEditRowIndex}
                             cardPadding={ks.cardPadding}
                             labelFontSize={ks.labelFontSize}
@@ -572,6 +582,7 @@ export function TrackerKanbanGrid({
             gridData={gridData}
             fields={fields}
             dependsOn={dependsOnForGrid}
+            trackerContext={trackerContext}
             isOverlay
             cardPadding={ks.cardPadding}
             labelFontSize={ks.labelFontSize}

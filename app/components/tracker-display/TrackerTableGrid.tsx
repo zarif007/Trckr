@@ -1,6 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { DataTable } from '@/components/ui/data-table'
 import type { FieldMetadata } from '@/components/ui/data-table/utils'
+import type { TrackerContextForOptions } from '@/lib/resolve-options'
 import {
   TrackerGrid,
   TrackerField,
@@ -34,6 +35,8 @@ interface TrackerTableGridProps {
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (rowIndices: number[]) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
+  /** For dynamic_select/dynamic_multiselect option resolution (e.g. all_field_paths). */
+  trackerContext?: TrackerContextForOptions
 }
 
 export function TrackerTableGrid({
@@ -51,6 +54,7 @@ export function TrackerTableGrid({
   onAddEntryToGrid,
   onDeleteEntries,
   onCrossGridUpdate,
+  trackerContext,
 }: TrackerTableGridProps) {
   const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
   const dependsOnForGrid = useMemo(
@@ -119,6 +123,15 @@ export function TrackerTableGrid({
     [dependsOnForGrid, gridData, grid.id]
   )
 
+  /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
+  const getFieldOverridesForAdd = useCallback(
+    (values: Record<string, unknown>, fieldId: string) =>
+      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values, {
+        onlyUseRowDataForSource: true,
+      })[fieldId],
+    [dependsOnForGrid, gridData, grid.id]
+  )
+
   if (connectedFieldNodes.length === 0) {
     if (layoutNodes.length === 0) return null
     return (
@@ -132,7 +145,7 @@ export function TrackerTableGrid({
 
   const fieldMetadata: FieldMetadata = {}
   tableFields.forEach((field) => {
-    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)
+    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
     const binding = (field.dataType === 'options' || field.dataType === 'multiselect')
       ? getBindingForField(grid.id, field.id, bindings, tabId)
       : undefined
@@ -242,7 +255,7 @@ export function TrackerTableGrid({
           <TrackerCell
             value={value}
             type={field.dataType}
-            options={resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData)}
+            options={resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)}
           />
         );
       },
@@ -257,14 +270,17 @@ export function TrackerTableGrid({
       getFieldOverrides={getFieldOverrides}
       getFieldOverridesForRow={getFieldOverridesForRow}
       hiddenColumns={[...hiddenColumnIds]}
-      getFieldOverridesForAdd={(values, fieldId) => getFieldOverridesForValues(values, 0)[fieldId]}
+      getFieldOverridesForAdd={getFieldOverridesForAdd}
       onCellUpdate={handleCellUpdate}
       onAddEntry={onAddEntry}
       onDeleteEntries={onDeleteEntries}
       getBindingUpdates={getBindingUpdates}
       config={grid.config}
       styleOverrides={styleOverrides}
-      addable={grid.config?.addable !== false}
+      addable={(grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
+      editable={grid.config?.isRowEditAble !== false}
+      deleteable={grid.config?.isRowDeleteAble !== false}
+      editLayoutAble={grid.config?.isEditAble !== false}
     />
   );
 }

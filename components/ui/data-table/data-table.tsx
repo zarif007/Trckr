@@ -68,6 +68,12 @@ interface DataTableProps<TData, TValue> {
   hiddenColumns?: string[]
   /** When false, hide Add Entry button and add-dialog. Default true. */
   addable?: boolean
+  /** When false, cells and row details are read-only. Default true. */
+  editable?: boolean
+  /** When false, hide Delete button and row selection. Default true. */
+  deleteable?: boolean
+  /** When false, hide column visibility / grid layout settings. Default true. */
+  editLayoutAble?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -84,6 +90,9 @@ export function DataTable<TData, TValue>({
   getFieldOverridesForAdd,
   hiddenColumns,
   addable = true,
+  editable = true,
+  deleteable = true,
+  editLayoutAble = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
@@ -120,96 +129,101 @@ export function DataTable<TData, TValue>({
 
   const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
     () => [
-      {
-        id: 'select',
-        size: 44,
-        minSize: 44,
-        maxSize: 44,
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && 'indeterminate')
-              }
-              onCheckedChange={(value) =>
-                table.toggleAllPageRowsSelected(!!value)
-              }
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-            />
-          </div>
-        ),
-      } as ColumnDef<TData, TValue>,
+      ...(deleteable
+        ? [
+          {
+            id: 'select',
+            size: 44,
+            minSize: 44,
+            maxSize: 44,
+            header: ({ table }) => (
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && 'indeterminate')
+                  }
+                  onCheckedChange={(value) =>
+                    table.toggleAllPageRowsSelected(!!value)
+                  }
+                />
+              </div>
+            ),
+            cell: ({ row }) => (
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  checked={row.getIsSelected()}
+                  onCheckedChange={(value) => row.toggleSelected(!!value)}
+                />
+              </div>
+            ),
+          } as ColumnDef<TData, TValue>,
+        ]
+        : []),
       ...columns,
       {
         id: 'actions',
         size: 44,
         minSize: 44,
         maxSize: 44,
-        header: ({ table }) => (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 p-0 hover:bg-muted"
+        header: ({ table }) =>
+          editLayoutAble ? (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-0 hover:bg-muted"
+                >
+                  <Settings2 className="h-4 w-4" />
+                  <span className="sr-only">View settings</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent
+                className="sm:max-w-[300px]"
+                onInteractOutside={(e) => e.preventDefault()}
               >
-                <Settings2 className="h-4 w-4" />
-                <span className="sr-only">View settings</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent
-              className="sm:max-w-[300px]"
-              onInteractOutside={(e) => e.preventDefault()}
-            >
-              <DialogHeader>
-                <DialogTitle>Toggle Columns</DialogTitle>
-              </DialogHeader>
-              <div className="py-2">
-                <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
-                  {table
-                    .getAllColumns()
-                    .filter(
-                      (column) =>
-                        typeof column.accessorFn !== 'undefined' &&
-                        column.getCanHide(),
-                    )
-                    .map((column) => {
-                      return (
-                        <div
-                          key={column.id}
-                          className="flex items-center space-x-2"
-                        >
-                          <Checkbox
-                            checked={column.getIsVisible()}
-                            onCheckedChange={(value) =>
-                              column.toggleVisibility(!!value)
-                            }
-                            id={`col-${column.id}`}
-                          />
-                          <label
-                            htmlFor={`col-${column.id}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
-                          >
-                            {typeof column.columnDef.header === 'string'
-                              ? column.columnDef.header
-                              : column.id}
-                          </label>
-                        </div>
+                <DialogHeader>
+                  <DialogTitle>Toggle Columns</DialogTitle>
+                </DialogHeader>
+                <div className="py-2">
+                  <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                    {table
+                      .getAllColumns()
+                      .filter(
+                        (column) =>
+                          typeof column.accessorFn !== 'undefined' &&
+                          column.getCanHide(),
                       )
-                    })}
+                      .map((column) => {
+                        return (
+                          <div
+                            key={column.id}
+                            className="flex items-center space-x-2"
+                          >
+                            <Checkbox
+                              checked={column.getIsVisible()}
+                              onCheckedChange={(value) =>
+                                column.toggleVisibility(!!value)
+                              }
+                              id={`col-${column.id}`}
+                            />
+                            <label
+                              htmlFor={`col-${column.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
+                            >
+                              {typeof column.columnDef.header === 'string'
+                                ? column.columnDef.header
+                                : column.id}
+                            </label>
+                          </div>
+                        )
+                      })}
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        ),
+              </DialogContent>
+            </Dialog>
+          ) : null,
         cell: ({ row }) => {
           return (
             <Button
@@ -225,7 +239,7 @@ export function DataTable<TData, TValue>({
         },
       } as ColumnDef<TData, TValue>,
     ],
-    [columns],
+    [columns, deleteable, editLayoutAble],
   )
 
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
@@ -245,11 +259,12 @@ export function DataTable<TData, TValue>({
       columnVisibility: effectiveVisibility,
     },
     meta: {
-      updateData: onCellUpdate,
+      updateData: editable ? onCellUpdate : undefined,
       fieldMetadata: fieldMetadata,
       tableStyles: ts,
       getFieldOverrides,
       getFieldOverridesForRow,
+      editable,
     },
   })
 
@@ -294,41 +309,43 @@ export function DataTable<TData, TValue>({
   return (
     <div className="w-full space-y-4">
       <div className="flex justify-end gap-2">
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-          <DialogTrigger asChild>
-            <Button
-              size="sm"
-              variant="destructive"
-              disabled={selectedRows.length === 0}
-            >
-              Delete ({selectedRows.length})
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>Delete Entries</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to delete {selectedRows.length} row
-                {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
-                undone.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2">
+        {deleteable && (
+          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+            <DialogTrigger asChild>
               <Button
-                variant="outline"
                 size="sm"
-                onClick={() => setDeleteConfirmOpen(false)}
+                variant="destructive"
+                disabled={selectedRows.length === 0}
               >
-                Cancel
+                Delete ({selectedRows.length})
               </Button>
-              <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-                Delete
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Delete Entries</DialogTitle>
+              </DialogHeader>
+              <div className="py-4">
+                <p className="text-sm text-muted-foreground">
+                  Are you sure you want to delete {selectedRows.length} row
+                  {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
+                  undone.
+                </p>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDeleteConfirmOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+                  Delete
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
         {addable && (
           <>
             <Button

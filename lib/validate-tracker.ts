@@ -4,6 +4,7 @@
  */
 
 import { parsePath } from './resolve-bindings'
+import { KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS } from './dynamic-options-functions'
 
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 interface BindingEntry {
@@ -217,8 +218,15 @@ export function validateBindings(tracker: TrackerLike): string[] {
     }
   }
 
-  // Check for missing bindings on select/multiselect fields (key is grid.field)
+  // Check for missing bindings on select/multiselect fields (key is grid.field). Skip dynamic_select/dynamic_multiselect (they use dynamicOptionsFunction, not bindings).
   for (const field of tracker.fields ?? []) {
+    if (field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect') {
+      const functionId = (field.config as { dynamicOptionsFunction?: string } | undefined)?.dynamicOptionsFunction
+      if (functionId && !(KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS as readonly string[]).includes(functionId)) {
+        warnings.push(`Dynamic select field "${field.id}" uses unknown dynamicOptionsFunction "${functionId}"`)
+      }
+      continue
+    }
     if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
 
     const gridInfo = getFieldGridInfo(field.id)

@@ -119,6 +119,16 @@ export function DependsOnTable({
             <TableHead
               className={cn(
                 ts.headerHeight,
+                'text-muted-foreground font-medium border-r border-border/50 last:border-r-0',
+                ts.headerFontSize,
+                ts.cellPadding
+              )}
+            >
+              Set
+            </TableHead>
+            <TableHead
+              className={cn(
+                ts.headerHeight,
                 'text-muted-foreground font-medium last:border-r-0',
                 ts.headerFontSize,
                 ts.cellPadding
@@ -164,12 +174,17 @@ export function DependsOnTable({
                   {formatRuleValue(rule.value)}
                 </TableCell>
                 <TableCell
+                  className={cn('border-r border-border/50 last:border-r-0', ts.cellPadding)}
+                >
+                  {rule.action ?? '—'}
+                </TableCell>
+                <TableCell
                   className={cn(
-                    'border-r border-border/50 last:border-r-0',
+                    'border-r border-border/50 last:border-r-0 text-muted-foreground',
                     ts.cellPadding
                   )}
                 >
-                  {rule.action ?? '—'}
+                  {formatRuleValue(rule.set)}
                 </TableCell>
                 <TableCell
                   className={cn(

@@ -49,6 +49,10 @@ interface TrackerSectionProps {
   tabId: string
   section: ITrackerSection
   grids: TrackerGrid[]
+  /** All grids in the tracker (for dynamic option functions e.g. all_field_paths). */
+  allGrids?: TrackerGrid[]
+  /** All fields in the tracker (for dynamic option functions e.g. all_field_paths). */
+  allFields?: TrackerField[]
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
@@ -73,6 +77,8 @@ function GridViewContent({
   gridLayoutNodes,
   allLayoutNodes,
   fields,
+  allGrids,
+  allFields,
   bindings,
   styleOverrides,
   dependsOn,
@@ -88,6 +94,8 @@ function GridViewContent({
   /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
   allLayoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
+  allGrids?: TrackerGrid[]
+  allFields?: TrackerField[]
   bindings: TrackerBindings
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
@@ -98,6 +106,10 @@ function GridViewContent({
 }) {
   const gridId = grid.id
   const g = { ...grid, config: view.config ?? {} }
+  const trackerContext =
+    allGrids != null && allFields != null
+      ? { grids: allGrids, fields: allFields }
+      : undefined
 
   if (view.type === 'table') {
     return (
@@ -111,6 +123,7 @@ function GridViewContent({
         styleOverrides={styleOverrides}
         dependsOn={dependsOn}
         gridData={gridData}
+        trackerContext={trackerContext}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
         onAddEntry={onAddEntry ? (newRow) => onAddEntry(gridId, newRow) : undefined}
@@ -130,6 +143,7 @@ function GridViewContent({
         styleOverrides={styleOverrides}
         dependsOn={dependsOn}
         gridData={gridData}
+        trackerContext={trackerContext}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
         onAddEntry={onAddEntry ? (newRow) => onAddEntry(gridId, newRow) : undefined}
@@ -148,6 +162,7 @@ function GridViewContent({
         styleOverrides={styleOverrides}
         dependsOn={dependsOn}
         gridData={gridData}
+        trackerContext={trackerContext}
         onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
         onCrossGridUpdate={onUpdate}
         onAddEntryToGrid={onAddEntry}
@@ -175,6 +190,8 @@ export function TrackerSection({
   tabId,
   section,
   grids,
+  allGrids,
+  allFields,
   fields,
   layoutNodes,
   bindings = {},
@@ -216,6 +233,8 @@ export function TrackerSection({
                   gridLayoutNodes={gridLayoutNodes}
                   allLayoutNodes={layoutNodes}
                   fields={fields}
+                  allGrids={allGrids}
+                  allFields={allFields}
                   bindings={bindings}
                   styleOverrides={viewOverrides}
                   dependsOn={dependsOn}
@@ -257,6 +276,8 @@ export function TrackerSection({
                         gridLayoutNodes={gridLayoutNodes}
                         allLayoutNodes={layoutNodes}
                         fields={fields}
+                        allGrids={allGrids}
+                        allFields={allFields}
                         bindings={bindings}
                         styleOverrides={viewOverrides}
                         dependsOn={dependsOn}

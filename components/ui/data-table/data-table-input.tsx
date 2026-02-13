@@ -278,7 +278,32 @@ export function DataTableInput({
         </>
       )
     }
+    case 'dynamic_select': {
+      const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
+      const selectOptions = (options ?? []).map((option) => {
+        const optValueRaw = typeof option === 'string' ? option : option.id
+        const optLabel = typeof option === 'string' ? option : option.label
+        const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
+        return { value: optValue, label: optLabel }
+      })
+      return (
+        <SearchableSelect
+          options={selectOptions}
+          value={selectValue}
+          onValueChange={(v) => onChange(v === '__empty__' ? '' : v)}
+          placeholder=""
+          searchPlaceholder=""
+          className={cn(
+            inlineInputClass,
+            className,
+            "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
+          )}
+          disabled={isDisabled}
+        />
+      )
+    }
     case 'multiselect':
+    case 'dynamic_multiselect':
       return (
         <>
           <MultiSelect
@@ -288,7 +313,7 @@ export function DataTableInput({
             isInline={!formField}
             className={formField ? cn(className, 'w-full text-left shadow-none') : cn(inlineInputClass, className)}
             disabled={isDisabled}
-            onAddOptionClick={onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
+            onAddOptionClick={type === 'multiselect' && onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog

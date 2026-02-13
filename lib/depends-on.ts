@@ -240,14 +240,22 @@ export function applyFieldOverrides<T extends Record<string, unknown>>(
   return next as T
 }
 
+export interface ResolveDependsOnOptions {
+  /** When true, for source fields in the same grid use only rowDataOverride (e.g. Add form / new row). Never use gridData for same-grid source. */
+  onlyUseRowDataForSource?: boolean
+}
+
 export function resolveDependsOnOverrides(
   rules: DependsOnRule[] | undefined,
   gridData: Record<string, Array<Record<string, unknown>>>,
   targetGridId: string,
   rowIndex: number,
   rowDataOverride?: Record<string, unknown>,
+  options?: ResolveDependsOnOptions,
 ): Record<string, FieldOverride> {
   if (!rules || rules.length === 0) return {}
+
+  const onlyUseRowDataForSource = options?.onlyUseRowDataForSource === true
 
   type DecisionValue = { priority: number; order: number; value: boolean | unknown }
   const decisions: Record<string, Partial<Record<keyof FieldOverride | 'setValue', DecisionValue>>> = {}
@@ -262,10 +270,12 @@ export function resolveDependsOnOverrides(
     if (!sourceGridId || !sourceFieldId) return
 
     const sourceRowIndex = sourceGridId === targetGridId ? rowIndex : 0
-    const sourceValue =
-      sourceGridId === targetGridId && rowDataOverride && sourceFieldId in rowDataOverride
-        ? rowDataOverride[sourceFieldId]
-        : getValueByPath(gridData, rule.source as FieldPath, sourceRowIndex)
+    const useRowDataOnly =
+      sourceGridId === targetGridId &&
+      (onlyUseRowDataForSource || (rowDataOverride && sourceFieldId in rowDataOverride))
+    const sourceValue = useRowDataOnly
+      ? rowDataOverride?.[sourceFieldId]
+      : getValueByPath(gridData, rule.source as FieldPath, sourceRowIndex)
 
     const matches = enriched._compare ? enriched._compare(sourceValue) : compareValues(sourceValue, rule.operator ?? 'eq', rule.value)
 

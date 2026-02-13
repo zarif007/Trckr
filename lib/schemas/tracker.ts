@@ -77,6 +77,8 @@ const fieldDataTypeEnum = z
     'date',
     'options',
     'multiselect',
+    'dynamic_select',
+    'dynamic_multiselect',
     'boolean',
     'text',
     'link',

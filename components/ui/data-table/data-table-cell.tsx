@@ -29,7 +29,9 @@ export function DataTableCell<TData, TValue>({
       rowData: Record<string, unknown>,
       fieldId: string
     ) => Record<string, unknown> | undefined
+    editable?: boolean
   }
+  const isEditable = meta?.editable !== false
   const tableStyles = meta?.tableStyles
   const overrides =
     meta?.getFieldOverridesForRow?.(row.index, row.original as Record<string, unknown>, cell.column.id) ??
@@ -93,7 +95,7 @@ export function DataTableCell<TData, TValue>({
             type={fieldInfo.type}
             options={fieldInfo.options}
             config={effectiveConfig}
-            disabled={isDisabled || overrideValue !== undefined}
+            disabled={!isEditable || isDisabled || overrideValue !== undefined}
             onAddOption={fieldInfo.onAddOption}
             optionsGridFields={fieldInfo.optionsGridFields}
             getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
