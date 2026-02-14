@@ -13,18 +13,27 @@ This folder holds **shared, reusable UI primitives** used across the app. They a
 ```
 components/
   ui/                    # Primitive components (shadcn-style)
+    badge.tsx
     button.tsx
+    calendar.tsx
+    card.tsx
+    checkbox.tsx
+    command.tsx
     dialog.tsx
     input.tsx
-    table.tsx
+    multi-select.tsx
+    popover.tsx
     select.tsx
+    table.tsx
+    tabs.tsx
+    textarea.tsx
     ...
   README.md              # This file
 ```
 
 ## Note on grids
 
-The **table** and **kanban** grid implementations used by the tracker live under **`app/components/tracker-display/grids/`** (data-table + kanban). There is no longer a `components/ui/data-table`; a redirect README remains at `components/ui/data-table/` pointing to the new location.
+The **table** and **kanban** grid implementations used by the tracker live under **`app/components/tracker-display/grids/`** (data-table + kanban).
 
 ## Adding new primitives
 

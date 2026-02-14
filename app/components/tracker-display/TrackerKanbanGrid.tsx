@@ -21,10 +21,11 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
-import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { resolveKanbanStyles } from '@/lib/style-utils'
 import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
 import { useTrackerOptionsContext } from './tracker-options-context'
+import { useGridDependsOn } from './hooks/useGridDependsOn'
 import {
   KanbanCard,
   SortableKanbanCard,
@@ -78,11 +79,7 @@ export function TrackerKanbanGrid({
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
 
-  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
-  const dependsOnForGrid = useMemo(
-    () => getRulesForGrid(dependsOnIndex, grid.id),
-    [dependsOnIndex, grid.id]
-  )
+  const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
 
   const kanbanState = useKanbanGroups({

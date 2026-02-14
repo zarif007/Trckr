@@ -2,16 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  TrackerDisplayProps,
-  TrackerTab,
-  TrackerGrid,
-  TrackerField,
-  TrackerLayoutNode,
-  TrackerBindings,
-  StyleOverrides,
-  DependsOnRules,
-} from './types'
+import type { TrackerDisplayProps } from './types'
 import { TrackerTabContent } from './TrackerTabContent'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'

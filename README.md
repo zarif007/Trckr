@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trckr
 
-## Getting Started
+A config-driven tracker builder: chat with AI to generate tracker schemas, then render them as interactive tabs, sections, and grids (table, kanban, form views) with bindings and conditional rules.
 
-First, run the development server:
+## Quick Start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The main tracker builder lives at `/tracker`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Architecture
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **app/** — Next.js routes and feature components (tracker page, landing page)
+- **components/** — Shared UI primitives (buttons, dialogs, selects, etc.)
+- **lib/** — Core logic: binding resolution, depends-on rules, validation, dynamic options
 
-## Learn More
+The tracker display (`app/components/tracker-display/`) turns a schema + data into tabs, sections, and grid views. Data flows one-way; the parent supplies `gridData` and callbacks.
 
-To learn more about Next.js, take a look at the following resources:
+For a detailed overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Tracker Display](app/components/tracker-display/README.md) — tabs, sections, grids, bindings
+- [lib/binding](lib/binding/README.md) — option resolution, bindings from schema
+- [lib/depends-on](lib/depends-on/README.md) — conditional field rules (hide, require, disable)
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Command  | Description        |
+|----------|--------------------|
+| `npm run dev`   | Start development server |
+| `npm run build` | Production build          |
+| `npm run start` | Run production server     |
+| `npm run lint`  | Run ESLint                |

@@ -107,7 +107,7 @@ export function applyTrackerPatch(
     (node) => gridIds.has(node.gridId) && fieldIds.has(node.fieldId),
   )
 
-  let bindings = { ...(base.bindings ?? {}) }
+  const bindings = { ...(base.bindings ?? {}) }
   if (patch.bindings) {
     for (const [key, value] of Object.entries(patch.bindings)) {
       if (value === null) {
@@ -130,7 +130,7 @@ export function applyTrackerPatch(
   }
 
   // --- Styles ---
-  let styles = { ...(base.styles ?? {}) }
+  const styles = { ...(base.styles ?? {}) }
   if (patch.styles) {
     for (const [key, value] of Object.entries(patch.styles)) {
       if (value === null) {

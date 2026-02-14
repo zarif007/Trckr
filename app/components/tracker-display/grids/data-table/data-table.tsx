@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -26,7 +26,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
@@ -104,8 +103,10 @@ export function DataTable<TData, TValue>({
     () => {
       const initialVisibility: VisibilityState = {}
       columns.forEach((col, index) => {
-        // @ts-ignore - accessorKey might not exist on all column types but usually does for data columns
-        const key = col.id || col.accessorKey || index.toString()
+        const key =
+          col.id ??
+          (col as { accessorKey?: string }).accessorKey ??
+          index.toString()
         if (key) {
           initialVisibility[key] = index < 5
         }

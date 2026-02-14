@@ -54,6 +54,9 @@ TrackerDisplayInline (entry: tabs + state + callbacks)
 
 Shared building blocks:
 
+- **DependsOnTable**  
+  Optional, standalone component for rendering depends-on rules in a table. Import from `@/app/components/tracker-display` when you need to display rules outside the main TrackerDisplay (e.g. in an admin or rules-editor view).
+
 - **TrackerCell**  
   Renders a single value by type (text, number, date, options, multiselect, boolean, link, currency, percentage, etc.), with optional `options` for labels.
 
@@ -113,6 +116,8 @@ tracker-display/
   TrackerDivGrid.tsx
   TrackerCell.tsx
   DependsOnTable.tsx        # Optional table for depends-on rules
+  hooks/
+    useGridDependsOn.ts     # Shared depends-on index/rules for grid components
   grids/
     README.md
     data-table/             # Table grid + shared utils/EntryFormDialog

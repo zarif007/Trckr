@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       }
 
       for (const msg of lastAssistant) {
-        let assistantMsgParts = []
+        const assistantMsgParts = []
 
         if (msg.managerData) {
           const { thinking, prd, builderTodo } = msg.managerData

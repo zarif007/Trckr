@@ -14,8 +14,9 @@ import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
-import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
+import { useGridDependsOn } from './hooks/useGridDependsOn'
 import { useMemo, useCallback } from 'react'
 
 interface TrackerTableGridProps {
@@ -60,11 +61,7 @@ export function TrackerTableGrid({
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
 
-  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
-  const dependsOnForGrid = useMemo(
-    () => getRulesForGrid(dependsOnIndex, grid.id),
-    [dependsOnIndex, grid.id]
-  )
+  const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const connectedFieldNodes = layoutNodes
     .filter((n) => n.gridId === grid.id)
     .sort((a, b) => a.order - b.order)

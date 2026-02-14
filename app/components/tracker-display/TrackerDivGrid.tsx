@@ -1,9 +1,8 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
 import { MultiSelect } from '@/components/ui/multi-select'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
@@ -16,8 +15,9 @@ import {
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
-import { applyFieldOverrides, buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
+import { useGridDependsOn } from './hooks/useGridDependsOn'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import type { FieldMetadata } from './grids/data-table/utils'
 import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
@@ -64,11 +64,7 @@ export function TrackerDivGrid({
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
-  const dependsOnIndex = useMemo(() => buildDependsOnIndex(dependsOn ?? []), [dependsOn])
-  const dependsOnForGrid = useMemo(
-    () => getRulesForGrid(dependsOnIndex, grid.id),
-    [dependsOnIndex, grid.id]
-  )
+  const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
