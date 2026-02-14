@@ -74,7 +74,7 @@ export function TrackerDialog({
         <Button
           variant="secondary"
           size="icon"
-          className="absolute top-3 right-3 z-50 h-9 w-9 rounded-full shadow-lg opacity-90 hover:opacity-100"
+          className="absolute top-3 right-3 z-50 h-9 w-9 rounded-full opacity-90 hover:opacity-100"
           onClick={() => handleOpenChange(false)}
           aria-label="Close preview"
         >
@@ -96,7 +96,7 @@ export function TrackerDialog({
           ) : activeTrackerData ? (
             <div className="w-full">
               {validationErrors.length > 0 && (
-                <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-4 text-amber-800 dark:text-amber-200" role="alert">
+                <div className="rounded-md border border-warning/50 bg-warning/10 p-4 text-warning-foreground" role="alert">
                   <p className="font-medium mb-2 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     Schema validation issues
@@ -122,8 +122,8 @@ export function TrackerDialog({
               />
             </div>
           ) : error && !isLoading ? (
-            <div className="h-full flex flex-col items-center justify-center text-red-500 gap-4">
-              <div className="p-3 rounded-full bg-red-500/10">
+            <div className="h-full flex flex-col items-center justify-center text-destructive gap-4">
+              <div className="p-3 rounded-full bg-destructive/10">
                 <AlertTriangle className="w-8 h-8" />
               </div>
               <div className="text-center max-w-md space-y-2">
@@ -142,8 +142,8 @@ export function TrackerDialog({
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">
               {messagesLength > 0 && !isLoading ? (
-                <div className="flex flex-col items-center gap-4 text-amber-500">
-                  <div className="p-3 rounded-full bg-amber-500/10">
+                <div className="flex flex-col items-center gap-4 text-warning">
+                  <div className="p-3 rounded-full bg-warning/10">
                     <AlertTriangle className="w-8 h-8" />
                   </div>
                   <div className="text-center max-w-md space-y-2">

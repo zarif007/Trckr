@@ -1,0 +1,52 @@
+---
+description: Theme and styling conventions - use theme module
+globs: "**/*.{tsx,ts,css}"
+alwaysApply: false
+---
+
+# Theme and Styling
+
+Import from `@/lib/theme` for all colors, surfaces, borders, shadows, and radius. Never use raw Tailwind color classes (e.g. `bg-gray-50`, `text-blue-600`). The theme module is the single source of truth.
+
+```tsx
+import { theme } from '@/lib/theme'
+// Use theme.surface, theme.text, theme.border, theme.shadow, theme.radius, theme.status, theme.patterns
+className={cn(theme.surface.card, theme.border.default, theme.shadow.sm)}
+```
+
+## Theme Module Structure
+
+- `theme.surface` – background, card, muted, mutedSubtle, secondary, popover, input, overlay
+- `theme.text` – foreground, muted, primary, success, warning, destructive, info
+- `theme.border` – default, subtle, subtleAlt, verySubtle, input, ring, hover
+- `theme.shadow` – xs, sm, md, lg, xl
+- `theme.radius` – sm, md, lg, full
+- `theme.status` – success/warning/destructive/info each with .bg, .border, .text
+- `theme.patterns` – inputBase, card, interactive, hoverPrimary
+
+## Shadows
+
+- `shadow-xs` – inputs, selects, form fields
+- `shadow-sm` – cards, buttons
+- `shadow-md` – dropdowns, popovers
+- `shadow-lg` – dialogs
+- `shadow-xl` – modals
+
+## Border Radius
+
+- `rounded-md` – default for most components
+- `rounded-lg` – larger containers
+- `rounded-full` – pills, avatars, icons
+
+## Borders
+
+- `border-border` – default
+- `border-border/60` – subtle
+- `border-border/40` – very subtle
+- Hover: `hover:border-ring`
+
+## Hover States
+
+- Surface: `hover:bg-muted` or `hover:bg-accent`
+- Primary emphasis: `hover:bg-primary/10`
+- Transitions: `transition-colors` or `transition-[color,box-shadow]`

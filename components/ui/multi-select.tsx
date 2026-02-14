@@ -73,7 +73,7 @@ export function MultiSelect({
   }, [options, searchValue])
 
   const triggerClasses = cn(
-    "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 font-normal text-left",
+    "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 font-normal text-left",
     isInline && "!h-full !min-h-0 border-0 bg-transparent shadow-none px-2 focus-visible:ring-0 focus:ring-0",
     className
   )

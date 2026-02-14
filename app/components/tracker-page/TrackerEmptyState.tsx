@@ -26,7 +26,7 @@ export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmpty
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           className="absolute -inset-4 rounded-full"
         />
-        <div className="relative w-16 h-16 rounded-md flex items-center justify-center bg-foreground shadow-xl">
+        <div className="relative w-16 h-16 rounded-md flex items-center justify-center bg-foreground">
           <Sparkles className="w-8 h-8 text-background" />
         </div>
       </div>
@@ -53,7 +53,7 @@ export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmpty
           <button
             key={suggestion.title}
             onClick={() => onApplySuggestion(suggestion.query)}
-            className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-card/70 hover:bg-card hover:border-primary/40 transition-all text-left shadow-sm"
+            className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-card/70 hover:bg-card hover:border-primary/40 transition-all text-left"
           >
             <span className={`text-xs ${suggestion.iconColor}`}>
               <suggestion.icon className="w-3.5 h-3.5" />

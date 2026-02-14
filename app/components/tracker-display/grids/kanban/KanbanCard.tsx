@@ -65,7 +65,7 @@ export function KanbanCard({
 
   return (
     <Card
-      className={`${cardPadding} bg-card border-border hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing relative ${isOverlay ? 'shadow-xl' : ''} ${fontWeight}`}
+      className={`${cardPadding} bg-card border-border transition-shadow cursor-grab active:cursor-grabbing relative ${fontWeight}`}
     >
       {showEditButton && (
         <Button

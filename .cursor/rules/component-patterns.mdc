@@ -1,0 +1,24 @@
+---
+description: React component patterns and UI conventions
+globs: "**/components/**/*.tsx"
+alwaysApply: false
+---
+
+# Component Patterns
+
+- Use `cn()` from `@/lib/utils` for className composition.
+- Import and use `theme` from `@/lib/theme` for all surfaces, text, borders, shadows, radius, and status colors.
+
+## Form Fields
+
+- Border: `border-input`, `hover:border-ring`, `focus-visible:border-ring`
+- Shadow: `shadow-xs`
+- Radius: `rounded-md`
+- Height: use `input-field-height` class for consistency
+
+## Status Colors
+
+- Success: `text-success`, `bg-success/10`, `border-success/60`
+- Warning: `text-warning`, `bg-warning/10`, `border-warning/50`
+- Error: `text-destructive`, `bg-destructive/10`, `border-destructive/50`
+- Info: `text-info`, `bg-info/10`, `border-info/60`

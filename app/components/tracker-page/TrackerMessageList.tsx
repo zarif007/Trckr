@@ -24,7 +24,7 @@ function renderTrackerPreview(
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       onClick={onPreviewClick}
-      className="group relative max-w-sm p-5 rounded-md border border-border/50 bg-secondary/30 backdrop-blur-xl hover:border-primary/50 transition-all cursor-pointer shadow-lg hover:shadow-primary/5"
+      className="group relative max-w-sm p-5 rounded-md border border-border/50 bg-secondary/30 backdrop-blur-xl hover:border-primary/50 transition-all cursor-pointer"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -94,7 +94,7 @@ export function TrackerMessageList({
             }`}
         >
           {message.role === 'assistant' && (
-            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-0">
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 mt-0">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
           )}
@@ -104,7 +104,7 @@ export function TrackerMessageList({
           >
             {message.content && (
               <div
-                className={`rounded-md px-4 py-2.5 shadow-sm font-medium ${message.role === 'user'
+                className={`rounded-md px-4 py-2.5 font-medium ${message.role === 'user'
                   ? 'bg-primary text-primary-foreground text-sm leading-relaxed'
                   : 'bg-secondary/30 backdrop-blur-xl border border-border/50 text-foreground text-sm leading-relaxed'
                   }`}
@@ -150,9 +150,9 @@ export function TrackerMessageList({
                             <div className="flex flex-col gap-1.5">
                               {message.managerData.builderTodo.map((todo, i) => (
                                 <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded border border-border/20 min-w-0">
-                                  <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-green-500' :
-                                    todo.action === 'update' ? 'bg-blue-500' :
-                                      todo.action === 'delete' ? 'bg-red-500' : 'bg-muted-foreground'
+                                  <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-success' :
+                                    todo.action === 'update' ? 'bg-info' :
+                                      todo.action === 'delete' ? 'bg-destructive' : 'bg-muted-foreground'
                                     }`} />
                                   <div className="min-w-0 break-words">
                                     <span className="opacity-60">{todo.action} </span>
@@ -193,7 +193,7 @@ export function TrackerMessageList({
           className="space-y-6"
         >
           <div className="flex gap-4 justify-start">
-            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 shadow-md mt-1">
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 mt-1">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
             <div className="flex-1 min-w-0 space-y-3">
@@ -250,10 +250,10 @@ export function TrackerMessageList({
                       <p className="text-[10px] uppercase tracking-[0.2em] font-black text-muted-foreground">Action Items</p>
                       <div className="flex flex-col gap-2">
                         {object.manager.builderTodo.map((todo, i) => (
-                          <div key={i} className="flex items-center gap-3 text-xs font-bold text-foreground bg-background/50 p-2.5 rounded-md border border-border/20 shadow-sm min-w-0">
-                            {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shrink-0" />}
-                            {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse shrink-0" />}
-                            {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />}
+                          <div key={i} className="flex items-center gap-3 text-xs font-bold text-foreground bg-background/50 p-2.5 rounded-md border border-border/20 min-w-0">
+                            {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-success animate-pulse shrink-0" />}
+                            {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-info animate-pulse shrink-0" />}
+                            {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />}
                             {!todo?.action && <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />}
                             <span className="flex-1 min-w-0 break-words">{todo?.task || "Preparing task..."}</span>
                           </div>

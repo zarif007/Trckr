@@ -36,27 +36,27 @@ body {
 }
 
 @layer base {
-  /* Light theme (default) */
+  /* Light theme (default) – subtle warm off-white, better contrast */
   :root,
   :root[data-theme='light'] {
-    --background: 0 0% 100%; /* #ffffff - pure white */
-    --foreground: 0 0% 3.9%; /* #0a0a0a - dark text */
-    --card: 0 0% 100%; /* white */
+    --background: 40 6% 98.5%;
+    --foreground: 0 0% 3.9%;
+    --card: 40 6% 98.5%;
     --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
+    --popover: 40 6% 98.5%;
     --popover-foreground: 0 0% 3.9%;
     --primary: 0 0% 9%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
+    --secondary: 40 4% 94%;
     --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 41.8%; /* #6b6b6b */
-    --accent: 0 0% 96.1%;
+    --muted: 40 4% 94%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 40 4% 94%;
     --accent-foreground: 0 0% 9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
     --chart-1: 12 76% 61%;
@@ -64,30 +64,43 @@ body {
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --sidebar: 0 0% 100%;
+    /* Semantic status colors */
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 9%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+    /* Theme-aware shadows (disabled – no shadows) */
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+    --sidebar: 40 6% 98.5%;
     --sidebar-foreground: 0 0% 3.9%;
     --sidebar-primary: 0 0% 9%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 96.1%;
+    --sidebar-accent: 40 4% 94%;
     --sidebar-accent-foreground: 0 0% 9%;
-    --sidebar-border: 0 0% 89.8%;
+    --sidebar-border: 0 0% 88%;
     --sidebar-ring: 0 0% 3.9%;
   }
 
   /* Dark theme */
   :root[data-theme='dark'] {
-    --background: 0 0% 0%; /* pure black */
-    --foreground: 0 0% 100%; /* white */
-    --card: 0 0% 0%; /* pure black */
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
     --card-foreground: 0 0% 100%;
-    --popover: 0 0% 0%; /* pure black */
+    --popover: 0 0% 0%;
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 98%;
     --primary-foreground: 0 0% 9%;
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 60.4%; /* #9a9a9a */
+    --muted-foreground: 0 0% 60.4%;
     --accent: 0 0% 14.9%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -100,7 +113,18 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar: 0 0% 0%; /* pure black */
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 98%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+    --sidebar: 0 0% 0%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 98%;
     --sidebar-primary-foreground: 0 0% 9%;
@@ -110,7 +134,7 @@ body {
     --sidebar-ring: 0 0% 83.1%;
   }
 
-  /* System preference fallback */
+  /* System preference fallback (dark) */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme]) {
       --background: 0 0% 0%;
@@ -137,6 +161,17 @@ body {
       --chart-3: 30 80% 55%;
       --chart-4: 280 65% 60%;
       --chart-5: 340 75% 55%;
+      --success: 142 70% 45%;
+      --success-foreground: 0 0% 98%;
+      --warning: 38 92% 55%;
+      --warning-foreground: 0 0% 98%;
+      --info: 217 91% 60%;
+      --info-foreground: 0 0% 98%;
+      --shadow-xs: none;
+      --shadow-sm: none;
+      --shadow-md: none;
+      --shadow-lg: none;
+      --shadow-xl: none;
       --sidebar: 0 0% 0%;
       --sidebar-foreground: 0 0% 100%;
       --sidebar-primary: 0 0% 98%;
@@ -177,6 +212,12 @@ body {
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
@@ -193,6 +234,12 @@ body {
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+  /* Map theme-aware shadows to Tailwind (all disabled) */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
 }
 
 @layer base {

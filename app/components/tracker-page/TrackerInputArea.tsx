@@ -43,7 +43,7 @@ export function TrackerInputArea({
             <button
               key={s.text}
               onClick={() => applySuggestion(s.text)}
-              className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap shadow-sm"
+              className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap"
             >
               <span className="text-sm group-hover:scale-110 transition-transform">{s.icon}</span>
               <span className="text-[11px] font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
@@ -60,7 +60,7 @@ export function TrackerInputArea({
         />
 
         <div
-          className={`relative bg-card rounded-md shadow-xl border border-border/50 overflow-hidden border-2 border-muted/100 ${isHero ? 'rounded-[18px] shadow-2xl border-border/70' : ''}`}
+          className={`relative bg-card rounded-md border border-border/50 overflow-hidden border-2 border-muted/100 ${isHero ? 'rounded-[18px] border-border/70' : ''}`}
         >
           <div className={`flex items-end gap-2 ${isHero ? 'p-3 md:p-4' : 'p-1.5'}`}>
             <textarea
@@ -87,7 +87,7 @@ export function TrackerInputArea({
             <Button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className={`shrink-0 transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed rounded-md ${isHero ? 'h-12 w-12' : 'h-10 w-10'} ${input.trim() && !isLoading
+              className={`shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed rounded-md ${isHero ? 'h-12 w-12' : 'h-10 w-10'} ${input.trim() && !isLoading
                 ? 'bg-foreground text-background hover:bg-foreground/90'
                 : 'bg-secondary text-muted-foreground'
                 }`}

@@ -24,11 +24,11 @@ export default function Hero() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="inline-flex items-center gap-2.5 rounded-md px-4 py-2 border border-border/60 bg-background/70 dark:bg-background/50 backdrop-blur-xl shadow-sm"
+          className="inline-flex items-center gap-2.5 rounded-md px-4 py-2 border border-border/60 bg-background/70 dark:bg-background/50 backdrop-blur-xl"
         >
           <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 ring-2 ring-emerald-500/30" />
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-success ring-2 ring-success/30" />
           </span>
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
             AI-native data tracking
@@ -67,7 +67,7 @@ export default function Hero() {
         >
           <Button
             size="lg"
-            className="group sm:h-12 px-6 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 shadow-lg shadow-foreground/10 transition-all duration-200 hover:shadow-xl hover:shadow-foreground/15 hover:scale-[1.02] active:scale-[0.98]"
+            className="group sm:h-12 px-6 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             asChild
           >
             <a href="/tracker" className="inline-flex items-center">

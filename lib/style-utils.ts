@@ -1,7 +1,8 @@
 import type { StyleOverrides } from '@/app/components/tracker-display/types'
+import { theme } from '@/lib/theme'
 
 // ============================================================================
-// Token → Tailwind class maps
+// Token → Tailwind class maps (use theme module for colors)
 // ============================================================================
 
 const fontSizeMap: Record<string, string> = {
@@ -36,17 +37,17 @@ const fontWeightForInputMap: Record<string, string> = {
   bold: '!font-bold',
 }
 
-/** Text (font) color for cells and inputs */
+/** Text (font) color for cells and inputs – from theme module */
 const textColorMap: Record<string, string> = {
-  default: 'text-foreground',
-  muted: 'text-muted-foreground',
-  primary: 'text-primary',
-  blue: 'text-blue-600 dark:text-blue-400',
-  green: 'text-green-600 dark:text-green-400',
-  red: 'text-red-600 dark:text-red-400',
-  purple: 'text-purple-600 dark:text-purple-400',
-  amber: 'text-amber-600 dark:text-amber-400',
-  rose: 'text-rose-600 dark:text-rose-400',
+  default: theme.text.foreground,
+  muted: theme.text.muted,
+  primary: theme.text.primary,
+  blue: theme.text.info,
+  green: theme.text.success,
+  red: theme.text.destructive,
+  purple: 'text-chart-4',
+  amber: 'text-chart-5',
+  rose: 'text-chart-1',
 }
 
 /** Literal classes for input override. */
@@ -54,12 +55,12 @@ const textColorForInputMap: Record<string, string> = {
   default: '!text-foreground',
   muted: '!text-muted-foreground',
   primary: '!text-primary',
-  blue: '!text-blue-600 dark:!text-blue-400',
-  green: '!text-green-600 dark:!text-green-400',
-  red: '!text-red-600 dark:!text-red-400',
-  purple: '!text-purple-600 dark:!text-purple-400',
-  amber: '!text-amber-600 dark:!text-amber-400',
-  rose: '!text-rose-600 dark:!text-rose-400',
+  blue: '!text-info',
+  green: '!text-success',
+  red: '!text-destructive',
+  purple: '!text-chart-4',
+  amber: '!text-chart-5',
+  rose: '!text-chart-1',
 }
 
 /** Default font size for table cells/inputs when no style override is set. Single source of truth. */
@@ -90,24 +91,24 @@ const densityHeaderHeight: Record<string, string> = {
 // ============================================================================
 
 const accentBorderMap: Record<string, string> = {
-  default: 'border-border/60',
-  blue: 'border-blue-400/60',
-  green: 'border-green-400/60',
-  red: 'border-red-400/60',
-  purple: 'border-purple-400/60',
-  amber: 'border-amber-400/60',
-  rose: 'border-rose-400/60',
+  default: theme.border.subtle,
+  blue: theme.status.info.border,
+  green: theme.status.success.border,
+  red: theme.status.destructive.border,
+  purple: 'border-chart-4/60',
+  amber: 'border-chart-5/60',
+  rose: 'border-chart-1/60',
 }
 
-/** Table/card background when accentColor is set (e.g. "add bg for table"). Strong enough to be visible in light and dark theme. */
+/** Table/card background when accentColor is set (e.g. "add bg for table"). Uses theme module. */
 const accentBgMap: Record<string, string> = {
   default: '',
-  blue: 'bg-blue-50 dark:bg-blue-900/50',
-  green: 'bg-green-50 dark:bg-green-900/50',
-  red: 'bg-red-50 dark:bg-red-900/50',
-  purple: 'bg-purple-50 dark:bg-purple-900/50',
-  amber: 'bg-amber-50 dark:bg-amber-900/50',
-  rose: 'bg-rose-50 dark:bg-rose-900/50',
+  blue: theme.status.info.bg,
+  green: theme.status.success.bg,
+  red: theme.status.destructive.bg,
+  purple: 'bg-chart-4/10',
+  amber: 'bg-chart-5/10',
+  rose: 'bg-chart-1/10',
 }
 
 const accentHeaderBgMap: Record<string, string> = {

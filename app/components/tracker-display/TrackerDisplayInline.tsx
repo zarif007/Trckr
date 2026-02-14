@@ -161,7 +161,7 @@ export function TrackerDisplayInline({
       <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
         <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
           {normalizedTabs.length > 0 && (
-            <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
+            <TabsList className="bg-muted transition-all duration-300">
               {normalizedTabs.map((tab, index) => (
                 <TabsTrigger
                   key={tab.id}

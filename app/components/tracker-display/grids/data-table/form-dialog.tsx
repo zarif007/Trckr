@@ -109,7 +109,7 @@ export function FormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[540px] p-0 gap-0 overflow-hidden border-border/60 shadow-xl [--tw-shadow-color:rgba(0,0,0,0.12)] dark:[--tw-shadow-color:rgba(0,0,0,0.4)]"
+        className="sm:max-w-[540px] p-0 gap-0 overflow-hidden border-border/60"
         onInteractOutside={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         onOpenAutoFocus={(e) => e.preventDefault()}
@@ -158,8 +158,7 @@ export function FormDialog({
             onClick={onSubmit}
             disabled={disableSubmit}
             className={cn(
-              'min-w-[100px] font-medium transition-all',
-              mode === 'add' && 'shadow-sm'
+              'min-w-[100px] font-medium transition-all'
             )}
           >
             {mode === 'add' ? (

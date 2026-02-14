@@ -1,15 +1,13 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { theme } from "@/lib/theme"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card"
-      className={cn(
-        "bg-card text-card-foreground flex flex-col gap-6 rounded-md border py-6 shadow-sm",
-        className
-      )}
+      className={cn(theme.patterns.card, "flex flex-col gap-6 border", className)}
       {...props}
     />
   )
@@ -42,7 +40,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn(theme.text.muted, "text-sm", className)}
       {...props}
     />
   )
