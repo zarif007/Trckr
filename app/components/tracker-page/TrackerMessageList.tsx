@@ -2,8 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Sparkles, User, Loader2, Maximize2, Target, ChevronDown, ChevronUp } from 'lucide-react'
-import type { Message } from '../hooks/useTrackerChat'
-import type { TrackerResponse } from '../hooks/useTrackerChat'
+import type { Message, TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerMessageListProps {
   messages: Message[]

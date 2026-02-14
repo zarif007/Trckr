@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
-import { suggestions } from '../hooks/useTrackerChat'
+import { suggestions } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerEmptyStateProps {
   onApplySuggestion: (query: string) => void

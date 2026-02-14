@@ -1,6 +1,6 @@
 import { ColumnDef } from '@tanstack/react-table'
-import { DataTable } from '@/components/ui/data-table'
-import type { FieldMetadata } from '@/components/ui/data-table/utils'
+import { DataTable } from './grids/data-table'
+import type { FieldMetadata } from './grids/data-table/utils'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -13,7 +13,7 @@ import {
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
-import type { OptionsGridFieldDef } from '@/components/ui/data-table/utils'
+import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { buildDependsOnIndex, getRulesForGrid, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useMemo, useCallback } from 'react'

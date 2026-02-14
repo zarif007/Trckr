@@ -1,11 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   TrackerDisplayProps,
   TrackerTab,
-  TrackerSection as ITrackerSection,
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
@@ -13,10 +12,15 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from './types'
-import { TrackerSection } from './TrackerSection'
+import { TrackerTabContent } from './TrackerTabContent'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
-import { ensureDependsOnOptionGrids, SHARED_TAB_ID, DEPENDS_ON_RULES_GRID, rulesGridRowsToDependsOn } from '@/lib/depends-on-options'
+import {
+  ensureDependsOnOptionGrids,
+  SHARED_TAB_ID,
+  DEPENDS_ON_RULES_GRID,
+  rulesGridRowsToDependsOn,
+} from '@/lib/depends-on-options'
 
 export function TrackerDisplayInline({
   tabs,
@@ -30,21 +34,19 @@ export function TrackerDisplayInline({
   getDataRef,
   dependsOn,
 }: TrackerDisplayProps) {
-  const normalizedTabs = useMemo(() => {
-    return (tabs ?? [])
-      .filter((tab) => !tab.config?.isHidden)
-      .sort((a, b) => a.placeId - b.placeId)
-  }, [tabs])
-
-  const [activeTabId, setActiveTabId] = useState(
-    normalizedTabs[0]?.id || '',
+  const normalizedTabs = useMemo(
+    () =>
+      (tabs ?? [])
+        .filter((tab) => !tab.config?.isHidden)
+        .sort((a, b) => a.placeId - b.placeId),
+    [tabs]
   )
+
+  const [activeTabId, setActiveTabId] = useState(normalizedTabs[0]?.id ?? '')
 
   useEffect(() => {
     if (normalizedTabs.length > 0) {
-      const tabExists = normalizedTabs.some(
-        (tab) => tab.id === activeTabId,
-      )
+      const tabExists = normalizedTabs.some((tab) => tab.id === activeTabId)
       if (!activeTabId || !tabExists) {
         setActiveTabId(normalizedTabs[0].id)
       }
@@ -55,14 +57,11 @@ export function TrackerDisplayInline({
     const fromBindings = getInitialGridDataFromBindings(bindings ?? {})
     const fromInitial = initialGridData ?? {}
     const merged: Record<string, Array<Record<string, unknown>>> = {}
-    const allGridIds = new Set([
-      ...Object.keys(fromBindings),
-      ...Object.keys(fromInitial),
-    ])
+    const allGridIds = new Set([...Object.keys(fromBindings), ...Object.keys(fromInitial)])
     for (const gridId of allGridIds) {
       const initialRows = fromInitial[gridId]
       const bindingRows = fromBindings[gridId]
-      if (initialRows && initialRows.length > 0) {
+      if (initialRows?.length > 0) {
         merged[gridId] = initialRows
       } else if (Array.isArray(bindingRows)) {
         merged[gridId] = bindingRows
@@ -114,7 +113,6 @@ export function TrackerDisplayInline({
     return merged
   }, [baseGridData, localGridData])
 
-  /** Derive dependsOn from the Rules grid when present so added/edited rows affect fields. */
   const effectiveDependsOn = useMemo(() => {
     if (!dependsOnAug) return dependsOn ?? []
     const rulesRows = gridData[DEPENDS_ON_RULES_GRID]
@@ -134,7 +132,7 @@ export function TrackerDisplayInline({
     gridId: string,
     rowIndex: number,
     columnId: string,
-    value: unknown,
+    value: unknown
   ) => {
     setLocalGridData((prev) => {
       const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
@@ -160,18 +158,17 @@ export function TrackerDisplayInline({
     })
   }
 
-  if (!normalizedTabs.length) {
-    return null
-  }
+  if (!normalizedTabs.length) return null
 
   return (
-    <TrackerOptionsProvider grids={effectiveGrids} fields={effectiveFields} layoutNodes={effectiveLayoutNodes} sections={effectiveSections}>
+    <TrackerOptionsProvider
+      grids={effectiveGrids}
+      fields={effectiveFields}
+      layoutNodes={effectiveLayoutNodes}
+      sections={effectiveSections}
+    >
       <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
-        <Tabs
-          value={activeTabId}
-          onValueChange={setActiveTabId}
-          className="w-full"
-        >
+        <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
           {normalizedTabs.length > 0 && (
             <TabsList className="bg-slate-50 dark:bg-black transition-all duration-300">
               {normalizedTabs.map((tab, index) => (
@@ -197,95 +194,14 @@ export function TrackerDisplayInline({
               bindings={effectiveBindings}
               styles={styles}
               dependsOn={effectiveDependsOn}
-              localGridData={localGridData}
               gridData={gridData}
-              handleUpdate={handleUpdate}
-              handleAddEntry={handleAddEntry}
-              handleDeleteEntries={handleDeleteEntries}
+              onUpdate={handleUpdate}
+              onAddEntry={handleAddEntry}
+              onDeleteEntries={handleDeleteEntries}
             />
           ))}
         </Tabs>
       </div>
     </TrackerOptionsProvider>
-  )
-}
-
-function TrackerTabContent({
-  tab,
-  sections,
-  grids,
-  fields,
-  layoutNodes,
-  bindings,
-  styles,
-  dependsOn,
-  localGridData,
-  gridData,
-  handleUpdate,
-  handleAddEntry,
-  handleDeleteEntries,
-}: {
-  tab: TrackerTab
-  sections: ITrackerSection[]
-  grids: TrackerGrid[]
-  fields: TrackerField[]
-  layoutNodes: TrackerLayoutNode[]
-  bindings: TrackerBindings
-  styles?: Record<string, StyleOverrides>
-  dependsOn?: DependsOnRules
-  localGridData: Record<string, Array<Record<string, unknown>>>
-  gridData: Record<string, Array<Record<string, unknown>>>
-  handleUpdate: (
-    gridId: string,
-    rowIndex: number,
-    columnId: string,
-    value: unknown,
-  ) => void
-  handleAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
-  handleDeleteEntries: (gridId: string, rowIndices: number[]) => void
-}) {
-  const tabSections = useMemo(() => {
-    return sections
-      .filter((section) => section.tabId === tab.id && !section.config?.isHidden)
-      .sort((a, b) => a.placeId - b.placeId)
-      .map((section) => ({
-        ...section,
-        grids: grids
-          .filter((grid) => grid.sectionId === section.id)
-          .sort((a, b) => a.placeId - b.placeId)
-      }))
-  }, [tab.id, sections, grids])
-
-  return (
-    <TabsContent
-      key={tab.id}
-      value={tab.id}
-      className="space-y-6 mt-6"
-    >
-      {tabSections.map((section, index) => (
-        <div
-          key={section.id}
-          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          <TrackerSection
-            tabId={tab.id}
-            section={section}
-            grids={section.grids}
-            allGrids={grids}
-            allFields={fields}
-            fields={fields}
-            layoutNodes={layoutNodes}
-            bindings={bindings}
-            styles={styles}
-            dependsOn={dependsOn}
-            gridData={gridData}
-            onUpdate={handleUpdate}
-            onAddEntry={handleAddEntry}
-            onDeleteEntries={handleDeleteEntries}
-          />
-        </div>
-      ))}
-    </TabsContent>
   )
 }

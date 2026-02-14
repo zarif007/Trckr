@@ -1,0 +1,135 @@
+'use client'
+
+import type {
+  TrackerGrid,
+  TrackerField,
+  TrackerLayoutNode,
+  TrackerBindings,
+  StyleOverrides,
+  DependsOnRules,
+} from './types'
+import type { GridType } from './types'
+import { TrackerTableGrid } from './TrackerTableGrid'
+import { TrackerKanbanGrid } from './TrackerKanbanGrid'
+import { TrackerDivGrid } from './TrackerDivGrid'
+
+export interface GridViewContentProps {
+  tabId: string
+  grid: TrackerGrid
+  view: { id?: string; type: GridType; name?: string; config?: TrackerGrid['config'] }
+  gridLayoutNodes: TrackerLayoutNode[]
+  allLayoutNodes: TrackerLayoutNode[]
+  fields: TrackerField[]
+  allGrids?: TrackerGrid[]
+  allFields?: TrackerField[]
+  bindings: TrackerBindings
+  styleOverrides?: StyleOverrides
+  dependsOn?: DependsOnRules
+  gridData?: Record<string, Array<Record<string, unknown>>>
+  onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
+  onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
+  onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
+}
+
+/** Renders a single grid view (table, kanban, form/div, or placeholder for calendar/timeline). */
+export function GridViewContent({
+  tabId,
+  grid,
+  view,
+  gridLayoutNodes,
+  allLayoutNodes,
+  fields,
+  allGrids,
+  allFields,
+  bindings,
+  styleOverrides,
+  dependsOn,
+  gridData,
+  onUpdate,
+  onAddEntry,
+  onDeleteEntries,
+}: GridViewContentProps) {
+  const gridId = grid.id
+  const g = { ...grid, config: view.config ?? {} }
+  const trackerContext =
+    allGrids != null && allFields != null ? { grids: allGrids, fields: allFields } : undefined
+
+  const updateCell = onUpdate
+    ? (rowIndex: number, columnId: string, value: unknown) =>
+      onUpdate(gridId, rowIndex, columnId, value)
+    : undefined
+  const addEntry = onAddEntry ? (newRow: Record<string, unknown>) => onAddEntry(gridId, newRow) : undefined
+  const deleteEntries = onDeleteEntries ? (rowIndices: number[]) => onDeleteEntries(gridId, rowIndices) : undefined
+
+  switch (view.type) {
+    case 'table':
+      return (
+        <TrackerTableGrid
+          tabId={tabId}
+          grid={g}
+          layoutNodes={gridLayoutNodes}
+          allLayoutNodes={allLayoutNodes}
+          fields={fields}
+          bindings={bindings}
+          styleOverrides={styleOverrides}
+          dependsOn={dependsOn}
+          gridData={gridData}
+          trackerContext={trackerContext}
+          onUpdate={updateCell}
+          onCrossGridUpdate={onUpdate}
+          onAddEntry={addEntry}
+          onAddEntryToGrid={onAddEntry}
+          onDeleteEntries={deleteEntries}
+        />
+      )
+    case 'kanban':
+      return (
+        <TrackerKanbanGrid
+          tabId={tabId}
+          grid={g}
+          layoutNodes={gridLayoutNodes}
+          fields={fields}
+          bindings={bindings}
+          styleOverrides={styleOverrides}
+          dependsOn={dependsOn}
+          gridData={gridData}
+          trackerContext={trackerContext}
+          onUpdate={updateCell}
+          onCrossGridUpdate={onUpdate}
+          onAddEntry={addEntry}
+        />
+      )
+    case 'div':
+      return (
+        <TrackerDivGrid
+          tabId={tabId}
+          grid={g}
+          layoutNodes={gridLayoutNodes}
+          allLayoutNodes={allLayoutNodes}
+          fields={fields}
+          bindings={bindings}
+          styleOverrides={styleOverrides}
+          dependsOn={dependsOn}
+          gridData={gridData}
+          trackerContext={trackerContext}
+          onUpdate={updateCell}
+          onCrossGridUpdate={onUpdate}
+          onAddEntryToGrid={onAddEntry}
+        />
+      )
+    case 'calendar':
+      return (
+        <div className="p-4 border border-dashed rounded text-muted-foreground">
+          Calendar Grid: {grid.name} (Not implemented)
+        </div>
+      )
+    case 'timeline':
+      return (
+        <div className="p-4 border border-dashed rounded text-muted-foreground">
+          Timeline Grid: {grid.name} (Not implemented)
+        </div>
+      )
+    default:
+      return null
+  }
+}

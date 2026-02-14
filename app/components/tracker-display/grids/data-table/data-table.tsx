@@ -36,7 +36,7 @@ import { Settings2, ChevronDown, Plus } from 'lucide-react'
 import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
 import { EntryFormDialog } from './entry-form-dialog'
-import type { StyleOverrides } from '@/app/components/tracker-display/types'
+import type { StyleOverrides } from '../../types'
 import { resolveTableStyles } from '@/lib/style-utils'
 
 interface DataTableProps<TData, TValue> {

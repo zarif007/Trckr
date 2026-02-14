@@ -7,7 +7,7 @@ import {
   DialogContent,
 } from '@/components/ui/dialog'
 import { TrackerDisplay } from '@/app/components/tracker-display'
-import type { TrackerResponse } from '../hooks/useTrackerChat'
+import type { TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
 
 /** Streamed object from useObject – typed loosely to accept PartialObject from AI SDK */
 type StreamedObject = { manager?: unknown; tracker?: unknown; trackerPatch?: unknown } | undefined

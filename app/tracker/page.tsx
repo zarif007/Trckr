@@ -2,10 +2,10 @@
 
 import { AnimatePresence } from 'framer-motion'
 import { useTrackerChat } from './hooks/useTrackerChat'
-import { TrackerEmptyState } from './components/TrackerEmptyState'
-import { TrackerMessageList } from './components/TrackerMessageList'
-import { TrackerInputArea } from './components/TrackerInputArea'
-import { TrackerDialog } from './components/TrackerDialog'
+import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
+import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
+import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
+import { TrackerDialog } from '@/app/components/tracker-page/TrackerDialog'
 
 export default function TrackerPage() {
   const {

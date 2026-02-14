@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import { Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { quickSuggestions } from '../hooks/useTrackerChat'
+import { quickSuggestions } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerInputAreaProps {
   input: string

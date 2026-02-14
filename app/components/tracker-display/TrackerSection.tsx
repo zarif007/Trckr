@@ -1,7 +1,9 @@
+'use client'
+
+import { useState } from 'react'
 import {
   TrackerSection as ITrackerSection,
   TrackerGrid,
-  GridType,
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
@@ -9,49 +11,16 @@ import {
   DependsOnRules,
 } from './types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrackerTableGrid } from './TrackerTableGrid'
-import { TrackerKanbanGrid } from './TrackerKanbanGrid'
-import { TrackerDivGrid } from './TrackerDivGrid'
+import { Button } from '@/components/ui/button'
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { GridViewContent } from './GridViewContent'
+import { normalizeGridViews } from './view-utils'
 
-const viewLabelForType = (type: GridType) => {
-  if (type === 'div') return 'Form'
-  if (type === 'table') return 'Table'
-  if (type === 'kanban') return 'Kanban'
-  if (type === 'calendar') return 'Calendar'
-  if (type === 'timeline') return 'Timeline'
-  return 'View'
-}
-
-const normalizeViews = (grid: TrackerGrid) => {
-  const rawViews = Array.isArray(grid.views) ? grid.views : []
-  const fallbackViews =
-    rawViews.length > 0
-      ? rawViews
-      : grid.type
-        ? [{ type: grid.type, config: grid.config }]
-        : [{ type: 'table' as const, config: grid.config }]
-
-  return fallbackViews.map((view, index) => {
-    const type = view.type ?? 'table'
-    const name = view.name ?? viewLabelForType(type)
-    const id = view.id ?? `${grid.id}_${type}_view_${index}`
-    return {
-      ...view,
-      type,
-      name,
-      id,
-      config: view.config ?? {},
-    }
-  })
-}
-
-interface TrackerSectionProps {
+export interface TrackerSectionProps {
   tabId: string
   section: ITrackerSection
   grids: TrackerGrid[]
-  /** All grids in the tracker (for dynamic option functions e.g. all_field_paths). */
   allGrids?: TrackerGrid[]
-  /** All fields in the tracker (for dynamic option functions e.g. all_field_paths). */
   allFields?: TrackerField[]
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
@@ -67,123 +36,6 @@ interface TrackerSectionProps {
   ) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
-}
-
-/** Renders one grid view using grid.id for data; type/config from the view. */
-function GridViewContent({
-  tabId,
-  grid,
-  view,
-  gridLayoutNodes,
-  allLayoutNodes,
-  fields,
-  allGrids,
-  allFields,
-  bindings,
-  styleOverrides,
-  dependsOn,
-  gridData,
-  onUpdate,
-  onAddEntry,
-  onDeleteEntries,
-}: {
-  tabId: string
-  grid: TrackerGrid
-  view: { id?: string; type: GridType; config?: TrackerGrid['config'] }
-  gridLayoutNodes: TrackerLayoutNode[]
-  /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
-  allLayoutNodes: TrackerLayoutNode[]
-  fields: TrackerField[]
-  allGrids?: TrackerGrid[]
-  allFields?: TrackerField[]
-  bindings: TrackerBindings
-  styleOverrides?: StyleOverrides
-  dependsOn?: DependsOnRules
-  gridData?: Record<string, Array<Record<string, unknown>>>
-  onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
-  onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
-  onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
-}) {
-  const gridId = grid.id
-  const g = { ...grid, config: view.config ?? {} }
-  const trackerContext =
-    allGrids != null && allFields != null
-      ? { grids: allGrids, fields: allFields }
-      : undefined
-
-  if (view.type === 'table') {
-    return (
-      <TrackerTableGrid
-        tabId={tabId}
-        grid={g}
-        layoutNodes={gridLayoutNodes}
-        allLayoutNodes={allLayoutNodes}
-        fields={fields}
-        bindings={bindings}
-        styleOverrides={styleOverrides}
-        dependsOn={dependsOn}
-        gridData={gridData}
-        trackerContext={trackerContext}
-        onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
-        onCrossGridUpdate={onUpdate}
-        onAddEntry={onAddEntry ? (newRow) => onAddEntry(gridId, newRow) : undefined}
-        onAddEntryToGrid={onAddEntry}
-        onDeleteEntries={onDeleteEntries ? (rowIndices) => onDeleteEntries(gridId, rowIndices) : undefined}
-      />
-    )
-  }
-  if (view.type === 'kanban') {
-    return (
-      <TrackerKanbanGrid
-        tabId={tabId}
-        grid={g}
-        layoutNodes={gridLayoutNodes}
-        fields={fields}
-        bindings={bindings}
-        styleOverrides={styleOverrides}
-        dependsOn={dependsOn}
-        gridData={gridData}
-        trackerContext={trackerContext}
-        onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
-        onCrossGridUpdate={onUpdate}
-        onAddEntry={onAddEntry ? (newRow) => onAddEntry(gridId, newRow) : undefined}
-      />
-    )
-  }
-  if (view.type === 'div') {
-    return (
-      <TrackerDivGrid
-        tabId={tabId}
-        grid={g}
-        layoutNodes={gridLayoutNodes}
-        allLayoutNodes={allLayoutNodes}
-        fields={fields}
-        bindings={bindings}
-        styleOverrides={styleOverrides}
-        dependsOn={dependsOn}
-        gridData={gridData}
-        trackerContext={trackerContext}
-        onUpdate={onUpdate ? (rowIndex, columnId, value) => onUpdate(gridId, rowIndex, columnId, value) : undefined}
-        onCrossGridUpdate={onUpdate}
-        onAddEntryToGrid={onAddEntry}
-      />
-    )
-  }
-  if (view.type === 'calendar') {
-    return (
-      <div className="p-4 border border-dashed rounded text-muted-foreground">
-        Calendar Grid: {grid.name} (Not implemented)
-      </div>
-    )
-  }
-  if (view.type === 'timeline') {
-    return (
-      <div className="p-4 border border-dashed rounded text-muted-foreground">
-        Timeline Grid: {grid.name} (Not implemented)
-      </div>
-    )
-  }
-  return null
 }
 
 export function TrackerSection({
@@ -202,98 +54,127 @@ export function TrackerSection({
   onAddEntry,
   onDeleteEntries,
 }: TrackerSectionProps) {
+  const [collapsed, setCollapsed] = useState(section.config?.isCollapsedByDefault ?? false)
+  const gridNames = grids.map((g) => g.name)
+
   return (
     <div className="space-y-4">
-      <h3 className="text-2xl font-semibold text-foreground border-b pb-2">
-        {section.name}
-      </h3>
-      <div className="space-y-6">
-        {grids.map((grid) => {
-          const gridLayoutNodes = layoutNodes
-            .filter(node => node.gridId === grid.id)
-            .sort((a, b) => a.order - b.order)
+      {collapsed ? (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setCollapsed(false)}
+          onKeyDown={(e) => e.key === 'Enter' && setCollapsed(false)}
+          className="flex flex-wrap items-center gap-x-1.5 gap-y-1 py-2 px-3 rounded-md bg-muted/60 text-muted-foreground text-sm border border-border/60 cursor-pointer hover:bg-muted transition-colors"
+          aria-label="Expand section"
+        >
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="font-medium text-foreground">{section.name}</span>
+          <span className="text-muted-foreground">—</span>
+          <span>{gridNames.join(', ')}</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-2 border-b pb-2">
+            <h3 className="text-2xl font-semibold text-foreground shrink-0">
+              {section.name}
+            </h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="shrink-0 h-8 w-8 text-muted-foreground hover:text-foreground"
+              onClick={() => setCollapsed(true)}
+              aria-label="Collapse section"
+            >
+              <ChevronDown className="h-5 w-5" />
+            </Button>
+          </div>
+          <div className="space-y-6">
+            {grids.map((grid) => {
+              const gridLayoutNodes = layoutNodes
+                .filter((node) => node.gridId === grid.id)
+                .sort((a, b) => a.order - b.order)
+              const views = normalizeGridViews(grid)
 
-          const views = normalizeViews(grid)
+              if (views.length === 1) {
+                const viewOverrides =
+                  (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined
+                return (
+                  <div key={grid.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                        {grid.name}
+                      </label>
+                    </div>
+                    <GridViewContent
+                      tabId={tabId}
+                      grid={grid}
+                      view={views[0]}
+                      gridLayoutNodes={gridLayoutNodes}
+                      allLayoutNodes={layoutNodes}
+                      fields={fields}
+                      allGrids={allGrids}
+                      allFields={allFields}
+                      bindings={bindings}
+                      styleOverrides={viewOverrides}
+                      dependsOn={dependsOn}
+                      gridData={gridData}
+                      onUpdate={onUpdate}
+                      onAddEntry={onAddEntry}
+                      onDeleteEntries={onDeleteEntries}
+                    />
+                  </div>
+                )
+              }
 
-          if (views.length === 1) {
-            const viewOverrides = (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined
-            return (
-              <div key={grid.id} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
+              const defaultTab = views[0]?.id ?? `${grid.id}_view_0`
+              return (
+                <div key={grid.id} className="space-y-3">
+                  <div className="flex items-center justify-between">
                     <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
                       {grid.name}
                     </label>
                   </div>
+                  <Tabs defaultValue={defaultTab} className="w-full">
+                    <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+                      {views.map((view) => (
+                        <TabsTrigger key={view.id} value={view.id}>
+                          {view.name}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {views.map((view) => {
+                      const viewOverrides =
+                        (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined
+                      return (
+                        <TabsContent key={view.id} value={view.id} className="mt-3">
+                          <GridViewContent
+                            tabId={tabId}
+                            grid={grid}
+                            view={view}
+                            gridLayoutNodes={gridLayoutNodes}
+                            allLayoutNodes={layoutNodes}
+                            fields={fields}
+                            allGrids={allGrids}
+                            allFields={allFields}
+                            bindings={bindings}
+                            styleOverrides={viewOverrides}
+                            dependsOn={dependsOn}
+                            gridData={gridData}
+                            onUpdate={onUpdate}
+                            onAddEntry={onAddEntry}
+                            onDeleteEntries={onDeleteEntries}
+                          />
+                        </TabsContent>
+                      )
+                    })}
+                  </Tabs>
                 </div>
-                <GridViewContent
-                  tabId={tabId}
-                  grid={grid}
-                  view={views[0]}
-                  gridLayoutNodes={gridLayoutNodes}
-                  allLayoutNodes={layoutNodes}
-                  fields={fields}
-                  allGrids={allGrids}
-                  allFields={allFields}
-                  bindings={bindings}
-                  styleOverrides={viewOverrides}
-                  dependsOn={dependsOn}
-                  gridData={gridData}
-                  onUpdate={onUpdate}
-                  onAddEntry={onAddEntry}
-                  onDeleteEntries={onDeleteEntries}
-                />
-              </div>
-            )
-          }
-          const defaultTab = views[0]?.id ?? `${grid.id}_view_0`
-
-          return (
-            <div key={grid.id} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    {grid.name}
-                  </label>
-                </div>
-              </div>
-              <Tabs defaultValue={defaultTab} className="w-full">
-                <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
-                  {views.map((view) => (
-                    <TabsTrigger key={view.id} value={view.id}>
-                      {view.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {views.map((view) => {
-                  const viewOverrides = (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined
-                  return (
-                    <TabsContent key={view.id} value={view.id} className="mt-3">
-                      <GridViewContent
-                        tabId={tabId}
-                        grid={grid}
-                        view={view}
-                        gridLayoutNodes={gridLayoutNodes}
-                        allLayoutNodes={layoutNodes}
-                        fields={fields}
-                        allGrids={allGrids}
-                        allFields={allFields}
-                        bindings={bindings}
-                        styleOverrides={viewOverrides}
-                        dependsOn={dependsOn}
-                        gridData={gridData}
-                        onUpdate={onUpdate}
-                        onAddEntry={onAddEntry}
-                        onDeleteEntries={onDeleteEntries}
-                      />
-                    </TabsContent>
-                  )
-                })}
-              </Tabs>
-            </div>
-          )
-        })}
-      </div>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   )
 }
