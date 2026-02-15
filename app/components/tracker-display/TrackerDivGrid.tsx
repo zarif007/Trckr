@@ -4,8 +4,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { MultiSelect } from '@/components/ui/multi-select'
-import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -19,7 +17,7 @@ import {
   DependsOnRules,
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
-import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from './edit-mode'
+import { useEditMode, useLayoutActions, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from './edit-mode'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
@@ -68,9 +66,8 @@ export function TrackerDivGrid({
 }: TrackerDivGridProps) {
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
-  const [addFieldOpen, setAddFieldOpen] = useState(false)
   const { editMode, schema, onSchemaChange } = useEditMode()
-  const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
+  const { remove, move, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
@@ -99,14 +96,6 @@ export function TrackerDivGrid({
       reorder(reordered)
     },
     [grid.id, fieldNodes, reorder]
-  )
-
-  const handleAddFieldConfirm = useCallback(
-    (result: Parameters<typeof add>[0]) => {
-      add(result)
-      setAddFieldOpen(false)
-    },
-    [add]
   )
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
@@ -167,25 +156,8 @@ export function TrackerDivGrid({
 
   if (fieldNodes.length === 0 && canEditLayout) {
     return (
-      <div className="space-y-2">
-        <button
-          type="button"
-          onClick={() => setAddFieldOpen(true)}
-          className="w-full py-3 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center hover:border-primary/40 hover:text-foreground transition-colors"
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <Plus className="h-3.5 w-3.5" />
-            Add field
-          </span>
-        </button>
-        <AddColumnOrFieldDialog
-          open={addFieldOpen}
-          onOpenChange={setAddFieldOpen}
-          variant="field"
-          existingFieldIds={[]}
-          allFields={schema!.fields ?? []}
-          onConfirm={handleAddFieldConfirm}
-        />
+      <div className="py-2">
+        <p className="text-xs text-muted-foreground/50">No fields — use Add below</p>
       </div>
     )
   }
@@ -442,28 +414,6 @@ export function TrackerDivGrid({
         </DndContext>
       ) : (
         fieldsContainer
-      )}
-      {canEditLayout && (
-        <button
-          type="button"
-          onClick={() => setAddFieldOpen(true)}
-          className="w-full py-2 rounded-md border border-dashed border-border text-muted-foreground text-xs hover:border-primary/40 hover:text-foreground transition-colors"
-        >
-          <span className="flex items-center justify-center gap-1">
-            <Plus className="h-3 w-3" />
-            Add field
-          </span>
-        </button>
-      )}
-      {canEditLayout && (
-        <AddColumnOrFieldDialog
-          open={addFieldOpen}
-          onOpenChange={setAddFieldOpen}
-          variant="field"
-          existingFieldIds={fieldNodes.map((n) => n.fieldId)}
-          allFields={schema!.fields ?? []}
-          onConfirm={handleAddFieldConfirm}
-        />
       )}
       {onAddEntryToGrid && addOptionContext && addOptionContext.optionsGridFields.length > 0 && (
         <EntryFormDialog

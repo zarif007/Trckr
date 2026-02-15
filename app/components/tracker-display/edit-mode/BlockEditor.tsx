@@ -24,7 +24,7 @@ import { AddColumnOrFieldDialog } from './AddColumnOrFieldDialog'
 import { useEditMode } from './context'
 import { useSectionGridActions } from './useSectionGridActions'
 import { useLayoutActions } from './useLayoutActions'
-import { getOrCreateSectionAndGridForField } from './ensureContainer'
+import { getOrCreateSectionAndGridForField, getOrCreateSectionForGrid } from './ensureContainer'
 import { GridBlockContent } from '../GridBlockContent'
 import type { FlatBlock, BlockEditorProps, AddColumnOrFieldResult } from './types'
 import type { TrackerSection, TrackerGrid } from '../types'
@@ -321,6 +321,22 @@ export function BlockEditor({
     [actions]
   )
 
+  // Add grid (table/kanban/form): create section if none exists
+  const handleAddGrid = useCallback(
+    (afterBlockIndex: number, type: 'table' | 'kanban' | 'div') => {
+      if (!schema || !onSchemaChange) return
+      const { sectionId, nextSchema } = getOrCreateSectionForGrid(
+        tab.id,
+        afterBlockIndex,
+        flatBlocks,
+        schema
+      )
+      if (nextSchema !== schema) onSchemaChange(nextSchema)
+      addGridToSection(sectionId, type)
+    },
+    [tab.id, flatBlocks, schema, onSchemaChange, addGridToSection]
+  )
+
   // "Add field" from block level: ensure section+grid exist, then open dialog
   const handleAddField = useCallback(
     (afterBlockIndex: number) => {
@@ -347,26 +363,17 @@ export function BlockEditor({
     [fieldLayoutActions]
   )
 
-  // Context-aware command callbacks for a specific position in the block list
+  // Context-aware command callbacks for a specific position in the block list.
+  // All options always available: create section/grid when needed.
   const getCommandProps = useCallback(
-    (afterBlockIndex: number) => {
-      let sectionId: string | null = null
-      for (let i = afterBlockIndex; i >= 0; i--) {
-        if (flatBlocks[i]?.type === 'section') {
-          sectionId = flatBlocks[i].id
-          break
-        }
-      }
-
-      return {
-        onAddSection: addSectionAtEnd,
-        onAddTable: sectionId ? () => addGridToSection(sectionId!, 'table') : undefined,
-        onAddKanban: sectionId ? () => addGridToSection(sectionId!, 'kanban') : undefined,
-        onAddForm: sectionId ? () => addGridToSection(sectionId!, 'div') : undefined,
-        onAddField: () => handleAddField(afterBlockIndex),
-      }
-    },
-    [flatBlocks, addSectionAtEnd, addGridToSection, handleAddField]
+    (afterBlockIndex: number) => ({
+      onAddSection: addSectionAtEnd,
+      onAddTable: () => handleAddGrid(afterBlockIndex, 'table'),
+      onAddKanban: () => handleAddGrid(afterBlockIndex, 'kanban'),
+      onAddForm: () => handleAddGrid(afterBlockIndex, 'div'),
+      onAddField: () => handleAddField(afterBlockIndex),
+    }),
+    [addSectionAtEnd, handleAddGrid, handleAddField]
   )
 
   // --- Group blocks by section for visual hierarchy ---
@@ -461,14 +468,19 @@ export function BlockEditor({
                       </SortableBlockItem>
                     </div>
                   ))}
-                  {/* Add block inside this section (for grids/fields) */}
-                  <BlockCommandInput
-                    {...getCommandProps(
-                      group.gridBlocks.length > 0
-                        ? group.gridBlocks[group.gridBlocks.length - 1].blockIndex + 1
-                        : group.sectionBlockIndex + 1
-                    )}
-                  />
+                  {/* Add block inside this section — align with block content (left gutter spacer) */}
+                  <div className="flex items-center">
+                    <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
+                    <div className="flex-1 min-w-0">
+                      <BlockCommandInput
+                        {...getCommandProps(
+                          group.gridBlocks.length > 0
+                            ? group.gridBlocks[group.gridBlocks.length - 1].blockIndex + 1
+                            : group.sectionBlockIndex + 1
+                        )}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -476,9 +488,14 @@ export function BlockEditor({
               {group.gridBlocks.length === 0 && (
                 <div className="ml-2 pl-4 border-l-2 border-dashed border-border/30 mt-1">
                   <p className="text-xs text-muted-foreground/50 py-1">Empty section — add a grid or field below</p>
-                  <BlockCommandInput
-                    {...getCommandProps(group.sectionBlockIndex + 1)}
-                  />
+                  <div className="flex items-center">
+                    <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
+                    <div className="flex-1 min-w-0">
+                      <BlockCommandInput
+                        {...getCommandProps(group.sectionBlockIndex + 1)}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -486,9 +503,14 @@ export function BlockEditor({
 
           {/* Final inserter at the bottom for adding top-level sections */}
           <div className="pl-10">
-            <BlockCommandInput
-              {...getCommandProps(flatBlocks.length)}
-            />
+            <div className="flex items-center">
+              <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
+              <div className="flex-1 min-w-0">
+                <BlockCommandInput
+                  {...getCommandProps(flatBlocks.length)}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Add-field dialog (opened from slash command → Field) */}
