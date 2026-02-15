@@ -20,10 +20,13 @@ import { LayoutList, Table2, LayoutGrid, FormInput } from 'lucide-react'
 
 import { BlockWrapper } from './BlockWrapper'
 import { BlockCommandInput } from './BlockCommandInput'
+import { AddColumnOrFieldDialog } from './AddColumnOrFieldDialog'
 import { useEditMode } from './context'
 import { useSectionGridActions } from './useSectionGridActions'
+import { useLayoutActions } from './useLayoutActions'
+import { getOrCreateSectionAndGridForField } from './ensureContainer'
 import { GridBlockContent } from '../GridBlockContent'
-import type { FlatBlock, BlockEditorProps } from './types'
+import type { FlatBlock, BlockEditorProps, AddColumnOrFieldResult } from './types'
 import type { TrackerSection, TrackerGrid } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -74,21 +77,23 @@ function InlineEditableName({
 
   if (!editing) {
     return (
-      <button
-        type="button"
-        className="text-xl font-semibold text-foreground hover:text-primary transition-colors text-left truncate"
+      <span
+        role="button"
+        tabIndex={0}
+        className="text-base font-semibold text-foreground hover:text-primary cursor-text transition-colors text-left truncate leading-7"
         onClick={() => setEditing(true)}
+        onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
         title="Click to rename"
       >
         {value}
-      </button>
+      </span>
     )
   }
 
   return (
     <input
       ref={inputRef}
-      className="text-xl font-semibold text-foreground bg-transparent border-b border-primary outline-none w-full"
+      className="text-base font-semibold text-foreground bg-transparent border-b border-primary/50 outline-none w-full leading-7"
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
@@ -171,7 +176,7 @@ function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
   const info = map[type] ?? map.table!
   const Icon = info.icon
   return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5">
+    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
       <Icon className="h-3 w-3" />
       {info.label}
     </span>
@@ -203,6 +208,10 @@ export function BlockEditor({
 }: BlockEditorProps) {
   const { schema, onSchemaChange } = useEditMode()
   const actions = useSectionGridActions(schema, onSchemaChange)
+
+  // --- Add field from block level ---
+  const [addFieldTargetGridId, setAddFieldTargetGridId] = useState<string | null>(null)
+  const fieldLayoutActions = useLayoutActions(addFieldTargetGridId ?? '', schema, onSchemaChange)
 
   // Build flat block list: [section, ...its grids, section, ...its grids, ...]
   const { flatBlocks, sectionMap, gridMap } = useMemo(() => {
@@ -249,7 +258,6 @@ export function BlockEditor({
       const overBlock = parseBlockSortableId(String(over.id))
       if (!activeBlock || !overBlock) return
 
-      // Find current indices in the flat list
       const activeIdx = flatBlocks.findIndex(
         (b) => b.type === activeBlock.type && b.id === activeBlock.id
       )
@@ -258,10 +266,8 @@ export function BlockEditor({
       )
       if (activeIdx < 0 || overIdx < 0) return
 
-      // Reorder the flat list
       const reordered = arrayMove(flatBlocks, activeIdx, overIdx)
 
-      // Rebuild sections and grids ordering from the reordered flat list
       if (!schema || !onSchemaChange) return
 
       let currentSectionId: string | null = null
@@ -304,13 +310,6 @@ export function BlockEditor({
   )
 
   // --- Add block helpers ---
-  const findLastSectionId = useCallback((): string | null => {
-    for (let i = flatBlocks.length - 1; i >= 0; i--) {
-      if (flatBlocks[i].type === 'section') return flatBlocks[i].id
-    }
-    return null
-  }, [flatBlocks])
-
   const addSectionAtEnd = useCallback(() => {
     actions.addSection(tab.id)
   }, [tab.id, actions])
@@ -322,10 +321,35 @@ export function BlockEditor({
     [actions]
   )
 
+  // "Add field" from block level: ensure section+grid exist, then open dialog
+  const handleAddField = useCallback(
+    (afterBlockIndex: number) => {
+      if (!schema || !onSchemaChange) return
+      const { gridId, nextSchema } = getOrCreateSectionAndGridForField(
+        tab.id,
+        afterBlockIndex,
+        flatBlocks,
+        schema
+      )
+      if (nextSchema !== schema) {
+        onSchemaChange(nextSchema)
+      }
+      setAddFieldTargetGridId(gridId)
+    },
+    [tab.id, flatBlocks, schema, onSchemaChange]
+  )
+
+  const handleAddFieldConfirm = useCallback(
+    (result: AddColumnOrFieldResult) => {
+      fieldLayoutActions.add(result)
+      setAddFieldTargetGridId(null)
+    },
+    [fieldLayoutActions]
+  )
+
   // Context-aware command callbacks for a specific position in the block list
   const getCommandProps = useCallback(
     (afterBlockIndex: number) => {
-      // Find which section we're in
       let sectionId: string | null = null
       for (let i = afterBlockIndex; i >= 0; i--) {
         if (flatBlocks[i]?.type === 'section') {
@@ -339,10 +363,38 @@ export function BlockEditor({
         onAddTable: sectionId ? () => addGridToSection(sectionId!, 'table') : undefined,
         onAddKanban: sectionId ? () => addGridToSection(sectionId!, 'kanban') : undefined,
         onAddForm: sectionId ? () => addGridToSection(sectionId!, 'div') : undefined,
+        onAddField: () => handleAddField(afterBlockIndex),
       }
     },
-    [flatBlocks, addSectionAtEnd, addGridToSection]
+    [flatBlocks, addSectionAtEnd, addGridToSection, handleAddField]
   )
+
+  // --- Group blocks by section for visual hierarchy ---
+  const sectionGroups = useMemo(() => {
+    const groups: Array<{
+      section: TrackerSection
+      sectionBlockIndex: number
+      gridBlocks: Array<{ grid: TrackerGrid; blockIndex: number }>
+    }> = []
+    let currentGroup: (typeof groups)[number] | null = null
+
+    flatBlocks.forEach((block, index) => {
+      if (block.type === 'section') {
+        const section = sectionMap.get(block.id)
+        if (section) {
+          currentGroup = { section, sectionBlockIndex: index, gridBlocks: [] }
+          groups.push(currentGroup)
+        }
+      } else if (block.type === 'grid' && currentGroup) {
+        const grid = gridMap.get(block.id)
+        if (grid) {
+          currentGroup.gridBlocks.push({ grid, blockIndex: index })
+        }
+      }
+    })
+
+    return groups
+  }, [flatBlocks, sectionMap, gridMap])
 
   // --- Render ---
   return (
@@ -352,97 +404,110 @@ export function BlockEditor({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <div className="space-y-1">
-          {flatBlocks.map((block, index) => {
-            if (block.type === 'section') {
-              const section = sectionMap.get(block.id)
-              if (!section) return null
-              return (
-                <div key={blockSortableId(block)}>
-                  <SortableBlockItem
-                    block={block}
-                    label={section.name}
-                    onRemove={() => actions.removeSection(section.id)}
-                  >
-                    <div className="flex items-center gap-2 py-1">
-                      <LayoutList className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <InlineEditableName
-                        value={section.name}
-                        onChange={(name) => actions.renameSection(section.id, name)}
-                      />
-                    </div>
-                  </SortableBlockItem>
-                </div>
-              )
-            }
-
-            if (block.type === 'grid') {
-              const grid = gridMap.get(block.id)
-              if (!grid) return null
-              return (
-                <div key={blockSortableId(block)}>
-                  <SortableBlockItem
-                    block={block}
-                    label={grid.name}
-                    onRemove={() => actions.removeGrid(grid.id)}
-                  >
-                    <div className="space-y-2 py-1 pl-2">
-                      <div className="flex items-center gap-2">
-                        <GridTypeBadge grid={grid} />
-                        <span className="text-sm font-medium text-foreground truncate">
-                          {grid.name}
-                        </span>
-                      </div>
-                      <GridBlockContent
-                        tabId={tab.id}
-                        grid={grid}
-                        layoutNodes={layoutNodes}
-                        allLayoutNodes={layoutNodes}
-                        fields={fields}
-                        allGrids={grids}
-                        allFields={fields}
-                        bindings={bindings}
-                        styles={styles}
-                        dependsOn={dependsOn}
-                        gridData={gridData}
-                        onUpdate={onUpdate}
-                        onAddEntry={onAddEntry}
-                        onDeleteEntries={onDeleteEntries}
-                        hideLabel
-                      />
-                    </div>
-                  </SortableBlockItem>
-                  <BlockCommandInput
-                    {...getCommandProps(index)}
-                    className="ml-10"
+        <div className="space-y-4">
+          {sectionGroups.map((group) => (
+            <div key={group.section.id} className="pl-10">
+              {/* Section heading */}
+              <SortableBlockItem
+                block={{ type: 'section', id: group.section.id }}
+                label={group.section.name}
+                onRemove={() => actions.removeSection(group.section.id)}
+              >
+                <div className="flex items-center gap-2 pb-1">
+                  <LayoutList className="h-4 w-4 text-muted-foreground/70 shrink-0" />
+                  <InlineEditableName
+                    value={group.section.name}
+                    onChange={(name) => actions.renameSection(group.section.id, name)}
                   />
                 </div>
-              )
-            }
+              </SortableBlockItem>
 
-            return null
-          })}
+              {/* Grids nested under section with visual indentation */}
+              {group.gridBlocks.length > 0 && (
+                <div className="ml-2 pl-4 border-l-2 border-border/50 space-y-3 mt-1">
+                  {group.gridBlocks.map(({ grid, blockIndex }) => (
+                    <div key={grid.id}>
+                      <SortableBlockItem
+                        block={{ type: 'grid', id: grid.id, sectionId: group.section.id }}
+                        label={grid.name}
+                        onRemove={() => actions.removeGrid(grid.id)}
+                      >
+                        <div className="space-y-2 py-1">
+                          <div className="flex items-center gap-2">
+                            <GridTypeBadge grid={grid} />
+                            <InlineEditableName
+                              value={grid.name}
+                              onChange={(name) => actions.renameGrid(grid.id, name)}
+                            />
+                          </div>
+                          <GridBlockContent
+                            tabId={tab.id}
+                            grid={grid}
+                            layoutNodes={layoutNodes}
+                            allLayoutNodes={layoutNodes}
+                            fields={fields}
+                            allGrids={grids}
+                            allFields={fields}
+                            bindings={bindings}
+                            styles={styles}
+                            dependsOn={dependsOn}
+                            gridData={gridData}
+                            onUpdate={onUpdate}
+                            onAddEntry={onAddEntry}
+                            onDeleteEntries={onDeleteEntries}
+                            hideLabel
+                          />
+                        </div>
+                      </SortableBlockItem>
+                    </div>
+                  ))}
+                  {/* Add block inside this section (for grids/fields) */}
+                  <BlockCommandInput
+                    {...getCommandProps(
+                      group.gridBlocks.length > 0
+                        ? group.gridBlocks[group.gridBlocks.length - 1].blockIndex + 1
+                        : group.sectionBlockIndex + 1
+                    )}
+                  />
+                </div>
+              )}
 
-          {/* Final slash command at the bottom */}
-          <BlockCommandInput
-            onAddSection={addSectionAtEnd}
-            onAddTable={
-              findLastSectionId()
-                ? () => addGridToSection(findLastSectionId()!, 'table')
-                : undefined
-            }
-            onAddKanban={
-              findLastSectionId()
-                ? () => addGridToSection(findLastSectionId()!, 'kanban')
-                : undefined
-            }
-            onAddForm={
-              findLastSectionId()
-                ? () => addGridToSection(findLastSectionId()!, 'div')
-                : undefined
-            }
-            className="ml-10"
-          />
+              {/* If section has no grids yet, show inserter directly */}
+              {group.gridBlocks.length === 0 && (
+                <div className="ml-2 pl-4 border-l-2 border-dashed border-border/30 mt-1">
+                  <p className="text-xs text-muted-foreground/50 py-1">Empty section — add a grid or field below</p>
+                  <BlockCommandInput
+                    {...getCommandProps(group.sectionBlockIndex + 1)}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Final inserter at the bottom for adding top-level sections */}
+          <div className="pl-10">
+            <BlockCommandInput
+              {...getCommandProps(flatBlocks.length)}
+            />
+          </div>
+
+          {/* Add-field dialog (opened from slash command → Field) */}
+          {addFieldTargetGridId && (
+            <AddColumnOrFieldDialog
+              open
+              onOpenChange={(open) => {
+                if (!open) setAddFieldTargetGridId(null)
+              }}
+              variant="field"
+              existingFieldIds={
+                layoutNodes
+                  .filter((n) => n.gridId === addFieldTargetGridId)
+                  .map((n) => n.fieldId)
+              }
+              allFields={fields}
+              onConfirm={handleAddFieldConfirm}
+            />
+          )}
         </div>
       </SortableContext>
     </DndContext>

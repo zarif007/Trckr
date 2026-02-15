@@ -167,18 +167,17 @@ export function TrackerDivGrid({
 
   if (fieldNodes.length === 0 && canEditLayout) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <button
           type="button"
           onClick={() => setAddFieldOpen(true)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          className="w-full py-3 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center hover:border-primary/40 hover:text-foreground transition-colors"
         >
-          <Plus className="h-4 w-4" />
-          Add field
+          <span className="flex items-center justify-center gap-1.5">
+            <Plus className="h-3.5 w-3.5" />
+            Add field
+          </span>
         </button>
-        <div className="p-6 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center">
-          No fields yet. Add a field to get started.
-        </div>
         <AddColumnOrFieldDialog
           open={addFieldOpen}
           onOpenChange={setAddFieldOpen}
@@ -267,6 +266,7 @@ export function TrackerDivGrid({
         }
 
         const inputTextClass = `${ds.fontSize} ${ds.fontWeight} ${ds.textColor}`.trim()
+        const fieldLabel = field.ui.label
         const renderInput = () => {
           switch (field.dataType) {
             case 'text':
@@ -274,6 +274,7 @@ export function TrackerDivGrid({
                 <Textarea
                   className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
+                  placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
                   disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -315,7 +316,7 @@ export function TrackerDivGrid({
                     }
                     handleSelectChange(val === '__empty__' ? '' : val)
                   }}
-                  searchPlaceholder=""
+                  searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
                   className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   onAddOptionClick={onAddOption ? () => {
                     setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
@@ -364,6 +365,7 @@ export function TrackerDivGrid({
                   type="number"
                   className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={typeof value === 'number' ? value : valueString}
+                  placeholder="0"
                   disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, Number(e.target.value))
@@ -375,6 +377,7 @@ export function TrackerDivGrid({
                 <Input
                   className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
                   defaultValue={valueString}
+                  placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
                   disabled={isDisabled}
                   onBlur={(e) =>
                     onUpdate?.(0, field.id, e.target.value)
@@ -392,7 +395,7 @@ export function TrackerDivGrid({
                 <span className="text-destructive/80 ml-1">*</span>
               )}
             </label>
-            <div className={`rounded-md border border-input hover:border-ring transition-[color,box-shadow] ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
+            <div className={`rounded-md border border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 transition-all ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
               {renderInput()}
             </div>
           </>
@@ -400,28 +403,19 @@ export function TrackerDivGrid({
 
         if (canEditLayout) {
           return (
-            <div key={field.id} className="space-y-2">
-              <SortableFieldRowEdit
-                gridId={grid.id}
-                fieldId={field.id}
-                label={field.ui.label}
-                index={index}
-                totalFields={fieldNodes.length}
-                onRemove={() => remove(field.id)}
-                onMoveUp={() => move(field.id, 'up')}
-                onMoveDown={() => move(field.id, 'down')}
-              >
-                {fieldContent}
-              </SortableFieldRowEdit>
-              <button
-                type="button"
-                onClick={() => setAddFieldOpen(true)}
-                className="flex items-center gap-1.5 ml-8 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Add field
-              </button>
-            </div>
+            <SortableFieldRowEdit
+              key={field.id}
+              gridId={grid.id}
+              fieldId={field.id}
+              label={field.ui.label}
+              index={index}
+              totalFields={fieldNodes.length}
+              onRemove={() => remove(field.id)}
+              onMoveUp={() => move(field.id, 'up')}
+              onMoveDown={() => move(field.id, 'down')}
+            >
+              {fieldContent}
+            </SortableFieldRowEdit>
           )
         }
 
@@ -435,27 +429,7 @@ export function TrackerDivGrid({
   )
 
   return (
-    <div className="space-y-4">
-      {canEditLayout && (
-        <button
-          type="button"
-          onClick={() => setAddFieldOpen(true)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add field
-        </button>
-      )}
-      {canEditLayout && (
-        <AddColumnOrFieldDialog
-          open={addFieldOpen}
-          onOpenChange={setAddFieldOpen}
-          variant="field"
-          existingFieldIds={fieldNodes.map((n) => n.fieldId)}
-          allFields={schema!.fields ?? []}
-          onConfirm={handleAddFieldConfirm}
-        />
-      )}
+    <div className="space-y-3">
       {canEditLayout ? (
         <DndContext
           sensors={sensors}
@@ -468,6 +442,28 @@ export function TrackerDivGrid({
         </DndContext>
       ) : (
         fieldsContainer
+      )}
+      {canEditLayout && (
+        <button
+          type="button"
+          onClick={() => setAddFieldOpen(true)}
+          className="w-full py-2 rounded-md border border-dashed border-border text-muted-foreground text-xs hover:border-primary/40 hover:text-foreground transition-colors"
+        >
+          <span className="flex items-center justify-center gap-1">
+            <Plus className="h-3 w-3" />
+            Add field
+          </span>
+        </button>
+      )}
+      {canEditLayout && (
+        <AddColumnOrFieldDialog
+          open={addFieldOpen}
+          onOpenChange={setAddFieldOpen}
+          variant="field"
+          existingFieldIds={fieldNodes.map((n) => n.fieldId)}
+          allFields={schema!.fields ?? []}
+          onConfirm={handleAddFieldConfirm}
+        />
       )}
       {onAddEntryToGrid && addOptionContext && addOptionContext.optionsGridFields.length > 0 && (
         <EntryFormDialog

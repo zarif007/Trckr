@@ -29,6 +29,9 @@ export {
   parseFieldId,
 } from './SortableBlock'
 
+export { getOrCreateSectionAndGridForField } from './ensureContainer'
+export type { EnsureContainerResult } from './ensureContainer'
+
 export {
   createNewFieldId,
   createNewField,

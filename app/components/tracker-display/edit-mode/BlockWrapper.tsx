@@ -1,12 +1,15 @@
 'use client'
 
-import { GripVertical, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useState, useCallback } from 'react'
+import { GripVertical, Trash2 } from 'lucide-react'
 import type { BlockWrapperProps } from './types'
+import { cn } from '@/lib/utils'
 
 /**
  * Notion-like block chrome: left gutter with drag handle and delete, visible on hover.
- * Used by the flat BlockEditor and by field-level sortables within grids.
+ *
+ * Uses JS onMouseOver/onMouseOut with stopPropagation so only the DIRECTLY
+ * hovered block shows its gutter -- not parent blocks when a child is hovered.
  */
 export function BlockWrapper({
   blockId,
@@ -20,7 +23,18 @@ export function BlockWrapper({
   dragHandleProps,
   dragHandleRef,
 }: BlockWrapperProps) {
+  const [hovered, setHovered] = useState(false)
   const isSortable = Boolean(dragHandleProps)
+
+  const handleMouseOver = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setHovered(true)
+  }, [])
+
+  const handleMouseOut = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    setHovered(false)
+  }, [])
 
   return (
     <div
@@ -28,40 +42,47 @@ export function BlockWrapper({
       style={wrapperStyle}
       data-block-id={blockId}
       data-block-variant={variant}
-      className="group/block relative flex items-start gap-0 rounded-md transition-colors min-h-[2rem]"
+      className={cn(
+        'relative flex items-start',
+        variant === 'section' && 'mt-1',
+        variant === 'grid' && 'rounded-md',
+        isDragging && 'opacity-40',
+      )}
       aria-label={label}
+      onMouseOver={handleMouseOver}
+      onMouseOut={handleMouseOut}
     >
       {/* Left gutter: drag handle + delete, visible on hover */}
-      <div className="flex flex-col items-center gap-0.5 pt-1 pl-0.5 pr-1 shrink-0 opacity-0 group-hover/block:opacity-100 transition-opacity">
-        <Button
+      <div
+        className={cn(
+          'flex items-center gap-0 shrink-0 h-7 -ml-[40px] mr-1 transition-opacity duration-100',
+          hovered && !isDragging ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+      >
+        <button
           ref={dragHandleRef}
           type="button"
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground"
+          className="flex items-center justify-center h-5 w-5 rounded hover:bg-muted text-muted-foreground/50 hover:text-foreground cursor-grab active:cursor-grabbing transition-colors"
           aria-label={`Drag to reorder ${label}`}
           {...(isSortable ? dragHandleProps : {})}
         >
-          <GripVertical className="h-4 w-4" aria-hidden />
-        </Button>
-        <Button
+          <GripVertical className="h-3 w-3" aria-hidden />
+        </button>
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+          className="flex items-center justify-center h-5 w-5 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors"
           onClick={(e) => {
             e.stopPropagation()
             onRemove()
           }}
           aria-label={`Remove ${label}`}
         >
-          <X className="h-3.5 w-3.5" aria-hidden />
-        </Button>
+          <Trash2 className="h-2.5 w-2.5" aria-hidden />
+        </button>
       </div>
+
       {/* Content */}
-      <div
-        className={`flex-1 min-w-0 py-1 pr-2 ${isDragging ? 'opacity-50 pointer-events-none' : ''}`}
-      >
+      <div className="flex-1 min-w-0">
         {children}
       </div>
     </div>

@@ -6,12 +6,14 @@ import {
   Table2,
   LayoutGrid,
   FormInput,
+  Type,
+  Plus,
   type LucideIcon,
 } from 'lucide-react'
 import {
   Popover,
   PopoverContent,
-  PopoverAnchor,
+  PopoverTrigger,
 } from '@/components/ui/popover'
 import {
   Command,
@@ -37,22 +39,23 @@ export interface BlockCommandInputProps {
   onAddTable?: () => void
   onAddKanban?: () => void
   onAddForm?: () => void
+  onAddField?: () => void
   className?: string
   placeholder?: string
 }
 
 /**
- * Notion-like slash command input.
- * Click to open, type "/" or search to filter and insert a block.
- * Shows all available block types in a single unified menu.
+ * Block inserter button.
+ * Always visible as a muted "+ Add block" button.
+ * Clicking opens a command palette to pick a block type.
  */
 export function BlockCommandInput({
   onAddSection,
   onAddTable,
   onAddKanban,
   onAddForm,
+  onAddField,
   className,
-  placeholder = 'Type / to add a block…',
 }: BlockCommandInputProps) {
   const [open, setOpen] = useState(false)
 
@@ -62,7 +65,7 @@ export function BlockCommandInput({
       items.push({
         id: 'section',
         label: 'Section',
-        description: 'Add a new section heading',
+        description: 'A new section heading',
         keywords: ['section', 'heading', 'block', 'group'],
         icon: LayoutList,
         onSelect: onAddSection,
@@ -72,7 +75,7 @@ export function BlockCommandInput({
       items.push({
         id: 'table',
         label: 'Table',
-        description: 'Add a data table',
+        description: 'A data table with rows and columns',
         keywords: ['table', 'grid', 'columns', 'rows', 'data'],
         icon: Table2,
         onSelect: onAddTable,
@@ -82,7 +85,7 @@ export function BlockCommandInput({
       items.push({
         id: 'kanban',
         label: 'Kanban',
-        description: 'Add a kanban board',
+        description: 'A kanban board with columns',
         keywords: ['kanban', 'board', 'cards', 'columns'],
         icon: LayoutGrid,
         onSelect: onAddKanban,
@@ -92,14 +95,24 @@ export function BlockCommandInput({
       items.push({
         id: 'form',
         label: 'Form',
-        description: 'Add a form / div layout',
+        description: 'A form / div layout',
         keywords: ['form', 'div', 'fields', 'layout', 'input'],
         icon: FormInput,
         onSelect: onAddForm,
       })
     }
+    if (onAddField) {
+      items.push({
+        id: 'field',
+        label: 'Field',
+        description: 'A single field (auto-creates form if needed)',
+        keywords: ['field', 'column', 'input', 'property', 'attribute'],
+        icon: Type,
+        onSelect: onAddField,
+      })
+    }
     return items
-  }, [onAddSection, onAddTable, onAddKanban, onAddForm])
+  }, [onAddSection, onAddTable, onAddKanban, onAddForm, onAddField])
 
   const handleSelect = useCallback((item: BlockCommandItem) => {
     item.onSelect()
@@ -109,7 +122,9 @@ export function BlockCommandInput({
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') {
+        setOpen(false)
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -118,68 +133,71 @@ export function BlockCommandInput({
   if (commands.length === 0) return null
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverAnchor asChild>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className={cn(
-            'w-full py-1.5 px-2 text-left text-sm text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/30 rounded transition-colors focus:outline-none focus:ring-1 focus:ring-ring',
-            className
-          )}
-          aria-label="Add block"
+    <div className={cn('py-1', className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors',
+              'text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted/50',
+              open && 'text-muted-foreground bg-muted/50',
+            )}
+            aria-label="Add block"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add block</span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-64 p-0"
+          sideOffset={4}
         >
-          <span>{placeholder}</span>
-        </button>
-      </PopoverAnchor>
-      <PopoverContent
-        align="start"
-        className="w-72 p-0"
-        sideOffset={4}
-      >
-        <Command
-          className="rounded-md border-0"
-          shouldFilter={true}
-          filter={(value, search) => {
-            if (!search) return 1
-            const v = value.toLowerCase()
-            const s = search.toLowerCase().replace(/^\//, '').trim()
-            if (!s) return 1
-            return v.includes(s) ? 1 : 0
-          }}
-        >
-          <CommandInput
-            placeholder="Search blocks…"
-            autoFocus
-            className="border-0 border-b rounded-t-md"
-          />
-          <CommandList>
-            <CommandEmpty>No block found.</CommandEmpty>
-            <CommandGroup heading="Blocks">
-              {commands.map((item) => {
-                const Icon = item.icon
-                const keywords = item.keywords.join(' ')
-                return (
-                  <CommandItem
-                    key={item.id}
-                    value={`${item.label} ${keywords}`}
-                    onSelect={() => handleSelect(item)}
-                    className="gap-2 py-2"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded border bg-muted/50">
-                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{item.label}</span>
-                      <span className="text-xs text-muted-foreground">{item.description}</span>
-                    </div>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          <Command
+            className="rounded-md border-0"
+            shouldFilter={true}
+            filter={(value, search) => {
+              if (!search) return 1
+              const v = value.toLowerCase()
+              const s = search.toLowerCase().replace(/^\//, '').trim()
+              if (!s) return 1
+              return v.includes(s) ? 1 : 0
+            }}
+          >
+            <CommandInput
+              placeholder="Search blocks..."
+              autoFocus
+              className="border-0 border-b rounded-t-md h-9 text-sm"
+            />
+            <CommandList className="max-h-[240px]">
+              <CommandEmpty>No block found.</CommandEmpty>
+              <CommandGroup>
+                {commands.map((item) => {
+                  const Icon = item.icon
+                  const keywords = item.keywords.join(' ')
+                  return (
+                    <CommandItem
+                      key={item.id}
+                      value={`${item.label} ${keywords}`}
+                      onSelect={() => handleSelect(item)}
+                      className="gap-2.5 px-2 py-1.5 cursor-pointer"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded bg-muted/70 shrink-0">
+                        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      </div>
+                      <div className="flex flex-col gap-0 min-w-0">
+                        <span className="text-sm font-medium leading-tight">{item.label}</span>
+                        <span className="text-[11px] text-muted-foreground leading-tight truncate">{item.description}</span>
+                      </div>
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
