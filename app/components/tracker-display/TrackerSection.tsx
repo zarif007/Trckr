@@ -10,11 +10,9 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from './types'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { GridViewContent } from './GridViewContent'
-import { normalizeGridViews } from './view-utils'
+import { GridBlockContent } from './GridBlockContent'
 
 export interface TrackerSectionProps {
   tabId: string
@@ -90,88 +88,26 @@ export function TrackerSection({
             </Button>
           </div>
           <div className="space-y-6">
-            {grids.map((grid) => {
-              const gridLayoutNodes = layoutNodes
-                .filter((node) => node.gridId === grid.id)
-                .sort((a, b) => a.order - b.order)
-              const views = normalizeGridViews(grid)
-
-              if (views.length === 1) {
-                const viewOverrides =
-                  (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined
-                return (
-                  <div key={grid.id} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                        {grid.name}
-                      </label>
-                    </div>
-                    <GridViewContent
-                      tabId={tabId}
-                      grid={grid}
-                      view={views[0]}
-                      gridLayoutNodes={gridLayoutNodes}
-                      allLayoutNodes={layoutNodes}
-                      fields={fields}
-                      allGrids={allGrids}
-                      allFields={allFields}
-                      bindings={bindings}
-                      styleOverrides={viewOverrides}
-                      dependsOn={dependsOn}
-                      gridData={gridData}
-                      onUpdate={onUpdate}
-                      onAddEntry={onAddEntry}
-                      onDeleteEntries={onDeleteEntries}
-                    />
-                  </div>
-                )
-              }
-
-              const defaultTab = views[0]?.id ?? `${grid.id}_view_0`
-              return (
-                <div key={grid.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                      {grid.name}
-                    </label>
-                  </div>
-                  <Tabs defaultValue={defaultTab} className="w-full">
-                    <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
-                      {views.map((view) => (
-                        <TabsTrigger key={view.id} value={view.id}>
-                          {view.name}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {views.map((view) => {
-                      const viewOverrides =
-                        (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined
-                      return (
-                        <TabsContent key={view.id} value={view.id} className="mt-3">
-                          <GridViewContent
-                            tabId={tabId}
-                            grid={grid}
-                            view={view}
-                            gridLayoutNodes={gridLayoutNodes}
-                            allLayoutNodes={layoutNodes}
-                            fields={fields}
-                            allGrids={allGrids}
-                            allFields={allFields}
-                            bindings={bindings}
-                            styleOverrides={viewOverrides}
-                            dependsOn={dependsOn}
-                            gridData={gridData}
-                            onUpdate={onUpdate}
-                            onAddEntry={onAddEntry}
-                            onDeleteEntries={onDeleteEntries}
-                          />
-                        </TabsContent>
-                      )
-                    })}
-                  </Tabs>
-                </div>
-              )
-            })}
+            {grids.map((grid) => (
+              <div key={grid.id} className="space-y-3">
+                <GridBlockContent
+                  tabId={tabId}
+                  grid={grid}
+                  layoutNodes={layoutNodes}
+                  allLayoutNodes={layoutNodes}
+                  fields={fields}
+                  allGrids={allGrids}
+                  allFields={allFields}
+                  bindings={bindings}
+                  styles={styles}
+                  dependsOn={dependsOn}
+                  gridData={gridData}
+                  onUpdate={onUpdate}
+                  onAddEntry={onAddEntry}
+                  onDeleteEntries={onDeleteEntries}
+                />
+              </div>
+            ))}
           </div>
         </>
       )}

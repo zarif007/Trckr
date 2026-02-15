@@ -146,4 +146,8 @@ export interface TrackerDisplayProps {
   initialGridData?: Record<string, Array<Record<string, unknown>>>
   /** Optional ref the display will set to a getter that returns current grid data (values only). */
   getDataRef?: React.MutableRefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
+  /** When true, layout is editable (add/remove/reorder columns and fields). */
+  editMode?: boolean
+  /** Called when schema is changed in edit mode. Pass updated full schema. */
+  onSchemaChange?: (schema: TrackerDisplayProps) => void
 }

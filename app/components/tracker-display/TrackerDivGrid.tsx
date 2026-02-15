@@ -1,9 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -14,6 +19,7 @@ import {
   DependsOnRules,
 } from './types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
+import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from './edit-mode'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
@@ -62,10 +68,46 @@ export function TrackerDivGrid({
 }: TrackerDivGridProps) {
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+  const [addFieldOpen, setAddFieldOpen] = useState(false)
+  const { editMode, schema, onSchemaChange } = useEditMode()
+  const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
+  const canEditLayout = editMode && !!schema && !!onSchemaChange
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
+
+  const fieldSortableIds = useMemo(
+    () => fieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
+    [grid.id, fieldNodes]
+  )
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+  const handleFieldDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id || !reorder) return
+      const currentIds = fieldNodes.map((n) => n.fieldId)
+      const activeParsed = parseFieldId(String(active.id))
+      const overParsed = parseFieldId(String(over.id))
+      if (!activeParsed || !overParsed || activeParsed.gridId !== grid.id || overParsed.gridId !== grid.id) return
+      const oldIndex = currentIds.indexOf(activeParsed.fieldId)
+      const newIndex = currentIds.indexOf(overParsed.fieldId)
+      if (oldIndex < 0 || newIndex < 0) return
+      const reordered = arrayMove(currentIds, oldIndex, newIndex)
+      reorder(reordered)
+    },
+    [grid.id, fieldNodes, reorder]
+  )
+
+  const handleAddFieldConfirm = useCallback(
+    (result: Parameters<typeof add>[0]) => {
+      add(result)
+      setAddFieldOpen(false)
+    },
+    [add]
+  )
 
   const [addOptionOpen, setAddOptionOpen] = useState(false)
   const [addOptionContext, setAddOptionContext] = useState<{
@@ -121,13 +163,39 @@ export function TrackerDivGrid({
     [dependsOnForGrid, gridData, grid.id, data]
   )
 
-  if (fieldNodes.length === 0) return null
+  if (fieldNodes.length === 0 && !canEditLayout) return null
+
+  if (fieldNodes.length === 0 && canEditLayout) {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setAddFieldOpen(true)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add field
+        </button>
+        <div className="p-6 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center">
+          No fields yet. Add a field to get started.
+        </div>
+        <AddColumnOrFieldDialog
+          open={addFieldOpen}
+          onOpenChange={setAddFieldOpen}
+          variant="field"
+          existingFieldIds={[]}
+          allFields={schema!.fields ?? []}
+          onConfirm={handleAddFieldConfirm}
+        />
+      </div>
+    )
+  }
 
   const isVertical = grid.config?.layout === 'vertical'
 
-  return (
-    <div className={`grid gap-4 ${isVertical ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
-      {fieldNodes.map((node) => {
+  const fieldsContainer = (
+    <div className={canEditLayout ? 'space-y-2' : `grid gap-4 ${isVertical ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+      {fieldNodes.map((node, index) => {
         const field = fields.find(f => f.id === node.fieldId)
         if (!field) return null
         const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
@@ -316,8 +384,8 @@ export function TrackerDivGrid({
           }
         }
 
-        return (
-          <div key={field.id} className="space-y-1.5">
+        const fieldContent = (
+          <>
             <label className={`${ds.labelFontSize} font-medium text-muted-foreground uppercase tracking-wider ${ds.fontWeight}`}>
               {field.ui.label}
               {effectiveConfig?.isRequired && (
@@ -327,9 +395,80 @@ export function TrackerDivGrid({
             <div className={`rounded-md border border-input hover:border-ring transition-[color,box-shadow] ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
               {renderInput()}
             </div>
+          </>
+        )
+
+        if (canEditLayout) {
+          return (
+            <div key={field.id} className="space-y-2">
+              <SortableFieldRowEdit
+                gridId={grid.id}
+                fieldId={field.id}
+                label={field.ui.label}
+                index={index}
+                totalFields={fieldNodes.length}
+                onRemove={() => remove(field.id)}
+                onMoveUp={() => move(field.id, 'up')}
+                onMoveDown={() => move(field.id, 'down')}
+              >
+                {fieldContent}
+              </SortableFieldRowEdit>
+              <button
+                type="button"
+                onClick={() => setAddFieldOpen(true)}
+                className="flex items-center gap-1.5 ml-8 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Add field
+              </button>
+            </div>
+          )
+        }
+
+        return (
+          <div key={field.id} className="space-y-1.5">
+            {fieldContent}
           </div>
         )
       })}
+    </div>
+  )
+
+  return (
+    <div className="space-y-4">
+      {canEditLayout && (
+        <button
+          type="button"
+          onClick={() => setAddFieldOpen(true)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add field
+        </button>
+      )}
+      {canEditLayout && (
+        <AddColumnOrFieldDialog
+          open={addFieldOpen}
+          onOpenChange={setAddFieldOpen}
+          variant="field"
+          existingFieldIds={fieldNodes.map((n) => n.fieldId)}
+          allFields={schema!.fields ?? []}
+          onConfirm={handleAddFieldConfirm}
+        />
+      )}
+      {canEditLayout ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleFieldDragEnd}
+        >
+          <SortableContext items={fieldSortableIds} strategy={verticalListSortingStrategy}>
+            {fieldsContainer}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        fieldsContainer
+      )}
       {onAddEntryToGrid && addOptionContext && addOptionContext.optionsGridFields.length > 0 && (
         <EntryFormDialog
           open={addOptionOpen}
@@ -350,3 +489,4 @@ export function TrackerDivGrid({
     </div>
   )
 }
+

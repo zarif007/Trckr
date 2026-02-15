@@ -17,7 +17,12 @@ import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridDependsOn } from './hooks/useGridDependsOn'
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState } from 'react'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, ColumnHeaderEdit, SortableColumnHeaderEdit, fieldSortableId, parseFieldId } from './edit-mode'
+import { Plus } from 'lucide-react'
 
 interface TrackerTableGridProps {
   tabId: string
@@ -60,6 +65,10 @@ export function TrackerTableGrid({
 }: TrackerTableGridProps) {
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+  const [addColumnOpen, setAddColumnOpen] = useState(false)
+  const { editMode, schema, onSchemaChange } = useEditMode()
+  const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
+  const canEditLayout = editMode && !!schema && !!onSchemaChange
 
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const connectedFieldNodes = layoutNodes
@@ -69,6 +78,30 @@ export function TrackerTableGrid({
     .map((node) => fields.find((f) => f.id === node.fieldId))
     .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
   const rows = gridData[grid.id] ?? []
+
+  const fieldSortableIds = useMemo(
+    () => connectedFieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
+    [grid.id, connectedFieldNodes]
+  )
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  )
+  const handleFieldDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id || !reorder) return
+      const currentIds = connectedFieldNodes.map((n) => n.fieldId)
+      const activeParsed = parseFieldId(String(active.id))
+      const overParsed = parseFieldId(String(over.id))
+      if (!activeParsed || !overParsed || activeParsed.gridId !== grid.id || overParsed.gridId !== grid.id) return
+      const oldIndex = currentIds.indexOf(activeParsed.fieldId)
+      const newIndex = currentIds.indexOf(overParsed.fieldId)
+      if (oldIndex < 0 || newIndex < 0) return
+      const reordered = arrayMove(currentIds, oldIndex, newIndex)
+      reorder(reordered)
+    },
+    [grid.id, connectedFieldNodes, reorder]
+  )
 
   /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
   const rowOverridesCache = useMemo(() => {
@@ -133,11 +166,44 @@ export function TrackerTableGrid({
     [dependsOnForGrid, gridData, grid.id]
   )
 
-  if (connectedFieldNodes.length === 0) {
+  const handleAddColumnConfirm = useCallback(
+    (result: Parameters<typeof add>[0]) => {
+      add(result)
+      setAddColumnOpen(false)
+    },
+    [add]
+  )
+
+  if (connectedFieldNodes.length === 0 && !canEditLayout) {
     if (layoutNodes.length === 0) return null
     return (
       <div className="p-4 text-muted-foreground">
         Empty Table (No Fields linked)
+      </div>
+    )
+  }
+  if (connectedFieldNodes.length === 0 && canEditLayout) {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setAddColumnOpen(true)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add column
+        </button>
+        <div className="p-6 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center">
+          No columns yet. Add a column to get started.
+        </div>
+        <AddColumnOrFieldDialog
+          open={addColumnOpen}
+          onOpenChange={setAddColumnOpen}
+          variant="column"
+          existingFieldIds={[]}
+          allFields={schema!.fields ?? []}
+          onConfirm={handleAddColumnConfirm}
+        />
       </div>
     )
   }
@@ -246,10 +312,24 @@ export function TrackerTableGrid({
   }
 
   const columns: ColumnDef<Record<string, unknown>>[] = tableFields.map(
-    (field) => ({
+    (field, index) => ({
       id: field.id,
       accessorKey: field.id,
-      header: field.ui.label,
+      header:
+        canEditLayout
+          ? () => (
+            <SortableColumnHeaderEdit
+              gridId={grid.id}
+              fieldId={field.id}
+              label={field.ui.label}
+              index={index}
+              totalColumns={tableFields.length}
+              onRemove={() => remove(field.id)}
+              onMoveUp={() => move(field.id, 'up')}
+              onMoveDown={() => move(field.id, 'down')}
+            />
+          )
+          : field.ui.label,
       cell: function Cell({ row }) {
         const value = row.getValue(field.id);
         return (
@@ -263,25 +343,63 @@ export function TrackerTableGrid({
     })
   );
 
-  return (
-    <DataTable
-      columns={columns}
-      data={rows}
-      fieldMetadata={fieldMetadata}
-      getFieldOverrides={getFieldOverrides}
-      getFieldOverridesForRow={getFieldOverridesForRow}
-      hiddenColumns={[...hiddenColumnIds]}
-      getFieldOverridesForAdd={getFieldOverridesForAdd}
-      onCellUpdate={handleCellUpdate}
-      onAddEntry={onAddEntry}
-      onDeleteEntries={onDeleteEntries}
-      getBindingUpdates={getBindingUpdates}
-      config={grid.config}
-      styleOverrides={styleOverrides}
-      addable={(grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
-      editable={grid.config?.isRowEditAble !== false}
-      deleteable={grid.config?.isRowDeleteAble !== false}
-      editLayoutAble={grid.config?.isEditAble !== false}
-    />
-  );
+  const tableContent = (
+    <>
+      {canEditLayout && (
+        <AddColumnOrFieldDialog
+          open={addColumnOpen}
+          onOpenChange={setAddColumnOpen}
+          variant="column"
+          existingFieldIds={connectedFieldNodes.map((n) => n.fieldId)}
+          allFields={schema!.fields ?? []}
+          onConfirm={handleAddColumnConfirm}
+        />
+      )}
+      <DataTable
+        columns={columns}
+        data={rows}
+        fieldMetadata={fieldMetadata}
+        getFieldOverrides={getFieldOverrides}
+        getFieldOverridesForRow={getFieldOverridesForRow}
+        hiddenColumns={[...hiddenColumnIds]}
+        getFieldOverridesForAdd={getFieldOverridesForAdd}
+        onCellUpdate={handleCellUpdate}
+        onAddEntry={onAddEntry}
+        onDeleteEntries={onDeleteEntries}
+        getBindingUpdates={getBindingUpdates}
+        config={grid.config}
+        styleOverrides={styleOverrides}
+        addable={(grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
+        editable={grid.config?.isRowEditAble !== false}
+        deleteable={grid.config?.isRowDeleteAble !== false}
+        editLayoutAble={grid.config?.isEditAble !== false}
+      />
+    </>
+  )
+
+  if (canEditLayout) {
+    return (
+      <div className="space-y-2">
+        <button
+          type="button"
+          onClick={() => setAddColumnOpen(true)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add column
+        </button>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleFieldDragEnd}
+        >
+          <SortableContext items={fieldSortableIds} strategy={horizontalListSortingStrategy}>
+            {tableContent}
+          </SortableContext>
+        </DndContext>
+      </div>
+    )
+  }
+
+  return tableContent
 }

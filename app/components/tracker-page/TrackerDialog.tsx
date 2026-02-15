@@ -1,6 +1,7 @@
 'use client'
 
-import { Loader2, AlertTriangle, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Loader2, AlertTriangle, X, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -8,6 +9,7 @@ import {
 } from '@/components/ui/dialog'
 import { TrackerDisplay } from '@/app/components/tracker-display'
 import type { TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
+import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 
 /** Streamed object from useObject – typed loosely to accept PartialObject from AI SDK */
 type StreamedObject = { manager?: unknown; tracker?: unknown; trackerPatch?: unknown } | undefined
@@ -26,6 +28,20 @@ interface TrackerDialogProps {
   onClearError: () => void
   trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
   messagesLength: number
+  onSchemaChange?: (schema: TrackerResponse) => void
+}
+
+function toDisplayProps(data: TrackerResponse): TrackerDisplayProps {
+  return {
+    tabs: data.tabs ?? [],
+    sections: data.sections ?? [],
+    grids: data.grids ?? [],
+    fields: data.fields ?? [],
+    layoutNodes: data.layoutNodes ?? [],
+    bindings: data.bindings ?? {},
+    styles: data.styles,
+    dependsOn: data.dependsOn ?? [],
+  }
 }
 
 export function TrackerDialog({
@@ -42,6 +58,7 @@ export function TrackerDialog({
   onClearError,
   trackerDataRef,
   messagesLength,
+  onSchemaChange,
 }: TrackerDialogProps) {
   const object = streamedObject as {
     tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; styles?: unknown; dependsOn?: unknown[] }
@@ -51,11 +68,42 @@ export function TrackerDialog({
     onOpenChange(next)
     if (!next) {
       onClearError()
+      setEditMode(false)
     }
   }
 
   const tracker = object?.tracker
   const isStreaming = isLoading
+  const hasTracker = Boolean(activeTrackerData && !isStreaming)
+
+  const [editMode, setEditMode] = useState(false)
+  const [editableSchema, setEditableSchema] = useState<TrackerDisplayProps | null>(null)
+
+  useEffect(() => {
+    if (editMode && activeTrackerData) {
+      setEditableSchema(toDisplayProps(activeTrackerData))
+    }
+  }, [editMode, activeTrackerData])
+
+  const handleSchemaChange = (schema: TrackerDisplayProps) => {
+    setEditableSchema(schema)
+    const next: TrackerResponse = {
+      ...activeTrackerData!,
+      tabs: schema.tabs,
+      sections: schema.sections,
+      grids: schema.grids,
+      fields: schema.fields,
+      layoutNodes: schema.layoutNodes ?? [],
+      bindings: schema.bindings ?? {},
+      styles: schema.styles,
+      dependsOn: schema.dependsOn ?? [],
+    }
+    onSchemaChange?.(next)
+  }
+
+  const displayProps = editMode && editableSchema
+    ? { ...editableSchema, getDataRef: trackerDataRef, editMode: true, onSchemaChange: handleSchemaChange }
+    : null
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -80,6 +128,23 @@ export function TrackerDialog({
         >
           <X className="h-4 w-4" />
         </Button>
+        {hasTracker && (
+          <Button
+            variant={editMode ? 'default' : 'secondary'}
+            size="sm"
+            className="absolute top-3 right-14 z-50 gap-1.5"
+            onClick={() => {
+              setEditMode((prev) => {
+                if (!prev && activeTrackerData) setEditableSchema(toDisplayProps(activeTrackerData))
+                return !prev
+              })
+            }}
+            aria-label={editMode ? 'Exit edit mode' : 'Edit layout'}
+          >
+            <Pencil className="h-4 w-4" />
+            {editMode ? 'Done' : 'Edit layout'}
+          </Button>
+        )}
         <div className="flex-1 overflow-y-auto min-h-0">
           {isStreaming && tracker ? (
             <TrackerDisplay
@@ -95,7 +160,7 @@ export function TrackerDialog({
             />
           ) : activeTrackerData ? (
             <div className="w-full">
-              {validationErrors.length > 0 && (
+              {validationErrors.length > 0 && !editMode && (
                 <div className="rounded-md border border-warning/50 bg-warning/10 p-4 text-warning-foreground" role="alert">
                   <p className="font-medium mb-2 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0" />
@@ -109,17 +174,23 @@ export function TrackerDialog({
                   <p className="text-xs mt-2 text-muted-foreground">You can ask the AI to fix these (e.g. add missing option sources or fix layout references).</p>
                 </div>
               )}
-              <TrackerDisplay
-                tabs={activeTrackerData.tabs}
-                sections={activeTrackerData.sections}
-                grids={activeTrackerData.grids}
-                fields={activeTrackerData.fields}
-                layoutNodes={activeTrackerData.layoutNodes}
-                bindings={activeTrackerData.bindings}
-                styles={activeTrackerData.styles}
-                dependsOn={activeTrackerData.dependsOn}
-                getDataRef={trackerDataRef}
-              />
+              {editMode && displayProps ? (
+                <TrackerDisplay
+                  {...displayProps}
+                />
+              ) : (
+                <TrackerDisplay
+                  tabs={activeTrackerData.tabs}
+                  sections={activeTrackerData.sections}
+                  grids={activeTrackerData.grids}
+                  fields={activeTrackerData.fields}
+                  layoutNodes={activeTrackerData.layoutNodes}
+                  bindings={activeTrackerData.bindings}
+                  styles={activeTrackerData.styles}
+                  dependsOn={activeTrackerData.dependsOn}
+                  getDataRef={trackerDataRef}
+                />
+              )}
             </div>
           ) : error && !isLoading ? (
             <div className="h-full flex flex-col items-center justify-center text-destructive gap-4">

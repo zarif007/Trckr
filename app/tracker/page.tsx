@@ -107,6 +107,7 @@ export default function TrackerPage() {
         onClearError={clearDialogError}
         trackerDataRef={trackerDataRef}
         messagesLength={messages.length}
+        onSchemaChange={setActiveTrackerData}
       />
     </div>
   )

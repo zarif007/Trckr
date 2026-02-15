@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TrackerDisplayProps } from './types'
 import { TrackerTabContent } from './TrackerTabContent'
 import { TrackerOptionsProvider } from './tracker-options-context'
+import { EditModeProvider } from './edit-mode'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
 import {
   ensureDependsOnOptionGrids,
@@ -24,6 +25,8 @@ export function TrackerDisplayInline({
   initialGridData,
   getDataRef,
   dependsOn,
+  editMode,
+  onSchemaChange,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(
     () =>
@@ -151,6 +154,48 @@ export function TrackerDisplayInline({
 
   if (!normalizedTabs.length) return null
 
+  const editModeSchema = editMode
+    ? { tabs, sections, grids, fields, layoutNodes, bindings, styles, dependsOn }
+    : undefined
+
+  const content = (
+    <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
+      <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
+        {normalizedTabs.length > 0 && (
+          <TabsList className="bg-muted transition-all duration-300">
+            {normalizedTabs.map((tab, index) => (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="animate-in fade-in-0 slide-in-from-left-2 duration-300"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {tab.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
+        {normalizedTabs.map((tab) => (
+          <TrackerTabContent
+            key={tab.id}
+            tab={tab}
+            sections={effectiveSections}
+            grids={effectiveGrids}
+            fields={effectiveFields}
+            layoutNodes={effectiveLayoutNodes}
+            bindings={effectiveBindings}
+            styles={styles}
+            dependsOn={effectiveDependsOn}
+            gridData={gridData}
+            onUpdate={handleUpdate}
+            onAddEntry={handleAddEntry}
+            onDeleteEntries={handleDeleteEntries}
+          />
+        ))}
+      </Tabs>
+    </div>
+  )
+
   return (
     <TrackerOptionsProvider
       grids={effectiveGrids}
@@ -158,41 +203,13 @@ export function TrackerDisplayInline({
       layoutNodes={effectiveLayoutNodes}
       sections={effectiveSections}
     >
-      <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
-        <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
-          {normalizedTabs.length > 0 && (
-            <TabsList className="bg-muted transition-all duration-300">
-              {normalizedTabs.map((tab, index) => (
-                <TabsTrigger
-                  key={tab.id}
-                  value={tab.id}
-                  className="animate-in fade-in-0 slide-in-from-left-2 duration-300"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {tab.name}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          )}
-          {normalizedTabs.map((tab) => (
-            <TrackerTabContent
-              key={tab.id}
-              tab={tab}
-              sections={effectiveSections}
-              grids={effectiveGrids}
-              fields={effectiveFields}
-              layoutNodes={effectiveLayoutNodes}
-              bindings={effectiveBindings}
-              styles={styles}
-              dependsOn={effectiveDependsOn}
-              gridData={gridData}
-              onUpdate={handleUpdate}
-              onAddEntry={handleAddEntry}
-              onDeleteEntries={handleDeleteEntries}
-            />
-          ))}
-        </Tabs>
-      </div>
+      <EditModeProvider
+        editMode={!!editMode}
+        schema={editModeSchema}
+        onSchemaChange={onSchemaChange}
+      >
+        {content}
+      </EditModeProvider>
     </TrackerOptionsProvider>
   )
 }

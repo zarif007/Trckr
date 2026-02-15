@@ -13,6 +13,7 @@ import type {
   DependsOnRules,
 } from './types'
 import { TrackerSection } from './TrackerSection'
+import { useCanEditLayout, BlockEditor } from './edit-mode'
 
 export interface TrackerTabContentProps {
   tab: TrackerTab
@@ -43,6 +44,8 @@ export function TrackerTabContent({
   onAddEntry,
   onDeleteEntries,
 }: TrackerTabContentProps) {
+  const canEditLayout = useCanEditLayout()
+
   const tabSections = useMemo(
     () =>
       sections
@@ -57,12 +60,35 @@ export function TrackerTabContent({
     [tab.id, sections, grids]
   )
 
+  // Edit mode: render flat Notion-like block editor
+  if (canEditLayout) {
+    return (
+      <TabsContent key={tab.id} value={tab.id} className="mt-6">
+        <BlockEditor
+          tab={tab}
+          sections={sections}
+          grids={grids}
+          fields={fields}
+          layoutNodes={layoutNodes}
+          bindings={bindings}
+          styles={styles}
+          dependsOn={dependsOn}
+          gridData={gridData}
+          onUpdate={onUpdate}
+          onAddEntry={onAddEntry}
+          onDeleteEntries={onDeleteEntries}
+        />
+      </TabsContent>
+    )
+  }
+
+  // Normal display mode
   return (
     <TabsContent key={tab.id} value={tab.id} className="space-y-6 mt-6">
       {tabSections.map((section, index) => (
         <div
           key={section.id}
-          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300 space-y-2"
           style={{ animationDelay: `${index * 100}ms` }}
         >
           <TrackerSection
