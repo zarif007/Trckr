@@ -159,7 +159,7 @@ export function TrackerDisplayInline({
     : undefined
 
   const content = (
-    <div className="w-full space-y-6 p-6 bg-card border border-border rounded-lg animate-in fade-in-0 duration-300">
+    <div className="w-full space-y-6 p-6 bg-card rounded-lg animate-in fade-in-0 duration-300">
       <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
         {normalizedTabs.length > 0 && (
           <TabsList className="bg-muted transition-all duration-300">

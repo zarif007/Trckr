@@ -13,9 +13,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  defaultDropAnimationSideEffects,
+} from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
+import { SortableContext, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -107,11 +116,17 @@ export function TrackerDivGrid({
     () => fieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
     [grid.id, fieldNodes]
   )
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id))
+  }, [])
   const handleFieldDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setActiveDragId(null)
       const { active, over } = event
       if (!over || active.id === over.id || !reorder) return
       const currentIds = fieldNodes.map((n) => n.fieldId)
@@ -479,17 +494,46 @@ export function TrackerDivGrid({
     </div>
   )
 
+  const activeDragField = useMemo(() => {
+    if (!activeDragId) return null
+    const parsed = parseFieldId(activeDragId)
+    if (!parsed || parsed.gridId !== grid.id) return null
+    const node = fieldNodes.find((n) => n.fieldId === parsed.fieldId)
+    const field = node ? fields.find((f) => f.id === node.fieldId) : undefined
+    return field ?? null
+  }, [activeDragId, grid.id, fieldNodes, fields])
+
   return (
     <div className="space-y-3">
       {canEditLayout ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
           onDragEnd={handleFieldDragEnd}
         >
           <SortableContext items={fieldSortableIds} strategy={rectSortingStrategy}>
             {fieldsContainer}
           </SortableContext>
+          <DragOverlay
+            dropAnimation={{
+              sideEffects: defaultDropAnimationSideEffects({
+                styles: { active: { opacity: '0.5' } },
+              }),
+            }}
+          >
+            {activeDragField ? (
+              <div className="flex flex-col w-full min-w-0 space-y-1.5 rounded-md border bg-background shadow-md p-3">
+                <span className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
+                  {activeDragField.ui.label}
+                </span>
+                <div
+                  className={`rounded-lg border border-dashed bg-muted/30 ${ds.fontSize} min-h-9`}
+                  aria-hidden
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
         </DndContext>
       ) : (
         fieldsContainer

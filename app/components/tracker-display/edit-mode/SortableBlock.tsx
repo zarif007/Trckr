@@ -6,17 +6,22 @@ import { ColumnHeaderEdit } from './ColumnHeaderEdit'
 import { FieldRowEdit } from './FieldRowEdit'
 
 const FIELD_PREFIX = 'field-'
+/** Delimiter safe for gridId/fieldId that may contain dashes. */
+const FIELD_ID_DELIMITER = '::'
 
 export function fieldSortableId(gridId: string, fieldId: string): string {
-  return `${FIELD_PREFIX}${gridId}-${fieldId}`
+  return `${FIELD_PREFIX}${gridId}${FIELD_ID_DELIMITER}${fieldId}`
 }
 
 export function parseFieldId(sortableId: string): { gridId: string; fieldId: string } | null {
   if (!sortableId.startsWith(FIELD_PREFIX)) return null
   const rest = sortableId.slice(FIELD_PREFIX.length)
-  const dash = rest.indexOf('-')
-  if (dash < 0) return null
-  return { gridId: rest.slice(0, dash), fieldId: rest.slice(dash + 1) }
+  const delim = rest.indexOf(FIELD_ID_DELIMITER)
+  if (delim < 0) return null
+  return {
+    gridId: rest.slice(0, delim),
+    fieldId: rest.slice(delim + FIELD_ID_DELIMITER.length),
+  }
 }
 
 /** Sortable column header for table grid (pass sortable props to ColumnHeaderEdit). */

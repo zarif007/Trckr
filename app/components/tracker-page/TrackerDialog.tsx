@@ -115,7 +115,6 @@ export function TrackerDialog({
           !max-w-[min(95vw,80rem)] !w-[min(95vw,80rem)] !h-fit !max-h-[75vh]
           overflow-hidden relative z-50
           bg-background/95 backdrop-blur-2xl
-          !border-none
           ${isStreaming ? 'animate-border-blink' : ''}
         `.trim()}
       >

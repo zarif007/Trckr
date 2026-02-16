@@ -13,7 +13,7 @@ export default function TrackerFromScratchPage() {
   )
 
   return (
-    <TrackerEditorPageLayout title="Create tracker from scratch">
+    <div className="py-32 px-2 max-w-7xl mx-auto">
       <TrackerDisplay
         tabs={schema.tabs}
         sections={schema.sections}
@@ -26,6 +26,6 @@ export default function TrackerFromScratchPage() {
         editMode
         onSchemaChange={onSchemaChange}
       />
-    </TrackerEditorPageLayout>
+    </div>
   )
 }
