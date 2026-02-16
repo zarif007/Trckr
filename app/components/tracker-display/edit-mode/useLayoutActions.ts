@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import type { TrackerDisplayProps, TrackerField, TrackerLayoutNode } from '../types'
 import type { AddColumnOrFieldResult } from './types'
-import { createNewField, getNextLayoutOrder } from './utils'
+import { createNewField, getNextLayoutOrder, getNextRowCol } from './utils'
 
 /**
  * Hook that returns layout mutation actions for a single grid.
@@ -50,7 +50,12 @@ export function useLayoutActions(
       const rest = (schema.layoutNodes ?? []).filter((n) => n.gridId !== gridId)
       const swapped = [...nodes]
         ;[swapped[idx], swapped[swap]] = [swapped[swap]!, swapped[idx]!]
-      const reordered = swapped.map((n, i) => ({ ...n, order: i }))
+      const reordered = swapped.map((n, i) => ({
+        ...n,
+        order: i,
+        row: Math.floor(i / 3),
+        col: i % 3,
+      }))
       applySchemaChange([...rest, ...reordered])
     },
     [schema, gridId, applySchemaChange]
@@ -62,18 +67,18 @@ export function useLayoutActions(
       const currentLayout = schema.layoutNodes ?? []
       const currentFields = schema.fields ?? []
       const existingIds = new Set(currentFields.map((f) => f.id))
+      const order = getNextLayoutOrder(currentLayout, gridId)
+      const { row, col } = getNextRowCol(currentLayout, gridId)
       if (result.mode === 'new') {
         const newField = createNewField(result.label, result.dataType, existingIds)
-        const order = getNextLayoutOrder(currentLayout, gridId)
         applySchemaChange(
-          [...currentLayout, { gridId, fieldId: newField.id, order }],
+          [...currentLayout, { gridId, fieldId: newField.id, order, row, col }],
           [...currentFields, newField]
         )
       } else {
-        const order = getNextLayoutOrder(currentLayout, gridId)
         applySchemaChange([
           ...currentLayout,
-          { gridId, fieldId: result.fieldId, order },
+          { gridId, fieldId: result.fieldId, order, row, col },
         ])
       }
     },
@@ -85,11 +90,22 @@ export function useLayoutActions(
     (fieldIdsInOrder: string[]) => {
       if (!schema) return
       const rest = (schema.layoutNodes ?? []).filter((n) => n.gridId !== gridId)
-      const reordered = fieldIdsInOrder.map((fieldId, order) => ({
-        gridId,
-        fieldId,
-        order,
-      }))
+      const existingByField = new Map(
+        (schema.layoutNodes ?? [])
+          .filter((n) => n.gridId === gridId)
+          .map((n) => [n.fieldId, n] as const)
+      )
+      const reordered = fieldIdsInOrder.map((fieldId, i) => {
+        const existing = existingByField.get(fieldId)
+        return {
+          ...existing,
+          gridId,
+          fieldId,
+          order: i,
+          row: Math.floor(i / 3),
+          col: i % 3,
+        }
+      })
       applySchemaChange([...rest, ...reordered])
     },
     [schema, gridId, applySchemaChange]

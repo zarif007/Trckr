@@ -63,6 +63,21 @@ export function getNextLayoutOrder(
   return Math.max(...orders) + 1
 }
 
+/** Next (row, col) slot for div grid layout. New fields are always added in a new row (col 0); user can drag-and-drop to place beside others. */
+export function getNextRowCol(
+  layoutNodes: TrackerLayoutNode[],
+  gridId: string
+): { row: number; col: number } {
+  const nodes = layoutNodes.filter((n) => n.gridId === gridId)
+  const withPos = nodes.filter((n) => n.row != null && n.col != null)
+  if (withPos.length === 0) {
+    const order = nodes.length === 0 ? 0 : Math.max(...nodes.map((n) => n.order)) + 1
+    return { row: order, col: 0 }
+  }
+  const maxRow = Math.max(...withPos.map((n) => n.row ?? 0))
+  return { row: maxRow + 1, col: 0 }
+}
+
 export function getSimpleFieldTypes(): TrackerFieldType[] {
   return [...SIMPLE_FIELD_TYPES]
 }

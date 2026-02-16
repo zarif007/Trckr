@@ -50,14 +50,14 @@ export function GridBlockHeader({
   )
 
   const badgeAndName = (
-    <>
+    <div className="flex items-center gap-1.5 min-w-0">
       <GridTypeBadge grid={grid} />
       {nameContent}
-    </>
+    </div>
   )
 
   return (
-    <div className="flex items-center gap-2 w-full min-w-0">
+    <div className="flex items-center w-full min-w-0">
       {controls ? (
         <LabelWithBlockControls
           label={badgeAndName}

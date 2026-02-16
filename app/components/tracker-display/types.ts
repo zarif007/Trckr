@@ -104,6 +104,10 @@ export type TrackerLayoutNode = {
   gridId: string
   fieldId: string
   order: number
+  /** Row index for div (form) grid layout; used with col for 2D placement. */
+  row?: number
+  /** Column index for div (form) grid layout; max 3 per row. */
+  col?: number
   renderAs?: 'default' | 'table' | 'kanban' | 'calendar' | 'timeline'
 }
 

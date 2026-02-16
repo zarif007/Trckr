@@ -19,7 +19,7 @@ export interface TrackerLike {
     ui?: { label?: string; placeholder?: string }
     config?: Record<string, unknown> | null
   }>
-  layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
+  layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number; row?: number; col?: number }>
   bindings?: Record<string, BindingEntry>
   dependsOn?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
 }

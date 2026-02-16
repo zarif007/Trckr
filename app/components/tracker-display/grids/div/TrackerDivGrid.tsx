@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/popover'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { SortableContext, rectSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -91,7 +91,17 @@ export function TrackerDivGrid({
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
-  const fieldNodes = layoutNodes.filter((n) => n.gridId === grid.id).sort((a, b) => a.order - b.order)
+  const fieldNodes = useMemo(() => {
+    const nodes = layoutNodes.filter((n) => n.gridId === grid.id)
+    return nodes.sort((a, b) => {
+      const ra = a.row ?? a.order
+      const ca = a.col ?? 0
+      const rb = b.row ?? b.order
+      const cb = b.col ?? 0
+      if (ra !== rb) return ra - rb
+      return ca - cb
+    })
+  }, [layoutNodes, grid.id])
 
   const fieldSortableIds = useMemo(
     () => fieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -181,268 +191,288 @@ export function TrackerDivGrid({
     )
   }
 
-  const fieldsContainer = (
-    <div className={canEditLayout ? 'space-y-2' : 'grid grid-cols-1 gap-4'}>
-      {fieldNodes.map((node, index) => {
-        const field = fields.find(f => f.id === node.fieldId)
-        if (!field) return null
-        const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
-        if (effectiveConfig?.isHidden) return null
+  const rowKeys = useMemo(
+    () => [...new Set(fieldNodes.map((n) => n.row ?? n.order))].sort((a, b) => a - b),
+    [fieldNodes]
+  )
 
-        const options = (field.dataType === 'options' || field.dataType === 'multiselect' || field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect')
-          ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
-          : undefined
+  function renderFieldContent(node: TrackerLayoutNode, index: number) {
+    const field = fields.find((f) => f.id === node.fieldId)
+    if (!field) return null
+    const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
+    if (effectiveConfig?.isHidden) return null
 
-        const binding = (field.dataType === 'options' || field.dataType === 'multiselect') && onAddEntryToGrid
-          ? getBindingForField(grid.id, field.id, bindings, tabId)
-          : undefined
-        const selectFieldPath = `${grid.id}.${field.id}`
-        let optionsGridFields: OptionsGridFieldDef[] = []
-        let onAddOption: ((row: Record<string, unknown>) => string) | undefined
-        if (binding && onAddEntryToGrid) {
-          const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
-          const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
-          const { fieldId: labelFieldId } = parsePath(binding.labelField)
-          const allNodes = allLayoutNodes ?? layoutNodes
-          const optionLayoutNodes = allNodes.filter((n) => n.gridId === (optionsGridId ?? '')).sort((a, b) => a.order - b.order)
-          optionsGridFields = optionLayoutNodes
-            .map((n) => fields.find((f) => f.id === n.fieldId))
-            .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
-            .map((f) => ({
-              id: f.id,
-              label: f.ui.label,
-              type: f.dataType as OptionsGridFieldDef['type'],
-              config: f.config as OptionsGridFieldDef['config'],
-            }))
-          onAddOption = (row: Record<string, unknown>) => {
-            onAddEntryToGrid!(optionsGridId!, row)
-            const val = row[valueFieldId ?? '']
-            const label = labelFieldId ? row[labelFieldId] : undefined
-            return String(val ?? label ?? '')
-          }
-        }
+    const options = (field.dataType === 'options' || field.dataType === 'multiselect' || field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect')
+      ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
+      : undefined
 
-        const rawValue = data[field.id]
-        const value = (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
-          ? (effectiveConfig as { value: unknown }).value
-          : rawValue
-        const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
-        const isDisabled = !!effectiveConfig?.isDisabled || (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
+    const binding = (field.dataType === 'options' || field.dataType === 'multiselect') && onAddEntryToGrid
+      ? getBindingForField(grid.id, field.id, bindings, tabId)
+      : undefined
+    const selectFieldPath = `${grid.id}.${field.id}`
+    let optionsGridFields: OptionsGridFieldDef[] = []
+    let onAddOption: ((row: Record<string, unknown>) => string) | undefined
+    if (binding && onAddEntryToGrid) {
+      const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+      const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+      const { fieldId: labelFieldId } = parsePath(binding.labelField)
+      const allNodes = allLayoutNodes ?? layoutNodes
+      const optionLayoutNodes = allNodes.filter((n) => n.gridId === (optionsGridId ?? '')).sort((a, b) => a.order - b.order)
+      optionsGridFields = optionLayoutNodes
+        .map((n) => fields.find((f) => f.id === n.fieldId))
+        .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
+        .map((f) => ({
+          id: f.id,
+          label: f.ui.label,
+          type: f.dataType as OptionsGridFieldDef['type'],
+          config: f.config as OptionsGridFieldDef['config'],
+        }))
+      onAddOption = (row: Record<string, unknown>) => {
+        onAddEntryToGrid!(optionsGridId!, row)
+        const val = row[valueFieldId ?? '']
+        const label = labelFieldId ? row[labelFieldId] : undefined
+        return String(val ?? label ?? '')
+      }
+    }
 
-        const handleSelectChange = (selectedValue: unknown) => {
-          onUpdate?.(0, field.id, selectedValue)
+    const rawValue = data[field.id]
+    const value = (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
+      ? (effectiveConfig as { value: unknown }).value
+      : rawValue
+    const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
+    const isDisabled = !!effectiveConfig?.isDisabled || (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
 
-          if (field.dataType === 'options' || field.dataType === 'multiselect') {
-            const binding = getBindingForField(grid.id, field.id, bindings, tabId)
-            if (binding && binding.fieldMappings.length > 0) {
-              const selectFieldPath = `${grid.id}.${field.id}`
-              const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
-              if (optionRow) {
-                const updates = applyBindings(binding, optionRow, selectFieldPath)
-                for (const update of updates) {
-                  const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
-                  if (targetGridId && targetFieldId) {
-                    if (onCrossGridUpdate) {
-                      onCrossGridUpdate(targetGridId, 0, targetFieldId, update.value)
-                    } else if (targetGridId === grid.id) {
-                      onUpdate?.(0, targetFieldId, update.value)
-                    }
-                  }
+    const handleSelectChange = (selectedValue: unknown) => {
+      onUpdate?.(0, field.id, selectedValue)
+
+      if (field.dataType === 'options' || field.dataType === 'multiselect') {
+        const binding = getBindingForField(grid.id, field.id, bindings, tabId)
+        if (binding && binding.fieldMappings.length > 0) {
+          const selectFieldPath = `${grid.id}.${field.id}`
+          const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
+          if (optionRow) {
+            const updates = applyBindings(binding, optionRow, selectFieldPath)
+            for (const update of updates) {
+              const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+              if (targetGridId && targetFieldId) {
+                if (onCrossGridUpdate) {
+                  onCrossGridUpdate(targetGridId, 0, targetFieldId, update.value)
+                } else if (targetGridId === grid.id) {
+                  onUpdate?.(0, targetFieldId, update.value)
                 }
               }
             }
           }
         }
+      }
+    }
 
-        const inputTextClass = `${ds.fontSize} ${ds.fontWeight} ${ds.textColor}`.trim()
-        const fieldLabel = field.ui.label
-        const renderInput = () => {
-          switch (field.dataType) {
-            case 'text':
-              return (
-                <Textarea
-                  className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  defaultValue={valueString}
-                  placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
-                  disabled={isDisabled}
-                  onBlur={(e) =>
-                    onUpdate?.(0, field.id, e.target.value)
-                  }
-                />
-              )
-            case 'boolean':
-              return (
-                <div className="flex items-center min-h-[2.5rem]">
-                  <Checkbox
-                    checked={value === true}
-                    disabled={isDisabled}
-                    onCheckedChange={(checked) =>
-                      onUpdate?.(0, field.id, checked)
-                    }
-                  />
-                </div>
-              )
-            case 'options': {
-              const opts = options ?? []
-              const toItemValue = (v: unknown) => {
-                const s = String(v ?? '').trim()
-                return s === '' ? '__empty__' : s
-              }
-              const selectOptions = opts.map((option) => {
-                const itemValue = toItemValue(option.value ?? option.id ?? option.label)
-                return { value: itemValue, label: option.label }
-              })
-              return (
-                <SearchableSelect
-                  options={selectOptions}
-                  value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
-                  disabled={isDisabled}
-                  onValueChange={(val) => {
-                    if (val === ADD_OPTION_VALUE && onAddOption) {
-                      setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
-                      setAddOptionOpen(true)
-                      return
-                    }
-                    handleSelectChange(val === '__empty__' ? '' : val)
-                  }}
-                  searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
-                  className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  onAddOptionClick={onAddOption ? () => {
-                    setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
-                    setAddOptionOpen(true)
-                  } : undefined}
-                  addOptionLabel="Add option..."
-                />
-              )
-            }
-            case 'multiselect': {
-              const opts = options ?? []
-              const multiOpts = opts.map(o => ({ label: o.label, id: String(o.value ?? o.id ?? o.label) }))
-              return (
-                <MultiSelect
-                  options={multiOpts}
-                  value={Array.isArray(value) ? value.map(String) : []}
-                  onChange={(val) => handleSelectChange(val)}
-                  disabled={isDisabled}
-                  className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  onAddOptionClick={onAddOption ? () => {
-                    setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
-                    setAddOptionOpen(true)
-                  } : undefined}
-                />
-              )
-            }
-            case 'date':
-              return (
-                <Popover modal={true}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className={`w-full text-left flex items-center border-0 bg-transparent focus-visible:ring-0 rounded-md py-2 px-3 min-h-9 ${inputTextClass} ${!value ? 'text-muted-foreground' : ''}`}
-                      disabled={isDisabled}
-                    >
-                      {value ? (
-                        format(new Date(String(value)), 'PPP')
-                      ) : (
-                        <span>Pick a date</span>
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[60]" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={value ? new Date(String(value)) : undefined}
-                      onSelect={(date) => {
-                        if (isDisabled) return
-                        if (date) {
-                          const newDate = new Date(date)
-                          newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
-                          onUpdate?.(0, field.id, newDate.toISOString())
-                        }
-                      }}
-                      disabled={(date) =>
-                        date > new Date('2100-01-01') || date < new Date('1900-01-01')
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              )
-            case 'number':
-              return (
-                <Input
-                  type="number"
-                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  defaultValue={typeof value === 'number' ? value : valueString}
-                  placeholder="0"
-                  disabled={isDisabled}
-                  onBlur={(e) =>
-                    onUpdate?.(0, field.id, Number(e.target.value))
-                  }
-                />
-              )
-            default:
-              return (
-                <Input
-                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  defaultValue={valueString}
-                  placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
-                  disabled={isDisabled}
-                  onBlur={(e) =>
-                    onUpdate?.(0, field.id, e.target.value)
-                  }
-                />
-              )
-          }
-        }
-
-        const labelContent = (
-          <label className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
-            {field.ui.label}
-            {effectiveConfig?.isRequired && (
-              <span className="text-destructive/80 ml-1">*</span>
-            )}
-          </label>
-        )
-
-        const inputContent = (
-          <div
-            className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
-            onPointerDown={(e) => {
-              // Prevent parent DnD sensors from intercepting pointer events on form inputs.
-              e.stopPropagation()
-            }}
-            onClick={(e) => {
-              focusInputInContainer(e.currentTarget)
-            }}
-          >
-            {renderInput()}
-          </div>
-        )
-
-        if (canEditLayout) {
+    const inputTextClass = `${ds.fontSize} ${ds.fontWeight} ${ds.textColor}`.trim()
+    const fieldLabel = field.ui.label
+    const renderInput = () => {
+      switch (field.dataType) {
+        case 'text':
           return (
-            <SortableFieldRowEdit
-              key={field.id}
-              gridId={grid.id}
-              fieldId={field.id}
-              label={field.ui.label}
-              labelContent={labelContent}
-              index={index}
-              totalFields={fieldNodes.length}
-              onRemove={() => remove(field.id)}
-              onMoveUp={() => move(field.id, 'up')}
-              onMoveDown={() => move(field.id, 'down')}
-            >
-              {inputContent}
-            </SortableFieldRowEdit>
+            <Textarea
+              className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+              defaultValue={valueString}
+              placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
+              disabled={isDisabled}
+              onBlur={(e) =>
+                onUpdate?.(0, field.id, e.target.value)
+              }
+            />
+          )
+        case 'boolean':
+          return (
+            <div className="flex items-center min-h-[2.5rem]">
+              <Checkbox
+                checked={value === true}
+                disabled={isDisabled}
+                onCheckedChange={(checked) =>
+                  onUpdate?.(0, field.id, checked)
+                }
+              />
+            </div>
+          )
+        case 'options': {
+          const opts = options ?? []
+          const toItemValue = (v: unknown) => {
+            const s = String(v ?? '').trim()
+            return s === '' ? '__empty__' : s
+          }
+          const selectOptions = opts.map((option) => {
+            const itemValue = toItemValue(option.value ?? option.id ?? option.label)
+            return { value: itemValue, label: option.label }
+          })
+          return (
+            <SearchableSelect
+              options={selectOptions}
+              value={typeof value === 'string' && value.trim() !== '' ? value : '__empty__'}
+              disabled={isDisabled}
+              onValueChange={(val) => {
+                if (val === ADD_OPTION_VALUE && onAddOption) {
+                  setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
+                  setAddOptionOpen(true)
+                  return
+                }
+                handleSelectChange(val === '__empty__' ? '' : val)
+              }}
+              searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
+              className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+              onAddOptionClick={onAddOption ? () => {
+                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
+                setAddOptionOpen(true)
+              } : undefined}
+              addOptionLabel="Add option..."
+            />
           )
         }
+        case 'multiselect': {
+          const opts = options ?? []
+          const multiOpts = opts.map(o => ({ label: o.label, id: String(o.value ?? o.id ?? o.label) }))
+          return (
+            <MultiSelect
+              options={multiOpts}
+              value={Array.isArray(value) ? value.map(String) : []}
+              onChange={(val) => handleSelectChange(val)}
+              disabled={isDisabled}
+              className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+              onAddOptionClick={onAddOption ? () => {
+                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
+                setAddOptionOpen(true)
+              } : undefined}
+            />
+          )
+        }
+        case 'date':
+          return (
+            <Popover modal={true}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={`w-full text-left flex items-center border-0 bg-transparent focus-visible:ring-0 rounded-md py-2 px-3 min-h-9 ${inputTextClass} ${!value ? 'text-muted-foreground' : ''}`}
+                  disabled={isDisabled}
+                >
+                  {value ? (
+                    format(new Date(String(value)), 'PPP')
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 z-[60]" align="start">
+                <Calendar
+                  mode="single"
+                  selected={value ? new Date(String(value)) : undefined}
+                  onSelect={(date) => {
+                    if (isDisabled) return
+                    if (date) {
+                      const newDate = new Date(date)
+                      newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
+                      onUpdate?.(0, field.id, newDate.toISOString())
+                    }
+                  }}
+                  disabled={(date) =>
+                    date > new Date('2100-01-01') || date < new Date('1900-01-01')
+                  }
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          )
+        case 'number':
+          return (
+            <Input
+              type="number"
+              className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+              defaultValue={typeof value === 'number' ? value : valueString}
+              placeholder="0"
+              disabled={isDisabled}
+              onBlur={(e) =>
+                onUpdate?.(0, field.id, Number(e.target.value))
+              }
+            />
+          )
+        default:
+          return (
+            <Input
+              className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+              defaultValue={valueString}
+              placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
+              disabled={isDisabled}
+              onBlur={(e) =>
+                onUpdate?.(0, field.id, e.target.value)
+              }
+            />
+          )
+      }
+    }
 
+    const labelContent = (
+      <label className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
+        {field.ui.label}
+        {effectiveConfig?.isRequired && (
+          <span className="text-destructive/80 ml-1">*</span>
+        )}
+      </label>
+    )
+
+    const inputContent = (
+      <div
+        className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+        }}
+        onClick={(e) => {
+          focusInputInContainer(e.currentTarget)
+        }}
+      >
+        {renderInput()}
+      </div>
+    )
+
+    if (canEditLayout) {
+      return (
+        <SortableFieldRowEdit
+          key={field.id}
+          gridId={grid.id}
+          fieldId={field.id}
+          label={field.ui.label}
+          labelContent={labelContent}
+          index={index}
+          totalFields={fieldNodes.length}
+          onRemove={() => remove(field.id)}
+          onMoveUp={() => move(field.id, 'up')}
+          onMoveDown={() => move(field.id, 'down')}
+        >
+          {inputContent}
+        </SortableFieldRowEdit>
+      )
+    }
+
+    return (
+      <div key={field.id} className="space-y-1.5">
+        {labelContent}
+        {inputContent}
+      </div>
+    )
+  }
+
+  const fieldsContainer = (
+    <div className="flex flex-col gap-4">
+      {rowKeys.map((rowKey) => {
+        const nodesInRow = fieldNodes
+          .filter((n) => (n.row ?? n.order) === rowKey)
+          .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
+        const gridCols =
+          nodesInRow.length === 1 ? 'grid-cols-1' : nodesInRow.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
         return (
-          <div key={field.id} className="space-y-1.5">
-            {labelContent}
-            {inputContent}
+          <div key={rowKey} className={`grid ${gridCols} gap-4`}>
+            {nodesInRow.map((node) => {
+              const index = fieldNodes.indexOf(node)
+              return <div key={node.fieldId}>{renderFieldContent(node, index)}</div>
+            })}
           </div>
         )
       })}
@@ -457,7 +487,7 @@ export function TrackerDivGrid({
           collisionDetection={closestCenter}
           onDragEnd={handleFieldDragEnd}
         >
-          <SortableContext items={fieldSortableIds} strategy={verticalListSortingStrategy}>
+          <SortableContext items={fieldSortableIds} strategy={rectSortingStrategy}>
             {fieldsContainer}
           </SortableContext>
         </DndContext>

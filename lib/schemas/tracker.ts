@@ -260,6 +260,8 @@ export const trackerSchema = z
             gridId: z.string(),
             fieldId: z.string(),
             order: z.coerce.number(),
+            row: z.number().optional().describe('Row index for div (form) grid layout.'),
+            col: z.number().optional().describe('Column index for div (form) grid layout; max 3 per row.'),
             renderAs: renderAsEnum,
           })
           .passthrough()

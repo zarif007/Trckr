@@ -17,7 +17,7 @@ export interface LabelWithBlockControlsProps {
 
 /**
  * Inline label row that reveals drag/add/delete controls on hover.
- * The label shifts right when controls appear, saving space and improving discoverability.
+ * When hidden, controls take zero space (no gap) so layout matches non-edit mode.
  */
 export function LabelWithBlockControls({
   label,
@@ -36,14 +36,18 @@ export function LabelWithBlockControls({
 
   return (
     <div
-      className={cn('flex items-center gap-1.5 min-w-0 group', className)}
+      className={cn(
+        'flex items-center min-w-0 group',
+        showControls ? 'gap-1.5' : '!gap-0', // !gap-0 ensures no gap when controls hidden
+        className
+      )}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Controls: appear on hover, push label right */}
+      {/* Controls: hidden = 0 width, no gap. min-w-0 allows shrinking. */}
       <div
         className={cn(
-          'flex items-center gap-0.5 shrink-0 overflow-hidden transition-[width,opacity] duration-150',
+          'flex items-center gap-0.5 shrink-0 min-w-0 overflow-hidden transition-[width,opacity] duration-150',
           showControls ? 'w-[4.5rem] opacity-100' : 'w-0 opacity-0 pointer-events-none'
         )}
       >
@@ -84,7 +88,6 @@ export function LabelWithBlockControls({
           <Trash2 className="h-3.5 w-3.5" aria-hidden />
         </button>
       </div>
-      {/* Label: flex-1 so it naturally shrinks when controls appear */}
       <div className="flex-1 min-w-0">
         {label}
       </div>
