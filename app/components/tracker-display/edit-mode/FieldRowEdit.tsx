@@ -1,15 +1,46 @@
 'use client'
 
 import { BlockWrapper } from './BlockWrapper'
+import { useBlockControls, LabelWithBlockControls } from '../layout'
 import type { FieldRowEditProps } from './types'
 
 /**
  * Edit wrapper for a div grid field row in edit mode.
- * Shows drag handle + delete on hover (scoped to this field only).
+ * Inline controls (drag, delete) appear on hover of the label row.
  */
+function FieldRowContent({
+  labelContent,
+  children,
+}: {
+  labelContent: React.ReactNode
+  children: React.ReactNode
+}) {
+  const controls = useBlockControls()
+  if (!controls) {
+    return (
+      <div className="space-y-1.5">
+        {labelContent}
+        {children}
+      </div>
+    )
+  }
+  return (
+    <div className="space-y-1.5">
+      <LabelWithBlockControls
+        label={labelContent}
+        onRemove={controls.onRemove}
+        dragHandleProps={controls.dragHandleProps}
+        isSortable={controls.isSortable}
+      />
+      {children}
+    </div>
+  )
+}
+
 export function FieldRowEdit({
   fieldId,
   label,
+  labelContent,
   onRemove,
   children,
   sortable,
@@ -25,9 +56,9 @@ export function FieldRowEdit({
       dragHandleProps={sortable?.dragHandleProps}
       isDragging={sortable?.isDragging}
     >
-      <div className="space-y-1.5">
+      <FieldRowContent labelContent={labelContent ?? label}>
         {children}
-      </div>
+      </FieldRowContent>
     </BlockWrapper>
   )
 }

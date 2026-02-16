@@ -396,32 +396,28 @@ export function TrackerDivGrid({
           }
         }
 
-        const fieldContent = (
-          <>
-            <label className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
-              {field.ui.label}
-              {effectiveConfig?.isRequired && (
-                <span className="text-destructive/80 ml-1">*</span>
-              )}
-            </label>
-            <div
-              className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
-              onPointerDown={(e) => {
-                // Prevent parent DnD sensors from intercepting pointer events on form inputs.
-                // Without this, the first click can be swallowed by PointerSensor activation
-                // logic in ancestor DndContexts (BlockEditor + field reorder), requiring a
-                // second click to actually focus the input.
-                e.stopPropagation()
-              }}
-              onClick={(e) => {
-                // Forward clicks on the container border/padding to the input inside,
-                // so clicking anywhere in the field area immediately activates editing.
-                focusInputInContainer(e.currentTarget)
-              }}
-            >
-              {renderInput()}
-            </div>
-          </>
+        const labelContent = (
+          <label className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
+            {field.ui.label}
+            {effectiveConfig?.isRequired && (
+              <span className="text-destructive/80 ml-1">*</span>
+            )}
+          </label>
+        )
+
+        const inputContent = (
+          <div
+            className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
+            onPointerDown={(e) => {
+              // Prevent parent DnD sensors from intercepting pointer events on form inputs.
+              e.stopPropagation()
+            }}
+            onClick={(e) => {
+              focusInputInContainer(e.currentTarget)
+            }}
+          >
+            {renderInput()}
+          </div>
         )
 
         if (canEditLayout) {
@@ -431,20 +427,22 @@ export function TrackerDivGrid({
               gridId={grid.id}
               fieldId={field.id}
               label={field.ui.label}
+              labelContent={labelContent}
               index={index}
               totalFields={fieldNodes.length}
               onRemove={() => remove(field.id)}
               onMoveUp={() => move(field.id, 'up')}
               onMoveDown={() => move(field.id, 'down')}
             >
-              {fieldContent}
+              {inputContent}
             </SortableFieldRowEdit>
           )
         }
 
         return (
           <div key={field.id} className="space-y-1.5">
-            {fieldContent}
+            {labelContent}
+            {inputContent}
           </div>
         )
       })}

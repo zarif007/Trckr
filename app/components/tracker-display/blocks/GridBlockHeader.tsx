@@ -2,7 +2,7 @@
 
 import { Table2, LayoutGrid, FormInput } from 'lucide-react'
 import type { TrackerGrid } from '../types'
-import { InlineEditableName } from '../layout'
+import { InlineEditableName, useBlockControls, LabelWithBlockControls } from '../layout'
 
 /** Grid type badge: small pill showing Table/Kanban/Form. Exported for use in BlockEditor or elsewhere. */
 export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
@@ -39,15 +39,35 @@ export function GridBlockHeader({
   editable = false,
   onNameChange,
 }: GridBlockHeaderProps) {
+  const controls = useBlockControls()
+
+  const nameContent = editable && onNameChange ? (
+    <InlineEditableName value={name} onChange={onNameChange} />
+  ) : (
+    <span className="text-base font-semibold text-foreground truncate leading-7">
+      {name}
+    </span>
+  )
+
+  const badgeAndName = (
+    <>
+      <GridTypeBadge grid={grid} />
+      {nameContent}
+    </>
+  )
+
   return (
     <div className="flex items-center gap-2 w-full min-w-0">
-      <GridTypeBadge grid={grid} />
-      {editable && onNameChange ? (
-        <InlineEditableName value={name} onChange={onNameChange} />
+      {controls ? (
+        <LabelWithBlockControls
+          label={badgeAndName}
+          onRemove={controls.onRemove}
+          dragHandleProps={controls.dragHandleProps}
+          onAddBlockClick={controls.onAddBlockClick}
+          isSortable={controls.isSortable}
+        />
       ) : (
-        <span className="text-base font-semibold text-foreground truncate leading-7">
-          {name}
-        </span>
+        badgeAndName
       )}
     </div>
   )

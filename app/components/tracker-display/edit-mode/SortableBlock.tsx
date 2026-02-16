@@ -81,6 +81,7 @@ export interface SortableFieldRowEditProps {
   gridId: string
   fieldId: string
   label: string
+  labelContent?: React.ReactNode
   index: number
   totalFields: number
   onRemove: () => void
@@ -93,6 +94,7 @@ export function SortableFieldRowEdit({
   gridId,
   fieldId,
   label,
+  labelContent,
   index,
   totalFields,
   onRemove,
@@ -119,6 +121,7 @@ export function SortableFieldRowEdit({
     <FieldRowEdit
       fieldId={fieldId}
       label={label}
+      labelContent={labelContent}
       index={index}
       totalFields={totalFields}
       onRemove={onRemove}

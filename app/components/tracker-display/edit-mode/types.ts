@@ -99,6 +99,8 @@ export interface ColumnHeaderEditProps {
 export interface FieldRowEditProps {
   fieldId: string
   label: string
+  /** The label element to show inline with controls (e.g. <label>...</label>) */
+  labelContent?: ReactNode
   index: number
   totalFields: number
   onRemove: () => void
