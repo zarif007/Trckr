@@ -1,6 +1,8 @@
 # Tracker Display
 
-A modular React UI for rendering **tracker** definitions: config-driven tabs, sections, and grids with multiple view types (table, kanban, form), bindings, conditional rules (depends-on), and optional styling.
+A **modular, reusable** React UI for rendering **tracker** definitions: config-driven tabs, sections, and grids with multiple view types (table, kanban, form), bindings, conditional rules (depends-on), and optional styling.
+
+---
 
 ## What It Is
 
@@ -9,128 +11,185 @@ A modular React UI for rendering **tracker** definitions: config-driven tabs, se
 
 Data flow is one-way: the parent supplies `gridData` and callbacks (`onUpdate`, `onAddEntry`, `onDeleteEntries`). The display never owns persistence; it just renders and invokes those callbacks.
 
-## Architecture
+---
+
+## Module Structure (Reusable & Scalable)
+
+The codebase is split into **reusable folders** so you can import layout, blocks, or sections independently and extend without touching unrelated code.
+
+```
+tracker-display/
+├── README.md                    # This file (tech doc)
+├── index.tsx                    # Public API: TrackerDisplay, DependsOnTable, types
+├── types.ts                     # Shared types (TrackerTab, TrackerGrid, etc.)
+├── constants.ts                 # View labels
+├── view-utils.ts                # normalizeGridViews
+├── tracker-options-context.tsx  # Context for grids/fields/layoutNodes/sections
+│
+├── layout/                      # Layout primitives (reusable)
+│   ├── index.ts
+│   ├── layout-tokens.ts         # Spacing & section bar class (single source of truth)
+│   ├── SectionBar.tsx           # Section header bar (edit + view)
+│   ├── ViewBlockWrapper.tsx     # Block shell for view mode (aligns with edit)
+│   └── InlineEditableName.tsx   # Click-to-edit name (section/grid)
+│
+├── blocks/                      # Block-level UI (reusable)
+│   ├── index.ts
+│   ├── GridBlockHeader.tsx      # Grid type badge + name (editable or static)
+│   └── GridBlockContent.tsx     # Single grid: views resolution + GridViewContent
+│
+├── sections/                    # Section & tab composition
+│   ├── index.ts
+│   ├── TrackerSection.tsx       # One section: bar + list of grids (collapsible)
+│   └── TrackerTabContent.tsx    # One tab: edit vs view, section list
+│
+├── TrackerDisplayInline.tsx     # Top-level: tabs + state + TrackerTabContent
+├── GridViewContent.tsx          # view.type → TrackerTableGrid | Kanban | Div
+├── TrackerTableGrid.tsx
+├── TrackerKanbanGrid.tsx
+├── TrackerCell.tsx
+├── DependsOnTable.tsx
+│
+├── edit-mode/                   # Edit layout (drag, rename, add block)
+│   ├── index.ts
+│   ├── BlockEditor.tsx          # Flat block list (sections + grids)
+│   ├── BlockWrapper.tsx         # Gutter + drag/delete (edit only)
+│   ├── context.tsx             # EditModeProvider, useCanEditLayout
+│   └── ...
+│
+├── tracker-editor/              # Page layout & schema (from-scratch)
+│   ├── TrackerEditorPageLayout.tsx
+│   ├── useEditableTrackerSchema.ts
+│   └── ...
+│
+├── grids/                       # Grid implementations
+│   ├── data-table/
+│   ├── kanban/
+│   └── div/                     # Form grid (TrackerDivGrid)
+│
+└── hooks/
+    └── useGridDependsOn.ts
+```
+
+---
+
+## How It Works
+
+### 1. Layout (`layout/`)
+
+**Purpose:** Single source of truth for spacing and section/grid chrome so **edit** and **view** mode look the same.
+
+- **layout-tokens.ts**  
+  Exports Tailwind class strings: `SECTION_STACK_GAP`, `SECTION_TO_GRIDS_GAP`, `GRIDS_CONTAINER`, `SECTION_GROUP_ROOT`, `GRID_BLOCK_INNER`, `TAB_CONTENT_ROOT`, `TAB_CONTENT_INNER`, `SECTION_BAR_CLASS`. Use these in both BlockEditor and TrackerSection so vertical gap and bar style stay identical.
+
+- **SectionBar**  
+  Renders the section header bar (icon + name, optional collapse). Edit mode passes `children` (e.g. `InlineEditableName`); view mode passes `name` + `onCollapseToggle`.
+
+- **ViewBlockWrapper**  
+  Wraps section bar or grid block in view mode with the same structure as edit `BlockWrapper` (gutter spacer + content area) so alignment is pixel-identical. No drag/delete UI.
+
+- **InlineEditableName**  
+  Click to edit, Enter/blur to save. Used for section and grid names in edit mode.
+
+**Reuse:** Import from `@/app/components/tracker-display/layout` when building custom section/grid UIs that should match tracker spacing and bar style.
+
+---
+
+### 2. Blocks (`blocks/`)
+
+**Purpose:** Grid-level header and content shared by **sections** (view) and **BlockEditor** (edit).
+
+- **GridBlockHeader**  
+  Shows grid type badge (Table/Kanban/Form) + name. Supports `editable` + `onNameChange` for edit mode.
+
+- **GridBlockContent**  
+  Takes one `TrackerGrid`, resolves views via `normalizeGridViews`, and renders either a single `GridViewContent` or a tab list of views. Handles `hideLabel` when the name is already shown by `GridBlockHeader`.
+
+**Reuse:** Use `GridBlockHeader` + `GridBlockContent` whenever you render a “grid block” (same look in view and edit). Add new view types in `GridViewContent` (root); blocks stay unchanged.
+
+---
+
+### 3. Sections (`sections/`)
+
+**Purpose:** Compose layout + blocks into **one section** and **one tab’s content**.
+
+- **TrackerSection**  
+  Renders one section: `ViewBlockWrapper` + `SectionBar` (with collapse), then a `GRIDS_CONTAINER` div of grid blocks. Each grid is `ViewBlockWrapper` + `GridBlockHeader` + `GridBlockContent` (hideLabel). Uses layout tokens so vertical gap matches edit.
+
+- **TrackerTabContent**  
+  For one tab: if edit layout, renders `BlockEditor`; otherwise renders a wrapper with `TAB_CONTENT_INNER` (space-y-6) and a list of section groups. Each group is a div with `SECTION_GROUP_ROOT` containing `TrackerSection`. Uses `TAB_CONTENT_ROOT` for the `TabsContent` class.
+
+**Reuse:** Use `TrackerTabContent` when you have tabs and want per-tab section list + edit mode. Use `TrackerSection` when you need a single section (e.g. embedded in another flow).
+
+---
+
+### 4. Data Flow
+
+- **gridData**: `Record<gridId, Array<Record<fieldId, value>>>`. Each grid’s rows are an array of row objects.
+- **onUpdate(gridId, rowIndex, columnId, value)**: Update one cell.
+- **onAddEntry(gridId, newRow)**: Append a row.
+- **onDeleteEntries(gridId, rowIndices)**: Remove rows.
+
+Bindings and depends-on are passed from the top; grid components resolve options and overrides using `gridData` and `trackerContext` where needed.
+
+---
+
+## Architecture (Component Tree)
 
 ```
 TrackerDisplayInline (entry: tabs + state + callbacks)
   └── TrackerOptionsProvider (context: grids, fields, layoutNodes, sections)
+  └── EditModeProvider (when editMode: schema + onSchemaChange)
   └── Tabs (per tab)
-        └── TrackerTabContent (per tab content)
-              └── TrackerSection (per section, collapsible)
-                    └── GridViewContent (per grid view: table | kanban | div | …)
-                          └── TrackerTableGrid | TrackerKanbanGrid | TrackerDivGrid | placeholder
+        └── TrackerTabContent (sections/)
+              ├── Edit: BlockEditor (edit-mode/) → SectionBar, GridBlockHeader, GridBlockContent (layout/, blocks/)
+              └── View: section list (SECTION_GROUP_ROOT) → TrackerSection (sections/)
+                    └── ViewBlockWrapper + SectionBar (layout/)
+                    └── GRIDS_CONTAINER → ViewBlockWrapper + GridBlockHeader + GridBlockContent (layout/, blocks/)
+                          └── GridViewContent → TrackerTableGrid | TrackerKanbanGrid | TrackerDivGrid (from grids/div)
 ```
 
-- **TrackerDisplayInline**  
-  Top-level component. Accepts `TrackerDisplayProps`: `tabs`, `sections`, `grids`, `fields`, `layoutNodes`, `bindings`, `styles`, `dependsOn`, `initialGridData`, `getDataRef`. Manages `localGridData` and merges with `initialGridData` / depends-on seed data. Renders tabs and delegates each tab’s content to `TrackerTabContent`.
-
-- **TrackerOptionsProvider**  
-  React context that provides `grids`, `fields`, `layoutNodes`, `sections` for option resolution (e.g. dynamic_select / all_field_paths). Grid components can use `useTrackerOptionsContext()` when a parent doesn’t pass `trackerContext` explicitly.
-
-- **TrackerTabContent**  
-  For one tab: filters sections by `tabId`, sorts by `placeId`, and renders a `TrackerSection` per section with that tab’s `gridData` and callbacks.
-
-- **TrackerSection**  
-  Collapsible section header and body. For each grid in the section it:
-  - Gets layout nodes for that grid and normalizes **views** via `normalizeGridViews(grid)` (from `view-utils`).
-  - If a single view: renders `GridViewContent` once.
-  - If multiple views: renders a tab list (Table / Kanban / etc.) and one `GridViewContent` per view.
-
-- **GridViewContent**  
-  Single place that maps `view.type` to the right grid component:
-  - `table` → `TrackerTableGrid`
-  - `kanban` → `TrackerKanbanGrid`
-  - `div` → `TrackerDivGrid`
-  - `calendar` / `timeline` → placeholder (not implemented)
-
-  So adding a new view type = add a branch here and implement the corresponding grid component.
-
-- **Grid components**  
-  - **TrackerTableGrid**: Uses `grids/data-table` (DataTable) with columns from layout + fields; inline add/edit/delete; bindings and depends-on.
-  - **TrackerKanbanGrid**: DnD kanban columns; uses `grids/kanban` and `grids/data-table/entry-form-dialog`; `useKanbanGroups` for groups/cards/field metadata.
-  - **TrackerDivGrid**: Form-style single-row layout; uses `grids/data-table` types and EntryFormDialog.
-
-  Both main grids (table and kanban) live under **`grids/`** (data-table + kanban) so they stay colocated and modular.
-
-Shared building blocks:
-
-- **DependsOnTable**  
-  Optional, standalone component for rendering depends-on rules in a table. Import from `@/app/components/tracker-display` when you need to display rules outside the main TrackerDisplay (e.g. in an admin or rules-editor view).
-
-- **TrackerCell**  
-  Renders a single value by type (text, number, date, options, multiselect, boolean, link, currency, percentage, etc.), with optional `options` for labels.
-
-- **types**  
-  Central types: `TrackerTab`, `TrackerSection`, `TrackerGrid`, `TrackerField`, `TrackerLayoutNode`, `GridType`, `TrackerBindings`, `StyleOverrides`, `DependsOnRules`, etc.
-
-- **constants**  
-  `VIEW_LABEL` / `getViewLabel` for default view names.
-
-- **view-utils**  
-  `normalizeGridViews(grid)` to turn `grid.views` or legacy `grid.type` into a list of `{ id, type, name, config }`.
-
-- **grids/**  
-  - **data-table/**: DataTable, EntryFormDialog, form-dialog, data-table-cell, data-table-input, utils (FieldMetadata, OptionsGridFieldDef). Used by table view and shared by kanban/div for add-entry and field metadata.
-  - **kanban/**: `KanbanCard` / `SortableKanbanCard`, `DroppableEmptyColumn` / `ColumnDropZone`, `useKanbanGroups`. Kanban view implementation.
-
-## Data and Callbacks
-
-- **gridData**: `Record<gridId, Array<Record<fieldId, value>>>`. Each grid’s rows are an array of row objects.
-- **onUpdate(gridId, rowIndex, columnId, value)**: Update one cell. Used for table/kanban/div; kanban also uses it when moving a card to another column (update of the group-by field).
-- **onAddEntry(gridId, newRow)**: Append a row. Table and Kanban “Add Entry” dialogs call this.
-- **onDeleteEntries(gridId, rowIndices)**: Remove rows. Table bulk delete uses this.
-
-Bindings and depends-on are passed through from the top; grid components resolve options and overrides (e.g. `resolveFieldOptionsV2`, `resolveDependsOnOverrides`) using `gridData` and `trackerContext` where needed.
+---
 
 ## How to Extend
 
 1. **New view type (e.g. calendar)**  
    - Add the type to `GridType` in `types.ts`.  
    - Add a label in `constants.ts` (`VIEW_LABEL`).  
-   - In `GridViewContent.tsx`, add a `case 'calendar':` that renders your new grid component (or a placeholder).  
-   - Implement the grid component (e.g. `TrackerCalendarGrid`) that consumes the same props pattern: `grid`, `layoutNodes`, `fields`, `gridData`, `onUpdate`, etc.
+   - In `GridViewContent.tsx`, add a branch that renders your grid component.  
+   - Implement the grid component (e.g. `TrackerCalendarGrid`) with the same props pattern: `grid`, `layoutNodes`, `fields`, `gridData`, `onUpdate`, etc.
 
 2. **New field type in TrackerCell**  
    - Extend `TrackerFieldType` in `types.ts`.  
-   - In `TrackerCell.tsx`, add a `case 'yourType':` and render the appropriate UI.
+   - In `TrackerCell.tsx`, add a case and render the appropriate UI.
 
-3. **New shared UI for a view**  
-   - Add a module under `tracker-display/` (or a subfolder like `kanban/`).  
-   - Export from that module and use it from the corresponding grid component (and from `index.tsx` if it should be part of the public API).
+3. **Custom section or tab layout**  
+   - Import from `layout/` (tokens, SectionBar, ViewBlockWrapper) and `blocks/` (GridBlockHeader, GridBlockContent).  
+   - Compose your own section/tab component using the same tokens so spacing stays consistent.
 
-## File Layout
+4. **Change vertical gap globally**  
+   - Edit `layout/layout-tokens.ts` only (e.g. `SECTION_STACK_GAP`, `GRIDS_CONTAINER`). Edit and view both consume these, so they stay in sync.
 
-```
-tracker-display/
-  index.tsx                 # Public export: TrackerDisplay (TrackerDisplayInline)
-  types.ts                  # Shared types
-  constants.ts              # View labels
-  view-utils.ts             # normalizeGridViews
-  tracker-options-context.tsx
-  TrackerDisplayInline.tsx   # Top-level tabs + state
-  TrackerTabContent.tsx     # Per-tab sections
-  TrackerSection.tsx        # Collapsible section + grid list
-  GridViewContent.tsx       # view type → grid component
-  TrackerTableGrid.tsx
-  TrackerKanbanGrid.tsx
-  TrackerDivGrid.tsx
-  TrackerCell.tsx
-  DependsOnTable.tsx        # Optional table for depends-on rules
-  hooks/
-    useGridDependsOn.ts     # Shared depends-on index/rules for grid components
-  grids/
-    README.md
-    data-table/             # Table grid + shared utils/EntryFormDialog
-    kanban/                 # Kanban grid
-  README.md                 # This file
-```
+---
 
-## Where the main grids live
+## Public API
 
-Table and kanban are the two main grid views. They live together under **`grids/`** (data-table + kanban) so both implementations are in one place and share types/dialogs (e.g. `FieldMetadata`, `EntryFormDialog`). See `grids/README.md`.
+From `@/app/components/tracker-display` (root `index.tsx`):
+
+- **TrackerDisplay** (TrackerDisplayInline): main component; pass `TrackerDisplayProps`.
+- **DependsOnTable**: standalone table for depends-on rules.
+- **Types**: `TrackerDisplayProps`, `TrackerTab`, `TrackerSection`, `TrackerGrid`, `TrackerField`, `TrackerLayoutNode`, `TrackerBindings`, `StyleOverrides`, `DependsOnRules`.
+
+For layout/blocks/sections reuse, import from:
+
+- `@/app/components/tracker-display/layout`
+- `@/app/components/tracker-display/blocks`
+- `@/app/components/tracker-display/sections`
+
+---
 
 ## Dependencies
 
-- **@dnd-kit** (core, sortable, utilities): used by `TrackerKanbanGrid` for drag-and-drop.
-- **@tanstack/react-table** + **DataTable** (and entry-form-dialog) from `./grids/data-table`: used by `TrackerTableGrid` and shared by kanban/div.
-- **lib/binding**, **lib/resolve-bindings**, **lib/depends-on**, **lib/depends-on-options**, **lib/style-utils**: option resolution, bindings, conditional rules, and style overrides.
+- **@dnd-kit** (core, sortable, utilities): used by TrackerKanbanGrid and edit-mode drag-and-drop.
+- **@tanstack/react-table** + **DataTable** from `grids/data-table`: used by TrackerTableGrid and shared by kanban/div.
+- **lib/binding**, **lib/resolve-bindings**, **lib/depends-on**, **lib/depends-on-options**, **lib/style-utils**: option resolution, bindings, conditional rules, style overrides.

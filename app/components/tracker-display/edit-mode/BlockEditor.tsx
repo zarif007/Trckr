@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useCallback, useState, useRef, useEffect } from 'react'
+import { useMemo, useCallback, useState } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -16,7 +16,6 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { LayoutList, Table2, LayoutGrid, FormInput } from 'lucide-react'
 
 import { BlockWrapper } from './BlockWrapper'
 import { BlockCommandInput } from './BlockCommandInput'
@@ -25,7 +24,15 @@ import { useEditMode } from './context'
 import { useSectionGridActions } from './useSectionGridActions'
 import { useLayoutActions } from './useLayoutActions'
 import { getOrCreateSectionAndGridForField, getOrCreateSectionForGrid } from './ensureContainer'
-import { GridBlockContent } from '../GridBlockContent'
+import { GridBlockContent, GridBlockHeader } from '../blocks'
+import { SectionBar, InlineEditableName } from '../layout'
+import {
+  SECTION_STACK_GAP,
+  SECTION_GROUP_ROOT,
+  GRIDS_CONTAINER,
+  GRID_ITEM_WRAPPER,
+  GRID_BLOCK_INNER,
+} from '../layout'
 import type { FlatBlock, BlockEditorProps, AddColumnOrFieldResult } from './types'
 import type { TrackerSection, TrackerGrid } from '../types'
 
@@ -53,70 +60,6 @@ function parseBlockSortableId(sortableId: string): FlatBlock | null {
 }
 
 // ---------------------------------------------------------------------------
-// Inline editable section name
-// ---------------------------------------------------------------------------
-
-function InlineEditableName({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (name: string) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(value)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    setDraft(value)
-  }, [value])
-
-  useEffect(() => {
-    if (editing) inputRef.current?.focus()
-  }, [editing])
-
-  if (!editing) {
-    return (
-      <span
-        role="button"
-        tabIndex={0}
-        className="text-base font-semibold text-foreground hover:text-primary cursor-text transition-colors text-left truncate leading-7"
-        onClick={() => setEditing(true)}
-        onKeyDown={(e) => { if (e.key === 'Enter') setEditing(true) }}
-        title="Click to rename"
-      >
-        {value}
-      </span>
-    )
-  }
-
-  return (
-    <input
-      ref={inputRef}
-      className="text-base font-semibold text-foreground bg-transparent border-b border-primary/50 outline-none w-full leading-7"
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={() => {
-        const trimmed = draft.trim()
-        if (trimmed && trimmed !== value) onChange(trimmed)
-        setEditing(false)
-      }}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          const trimmed = draft.trim()
-          if (trimmed && trimmed !== value) onChange(trimmed)
-          setEditing(false)
-        }
-        if (e.key === 'Escape') {
-          setDraft(value)
-          setEditing(false)
-        }
-      }}
-    />
-  )
-}
-
-// ---------------------------------------------------------------------------
 // Sortable block wrapper
 // ---------------------------------------------------------------------------
 
@@ -125,11 +68,15 @@ function SortableBlockItem({
   children,
   onRemove,
   label,
+  afterBlockIndex,
+  onOpenAddBlock,
 }: {
   block: FlatBlock
   children: React.ReactNode
   onRemove: () => void
   label: string
+  afterBlockIndex: number
+  onOpenAddBlock: (insertAfterIndex: number) => void
 }) {
   const id = blockSortableId(block)
   const {
@@ -156,30 +103,10 @@ function SortableBlockItem({
       wrapperStyle={style}
       dragHandleProps={{ ...attributes, ...listeners }}
       isDragging={isDragging}
+      onAddBlockClick={() => onOpenAddBlock(afterBlockIndex + 1)}
     >
       {children}
     </BlockWrapper>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Grid type badge
-// ---------------------------------------------------------------------------
-
-function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
-  const type = grid.views?.[0]?.type ?? grid.type ?? 'table'
-  const map: Record<string, { icon: typeof Table2; label: string }> = {
-    table: { icon: Table2, label: 'Table' },
-    kanban: { icon: LayoutGrid, label: 'Kanban' },
-    div: { icon: FormInput, label: 'Form' },
-  }
-  const info = map[type] ?? map.table!
-  const Icon = info.icon
-  return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
-      <Icon className="h-3 w-3" />
-      {info.label}
-    </span>
   )
 }
 
@@ -212,6 +139,9 @@ export function BlockEditor({
   // --- Add field from block level ---
   const [addFieldTargetGridId, setAddFieldTargetGridId] = useState<string | null>(null)
   const fieldLayoutActions = useLayoutActions(addFieldTargetGridId ?? '', schema, onSchemaChange)
+
+  // --- Inline add-block inserter (opened by plus button on a block) ---
+  const [insertInserterAfterBlockIndex, setInsertInserterAfterBlockIndex] = useState<number | null>(null)
 
   // Build flat block list: [section, ...its grids, section, ...its grids, ...]
   const { flatBlocks, sectionMap, gridMap } = useMemo(() => {
@@ -376,6 +306,22 @@ export function BlockEditor({
     [addSectionAtEnd, handleAddGrid, handleAddField]
   )
 
+  // Command props that also close the inline inserter when an action is selected.
+  const getCommandPropsWithClose = useCallback(
+    (afterBlockIndex: number) => {
+      const props = getCommandProps(afterBlockIndex)
+      const clear = () => setInsertInserterAfterBlockIndex(null)
+      return {
+        onAddSection: props.onAddSection ? () => { props.onAddSection!(); clear() } : undefined,
+        onAddTable: props.onAddTable ? () => { props.onAddTable!(); clear() } : undefined,
+        onAddKanban: props.onAddKanban ? () => { props.onAddKanban!(); clear() } : undefined,
+        onAddForm: props.onAddForm ? () => { props.onAddForm!(); clear() } : undefined,
+        onAddField: props.onAddField ? () => { props.onAddField!(); clear() } : undefined,
+      }
+    },
+    [getCommandProps]
+  )
+
   // --- Group blocks by section for visual hierarchy ---
   const sectionGroups = useMemo(() => {
     const groups: Array<{
@@ -411,42 +357,55 @@ export function BlockEditor({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-        <div className="space-y-4">
+        <div className={`${SECTION_STACK_GAP} w-full min-w-0`}>
           {sectionGroups.map((group) => (
-            <div key={group.section.id} className="pl-10">
+            <div key={group.section.id} className={SECTION_GROUP_ROOT}>
               {/* Section heading */}
               <SortableBlockItem
                 block={{ type: 'section', id: group.section.id }}
                 label={group.section.name}
                 onRemove={() => actions.removeSection(group.section.id)}
+                afterBlockIndex={group.sectionBlockIndex}
+                onOpenAddBlock={setInsertInserterAfterBlockIndex}
               >
-                <div className="flex items-center gap-2 pb-1">
-                  <LayoutList className="h-4 w-4 text-muted-foreground/70 shrink-0" />
+                <SectionBar name={group.section.name}>
                   <InlineEditableName
                     value={group.section.name}
                     onChange={(name) => actions.renameSection(group.section.id, name)}
                   />
-                </div>
+                </SectionBar>
               </SortableBlockItem>
 
-              {/* Grids nested under section with visual indentation */}
+              {/* Inline add-block inserter below section (when plus clicked on section) */}
+              {insertInserterAfterBlockIndex === group.sectionBlockIndex + 1 && (
+                <div className="flex py-2 mt-2 w-full">
+                  <div className="flex-1 min-w-0">
+                    <BlockCommandInput
+                      {...getCommandPropsWithClose(insertInserterAfterBlockIndex)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Grids in this section */}
               {group.gridBlocks.length > 0 && (
-                <div className="ml-2 pl-4 border-l-2 border-border/50 space-y-3 mt-1">
+                <div className={GRIDS_CONTAINER}>
                   {group.gridBlocks.map(({ grid, blockIndex }) => (
-                    <div key={grid.id}>
+                    <div key={grid.id} className={GRID_ITEM_WRAPPER}>
                       <SortableBlockItem
                         block={{ type: 'grid', id: grid.id, sectionId: group.section.id }}
                         label={grid.name}
                         onRemove={() => actions.removeGrid(grid.id)}
+                        afterBlockIndex={blockIndex}
+                        onOpenAddBlock={setInsertInserterAfterBlockIndex}
                       >
-                        <div className="space-y-2 py-1">
-                          <div className="flex items-center gap-2">
-                            <GridTypeBadge grid={grid} />
-                            <InlineEditableName
-                              value={grid.name}
-                              onChange={(name) => actions.renameGrid(grid.id, name)}
-                            />
-                          </div>
+                        <div className={GRID_BLOCK_INNER}>
+                          <GridBlockHeader
+                            grid={grid}
+                            name={grid.name}
+                            editable
+                            onNameChange={(name) => actions.renameGrid(grid.id, name)}
+                          />
                           <GridBlockContent
                             tabId={tab.id}
                             grid={grid}
@@ -466,50 +425,31 @@ export function BlockEditor({
                           />
                         </div>
                       </SortableBlockItem>
+                      {/* Inline add-block inserter below this grid (when plus clicked on grid) */}
+                      {insertInserterAfterBlockIndex === blockIndex + 1 && (
+                        <div className="flex py-2 mt-2 w-full">
+                          <div className="flex-1 min-w-0">
+                            <BlockCommandInput
+                              {...getCommandPropsWithClose(insertInserterAfterBlockIndex)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  {/* Add block inside this section — align with block content (left gutter spacer) */}
-                  <div className="flex items-center">
-                    <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
-                    <div className="flex-1 min-w-0">
-                      <BlockCommandInput
-                        {...getCommandProps(
-                          group.gridBlocks.length > 0
-                            ? group.gridBlocks[group.gridBlocks.length - 1].blockIndex + 1
-                            : group.sectionBlockIndex + 1
-                        )}
-                      />
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* If section has no grids yet, show inserter directly */}
-              {group.gridBlocks.length === 0 && (
-                <div className="ml-2 pl-4 border-l-2 border-dashed border-border/30 mt-1">
-                  <p className="text-xs text-muted-foreground/50 py-1">Empty section — add a grid or field below</p>
-                  <div className="flex items-center">
-                    <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
-                    <div className="flex-1 min-w-0">
-                      <BlockCommandInput
-                        {...getCommandProps(group.sectionBlockIndex + 1)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Empty section: no default inserter; user clicks + on section to add */}
             </div>
           ))}
 
-          {/* Final inserter at the bottom for adding top-level sections */}
-          <div className="pl-10">
-            <div className="flex items-center">
-              <div className="w-10 shrink-0 min-h-7 flex items-center" aria-hidden />
-              <div className="flex-1 min-w-0">
-                <BlockCommandInput
-                  {...getCommandProps(flatBlocks.length)}
-                />
-              </div>
+          {/* Only always-visible add-block row: at the bottom. Others appear on + click. */}
+          <div className="flex pt-2 pb-0 w-full">
+            <div className="flex-1 min-w-0">
+              <BlockCommandInput
+                {...getCommandProps(flatBlocks.length)}
+              />
             </div>
           </div>
 

@@ -11,7 +11,7 @@ import type {
 import type { GridType } from './types'
 import { TrackerTableGrid } from './TrackerTableGrid'
 import { TrackerKanbanGrid } from './TrackerKanbanGrid'
-import { TrackerDivGrid } from './TrackerDivGrid'
+import { TrackerDivGrid } from './grids/div'
 
 export interface GridViewContentProps {
   tabId: string

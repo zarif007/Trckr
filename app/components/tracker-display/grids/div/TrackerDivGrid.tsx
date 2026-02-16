@@ -1,3 +1,5 @@
+'use client'
+
 import { useState, useMemo, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,16 +17,16 @@ import {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
-} from './types'
+} from '../../types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
-import { useEditMode, useLayoutActions, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from './edit-mode'
+import { useEditMode, useLayoutActions, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from '../../edit-mode'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
-import { useTrackerOptionsContext } from './tracker-options-context'
-import { useGridDependsOn } from './hooks/useGridDependsOn'
-import type { OptionsGridFieldDef } from './grids/data-table/utils'
-import type { FieldMetadata } from './grids/data-table/utils'
-import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
+import { useTrackerOptionsContext } from '../../tracker-options-context'
+import { useGridDependsOn } from '../../hooks/useGridDependsOn'
+import type { OptionsGridFieldDef } from '../data-table/utils'
+import type { FieldMetadata } from '../data-table/utils'
+import { EntryFormDialog } from '../data-table/entry-form-dialog'
 import { resolveDivStyles } from '@/lib/style-utils'
 
 const ADD_OPTION_VALUE = '__add_option__'
@@ -33,20 +35,30 @@ interface TrackerDivGridProps {
   tabId: string
   grid: TrackerGrid
   layoutNodes: TrackerLayoutNode[]
-  /** All layout nodes (all grids). Used to resolve options grid fields for Add Option. */
   allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
-  /** Optional style overrides for this div view. */
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
-  /** Add a row to any grid (e.g. options grid). Used for "Add option" in select/multiselect. */
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void
-  /** For dynamic_select/dynamic_multiselect option resolution (e.g. all_field_paths). */
   trackerContext?: TrackerContextForOptions
+}
+
+/**
+ * Focus the first interactive element inside a container.
+ * Used on the field wrapper so that clicking the border/padding area
+ * immediately activates the input rather than requiring a second click.
+ */
+function focusInputInContainer(container: HTMLElement) {
+  const input = container.querySelector<HTMLElement>(
+    'input, textarea, [role="combobox"], [role="listbox"]'
+  )
+  if (input && document.activeElement !== input) {
+    input.focus()
+  }
 }
 
 export function TrackerDivGrid({
@@ -367,7 +379,21 @@ export function TrackerDivGrid({
                 <span className="text-destructive/80 ml-1">*</span>
               )}
             </label>
-            <div className={`rounded-md border border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 transition-all ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}>
+            <div
+              className={`rounded-md border border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 transition-colors ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
+              onPointerDown={(e) => {
+                // Prevent parent DnD sensors from intercepting pointer events on form inputs.
+                // Without this, the first click can be swallowed by PointerSensor activation
+                // logic in ancestor DndContexts (BlockEditor + field reorder), requiring a
+                // second click to actually focus the input.
+                e.stopPropagation()
+              }}
+              onClick={(e) => {
+                // Forward clicks on the container border/padding to the input inside,
+                // so clicking anywhere in the field area immediately activates editing.
+                focusInputInContainer(e.currentTarget)
+              }}
+            >
               {renderInput()}
             </div>
           </>
@@ -435,4 +461,3 @@ export function TrackerDivGrid({
     </div>
   )
 }
-

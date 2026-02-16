@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TrackerDisplayProps } from './types'
-import { TrackerTabContent } from './TrackerTabContent'
+import { TrackerTabContent } from './sections'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'

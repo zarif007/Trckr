@@ -37,8 +37,9 @@ export interface BlockEditorProps {
   dependsOn?: DependsOnRules
   gridData: Record<string, Array<Record<string, unknown>>>
   onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
-  onAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
-  onDeleteEntries: (gridId: string, rowIndices: number[]) => void
+  /** When omitted (e.g. in edit/add layout mode), Add Entry and add-data buttons are hidden. */
+  onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
+  onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,8 @@ export interface ColumnHeaderEditProps {
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  /** When true, render inline (no left gutter) so header aligns with table body. */
+  inline?: boolean
   sortable?: {
     wrapperRef: (node: HTMLElement | null) => void
     wrapperStyle: React.CSSProperties
@@ -131,4 +134,6 @@ export interface BlockWrapperProps {
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
   /** Ref for the drag handle if needed. */
   dragHandleRef?: React.RefObject<HTMLButtonElement | null>
+  /** When provided, shows a plus button that opens the add-block inserter below this block. */
+  onAddBlockClick?: () => void
 }

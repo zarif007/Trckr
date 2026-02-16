@@ -11,9 +11,10 @@ import type {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
-} from './types'
+} from '../types'
 import { TrackerSection } from './TrackerSection'
-import { useCanEditLayout, BlockEditor } from './edit-mode'
+import { useCanEditLayout, BlockEditor } from '../edit-mode'
+import { TAB_CONTENT_ROOT, TAB_CONTENT_INNER, SECTION_GROUP_ROOT } from '../layout'
 
 export interface TrackerTabContentProps {
   tab: TrackerTab
@@ -60,10 +61,11 @@ export function TrackerTabContent({
     [tab.id, sections, grids]
   )
 
-  // Edit mode: render flat Notion-like block editor
+  // Edit mode: render flat Notion-like block editor (full width so BlockEditor's ml-auto right-aligns).
+  // Do not pass onAddEntry/onDeleteEntries so Add Entry / add-data buttons are hidden.
   if (canEditLayout) {
     return (
-      <TabsContent key={tab.id} value={tab.id} className="mt-6">
+      <TabsContent key={tab.id} value={tab.id} className={TAB_CONTENT_ROOT}>
         <BlockEditor
           tab={tab}
           sections={sections}
@@ -75,40 +77,36 @@ export function TrackerTabContent({
           dependsOn={dependsOn}
           gridData={gridData}
           onUpdate={onUpdate}
-          onAddEntry={onAddEntry}
-          onDeleteEntries={onDeleteEntries}
         />
       </TabsContent>
     )
   }
 
-  // Normal display mode
+  // Normal display mode: same vertical structure as edit — TAB_CONTENT_INNER applies space-y-6 to section list
   return (
-    <TabsContent key={tab.id} value={tab.id} className="space-y-6 mt-6">
-      {tabSections.map((section, index) => (
-        <div
-          key={section.id}
-          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-300 space-y-2"
-          style={{ animationDelay: `${index * 100}ms` }}
-        >
-          <TrackerSection
-            tabId={tab.id}
-            section={section}
-            grids={section.grids}
-            allGrids={grids}
-            allFields={fields}
-            fields={fields}
-            layoutNodes={layoutNodes}
-            bindings={bindings}
-            styles={styles}
-            dependsOn={dependsOn}
-            gridData={gridData}
-            onUpdate={onUpdate}
-            onAddEntry={onAddEntry}
-            onDeleteEntries={onDeleteEntries}
-          />
-        </div>
-      ))}
+    <TabsContent key={tab.id} value={tab.id} className={TAB_CONTENT_ROOT}>
+      <div className={TAB_CONTENT_INNER}>
+        {tabSections.map((section) => (
+          <div key={section.id} className={SECTION_GROUP_ROOT}>
+            <TrackerSection
+              tabId={tab.id}
+              section={section}
+              grids={section.grids}
+              allGrids={grids}
+              allFields={fields}
+              fields={fields}
+              layoutNodes={layoutNodes}
+              bindings={bindings}
+              styles={styles}
+              dependsOn={dependsOn}
+              gridData={gridData}
+              onUpdate={onUpdate}
+              onAddEntry={onAddEntry}
+              onDeleteEntries={onDeleteEntries}
+            />
+          </div>
+        ))}
+      </div>
     </TabsContent>
   )
 }

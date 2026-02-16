@@ -7,10 +7,10 @@ import type {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
-} from './types'
+} from '../types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { GridViewContent } from './GridViewContent'
-import { normalizeGridViews } from './view-utils'
+import { GridViewContent } from '../GridViewContent'
+import { normalizeGridViews } from '../view-utils'
 
 export interface GridBlockContentProps {
   tabId: string
@@ -63,7 +63,7 @@ export function GridBlockContent({
     const viewOverrides =
       (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined
     return (
-      <div className="space-y-3">
+      <div className="w-full min-w-0 space-y-2.5">
         {!hideLabel && (
           <div className="flex items-center justify-between">
             <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -94,7 +94,7 @@ export function GridBlockContent({
 
   const defaultTab = views[0]?.id ?? `${grid.id}_view_0`
   return (
-    <div className="space-y-3">
+    <div className="w-full min-w-0 space-y-2.5">
       {!hideLabel && (
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
@@ -114,7 +114,7 @@ export function GridBlockContent({
           const viewOverrides =
             (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined
           return (
-            <TabsContent key={view.id} value={view.id} className="mt-3">
+            <TabsContent key={view.id} value={view.id} className="mt-2.5">
               <GridViewContent
                 tabId={tabId}
                 grid={grid}

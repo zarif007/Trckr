@@ -217,40 +217,44 @@ export function TrackerKanbanGrid({
       onDragEnd={handleDragEnd}
     >
       <div className="w-full space-y-4">
-        <div className="flex justify-end gap-2">
-          <Button
-            size="sm"
-            variant="default"
-            onClick={() => setShowAddDialog(true)}
-            className="font-medium"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Add Entry
-          </Button>
-        </div>
+        {onAddEntry != null && (
+          <>
+            <div className="flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => setShowAddDialog(true)}
+                className="font-medium"
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Entry
+              </Button>
+            </div>
 
-        <EntryFormDialog
-          open={showAddDialog}
-          onOpenChange={setShowAddDialog}
-          title="Add New Entry"
-          submitLabel="Add Entry"
-          fieldMetadata={fieldMetadata}
-          fieldOrder={fieldOrder}
-          initialValues={
-            groupByFieldId && groups.length > 0
-              ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
-              : {}
-          }
-          onSave={(values) => {
-            onAddEntry?.(values)
-            setShowAddDialog(false)
-          }}
-          onSaveAnother={(values) => onAddEntry?.(values)}
-          getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={(values, fieldId) =>
-            resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values)[fieldId]
-          }
-        />
+            <EntryFormDialog
+              open={showAddDialog}
+              onOpenChange={setShowAddDialog}
+              title="Add New Entry"
+              submitLabel="Add Entry"
+              fieldMetadata={fieldMetadata}
+              fieldOrder={fieldOrder}
+              initialValues={
+                groupByFieldId && groups.length > 0
+                  ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
+                  : {}
+              }
+              onSave={(values) => {
+                onAddEntry(values)
+                setShowAddDialog(false)
+              }}
+              onSaveAnother={(values) => onAddEntry(values)}
+              getBindingUpdates={getBindingUpdates}
+              getFieldOverrides={(values, fieldId) =>
+                resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values)[fieldId]
+              }
+            />
+          </>
+        )}
 
         <EntryFormDialog
           open={editRowIndex !== null}

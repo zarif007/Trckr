@@ -123,7 +123,7 @@ export function BlockCommandInput({
   if (commands.length === 0) return null
 
   return (
-    <div className={cn('w-full min-h-7', className)}>
+    <div className={cn('w-full min-h-8', className)}>
       <Popover
         open={open}
         onOpenChange={(nextOpen) => {
@@ -135,7 +135,7 @@ export function BlockCommandInput({
           <div
             ref={triggerRef}
             className={cn(
-              'flex items-center gap-2 w-full min-h-7 px-2 py-1.5 rounded-sm text-sm leading-7 transition-colors',
+              'flex items-center gap-2 w-full min-h-8 px-3 py-2 rounded-md text-sm transition-colors',
               'text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/40',
               'focus-within:text-foreground focus-within:bg-muted/30',
               open && 'text-foreground bg-muted/30'

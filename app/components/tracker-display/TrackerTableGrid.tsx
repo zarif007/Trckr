@@ -369,9 +369,9 @@ export function TrackerTableGrid({
         getBindingUpdates={getBindingUpdates}
         config={grid.config}
         styleOverrides={styleOverrides}
-        addable={(grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
+        addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
         editable={grid.config?.isRowEditAble !== false}
-        deleteable={grid.config?.isRowDeleteAble !== false}
+        deleteable={onDeleteEntries != null && grid.config?.isRowDeleteAble !== false}
         editLayoutAble={grid.config?.isEditAble !== false}
       />
     </>
@@ -379,7 +379,7 @@ export function TrackerTableGrid({
 
   if (canEditLayout) {
     return (
-      <div className="space-y-2">
+      <div className="w-full min-w-0 space-y-2">
         <button
           type="button"
           onClick={() => setAddColumnOpen(true)}

@@ -65,6 +65,7 @@ export function SortableColumnHeaderEdit({
       onRemove={onRemove}
       onMoveUp={onMoveUp}
       onMoveDown={onMoveDown}
+      inline
       sortable={{
         wrapperRef: setNodeRef,
         wrapperStyle: style,
