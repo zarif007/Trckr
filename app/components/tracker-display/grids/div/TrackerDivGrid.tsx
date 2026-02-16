@@ -1,11 +1,18 @@
 'use client'
 
 import { useState, useMemo, useCallback } from 'react'
+import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -174,10 +181,8 @@ export function TrackerDivGrid({
     )
   }
 
-  const isVertical = grid.config?.layout === 'vertical'
-
   const fieldsContainer = (
-    <div className={canEditLayout ? 'space-y-2' : `grid gap-4 ${isVertical ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'}`}>
+    <div className={canEditLayout ? 'space-y-2' : 'grid grid-cols-1 gap-4'}>
       {fieldNodes.map((node, index) => {
         const field = fields.find(f => f.id === node.fieldId)
         if (!field) return null
@@ -329,19 +334,39 @@ export function TrackerDivGrid({
             }
             case 'date':
               return (
-                <Input
-                  type="date"
-                  className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-                  defaultValue={
-                    value
-                      ? new Date(String(value)).toISOString().split('T')[0]
-                      : undefined
-                  }
-                  disabled={isDisabled}
-                  onBlur={(e) =>
-                    onUpdate?.(0, field.id, e.target.value)
-                  }
-                />
+                <Popover modal={true}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={`w-full text-left flex items-center border-0 bg-transparent focus-visible:ring-0 rounded-md py-2 px-3 min-h-9 ${inputTextClass} ${!value ? 'text-muted-foreground' : ''}`}
+                      disabled={isDisabled}
+                    >
+                      {value ? (
+                        format(new Date(String(value)), 'PPP')
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-[60]" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={value ? new Date(String(value)) : undefined}
+                      onSelect={(date) => {
+                        if (isDisabled) return
+                        if (date) {
+                          const newDate = new Date(date)
+                          newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
+                          onUpdate?.(0, field.id, newDate.toISOString())
+                        }
+                      }}
+                      disabled={(date) =>
+                        date > new Date('2100-01-01') || date < new Date('1900-01-01')
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               )
             case 'number':
               return (
@@ -373,14 +398,14 @@ export function TrackerDivGrid({
 
         const fieldContent = (
           <>
-            <label className={`${ds.labelFontSize} font-medium text-muted-foreground uppercase tracking-wider ${ds.fontWeight}`}>
+            <label className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}>
               {field.ui.label}
               {effectiveConfig?.isRequired && (
                 <span className="text-destructive/80 ml-1">*</span>
               )}
             </label>
             <div
-              className={`rounded-md border border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 transition-colors ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
+              className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
               onPointerDown={(e) => {
                 // Prevent parent DnD sensors from intercepting pointer events on form inputs.
                 // Without this, the first click can be swallowed by PointerSensor activation
