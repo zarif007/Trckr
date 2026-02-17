@@ -33,10 +33,6 @@ export interface BlockCommandInputProps {
   placeholder?: string
 }
 
-/**
- * Notion-like Add inserter. Same pattern as SearchableSelect:
- * Single input in the trigger; type to search; dropdown shows filtered list only (no second input).
- */
 export function BlockCommandInput({
   onAddSection,
   onAddTable,

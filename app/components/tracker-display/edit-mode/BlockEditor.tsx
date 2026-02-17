@@ -24,6 +24,7 @@ import { useEditMode } from './context'
 import { useSectionGridActions } from './useSectionGridActions'
 import { useLayoutActions } from './useLayoutActions'
 import { getOrCreateSectionAndGridForField, getOrCreateSectionForGrid } from './ensureContainer'
+import { createNewGridId, getNextGridPlaceId } from './utils'
 import { GridBlockContent, GridBlockHeader } from '../blocks'
 import { SectionBar, InlineEditableName } from '../layout'
 import {
@@ -251,7 +252,9 @@ export function BlockEditor({
     [actions]
   )
 
-  // Add grid (table/kanban/form): create section if none exists
+  // Add grid (table/kanban/form): create section if none exists.
+  // When we create a section (nextSchema !== schema), apply section + grid in one update
+  // so the second update doesn't overwrite the first (stale closure bug when starting with no data).
   const handleAddGrid = useCallback(
     (afterBlockIndex: number, type: 'table' | 'kanban' | 'div') => {
       if (!schema || !onSchemaChange) return
@@ -261,8 +264,27 @@ export function BlockEditor({
         flatBlocks,
         schema
       )
-      if (nextSchema !== schema) onSchemaChange(nextSchema)
-      addGridToSection(sectionId, type)
+      if (nextSchema !== schema) {
+        const grids = nextSchema.grids ?? []
+        const gridIds = new Set(grids.map((g) => g.id))
+        const id = createNewGridId(gridIds)
+        const placeId = getNextGridPlaceId(grids, sectionId)
+        const names: Record<string, string> = {
+          table: 'New table',
+          div: 'New form',
+          kanban: 'New board',
+        }
+        const newGrid: TrackerGrid = {
+          id,
+          name: names[type] ?? 'New grid',
+          sectionId,
+          placeId,
+          type,
+        }
+        onSchemaChange({ ...nextSchema, grids: [...grids, newGrid] })
+      } else {
+        addGridToSection(sectionId, type)
+      }
     },
     [tab.id, flatBlocks, schema, onSchemaChange, addGridToSection]
   )
