@@ -1,13 +1,59 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
+import { TrackerModeChoice } from '@/app/components/tracker-page/TrackerModeChoice'
 import { useTrackerChat } from './hooks/useTrackerChat'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
 import { TrackerDialog } from '@/app/components/tracker-page/TrackerDialog'
+import { TrackerDisplay } from '@/app/components/tracker-display'
+import {
+  INITIAL_TRACKER_SCHEMA,
+  useEditableTrackerSchema,
+} from '@/app/components/tracker-display/tracker-editor'
+
+type TrackerMode = 'choice' | 'ai' | 'manual'
 
 export default function TrackerPage() {
+  const searchParams = useSearchParams()
+  const [mode, setMode] = useState<TrackerMode>(() => {
+    const m = searchParams.get('mode')
+    return (m === 'ai' || m === 'manual') ? m : 'choice'
+  })
+
+  useEffect(() => {
+    const m = searchParams.get('mode')
+    if (m === 'ai' || m === 'manual') setMode(m)
+  }, [searchParams])
+
+  const pageWrapper = 'min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col pt-24 md:pt-40'
+
+  if (mode === 'choice') {
+    return (
+      <div className={pageWrapper}>
+        <TrackerModeChoice
+          onSelectAI={() => setMode('ai')}
+          onSelectManual={() => setMode('manual')}
+        />
+      </div>
+    )
+  }
+
+  if (mode === 'manual') {
+    return (
+      <TrackerManualView onBackToStart={() => setMode('choice')} />
+    )
+  }
+
+  return (
+    <TrackerAIView onBackToStart={() => setMode('choice')} />
+  )
+}
+
+function TrackerAIView({ onBackToStart }: { onBackToStart: () => void }) {
   const {
     input,
     setInput,
@@ -36,9 +82,16 @@ export default function TrackerPage() {
   } = useTrackerChat()
 
   return (
-    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col pt-24 md:pt-40">
+    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col pt-20 md:pt-20">
       <div className="flex-1 overflow-y-auto pb-32 z-10">
         <div className="relative max-w-4xl mx-auto px-2 md:px-6 py-0">
+          <button
+            type="button"
+            onClick={onBackToStart}
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-0 transition-colors"
+          >
+            ← Back to start
+          </button>
           <AnimatePresence mode="wait">
             {isChatEmpty ? (
               <TrackerEmptyState
@@ -109,6 +162,40 @@ export default function TrackerPage() {
         messagesLength={messages.length}
         onSchemaChange={setActiveTrackerData}
       />
+    </div>
+  )
+}
+
+function TrackerManualView({ onBackToStart }: { onBackToStart: () => void }) {
+  const { schema, onSchemaChange } = useEditableTrackerSchema(
+    INITIAL_TRACKER_SCHEMA
+  )
+
+  return (
+    <div className="min-h-screen font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden flex flex-col pt-12 md:pt-20">
+      <div className="flex-1 overflow-y-auto">
+        <div className="py-8 px-2 max-w-7xl mx-auto">
+          <button
+            type="button"
+            onClick={onBackToStart}
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-0 transition-colors"
+          >
+            ← Back to start
+          </button>
+          <TrackerDisplay
+            tabs={schema.tabs}
+            sections={schema.sections}
+            grids={schema.grids}
+            fields={schema.fields}
+            layoutNodes={schema.layoutNodes}
+            bindings={schema.bindings}
+            styles={schema.styles}
+            dependsOn={schema.dependsOn}
+            editMode
+            onSchemaChange={onSchemaChange}
+          />
+        </div>
+      </div>
     </div>
   )
 }

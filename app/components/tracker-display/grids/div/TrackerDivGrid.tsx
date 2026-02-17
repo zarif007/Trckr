@@ -196,6 +196,20 @@ export function TrackerDivGrid({
     [dependsOnForGrid, gridData, grid.id, data]
   )
 
+  const rowKeys = useMemo(
+    () => [...new Set(fieldNodes.map((n) => n.row ?? n.order))].sort((a, b) => a - b),
+    [fieldNodes]
+  )
+
+  const activeDragField = useMemo(() => {
+    if (!activeDragId) return null
+    const parsed = parseFieldId(activeDragId)
+    if (!parsed || parsed.gridId !== grid.id) return null
+    const node = fieldNodes.find((n) => n.fieldId === parsed.fieldId)
+    const field = node ? fields.find((f) => f.id === node.fieldId) : undefined
+    return field ?? null
+  }, [activeDragId, grid.id, fieldNodes, fields])
+
   if (fieldNodes.length === 0 && !canEditLayout) return null
 
   if (fieldNodes.length === 0 && canEditLayout) {
@@ -205,11 +219,6 @@ export function TrackerDivGrid({
       </div>
     )
   }
-
-  const rowKeys = useMemo(
-    () => [...new Set(fieldNodes.map((n) => n.row ?? n.order))].sort((a, b) => a - b),
-    [fieldNodes]
-  )
 
   function renderFieldContent(node: TrackerLayoutNode, index: number) {
     const field = fields.find((f) => f.id === node.fieldId)
@@ -493,15 +502,6 @@ export function TrackerDivGrid({
       })}
     </div>
   )
-
-  const activeDragField = useMemo(() => {
-    if (!activeDragId) return null
-    const parsed = parseFieldId(activeDragId)
-    if (!parsed || parsed.gridId !== grid.id) return null
-    const node = fieldNodes.find((n) => n.fieldId === parsed.fieldId)
-    const field = node ? fields.find((f) => f.id === node.fieldId) : undefined
-    return field ?? null
-  }, [activeDragId, grid.id, fieldNodes, fields])
 
   return (
     <div className="space-y-3">
