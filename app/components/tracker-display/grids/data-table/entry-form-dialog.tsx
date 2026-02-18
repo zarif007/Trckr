@@ -24,6 +24,8 @@ export interface EntryFormDialogProps {
   getFieldOverrides?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
   /** Optional: "add" vs "edit" mode for different accents */
   mode?: 'add' | 'edit'
+  /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
+  gridId?: string
 }
 
 export function EntryFormDialog({
@@ -39,9 +41,23 @@ export function EntryFormDialog({
   getBindingUpdates,
   getFieldOverrides,
   mode = 'add',
+  gridId,
 }: EntryFormDialogProps) {
-  const orderedIds = fieldOrder ?? Object.keys(fieldMetadata)
+  const orderedIds = useMemo(
+    () => fieldOrder ?? Object.keys(fieldMetadata),
+    [fieldOrder, fieldMetadata]
+  )
   const [formData, setFormData] = useState<Record<string, unknown>>(initialValues)
+
+  const rowValuesForValidation = useMemo(() => {
+    const base = { ...formData }
+    if (gridId) {
+      for (const id of orderedIds) {
+        base[`${gridId}.${id}`] = formData[id]
+      }
+    }
+    return base
+  }, [formData, gridId, orderedIds])
 
   // Only reset form when dialog opens; don't reset when parent re-renders (e.g. after "Add option")
   // so that the newly selected option is preserved in the form.
@@ -69,10 +85,10 @@ export function EntryFormDialog({
         fieldType: fieldInfo.type,
         config: effectiveConfig,
         rules: fieldInfo.validations,
-        rowValues: formData,
+        rowValues: rowValuesForValidation,
       })
     })
-  }, [formData, fieldMetadata, orderedIds, getFieldOverrides])
+  }, [formData, fieldMetadata, orderedIds, getFieldOverrides, rowValuesForValidation])
 
   const handleSave = useCallback(() => {
     onSave(formData)
@@ -125,7 +141,7 @@ export function EntryFormDialog({
             fieldType: fieldInfo.type,
             config: effectiveConfig,
             rules: fieldInfo.validations,
-            rowValues: formData,
+            rowValues: rowValuesForValidation,
           })
           const showError = columnId in formData ? !!error : false
           const Icon = getFieldIcon(fieldInfo.type)

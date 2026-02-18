@@ -7,6 +7,7 @@ import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 
 export interface TrackerResponse extends TrackerDisplayProps { }
@@ -124,6 +125,46 @@ export function useTrackerChat() {
     }
 
     if (!rawTracker) return null
+    // Ensure validations keys are always "gridId.fieldId" (like bindings).
+    const normalizeValidations = (tracker: TrackerLike): TrackerLike => {
+      const grids = tracker.grids ?? []
+      const fields = tracker.fields ?? []
+      const layoutNodes = tracker.layoutNodes ?? []
+      const validations = tracker.validations ?? {}
+
+      const gridIds = new Set(grids.map((g) => g.id))
+      const fieldIds = new Set(fields.map((f) => f.id))
+      const gridsByFieldId = new Map<string, Set<string>>()
+      for (const n of layoutNodes) {
+        if (!gridIds.has(n.gridId) || !fieldIds.has(n.fieldId)) continue
+        if (!gridsByFieldId.has(n.fieldId)) gridsByFieldId.set(n.fieldId, new Set())
+        gridsByFieldId.get(n.fieldId)!.add(n.gridId)
+      }
+
+      const normalized: Record<string, FieldValidationRule[]> = {}
+      for (const [key, rules] of Object.entries(validations)) {
+        if (!key.includes('.')) {
+          const fieldId = key
+          if (!fieldIds.has(fieldId)) continue
+          const gridSet = gridsByFieldId.get(fieldId)
+          if (!gridSet || gridSet.size === 0) continue
+          for (const gridId of gridSet) {
+            const path = `${gridId}.${fieldId}`
+            const existing = normalized[path]
+            normalized[path] = existing ? [...existing, ...rules] : rules
+          }
+          continue
+        }
+
+        const [gridId, fieldId] = key.split('.')
+        if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
+        const existing = normalized[key]
+        normalized[key] = existing ? [...existing, ...rules] : rules
+      }
+
+      return { ...tracker, validations: normalized }
+    }
+    rawTracker = normalizeValidations(rawTracker)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
     return tracker as TrackerResponse

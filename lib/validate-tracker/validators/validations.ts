@@ -1,3 +1,7 @@
+/**
+ * Validates tracker.validations. Keys must be "gridId.fieldId" (like bindings, e.g. main_grid.sku).
+ * Every field is in a grid; there is no bare fieldId key.
+ */
 import type { ValidationContext, ValidatorResult } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import { parsePath } from '@/lib/resolve-bindings'
@@ -35,12 +39,10 @@ function validateExprNode(
       const ref = node.fieldId
       if (typeof ref !== 'string' || ref.trim().length === 0) {
         errors.push(`${path}.fieldId must be a non-empty string`)
-      } else if (ref.includes('.')) {
-        if (!ctx.fieldPaths.has(ref)) {
-          errors.push(`${path}.fieldId references missing field path "${ref}" (use gridId.fieldId)`)
-        }
-      } else if (!ctx.fieldIds.has(ref)) {
-        errors.push(`${path}.fieldId references missing field "${ref}"`)
+      } else if (!ref.includes('.')) {
+        errors.push(`${path}.fieldId must be "gridId.fieldId" (e.g. main_grid.sku), not bare fieldId`)
+      } else if (!ctx.fieldPaths.has(ref)) {
+        errors.push(`${path}.fieldId references missing field path "${ref}"`)
       }
       return errors
     }
@@ -142,13 +144,11 @@ function validateExprNode(
   }
 }
 
-/** Validation keys use gridId.fieldId (like bindings); legacy key is fieldId only. */
-function getValidationKeyPath(key: string): { gridId: string | null; fieldId: string } | null {
-  if (key.includes('.')) {
-    const { gridId, fieldId } = parsePath(key)
-    return gridId && fieldId ? { gridId, fieldId } : null
-  }
-  return { gridId: null, fieldId: key }
+/** Parse validation key; only "gridId.fieldId" (like bindings) is allowed. */
+function getValidationKeyPath(key: string): { gridId: string; fieldId: string } | null {
+  if (!key.includes('.')) return null
+  const { gridId, fieldId } = parsePath(key)
+  return gridId && fieldId ? { gridId, fieldId } : null
 }
 
 export function validateValidations(ctx: ValidationContext): ValidatorResult {
@@ -158,24 +158,17 @@ export function validateValidations(ctx: ValidationContext): ValidatorResult {
   for (const [key, rules] of Object.entries(validations)) {
     const parsed = getValidationKeyPath(key)
     if (!parsed) {
-      errors.push(`validations key "${key}" must be "gridId.fieldId" or a single fieldId`)
+      errors.push(`validations key "${key}" must be "gridId.fieldId" (e.g. main_grid.sku), like bindings`)
       continue
     }
-    const { gridId, fieldId } = parsed
-    if (gridId != null) {
-      if (!ctx.gridIds.has(gridId)) {
-        errors.push(`validations key "${key}": grid "${gridId}" not found`)
-        continue
-      }
-      if (!ctx.fieldPaths.has(key)) {
-        errors.push(`validations key "${key}": field path "${key}" not found (field must be placed in layout for that grid)`)
-        continue
-      }
-    } else {
-      if (!ctx.fieldIds.has(fieldId)) {
-        errors.push(`validations key "${key}": field "${fieldId}" not found`)
-        continue
-      }
+    const { gridId } = parsed
+    if (!ctx.gridIds.has(gridId)) {
+      errors.push(`validations key "${key}": grid "${gridId}" not found`)
+      continue
+    }
+    if (!ctx.fieldPaths.has(key)) {
+      errors.push(`validations key "${key}": field path "${key}" not found (field must be placed in layout for that grid)`)
+      continue
     }
 
     if (!Array.isArray(rules)) {

@@ -142,7 +142,7 @@ export interface TrackerDisplayProps {
   grids: TrackerGrid[]
   fields: TrackerField[]
   layoutNodes?: TrackerLayoutNode[]
-  /** Field validations keyed by field id. */
+  /** Field validations keyed by "gridId.fieldId" (like bindings). */
   validations?: Record<string, FieldValidationRule[]>
   /** Conditional field actions (hide/require/disable). */
   dependsOn?: DependsOnRules

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -48,6 +48,7 @@ import { EntryFormDialog } from '../data-table/entry-form-dialog'
 import { resolveDivStyles } from '@/lib/style-utils'
 
 const ADD_OPTION_VALUE = '__add_option__'
+const EMPTY_ROW: Record<string, unknown> = {}
 
 interface TrackerDivGridProps {
   tabId: string
@@ -105,6 +106,27 @@ export function TrackerDivGrid({
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
+  const fieldsById = useMemo(() => {
+    const map = new Map<string, TrackerField>()
+    fields.forEach((field) => map.set(field.id, field))
+    return map
+  }, [fields])
+  const layoutNodesByGridId = useMemo(() => {
+    const nodes = allLayoutNodes ?? layoutNodes
+    const map = new Map<string, TrackerLayoutNode[]>()
+    nodes.forEach((node) => {
+      const list = map.get(node.gridId)
+      if (list) {
+        list.push(node)
+      } else {
+        map.set(node.gridId, [node])
+      }
+    })
+    for (const list of map.values()) {
+      list.sort((a, b) => a.order - b.order)
+    }
+    return map
+  }, [allLayoutNodes, layoutNodes])
   const fieldNodes = useMemo(() => {
     const nodes = layoutNodes.filter((n) => n.gridId === grid.id)
     return nodes.sort((a, b) => {
@@ -116,6 +138,106 @@ export function TrackerDivGrid({
       return ca - cb
     })
   }, [layoutNodes, grid.id])
+  const fieldIndexById = useMemo(() => {
+    const map = new Map<string, number>()
+    fieldNodes.forEach((node, index) => map.set(node.fieldId, index))
+    return map
+  }, [fieldNodes])
+  const optionFieldIds = useMemo(
+    () => fieldNodes.map((node) => node.fieldId),
+    [fieldNodes]
+  )
+  const fieldOptionsMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof resolveFieldOptionsV2> | undefined>()
+    optionFieldIds.forEach((fieldId) => {
+      const field = fieldsById.get(fieldId)
+      if (!field) return
+      const needsOptions =
+        field.dataType === 'options' ||
+        field.dataType === 'multiselect' ||
+        field.dataType === 'dynamic_select' ||
+        field.dataType === 'dynamic_multiselect'
+      map.set(
+        fieldId,
+        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext) : undefined
+      )
+    })
+    return map
+  }, [optionFieldIds, fieldsById, tabId, grid.id, bindings, gridData, trackerContext])
+  const bindingByFieldId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof getBindingForField> | undefined>()
+    optionFieldIds.forEach((fieldId) => {
+      const field = fieldsById.get(fieldId)
+      if (!field) return
+      if (field.dataType === 'options' || field.dataType === 'multiselect') {
+        map.set(fieldId, getBindingForField(grid.id, fieldId, bindings, tabId))
+      }
+    })
+    return map
+  }, [optionFieldIds, fieldsById, grid.id, bindings, tabId])
+  const addOptionConfigByFieldId = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        optionsGridFields: OptionsGridFieldDef[]
+        onAddOption: (row: Record<string, unknown>) => string
+        optionsGridId?: string
+      }
+    >()
+    if (!onAddEntryToGrid) return map
+    optionFieldIds.forEach((fieldId) => {
+      const binding = bindingByFieldId.get(fieldId)
+      if (!binding) return
+      const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+      if (!optionsGridId) return
+      const selectFieldPath = `${grid.id}.${fieldId}`
+      const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+      const { fieldId: labelFieldId } = parsePath(binding.labelField)
+      const optionLayoutNodes = layoutNodesByGridId.get(optionsGridId) ?? []
+      const optionsGridFields = optionLayoutNodes
+        .map((n) => fieldsById.get(n.fieldId))
+        .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
+        .map((f) => ({
+          id: f.id,
+          label: f.ui.label,
+          type: f.dataType as OptionsGridFieldDef['type'],
+          config: f.config as OptionsGridFieldDef['config'],
+          validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id],
+        }))
+      const onAddOption = (row: Record<string, unknown>) => {
+        onAddEntryToGrid(optionsGridId, row)
+        const val = row[valueFieldId ?? '']
+        const label = labelFieldId ? row[labelFieldId] : undefined
+        return String(val ?? label ?? '')
+      }
+      map.set(fieldId, { optionsGridFields, onAddOption, optionsGridId })
+    })
+    return map
+  }, [
+    optionFieldIds,
+    bindingByFieldId,
+    grid.id,
+    fieldsById,
+    layoutNodesByGridId,
+    validations,
+    onAddEntryToGrid,
+  ])
+  const nodesByRow = useMemo(() => {
+    const map = new Map<number, TrackerLayoutNode[]>()
+    fieldNodes.forEach((node) => {
+      const rowKey = node.row ?? node.order
+      const list = map.get(rowKey)
+      if (list) {
+        list.push(node)
+      } else {
+        map.set(rowKey, [node])
+      }
+    })
+    for (const list of map.values()) {
+      list.sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
+    }
+    return map
+  }, [fieldNodes])
 
   const fieldSortableIds = useMemo(
     () => fieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -147,6 +269,7 @@ export function TrackerDivGrid({
     [grid.id, fieldNodes, reorder]
   )
 
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [addOptionOpen, setAddOptionOpen] = useState(false)
   const [addOptionContext, setAddOptionContext] = useState<{
     fieldId: string
@@ -165,7 +288,7 @@ export function TrackerDivGrid({
         name: f.label,
         type: f.type,
         config: f.config,
-        validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
+        validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id],
       }
     })
     return meta
@@ -205,21 +328,35 @@ export function TrackerDivGrid({
     }
   }
 
-  const data = gridData?.[grid.id]?.[0] || {}
-  const [draftRow, setDraftRow] = useState<Record<string, unknown>>(data)
-  const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(new Set())
+  const data = useMemo(() => gridData?.[grid.id]?.[0] ?? EMPTY_ROW, [gridData, grid.id])
+  const [draftRow, setDraftRow] = useState<Record<string, unknown>>(() => data)
+  const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(() => new Set())
+  const [dirtyFieldIds, setDirtyFieldIds] = useState<Set<string>>(() => new Set())
+  const touchedFieldIdsRef = useRef(touchedFieldIds)
+  useEffect(() => {
+    touchedFieldIdsRef.current = touchedFieldIds
+  }, [touchedFieldIds])
   useEffect(() => {
     setDraftRow((prev) => {
       const next = { ...data }
-      touchedFieldIds.forEach((fieldId) => {
+      touchedFieldIdsRef.current.forEach((fieldId) => {
         next[fieldId] = prev[fieldId]
       })
       return next
     })
-  }, [data, touchedFieldIds])
+  }, [data, grid.id])
+
+  const rowValuesForValidation = useMemo(() => {
+    const base = { ...draftRow }
+    for (const n of fieldNodes) {
+      base[`${grid.id}.${n.fieldId}`] = draftRow[n.fieldId] ?? data[n.fieldId]
+    }
+    return base
+  }, [draftRow, data, grid.id, fieldNodes])
 
   const handleFieldUpdate = useCallback(
     (fieldId: string, value: unknown) => {
+      setDirtyFieldIds((prev) => new Set(prev).add(fieldId))
       setDraftRow((prev) => ({ ...prev, [fieldId]: value }))
       onUpdate?.(0, fieldId, value)
     },
@@ -238,19 +375,15 @@ export function TrackerDivGrid({
     [dependsOnForGrid, gridData, grid.id, data]
   )
 
-  const rowKeys = useMemo(
-    () => [...new Set(fieldNodes.map((n) => n.row ?? n.order))].sort((a, b) => a - b),
-    [fieldNodes]
-  )
+  const rowKeys = useMemo(() => [...nodesByRow.keys()].sort((a, b) => a - b), [nodesByRow])
 
   const activeDragField = useMemo(() => {
     if (!activeDragId) return null
     const parsed = parseFieldId(activeDragId)
     if (!parsed || parsed.gridId !== grid.id) return null
-    const node = fieldNodes.find((n) => n.fieldId === parsed.fieldId)
-    const field = node ? fields.find((f) => f.id === node.fieldId) : undefined
+    const field = fieldsById.get(parsed.fieldId)
     return field ?? null
-  }, [activeDragId, grid.id, fieldNodes, fields])
+  }, [activeDragId, grid.id, fieldsById])
 
   if (fieldNodes.length === 0 && !canEditLayout) return null
 
@@ -263,47 +396,18 @@ export function TrackerDivGrid({
   }
 
   function renderFieldContent(node: TrackerLayoutNode, index: number) {
-    const field = fields.find((f) => f.id === node.fieldId)
+    const field = fieldsById.get(node.fieldId)
     if (!field) return null
     const effectiveConfig = applyFieldOverrides(field.config, fieldOverrides[field.id])
     if (effectiveConfig?.isHidden) return null
 
-    const options = (field.dataType === 'options' || field.dataType === 'multiselect' || field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect')
-      ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
-      : undefined
+    const options = fieldOptionsMap.get(field.id)
+    const addOptionConfig = addOptionConfigByFieldId.get(field.id)
+    const optionsGridFields: OptionsGridFieldDef[] = addOptionConfig?.optionsGridFields ?? []
+    const onAddOption = addOptionConfig?.onAddOption
+    const optionsGridId = addOptionConfig?.optionsGridId
 
-    const binding = (field.dataType === 'options' || field.dataType === 'multiselect') && onAddEntryToGrid
-      ? getBindingForField(grid.id, field.id, bindings, tabId)
-      : undefined
-    const selectFieldPath = `${grid.id}.${field.id}`
-    let optionsGridFields: OptionsGridFieldDef[] = []
-    let onAddOption: ((row: Record<string, unknown>) => string) | undefined
-    let optionsGridId: string | undefined
-    if (binding && onAddEntryToGrid) {
-      optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
-      const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
-      const { fieldId: labelFieldId } = parsePath(binding.labelField)
-      const allNodes = allLayoutNodes ?? layoutNodes
-      const optionLayoutNodes = allNodes.filter((n) => n.gridId === (optionsGridId ?? '')).sort((a, b) => a.order - b.order)
-      optionsGridFields = optionLayoutNodes
-        .map((n) => fields.find((f) => f.id === n.fieldId))
-        .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
-        .map((f) => ({
-          id: f.id,
-          label: f.ui.label,
-          type: f.dataType as OptionsGridFieldDef['type'],
-          config: f.config as OptionsGridFieldDef['config'],
-          validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
-        }))
-      onAddOption = (row: Record<string, unknown>) => {
-        onAddEntryToGrid!(optionsGridId!, row)
-        const val = row[valueFieldId ?? '']
-        const label = labelFieldId ? row[labelFieldId] : undefined
-        return String(val ?? label ?? '')
-      }
-    }
-
-    const fieldRules = validations?.[`${grid.id}.${field.id}`] ?? validations?.[field.id]
+    const fieldRules = validations?.[`${grid.id}.${field.id}`]
     const rawValue = draftRow[field.id] ?? data[field.id]
     const value = (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
       ? (effectiveConfig as { value: unknown }).value
@@ -319,16 +423,16 @@ export function TrackerDivGrid({
         fieldType: field.dataType,
         config: effectiveConfig,
         rules: fieldRulesResolved,
-        rowValues: draftRow,
+        rowValues: rowValuesForValidation,
       })
       : null
-    const showError = touchedFieldIds.has(field.id) && !!validationError
+    const showError = (dirtyFieldIds.has(field.id) || touchedFieldIds.has(field.id)) && !!validationError
 
     const handleSelectChange = (selectedValue: unknown) => {
       handleFieldUpdateWithTouched(field.id, selectedValue)
 
       if (field.dataType === 'options' || field.dataType === 'multiselect') {
-        const binding = getBindingForField(grid.id, field.id, bindings, tabId)
+        const binding = bindingByFieldId.get(field.id)
         if (binding && binding.fieldMappings.length > 0) {
           const selectFieldPath = `${grid.id}.${field.id}`
           const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
@@ -357,9 +461,10 @@ export function TrackerDivGrid({
           return (
             <Textarea
               className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-              defaultValue={valueString}
+              value={valueString}
               placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
               disabled={isDisabled}
+              onChange={(e) => handleFieldUpdate(field.id, e.target.value)}
               onBlur={(e) =>
                 handleFieldUpdateWithTouched(field.id, e.target.value)
               }
@@ -429,7 +534,7 @@ export function TrackerDivGrid({
         }
         case 'date':
           return (
-            <Popover modal={true}>
+            <Popover modal={true} open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
@@ -455,6 +560,7 @@ export function TrackerDivGrid({
                       handleFieldUpdateWithTouched(field.id, newDate.toISOString())
                     }
                   }}
+                  onCloseRequest={() => setDatePickerOpen(false)}
                   disabled={(date) =>
                     date > new Date('2100-01-01') || date < new Date('1900-01-01')
                   }
@@ -463,26 +569,33 @@ export function TrackerDivGrid({
               </PopoverContent>
             </Popover>
           )
-        case 'number':
+        case 'number': {
+          const numValue = typeof value === 'number' ? value : valueString
           return (
             <Input
               type="number"
               className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-              defaultValue={typeof value === 'number' ? value : valueString}
+              value={numValue === '' ? '' : numValue}
               placeholder="0"
               disabled={isDisabled}
+              onChange={(e) => {
+                const raw = e.target.value
+                handleFieldUpdate(field.id, raw === '' ? undefined : Number(raw))
+              }}
               onBlur={(e) =>
-                handleFieldUpdateWithTouched(field.id, Number(e.target.value))
+                handleFieldUpdateWithTouched(field.id, e.target.value === '' ? undefined : Number(e.target.value))
               }
             />
           )
+        }
         default:
           return (
             <Input
               className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
-              defaultValue={valueString}
+              value={valueString}
               placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
               disabled={isDisabled}
+              onChange={(e) => handleFieldUpdate(field.id, e.target.value)}
               onBlur={(e) =>
                 handleFieldUpdateWithTouched(field.id, e.target.value)
               }
@@ -553,15 +666,13 @@ export function TrackerDivGrid({
   const fieldsContainer = (
     <div className="flex flex-col gap-4">
       {rowKeys.map((rowKey) => {
-        const nodesInRow = fieldNodes
-          .filter((n) => (n.row ?? n.order) === rowKey)
-          .sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
+        const nodesInRow = nodesByRow.get(rowKey) ?? []
         const gridCols =
           nodesInRow.length === 1 ? 'grid-cols-1' : nodesInRow.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
         return (
           <div key={rowKey} className={`grid ${gridCols} gap-4`}>
             {nodesInRow.map((node) => {
-              const index = fieldNodes.indexOf(node)
+              const index = fieldIndexById.get(node.fieldId) ?? 0
               return <div key={node.fieldId}>{renderFieldContent(node, index)}</div>
             })}
           </div>
@@ -619,6 +730,7 @@ export function TrackerDivGrid({
           initialValues={initialOptionValues}
           onSave={applyAddOption}
           onSaveAnother={applyAddOption}
+          gridId={addOptionContext.optionsGridId}
           mode="add"
         />
       )}

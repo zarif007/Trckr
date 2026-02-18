@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -16,13 +17,18 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, Settings2, ShieldCheck } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
+import { FIELD_TYPE_LABELS } from './utils'
+import type { TrackerFieldType } from '../types'
 
 const RULE_TYPES: Array<FieldValidationRule['type']> = [
   'required',
@@ -32,6 +38,18 @@ const RULE_TYPES: Array<FieldValidationRule['type']> = [
   'maxLength',
   'expr',
 ]
+
+const RULE_TYPE_LABELS: Record<FieldValidationRule['type'], string> = {
+  required: 'Required',
+  min: 'Minimum value',
+  max: 'Maximum value',
+  minLength: 'Minimum length',
+  maxLength: 'Maximum length',
+  expr: 'Custom expression',
+}
+
+const NUMERIC_TYPES: TrackerFieldType[] = ['number', 'currency', 'percentage']
+const TEXT_TYPES: TrackerFieldType[] = ['string', 'text', 'link']
 
 const defaultExpr: ExprNode = { op: 'const', value: true }
 
@@ -96,8 +114,8 @@ export function FieldSettingsDialog({
     setMinLength(field.config?.minLength != null ? String(field.config.minLength) : '')
     setMaxLength(field.config?.maxLength != null ? String(field.config.maxLength) : '')
 
-    const validationKey = gridId ? `${gridId}.${field.id}` : field.id
-    const nextRules = (schema?.validations?.[validationKey] ?? schema?.validations?.[field.id] ?? []).map(ensureRuleDefaults)
+    const validationKey = gridId ? `${gridId}.${field.id}` : ''
+    const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
     const nextExprDrafts: Record<number, string> = {}
     nextRules.forEach((rule, idx) => {
@@ -171,6 +189,17 @@ export function FieldSettingsDialog({
     }
   }
 
+  const applyExprPreset = (index: number, expr: ExprNode) => {
+    const str = JSON.stringify(expr, null, 2)
+    setExprDrafts((prev) => ({ ...prev, [index]: str }))
+    updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr })
+    setExprErrors((prev) => {
+      const next = { ...prev }
+      delete next[index]
+      return next
+    })
+  }
+
   const handleApplyJson = () => {
     try {
       const parsed = JSON.parse(jsonDraft)
@@ -220,14 +249,15 @@ export function FieldSettingsDialog({
         : f
     )
 
-    const validationKey = gridId ? `${gridId}.${field.id}` : field.id
+    const validationKey = gridId ? `${gridId}.${field.id}` : ''
     const nextValidations = { ...(schema.validations ?? {}) }
-    if (rules.length > 0) {
-      nextValidations[validationKey] = rules
-    } else {
-      delete nextValidations[validationKey]
+    if (validationKey) {
+      if (rules.length > 0) {
+        nextValidations[validationKey] = rules
+      } else {
+        delete nextValidations[validationKey]
+      }
     }
-    if (validationKey !== field.id) delete nextValidations[field.id]
 
     onSchemaChange({
       ...schema,
@@ -238,171 +268,450 @@ export function FieldSettingsDialog({
     onOpenChange(false)
   }
 
+  const isNumeric = NUMERIC_TYPES.includes(field.dataType)
+  const isText = TEXT_TYPES.includes(field.dataType)
+  const typeLabel = FIELD_TYPE_LABELS[field.dataType] ?? field.dataType
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[720px] p-0 gap-0 overflow-hidden">
-        <div className="px-6 pt-6 pb-4 border-b border-border/60 bg-muted/30">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">Field settings</DialogTitle>
-            <p className="text-xs text-muted-foreground">Field: {field.id}</p>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90"
+      >
+        <div className="relative shrink-0 px-6 pt-6 pb-5 bg-gradient-to-br from-primary/8 via-background to-background">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/80" />
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+              Field settings
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
+              Edit label, placeholder, and validation rules for this field.
+              <span className="block mt-1 text-xs opacity-90">Field: {field.id}</span>
+            </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="px-6 py-5">
-          <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="validations">Validations</TabsTrigger>
-            </TabsList>
-            <TabsContent value="general" className="mt-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Label</label>
-                  <Input value={label} onChange={(e) => setLabel(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Placeholder</label>
-                  <Input value={placeholder} onChange={(e) => setPlaceholder(e.target.value)} />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Checkbox checked={isRequired} onCheckedChange={(v) => setIsRequired(Boolean(v))} />
-                <span className="text-sm">Required</span>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Min</label>
-                  <Input type="number" value={min} onChange={(e) => setMin(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Max</label>
-                  <Input type="number" value={max} onChange={(e) => setMax(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Min length</label>
-                  <Input type="number" value={minLength} onChange={(e) => setMinLength(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase tracking-wide">Max length</label>
-                  <Input type="number" value={maxLength} onChange={(e) => setMaxLength(e.target.value)} />
-                </div>
-              </div>
-            </TabsContent>
-            <TabsContent value="validations" className="mt-5 space-y-4">
-              {rules.length === 0 && (
-                <p className="text-sm text-muted-foreground">No validation rules yet.</p>
-              )}
-              <div className="space-y-4">
-                {rules.map((rule, index) => (
-                  <div key={index} className="rounded-lg border border-border/60 p-4 space-y-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <label className="text-xs font-semibold uppercase tracking-wide">Type</label>
-                        <Select
-                          value={rule.type}
-                          onValueChange={(value) => handleRuleTypeChange(index, value as FieldValidationRule['type'])}
-                        >
-                          <SelectTrigger className="mt-2">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {RULE_TYPES.map((t) => (
-                              <SelectItem key={t} value={t}>
-                                {t}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <button
-                        type="button"
-                        className="mt-6 h-9 w-9 rounded-md border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/40"
-                        onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
-                        aria-label="Remove rule"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {(rule.type === 'min' || rule.type === 'max' || rule.type === 'minLength' || rule.type === 'maxLength') && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide">Value</label>
-                        <Input
-                          type="number"
-                          value={String(rule.value ?? '')}
-                          onChange={(e) =>
-                            updateRule(index, { ...rule, value: toNumberOrUndefined(e.target.value) ?? 0 })
-                          }
-                        />
-                      </div>
-                    )}
-
-                    {rule.type === 'expr' && (
-                      <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide">Expression (JSON)</label>
-                        <Textarea
-                          value={exprDrafts[index] ?? JSON.stringify(rule.expr, null, 2)}
-                          onChange={(e) => handleExprChange(index, e.target.value)}
-                          onBlur={() => handleExprBlur(index)}
-                          className="font-mono text-xs min-h-[120px]"
-                        />
-                        {exprErrors[index] && (
-                          <p className="text-xs text-destructive">{exprErrors[index]}</p>
-                        )}
-                      </div>
-                    )}
-
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="space-y-5 px-6 py-5">
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList className="inline-flex w-full rounded-xl bg-muted/40 p-1 h-11 border border-border/50">
+                <TabsTrigger
+                  value="general"
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60',
+                    'transition-colors min-w-0'
+                  )}
+                >
+                  <Settings2 className="h-4 w-4 shrink-0" />
+                  <span className="truncate">General</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="validations"
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60',
+                    'transition-colors min-w-0'
+                  )}
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Validations</span>
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="general" className="mt-5 space-y-5">
+                <div className="space-y-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Display
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-semibold uppercase tracking-wide">Message</label>
+                      <label
+                        htmlFor="field-settings-label"
+                        className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                      >
+                        Label
+                      </label>
                       <Input
-                        value={rule.message ?? ''}
-                        onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
-                        placeholder="Optional custom error message"
+                        id="field-settings-label"
+                        value={label}
+                        onChange={(e) => setLabel(e.target.value)}
+                        className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="field-settings-placeholder"
+                        className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                      >
+                        Placeholder
+                      </label>
+                      <Input
+                        id="field-settings-placeholder"
+                        value={placeholder}
+                        onChange={(e) => setPlaceholder(e.target.value)}
+                        className="h-10 w-full rounded-lg border-border/60 bg-background/90"
                       />
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="gap-2"
-                onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
-              >
-                <Plus className="h-4 w-4" />
-                Add rule
-              </Button>
-
-              <div className="pt-4 border-t border-border/60 space-y-2">
-                <button
-                  type="button"
-                  className="text-sm text-muted-foreground hover:text-foreground"
-                  onClick={() => setAdvancedOpen((prev) => !prev)}
-                >
-                  {advancedOpen ? 'Hide advanced JSON' : 'Show advanced JSON'}
-                </button>
-                {advancedOpen && (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={jsonDraft}
-                      onChange={(e) => setJsonDraft(e.target.value)}
-                      className="font-mono text-xs min-h-[160px]"
-                    />
-                    {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}
-                    <Button type="button" variant="secondary" onClick={handleApplyJson}>
-                      Apply JSON
-                    </Button>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border/50" />
                   </div>
+                  <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
+                    <span className="bg-background px-2 text-muted-foreground">Constraints</span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      id="field-settings-required"
+                      checked={isRequired}
+                      onCheckedChange={(v) => setIsRequired(Boolean(v))}
+                    />
+                    <label
+                      htmlFor="field-settings-required"
+                      className="text-sm font-medium cursor-pointer"
+                    >
+                      Required
+                    </label>
+                  </div>
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Type: {typeLabel}
+                  </p>
+                  {isNumeric && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-min"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Min
+                        </label>
+                        <Input
+                          id="field-settings-min"
+                          type="number"
+                          value={min}
+                          onChange={(e) => setMin(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-max"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Max
+                        </label>
+                        <Input
+                          id="field-settings-max"
+                          type="number"
+                          value={max}
+                          onChange={(e) => setMax(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {isText && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-min-length"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Min length
+                        </label>
+                        <Input
+                          id="field-settings-min-length"
+                          type="number"
+                          value={minLength}
+                          onChange={(e) => setMinLength(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-max-length"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Max length
+                        </label>
+                        <Input
+                          id="field-settings-max-length"
+                          type="number"
+                          value={maxLength}
+                          onChange={(e) => setMaxLength(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              <TabsContent value="validations" className="mt-5 space-y-5">
+                {rules.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      No validation rules. Add rules to validate this field on submit.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add required
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add min/max
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add rule
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4">
+                      {rules.map((rule, index) => (
+                        <div key={index} className="rounded-lg border border-border/60 p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1">
+                              <label
+                                htmlFor={`rule-type-${index}`}
+                                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                              >
+                                Type
+                              </label>
+                              <Select
+                                value={rule.type}
+                                onValueChange={(value) =>
+                                  handleRuleTypeChange(index, value as FieldValidationRule['type'])
+                                }
+                              >
+                                <SelectTrigger
+                                  id={`rule-type-${index}`}
+                                  className="mt-2 h-10 w-full rounded-lg border-border/60 bg-background/90"
+                                >
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectGroup>
+                                    <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                      Value rules
+                                    </SelectLabel>
+                                    <SelectItem value="required">{RULE_TYPE_LABELS.required}</SelectItem>
+                                    <SelectItem value="min">{RULE_TYPE_LABELS.min}</SelectItem>
+                                    <SelectItem value="max">{RULE_TYPE_LABELS.max}</SelectItem>
+                                    <SelectItem value="minLength">{RULE_TYPE_LABELS.minLength}</SelectItem>
+                                    <SelectItem value="maxLength">{RULE_TYPE_LABELS.maxLength}</SelectItem>
+                                  </SelectGroup>
+                                  <SelectGroup>
+                                    <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                      Custom
+                                    </SelectLabel>
+                                    <SelectItem value="expr">{RULE_TYPE_LABELS.expr}</SelectItem>
+                                  </SelectGroup>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <button
+                              type="button"
+                              className="mt-6 h-9 w-9 rounded-md border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                              onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
+                              aria-label="Remove rule"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          {(rule.type === 'min' ||
+                            rule.type === 'max' ||
+                            rule.type === 'minLength' ||
+                            rule.type === 'maxLength') && (
+                              <div className="space-y-2">
+                                <label
+                                  htmlFor={`rule-value-${index}`}
+                                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                                >
+                                  Value
+                                </label>
+                                <Input
+                                  id={`rule-value-${index}`}
+                                  type="number"
+                                  value={String(rule.value ?? '')}
+                                  onChange={(e) =>
+                                    updateRule(index, {
+                                      ...rule,
+                                      value: toNumberOrUndefined(e.target.value) ?? 0,
+                                    })
+                                  }
+                                  className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                                />
+                              </div>
+                            )}
+
+                          {rule.type === 'expr' && (
+                            <div className="space-y-3">
+                              <div>
+                                <p className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                                  Custom expression
+                                </p>
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                  Validation passes when the expression returns true. Use presets below or edit JSON for advanced logic.
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => applyExprPreset(index, { op: 'const', value: true })}
+                                  className="h-8 text-xs"
+                                >
+                                  Always valid
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => applyExprPreset(index, { op: 'const', value: false })}
+                                  className="h-8 text-xs"
+                                >
+                                  Always invalid
+                                </Button>
+                              </div>
+                              <div className="space-y-1.5">
+                                <label
+                                  htmlFor={`rule-expr-${index}`}
+                                  className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide"
+                                >
+                                  JSON (advanced)
+                                </label>
+                                <Textarea
+                                  id={`rule-expr-${index}`}
+                                  value={exprDrafts[index] ?? JSON.stringify(rule.expr, null, 2)}
+                                  onChange={(e) => handleExprChange(index, e.target.value)}
+                                  onBlur={() => handleExprBlur(index)}
+                                  placeholder='e.g. {"op": "const", "value": true}'
+                                  className="font-mono text-xs min-h-[100px] rounded-lg border-border/60 bg-muted/20 placeholder:text-muted-foreground/60"
+                                  aria-invalid={Boolean(exprErrors[index])}
+                                  aria-describedby={exprErrors[index] ? `rule-expr-error-${index}` : undefined}
+                                />
+                                {exprErrors[index] && (
+                                  <p id={`rule-expr-error-${index}`} className="text-xs text-destructive">
+                                    {exprErrors[index]}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <label
+                              htmlFor={`rule-message-${index}`}
+                              className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                            >
+                              Message
+                            </label>
+                            <Input
+                              id={`rule-message-${index}`}
+                              value={rule.message ?? ''}
+                              onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
+                              placeholder="Optional custom error message. Leave blank to use default message."
+                              className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add required
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add min/max
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5"
+                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add rule
+                      </Button>
+                    </div>
+                  </>
                 )}
-              </div>
-            </TabsContent>
-          </Tabs>
+
+                <div className="pt-4 border-t border-border/60 space-y-2">
+                  <button
+                    type="button"
+                    className="text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => setAdvancedOpen((prev) => !prev)}
+                  >
+                    {advancedOpen ? 'Hide advanced JSON' : 'Show advanced JSON'}
+                  </button>
+                  {advancedOpen && (
+                    <div className="space-y-2">
+                      <Textarea
+                        value={jsonDraft}
+                        onChange={(e) => setJsonDraft(e.target.value)}
+                        className="font-mono text-xs min-h-[160px]"
+                        aria-invalid={Boolean(jsonError)}
+                        aria-describedby={jsonError ? 'advanced-json-error' : undefined}
+                      />
+                      {jsonError && (
+                        <p id="advanced-json-error" className="text-xs text-destructive">
+                          {jsonError}
+                        </p>
+                      )}
+                      <Button type="button" variant="secondary" size="sm" onClick={handleApplyJson}>
+                        Apply JSON
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-        <DialogFooter className="px-6 py-4 border-t border-border/60 bg-muted/10">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="shrink-0 flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(false)}
+            className="min-w-[84px]"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save</Button>
+          <Button size="sm" onClick={handleSave} className="min-w-[104px]">
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -75,13 +75,43 @@ export function TrackerTableGrid({
   const canEditLayout = editMode && !!schema && !!onSchemaChange
 
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
-  const connectedFieldNodes = layoutNodes
-    .filter((n) => n.gridId === grid.id)
-    .sort((a, b) => a.order - b.order)
-  const tableFields = connectedFieldNodes
-    .map((node) => fields.find((f) => f.id === node.fieldId))
-    .filter((f): f is TrackerField => !!f && !f.config?.isHidden)
-  const rows = gridData[grid.id] ?? []
+  const fieldsById = useMemo(() => {
+    const map = new Map<string, TrackerField>()
+    fields.forEach((field) => map.set(field.id, field))
+    return map
+  }, [fields])
+
+  const layoutNodesByGridId = useMemo(() => {
+    const nodes = allLayoutNodes ?? layoutNodes
+    const map = new Map<string, TrackerLayoutNode[]>()
+    nodes.forEach((node) => {
+      const list = map.get(node.gridId)
+      if (list) {
+        list.push(node)
+      } else {
+        map.set(node.gridId, [node])
+      }
+    })
+    for (const list of map.values()) {
+      list.sort((a, b) => a.order - b.order)
+    }
+    return map
+  }, [allLayoutNodes, layoutNodes])
+
+  const connectedFieldNodes = useMemo(
+    () => layoutNodesByGridId.get(grid.id) ?? [],
+    [layoutNodesByGridId, grid.id]
+  )
+
+  const tableFields = useMemo(
+    () =>
+      connectedFieldNodes
+        .map((node) => fieldsById.get(node.fieldId))
+        .filter((f): f is TrackerField => !!f && !f.config?.isHidden),
+    [connectedFieldNodes, fieldsById]
+  )
+
+  const rows = useMemo(() => gridData[grid.id] ?? [], [gridData, grid.id])
 
   const fieldSortableIds = useMemo(
     () => connectedFieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -178,6 +208,183 @@ export function TrackerTableGrid({
     [add]
   )
 
+  const fieldOptionsMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof resolveFieldOptionsV2> | undefined>()
+    tableFields.forEach((field) => {
+      const needsOptions =
+        field.dataType === 'options' ||
+        field.dataType === 'multiselect' ||
+        field.dataType === 'dynamic_select' ||
+        field.dataType === 'dynamic_multiselect'
+      map.set(
+        field.id,
+        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext) : undefined
+      )
+    })
+    return map
+  }, [tableFields, tabId, grid.id, bindings, gridData, trackerContext])
+
+  const bindingByFieldId = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof getBindingForField> | undefined>()
+    tableFields.forEach((field) => {
+      if (field.dataType === 'options' || field.dataType === 'multiselect') {
+        map.set(field.id, getBindingForField(grid.id, field.id, bindings, tabId))
+      }
+    })
+    return map
+  }, [tableFields, grid.id, bindings, tabId])
+
+  const fieldMetadata = useMemo<FieldMetadata>(() => {
+    const meta: FieldMetadata = {}
+    tableFields.forEach((field) => {
+      const opts = fieldOptionsMap.get(field.id)
+      const binding = bindingByFieldId.get(field.id)
+      const selectFieldPath = `${grid.id}.${field.id}`
+      let optionsGridFields: OptionsGridFieldDef[] | undefined
+      let onAddOption: ((row: Record<string, unknown>) => string) | undefined
+      if (binding && onAddEntryToGrid) {
+        const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+        const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+        const { fieldId: labelFieldId } = parsePath(binding.labelField)
+        const optionLayoutNodes = optionsGridId ? (layoutNodesByGridId.get(optionsGridId) ?? []) : []
+        optionsGridFields = optionLayoutNodes
+          .map((n) => fieldsById.get(n.fieldId))
+          .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
+          .map((f) => ({
+            id: f.id,
+            label: f.ui.label,
+            type: f.dataType as FieldMetadata[string]['type'],
+            config: f.config as FieldMetadata[string]['config'],
+            validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id],
+          }))
+        onAddOption = (row: Record<string, unknown>) => {
+          onAddEntryToGrid!(optionsGridId!, row)
+          const val = row[valueFieldId ?? '']
+          const label = labelFieldId ? row[labelFieldId] : undefined
+          return String(val ?? label ?? '')
+        }
+      }
+      const getBindingUpdatesFromRow =
+        binding && onAddEntryToGrid
+          ? (row: Record<string, unknown>) => {
+            if (!binding?.fieldMappings?.length) return {}
+            const selectFieldPath = `${grid.id}.${field.id}`
+            const updates = applyBindings(binding, row, selectFieldPath)
+            const result: Record<string, unknown> = {}
+            for (const u of updates) {
+              const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
+              if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
+            }
+            return result
+          }
+          : undefined
+      meta[field.id] = {
+        name: field.ui.label,
+        type: field.dataType,
+        options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
+        config: field.config,
+        validations: validations?.[`${grid.id}.${field.id}`],
+        optionsGridFields,
+        onAddOption,
+        getBindingUpdatesFromRow,
+      }
+    })
+    return meta
+  }, [
+    tableFields,
+    fieldOptionsMap,
+    bindingByFieldId,
+    grid.id,
+    fieldsById,
+    layoutNodesByGridId,
+    validations,
+    onAddEntryToGrid,
+  ])
+
+  const handleCellUpdate = useCallback(
+    (rowIndex: number, columnId: string, value: unknown) => {
+      if (!onUpdate) return
+
+      onUpdate(rowIndex, columnId, value)
+
+      const field = fieldsById.get(columnId)
+      if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
+        const binding = bindingByFieldId.get(columnId)
+        if (binding && binding.fieldMappings.length > 0) {
+          const selectFieldPath = `${grid.id}.${columnId}`
+          const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+          if (optionRow) {
+            const updates = applyBindings(binding, optionRow, selectFieldPath)
+            for (const update of updates) {
+              const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+              if (targetGridId && targetFieldId) {
+                if (onCrossGridUpdate) {
+                  onCrossGridUpdate(targetGridId, rowIndex, targetFieldId, update.value)
+                } else if (targetGridId === grid.id) {
+                  onUpdate(rowIndex, targetFieldId, update.value)
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    [bindingByFieldId, fieldsById, grid.id, gridData, onCrossGridUpdate, onUpdate]
+  )
+
+  const getBindingUpdates = useCallback(
+    (fieldId: string, value: unknown): Record<string, unknown> => {
+      const binding = bindingByFieldId.get(fieldId)
+      if (!binding?.fieldMappings?.length) return {}
+      const selectFieldPath = `${grid.id}.${fieldId}`
+      const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+      if (!optionRow) return {}
+      const updates = applyBindings(binding, optionRow, selectFieldPath)
+      const result: Record<string, unknown> = {}
+      for (const u of updates) {
+        const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
+        if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
+      }
+      return result
+    },
+    [bindingByFieldId, grid.id, gridData]
+  )
+
+  const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(
+    () =>
+      tableFields.map((field, index) => ({
+        id: field.id,
+        accessorKey: field.id,
+        header:
+          canEditLayout
+            ? () => (
+              <SortableColumnHeaderEdit
+                gridId={grid.id}
+                fieldId={field.id}
+                label={field.ui.label}
+                index={index}
+                totalColumns={tableFields.length}
+                onRemove={() => remove(field.id)}
+                onMoveUp={() => move(field.id, 'up')}
+                onMoveDown={() => move(field.id, 'down')}
+                onSettings={() => setSettingsFieldId(field.id)}
+              />
+            )
+            : field.ui.label,
+        cell: function Cell({ row }) {
+          const value = row.getValue(field.id)
+          return (
+            <TrackerCell
+              value={value}
+              type={field.dataType}
+              options={fieldOptionsMap.get(field.id)}
+            />
+          )
+        },
+      })),
+    [tableFields, canEditLayout, grid.id, remove, move, fieldOptionsMap]
+  )
+
   if (connectedFieldNodes.length === 0 && !canEditLayout) {
     if (layoutNodes.length === 0) return null
     return (
@@ -213,142 +420,6 @@ export function TrackerTableGrid({
   }
   if (tableFields.length === 0)
     return <div className="p-4 text-red-500">Missing Field Definitions</div>
-
-  const fieldMetadata: FieldMetadata = {}
-  tableFields.forEach((field) => {
-    const opts = resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)
-    const binding = (field.dataType === 'options' || field.dataType === 'multiselect')
-      ? getBindingForField(grid.id, field.id, bindings, tabId)
-      : undefined
-    const selectFieldPath = `${grid.id}.${field.id}`
-    let optionsGridFields: OptionsGridFieldDef[] | undefined
-    let onAddOption: ((row: Record<string, unknown>) => string) | undefined
-    if (binding && onAddEntryToGrid) {
-      const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
-      const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
-      const { fieldId: labelFieldId } = parsePath(binding.labelField)
-      const allNodes = allLayoutNodes ?? layoutNodes
-      const optionLayoutNodes = allNodes.filter((n) => n.gridId === (optionsGridId ?? '')).sort((a, b) => a.order - b.order)
-      optionsGridFields = optionLayoutNodes
-        .map((n) => fields.find((f) => f.id === n.fieldId))
-        .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
-        .map((f) => ({
-          id: f.id,
-          label: f.ui.label,
-          type: f.dataType as FieldMetadata[string]['type'],
-          config: f.config as FieldMetadata[string]['config'],
-          validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
-        }))
-      onAddOption = (row: Record<string, unknown>) => {
-        onAddEntryToGrid!(optionsGridId!, row)
-        const val = row[valueFieldId ?? '']
-        const label = labelFieldId ? row[labelFieldId] : undefined
-        return String(val ?? label ?? '')
-      }
-    }
-    const getBindingUpdatesFromRow =
-      binding && onAddEntryToGrid
-        ? (row: Record<string, unknown>) => {
-          const b = getBindingForField(grid.id, field.id, bindings, tabId)
-          if (!b?.fieldMappings?.length) return {}
-          const selectFieldPath = `${grid.id}.${field.id}`
-          const updates = applyBindings(b, row, selectFieldPath)
-          const result: Record<string, unknown> = {}
-          for (const u of updates) {
-            const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
-            if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
-          }
-          return result
-        }
-        : undefined
-    fieldMetadata[field.id] = {
-      name: field.ui.label,
-      type: field.dataType,
-      options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
-      config: field.config,
-      validations: validations?.[`${grid.id}.${field.id}`] ?? validations?.[field.id],
-      optionsGridFields,
-      onAddOption,
-      getBindingUpdatesFromRow,
-    }
-  })
-
-  const handleCellUpdate = (rowIndex: number, columnId: string, value: unknown) => {
-    if (!onUpdate) return
-
-    onUpdate(rowIndex, columnId, value)
-
-    const field = tableFields.find((f) => f.id === columnId)
-    if (field && (field.dataType === 'options' || field.dataType === 'multiselect')) {
-      const binding = getBindingForField(grid.id, columnId, bindings, tabId)
-      if (binding && binding.fieldMappings.length > 0) {
-        const selectFieldPath = `${grid.id}.${columnId}`
-        const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
-        if (optionRow) {
-          const updates = applyBindings(binding, optionRow, selectFieldPath)
-          for (const update of updates) {
-            const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
-            if (targetGridId && targetFieldId) {
-              if (onCrossGridUpdate) {
-                onCrossGridUpdate(targetGridId, rowIndex, targetFieldId, update.value)
-              } else if (targetGridId === grid.id) {
-                onUpdate(rowIndex, targetFieldId, update.value)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
-  const getBindingUpdates = (fieldId: string, value: unknown): Record<string, unknown> => {
-    const binding = getBindingForField(grid.id, fieldId, bindings, tabId)
-    if (!binding?.fieldMappings?.length) return {}
-    const selectFieldPath = `${grid.id}.${fieldId}`
-    const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
-    if (!optionRow) return {}
-    const updates = applyBindings(binding, optionRow, selectFieldPath)
-    const result: Record<string, unknown> = {}
-    for (const u of updates) {
-      const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
-      if (targetGridId === grid.id && targetFieldId) result[targetFieldId] = u.value
-    }
-    return result
-  }
-
-  const columns: ColumnDef<Record<string, unknown>>[] = tableFields.map(
-    (field, index) => ({
-      id: field.id,
-      accessorKey: field.id,
-      header:
-        canEditLayout
-          ? () => (
-            <SortableColumnHeaderEdit
-              gridId={grid.id}
-              fieldId={field.id}
-              label={field.ui.label}
-              index={index}
-              totalColumns={tableFields.length}
-              onRemove={() => remove(field.id)}
-              onMoveUp={() => move(field.id, 'up')}
-              onMoveDown={() => move(field.id, 'down')}
-              onSettings={() => setSettingsFieldId(field.id)}
-            />
-          )
-          : field.ui.label,
-      cell: function Cell({ row }) {
-        const value = row.getValue(field.id);
-        return (
-          <TrackerCell
-            value={value}
-            type={field.dataType}
-            options={resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext)}
-          />
-        );
-      },
-    })
-  );
 
   const tableContent = (
     <>
@@ -388,6 +459,7 @@ export function TrackerTableGrid({
         getBindingUpdates={getBindingUpdates}
         config={grid.config}
         styleOverrides={styleOverrides}
+        gridId={grid.id}
         addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
         editable={grid.config?.isRowEditAble !== false}
         deleteable={onDeleteEntries != null && grid.config?.isRowDeleteAble !== false}

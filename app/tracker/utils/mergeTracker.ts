@@ -1,4 +1,5 @@
 import type { TrackerDisplayProps, TrackerLayoutNode } from '@/app/components/tracker-display/types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
 
 type PatchItem<T> = Partial<T> & { id?: string; _delete?: boolean }
@@ -6,6 +7,33 @@ type LayoutNodePatch = Partial<TrackerLayoutNode> & { gridId?: string; fieldId?:
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const isExprNode = (value: unknown): value is { op: string } =>
+  isPlainObject(value) && typeof value.op === 'string'
+
+const isFieldValidationRule = (value: unknown): value is FieldValidationRule => {
+  if (!isPlainObject(value) || typeof value.type !== 'string') return false
+
+  switch (value.type) {
+    case 'required':
+      return true
+    case 'min':
+    case 'max':
+    case 'minLength':
+    case 'maxLength':
+      return typeof value.value === 'number' && !Number.isNaN(value.value)
+    case 'expr':
+      return isExprNode(value.expr)
+    default:
+      return false
+  }
+}
+
+const coerceValidationRules = (value: unknown): FieldValidationRule[] | null => {
+  if (!Array.isArray(value)) return null
+  // Empty arrays are allowed (explicitly clearing validations for a field).
+  return value.filter(isFieldValidationRule)
+}
 
 const mergeWithNested = <T extends Record<string, unknown>>(
   base: T,
@@ -129,13 +157,14 @@ export function applyTrackerPatch(
     }
   }
 
-  const validations = { ...(base.validations ?? {}) } as Record<string, unknown>
+  const validations: Record<string, FieldValidationRule[]> = { ...(base.validations ?? {}) }
   if (patch.validations) {
     for (const [key, value] of Object.entries(patch.validations)) {
       if (value === null) {
         delete validations[key]
       } else {
-        validations[key] = value as any
+        const rules = coerceValidationRules(value)
+        if (rules) validations[key] = rules
       }
     }
   }
@@ -144,8 +173,35 @@ export function applyTrackerPatch(
       delete validations[key]
     }
   }
-  for (const key of Object.keys(validations)) {
-    if (!fieldIds.has(key)) delete validations[key]
+  // Normalize validations keys to "gridId.fieldId" (like bindings).
+  // Any legacy bare fieldId keys are mapped to their grid(s) via layoutNodes.
+  const gridsByFieldId = new Map<string, Set<string>>()
+  for (const node of layoutNodes) {
+    if (!gridsByFieldId.has(node.fieldId)) gridsByFieldId.set(node.fieldId, new Set())
+    gridsByFieldId.get(node.fieldId)!.add(node.gridId)
+  }
+
+  const normalizedValidations: Record<string, FieldValidationRule[]> = {}
+  for (const [key, rules] of Object.entries(validations)) {
+    // Legacy key: "<fieldId>"
+    if (!key.includes('.')) {
+      const fieldId = key
+      if (!fieldIds.has(fieldId)) continue
+      const gridSet = gridsByFieldId.get(fieldId)
+      if (!gridSet || gridSet.size === 0) continue
+      for (const gridId of gridSet) {
+        const path = `${gridId}.${fieldId}`
+        const existing = normalizedValidations[path]
+        normalizedValidations[path] = existing ? [...existing, ...rules] : rules
+      }
+      continue
+    }
+
+    // New key: "<gridId>.<fieldId>"
+    const [gridId, fieldId] = key.split('.')
+    if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
+    const existing = normalizedValidations[key]
+    normalizedValidations[key] = existing ? [...existing, ...rules] : rules
   }
 
   // --- Styles ---
@@ -176,7 +232,7 @@ export function applyTrackerPatch(
     fields,
     layoutNodes,
     bindings,
-    validations,
+    validations: normalizedValidations,
     dependsOn: patch.dependsOn ?? base.dependsOn,
     styles,
   }

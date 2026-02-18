@@ -120,6 +120,23 @@ export function TrackerKanbanGrid({
     rows,
   } = kanbanState
 
+  const groupedCards = useMemo(() => {
+    const map = new Map<string, Array<Record<string, unknown> & { _originalIdx: number }>>()
+    rows.forEach((row, idx) => {
+      const key = String((row as Record<string, unknown>)[groupByFieldId] ?? '').trim()
+      const card = { ...(row as Record<string, unknown>), _originalIdx: idx }
+      const list = map.get(key)
+      if (list) {
+        list.push(card)
+      } else {
+        map.set(key, [card])
+      }
+    })
+    return map
+  }, [rows, groupByFieldId])
+
+  const validGroupIds = useMemo(() => new Set(groups.map((g) => g.id)), [groups])
+
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
   }, [])
@@ -142,7 +159,6 @@ export function TrackerKanbanGrid({
       const firstDash = overId.indexOf('-')
       if (firstDash >= 0) nextGroupId = overId.slice(firstDash + 1)
       const nextGroupIdTrimmed = nextGroupId.trim()
-      const validGroupIds = new Set(groups.map((g) => g.id))
       if (!validGroupIds.has(nextGroupIdTrimmed)) return
 
       const currentGroup = currentCard?.[groupByFieldId]
@@ -150,7 +166,7 @@ export function TrackerKanbanGrid({
         onUpdate(cardIdx, groupByFieldId, nextGroupIdTrimmed)
       }
     },
-    [groups, groupByFieldId, rows, onUpdate]
+    [groupByFieldId, rows, onUpdate, validGroupIds]
   )
 
   const getBindingUpdates = useCallback(
@@ -203,15 +219,22 @@ export function TrackerKanbanGrid({
     [editRowIndex, onUpdate, onCrossGridUpdate, kanbanFields, grid.id, bindings, tabId, gridData]
   )
 
-  const cardStyles = {
-    cardPadding: ks.cardPadding,
-    labelFontSize: ks.labelFontSize,
-    valueFontSize: ks.fontSize,
-    fontWeight: ks.fontWeight,
-    valueTextColor: ks.textColor,
-  }
+  const cardStyles = useMemo(
+    () => ({
+      cardPadding: ks.cardPadding,
+      labelFontSize: ks.labelFontSize,
+      valueFontSize: ks.fontSize,
+      fontWeight: ks.fontWeight,
+      valueTextColor: ks.textColor,
+    }),
+    [ks.cardPadding, ks.labelFontSize, ks.fontSize, ks.fontWeight, ks.textColor]
+  )
 
-  const activeCard = activeId ? rows[parseInt(activeId.split('-')[0], 10)] : null
+  const activeCard = useMemo(() => {
+    if (!activeId) return null
+    const idx = parseInt(activeId.split('-')[0], 10)
+    return Number.isNaN(idx) ? null : rows[idx]
+  }, [activeId, rows])
 
   return (
     <DndContext
@@ -256,6 +279,7 @@ export function TrackerKanbanGrid({
               getFieldOverrides={(values, fieldId) =>
                 resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values)[fieldId]
               }
+              gridId={grid.id}
             />
           </>
         )}
@@ -278,13 +302,12 @@ export function TrackerKanbanGrid({
               values
             )[fieldId]
           }
+          gridId={grid.id}
         />
 
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {groups.map((group) => {
-            const cardsInGroup = rows
-              .map((ex, idx) => ({ ...ex, _originalIdx: idx } as Record<string, unknown> & { _originalIdx: number }))
-              .filter((ex) => String(ex[groupByFieldId] ?? '').trim() === group.id)
+            const cardsInGroup = groupedCards.get(group.id) ?? []
 
             return (
               <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
@@ -307,13 +330,12 @@ export function TrackerKanbanGrid({
                     ) : (
                       <>
                         {cardsInGroup.map((card) => {
-                          const idx = (card as Record<string, unknown> & { _originalIdx: number })._originalIdx
-                          const sortId = `${idx}-${group.id}`
+                          const sortId = `${card._originalIdx}-${group.id}`
                           return (
                             <SortableKanbanCard
                               key={sortId}
                               id={sortId}
-                              card={card as Record<string, unknown> & { _originalIdx: number }}
+                              card={card}
                               cardFields={cardFieldsDisplay}
                               tabId={tabId}
                               gridId={grid.id}

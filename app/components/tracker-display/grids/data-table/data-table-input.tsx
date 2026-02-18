@@ -60,6 +60,7 @@ export function DataTableInput({
 }: DataTableInputProps) {
   const inlineInputClass = `border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [addOptionOpen, setAddOptionOpen] = useState(false)
   const addOptionModeRef = useRef<'select' | 'multiselect'>('select')
   // Debounce string/text inputs to avoid lag on every keystroke
@@ -172,7 +173,7 @@ export function DataTableInput({
     }
     case 'date':
       return (
-        <Popover modal={true}>
+        <Popover modal={true} open={datePickerOpen} onOpenChange={setDatePickerOpen}>
           <PopoverTrigger asChild>
             <button
               type="button"
@@ -199,6 +200,7 @@ export function DataTableInput({
                   onChange(newDate.toISOString())
                 }
               }}
+              onCloseRequest={() => setDatePickerOpen(false)}
               disabled={(date) =>
                 date > new Date('2100-01-01') || date < new Date('1900-01-01')
               }

@@ -23,14 +23,29 @@ function Calendar({
   buttonVariant = "ghost",
   formatters,
   components,
+  onSelect,
+  onCloseRequest,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  /** Called when a date is selected in single mode; use to close the popover. */
+  onCloseRequest?: () => void
 }) {
   const defaultClassNames = getDefaultClassNames()
 
+  const handleSelect = React.useCallback(
+    (date: Date | undefined, ...args: unknown[]) => {
+      onSelect?.(date, ...args)
+      if (props.mode === "single" && date) {
+        onCloseRequest?.()
+      }
+    },
+    [onSelect, onCloseRequest, props.mode]
+  )
+
   return (
     <DayPicker
+      onSelect={handleSelect}
       showOutsideDays={showOutsideDays}
       className={cn(
         "bg-background group/calendar p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",

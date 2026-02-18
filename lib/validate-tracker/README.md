@@ -40,8 +40,9 @@ Validators are pure with respect to the context: they read only and do not mutat
 | **Options fields** | `validators/options-fields.ts` | Warnings | Every `options` / `multiselect` field (that is placed in a grid) has a bindings entry. |
 | **DependsOn** | `validators/depends-on.ts` | Warnings | Each `dependsOn` rule has a valid `source` (grid + field) and each target path has valid grid + field. |
 | **Bindings** | `validators/bindings.ts` | Warnings | Binding keys are valid grid.field paths; optionsGrid exists and is an options grid; labelField and fieldMappings reference existing fields; value mapping (to = field path) exists; dynamic_select/dynamic_multiselect use known function ids; select/multiselect fields in layout have a bindings entry. |
+| **Validations** | `validators/validations.ts` | Errors | Validation keys must be `"gridId.fieldId"` (like bindings, e.g. `main_grid.sku`). Every field is in a grid; there is no bare `fieldId` key. Expr rules must reference fields by `gridId.fieldId`. |
 
-Layout is the only one that produces **errors**; the rest produce **warnings** so that invalid bits are skipped at runtime without failing the whole schema.
+Layout and validations produce **errors**; the rest produce **warnings** so that invalid bits are skipped at runtime without failing the whole schema.
 
 ### Auto-fix
 

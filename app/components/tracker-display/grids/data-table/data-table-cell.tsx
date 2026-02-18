@@ -30,7 +30,20 @@ export function DataTableCell<TData, TValue>({
       fieldId: string
     ) => Record<string, unknown> | undefined
     editable?: boolean
+    gridId?: string
   }
+  const rowOriginal = row.original as Record<string, unknown>
+  const rowValues = (() => {
+    const base = { ...rowOriginal }
+    const gridId = meta?.gridId
+    const fieldMeta = fieldMetadata
+    if (gridId && fieldMeta) {
+      for (const columnId of Object.keys(fieldMeta)) {
+        base[`${gridId}.${columnId}`] = rowOriginal[columnId]
+      }
+    }
+    return base
+  })()
   const isEditable = meta?.editable !== false
   const tableStyles = meta?.tableStyles
   const overrides =
@@ -46,14 +59,16 @@ export function DataTableCell<TData, TValue>({
   const isDisabled = !!effectiveConfig?.isDisabled
   const overrideValue = overrides && 'value' in overrides ? (overrides as { value?: unknown }).value : undefined
 
-  const [value, setValue] = useState(() =>
-    overrideValue !== undefined ? overrideValue : cell.getValue()
+  const cellValue = cell.getValue()
+  const [value, setValue] = useState<unknown>(() =>
+    overrideValue !== undefined ? overrideValue : cellValue
   )
   const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
-    setValue(overrideValue !== undefined ? overrideValue : cell.getValue())
-  }, [cell.getValue(), overrideValue])
+    const next = overrideValue !== undefined ? overrideValue : cellValue
+    setValue((prev: unknown) => (Object.is(prev, next) ? prev : next))
+  }, [cellValue, overrideValue])
 
   const handleUpdate = (newValue: any, options?: { bindingUpdates?: Record<string, unknown> }) => {
     setDirty(true)
@@ -72,7 +87,7 @@ export function DataTableCell<TData, TValue>({
       fieldType: fieldInfo.type,
       config: effectiveConfig,
       rules: fieldInfo.validations,
-      rowValues: row.original as Record<string, unknown>,
+      rowValues,
     })
     : null
   const showError = dirty && !!validationError

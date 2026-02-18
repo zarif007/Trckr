@@ -221,12 +221,13 @@ Example — "green accents on kanban": styles: { "tasks_kanban_view": { "accentC
 
 === VALIDATIONS (TOP-LEVEL) ===
 
-Use a top-level "validations" object keyed by field id. Each field id maps to an array of validation rules.
+Use a top-level "validations" object keyed by "<grid_id>.<field_id>" (like bindings, no tab).
+There is no bare "<field_id>" validations key.
 Basic constraints live in field.config (isRequired, min, max, minLength, maxLength). Use validations for regex and expression rules.
 
 Structure:
 validations: {
-  "<field_id>": [
+  "<grid_id>.<field_id>": [
     { type: "required", message?: "..." },
     { type: "min" | "max" | "minLength" | "maxLength", value: <number>, message?: "..." },
     { type: "expr", expr: <ExprNode>, message?: "..." }
@@ -234,8 +235,8 @@ validations: {
 }
 
 ExprNode examples:
-- regex: { op: "regex", value: { op: "field", fieldId: "sku" }, pattern: "^[A-Z]{2}\\\\d{4}$" }
-- math: { op: "add", args: [ { op: "mul", args: [ { op: "field", fieldId: "b" }, { op: "const", value: 10 } ] }, ... ] }
+- regex: { op: "regex", value: { op: "field", fieldId: "main_grid.sku" }, pattern: "^[A-Z]{2}\\\\d{4}$" }
+- math: { op: "add", args: [ { op: "mul", args: [ { op: "field", fieldId: "main_grid.b" }, { op: "const", value: 10 } ] }, ... ] }
 
 If no validations are needed, omit "validations" or use an empty object.
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.

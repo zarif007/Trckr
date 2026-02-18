@@ -72,13 +72,17 @@ export function useKanbanGroups({
   const groupingField = kanbanFields.find((f) => f.id === groupByFieldId)
   if (!groupingField) return null
 
-  const options = resolveFieldOptionsV2(
-    tabId,
-    grid.id,
-    groupingField,
-    bindings,
-    gridData,
-    trackerContext ?? undefined
+  const options = useMemo(
+    () =>
+      resolveFieldOptionsV2(
+        tabId,
+        grid.id,
+        groupingField,
+        bindings,
+        gridData,
+        trackerContext ?? undefined
+      ),
+    [tabId, grid.id, groupingField, bindings, gridData, trackerContext]
   )
 
   const groups = useMemo(() => {
@@ -127,13 +131,13 @@ export function useKanbanGroups({
         type: field.dataType,
         options: opts?.map((o) => ({ id: toOptionId(o), label: o.label ?? '' })),
         config: field.config,
-        validations: validations?.[`${grid.id}.${field.id}`] ?? validations?.[field.id],
+        validations: validations?.[`${grid.id}.${field.id}`],
       }
     })
     return meta
   }, [tabId, grid.id, kanbanFields, bindings, gridData, trackerContext, validations])
 
-  const fieldOrder = kanbanFields.map((f) => f.id)
+  const fieldOrder = useMemo(() => kanbanFields.map((f) => f.id), [kanbanFields])
 
   return {
     groups,

@@ -1,5 +1,6 @@
 export type ExprNode =
   | { op: 'const'; value: unknown }
+  /** fieldId must be "gridId.fieldId" (e.g. main_grid.sku), like bindings. */
   | { op: 'field'; fieldId: string }
   | { op: 'add'; args: ExprNode[] }
   | { op: 'mul'; args: ExprNode[] }

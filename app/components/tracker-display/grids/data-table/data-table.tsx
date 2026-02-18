@@ -70,6 +70,8 @@ interface DataTableProps<TData, TValue> {
   deleteable?: boolean
   /** When false, hide column visibility / grid layout settings. Default true. */
   editLayoutAble?: boolean
+  /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
+  gridId?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -89,6 +91,7 @@ export function DataTable<TData, TValue>({
   editable = true,
   deleteable = true,
   editLayoutAble = true,
+  gridId,
 }: DataTableProps<TData, TValue>) {
   const [tableData, setTableData] = useState<TData[]>(data)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -98,7 +101,7 @@ export function DataTable<TData, TValue>({
   const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
 
   useEffect(() => {
-    setTableData(data)
+    setTableData((prev) => (prev === data ? prev : data))
   }, [data])
 
   const selectedRows = Object.keys(rowSelection)
@@ -281,6 +284,7 @@ export function DataTable<TData, TValue>({
       getFieldOverrides,
       getFieldOverridesForRow,
       editable,
+      gridId,
     },
   })
 
@@ -393,6 +397,7 @@ export function DataTable<TData, TValue>({
               onSaveAnother={handleAddEntryAndStayOpen}
               getBindingUpdates={getBindingUpdates}
               getFieldOverrides={getFieldOverridesForAdd}
+              gridId={gridId}
             />
           </>
         )}
@@ -411,6 +416,7 @@ export function DataTable<TData, TValue>({
           onSave={handleEditSave}
           getBindingUpdates={getBindingUpdates}
           getFieldOverrides={getFieldOverridesForAdd}
+          gridId={gridId}
           mode="edit"
         />
       </div>
