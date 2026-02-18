@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -34,14 +34,16 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from '../../types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
-import { useEditMode, useLayoutActions, FieldRowEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId } from '../../edit-mode'
+import { useEditMode, useLayoutActions, SortableFieldRowEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from '../../edit-mode'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from '../../tracker-options-context'
 import { useGridDependsOn } from '../../hooks/useGridDependsOn'
 import type { OptionsGridFieldDef } from '../data-table/utils'
 import type { FieldMetadata } from '../data-table/utils'
+import { getValidationError } from '../data-table/utils'
 import { EntryFormDialog } from '../data-table/entry-form-dialog'
 import { resolveDivStyles } from '@/lib/style-utils'
 
@@ -54,6 +56,7 @@ interface TrackerDivGridProps {
   allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -84,6 +87,7 @@ export function TrackerDivGrid({
   allLayoutNodes,
   fields,
   bindings = {},
+  validations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -97,6 +101,7 @@ export function TrackerDivGrid({
   const { editMode, schema, onSchemaChange } = useEditMode()
   const { remove, move, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
+  const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
@@ -149,15 +154,22 @@ export function TrackerDivGrid({
     isMultiselect: boolean
     currentValue: unknown
     optionsGridFields: OptionsGridFieldDef[]
+    optionsGridId?: string
   } | null>(null)
 
   const addOptionFieldMetadata: FieldMetadata = useMemo(() => {
     const meta: FieldMetadata = {}
+    const optionsGridId = addOptionContext?.optionsGridId
     addOptionContext?.optionsGridFields?.forEach((f) => {
-      meta[f.id] = { name: f.label, type: f.type, config: f.config }
+      meta[f.id] = {
+        name: f.label,
+        type: f.type,
+        config: f.config,
+        validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
+      }
     })
     return meta
-  }, [addOptionContext?.optionsGridFields])
+  }, [addOptionContext?.optionsGridFields, addOptionContext?.optionsGridId, validations])
 
   const addOptionFieldOrder = useMemo(
     () => addOptionContext?.optionsGridFields?.map((f) => f.id) ?? [],
@@ -182,15 +194,45 @@ export function TrackerDivGrid({
     })
     const newValue = addOptionContext.onAddOption(normalized)
     if (addOptionContext.isMultiselect) {
-      const currentVal = data[addOptionContext.fieldId]
+      const currentVal = draftRow[addOptionContext.fieldId] ?? data[addOptionContext.fieldId]
       const current = Array.isArray(currentVal) ? currentVal : []
-      onUpdate?.(0, addOptionContext.fieldId, [...current.map(String), newValue])
+      const next = [...current.map(String), newValue]
+      setDraftRow((prev) => ({ ...prev, [addOptionContext!.fieldId]: next }))
+      onUpdate?.(0, addOptionContext.fieldId, next)
     } else {
+      setDraftRow((prev) => ({ ...prev, [addOptionContext.fieldId]: newValue }))
       onUpdate?.(0, addOptionContext.fieldId, newValue)
     }
   }
 
   const data = gridData?.[grid.id]?.[0] || {}
+  const [draftRow, setDraftRow] = useState<Record<string, unknown>>(data)
+  const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    setDraftRow((prev) => {
+      const next = { ...data }
+      touchedFieldIds.forEach((fieldId) => {
+        next[fieldId] = prev[fieldId]
+      })
+      return next
+    })
+  }, [data, touchedFieldIds])
+
+  const handleFieldUpdate = useCallback(
+    (fieldId: string, value: unknown) => {
+      setDraftRow((prev) => ({ ...prev, [fieldId]: value }))
+      onUpdate?.(0, fieldId, value)
+    },
+    [onUpdate]
+  )
+  const handleFieldUpdateWithTouched = useCallback(
+    (fieldId: string, value: unknown) => {
+      setTouchedFieldIds((prev) => new Set(prev).add(fieldId))
+      handleFieldUpdate(fieldId, value)
+    },
+    [handleFieldUpdate]
+  )
+
   const fieldOverrides = useMemo(
     () => resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, data),
     [dependsOnForGrid, gridData, grid.id, data]
@@ -236,8 +278,9 @@ export function TrackerDivGrid({
     const selectFieldPath = `${grid.id}.${field.id}`
     let optionsGridFields: OptionsGridFieldDef[] = []
     let onAddOption: ((row: Record<string, unknown>) => string) | undefined
+    let optionsGridId: string | undefined
     if (binding && onAddEntryToGrid) {
-      const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+      optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
       const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
       const { fieldId: labelFieldId } = parsePath(binding.labelField)
       const allNodes = allLayoutNodes ?? layoutNodes
@@ -250,6 +293,7 @@ export function TrackerDivGrid({
           label: f.ui.label,
           type: f.dataType as OptionsGridFieldDef['type'],
           config: f.config as OptionsGridFieldDef['config'],
+          validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
         }))
       onAddOption = (row: Record<string, unknown>) => {
         onAddEntryToGrid!(optionsGridId!, row)
@@ -259,15 +303,29 @@ export function TrackerDivGrid({
       }
     }
 
-    const rawValue = data[field.id]
+    const fieldRules = validations?.[`${grid.id}.${field.id}`] ?? validations?.[field.id]
+    const rawValue = draftRow[field.id] ?? data[field.id]
     const value = (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
       ? (effectiveConfig as { value: unknown }).value
       : rawValue
     const valueString = typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
     const isDisabled = !!effectiveConfig?.isDisabled || (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
 
+    const fieldRulesResolved = fieldRules ?? []
+    const validationError = fieldRulesResolved.length
+      ? getValidationError({
+        value,
+        fieldId: field.id,
+        fieldType: field.dataType,
+        config: effectiveConfig,
+        rules: fieldRulesResolved,
+        rowValues: draftRow,
+      })
+      : null
+    const showError = touchedFieldIds.has(field.id) && !!validationError
+
     const handleSelectChange = (selectedValue: unknown) => {
-      onUpdate?.(0, field.id, selectedValue)
+      handleFieldUpdateWithTouched(field.id, selectedValue)
 
       if (field.dataType === 'options' || field.dataType === 'multiselect') {
         const binding = getBindingForField(grid.id, field.id, bindings, tabId)
@@ -282,7 +340,7 @@ export function TrackerDivGrid({
                 if (onCrossGridUpdate) {
                   onCrossGridUpdate(targetGridId, 0, targetFieldId, update.value)
                 } else if (targetGridId === grid.id) {
-                  onUpdate?.(0, targetFieldId, update.value)
+                  handleFieldUpdateWithTouched(targetFieldId, update.value)
                 }
               }
             }
@@ -303,7 +361,7 @@ export function TrackerDivGrid({
               placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
               disabled={isDisabled}
               onBlur={(e) =>
-                onUpdate?.(0, field.id, e.target.value)
+                handleFieldUpdateWithTouched(field.id, e.target.value)
               }
             />
           )
@@ -314,7 +372,7 @@ export function TrackerDivGrid({
                 checked={value === true}
                 disabled={isDisabled}
                 onCheckedChange={(checked) =>
-                  onUpdate?.(0, field.id, checked)
+                  handleFieldUpdateWithTouched(field.id, checked)
                 }
               />
             </div>
@@ -336,7 +394,7 @@ export function TrackerDivGrid({
               disabled={isDisabled}
               onValueChange={(val) => {
                 if (val === ADD_OPTION_VALUE && onAddOption) {
-                  setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
+                  setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields, optionsGridId })
                   setAddOptionOpen(true)
                   return
                 }
@@ -345,7 +403,7 @@ export function TrackerDivGrid({
               searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
               className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
               onAddOptionClick={onAddOption ? () => {
-                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields })
+                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: false, currentValue: value, optionsGridFields, optionsGridId })
                 setAddOptionOpen(true)
               } : undefined}
               addOptionLabel="Add option..."
@@ -363,7 +421,7 @@ export function TrackerDivGrid({
               disabled={isDisabled}
               className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
               onAddOptionClick={onAddOption ? () => {
-                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields })
+                setAddOptionContext({ fieldId: field.id, onAddOption, isMultiselect: true, currentValue: value, optionsGridFields, optionsGridId })
                 setAddOptionOpen(true)
               } : undefined}
             />
@@ -394,7 +452,7 @@ export function TrackerDivGrid({
                     if (date) {
                       const newDate = new Date(date)
                       newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
-                      onUpdate?.(0, field.id, newDate.toISOString())
+                      handleFieldUpdateWithTouched(field.id, newDate.toISOString())
                     }
                   }}
                   disabled={(date) =>
@@ -414,7 +472,7 @@ export function TrackerDivGrid({
               placeholder="0"
               disabled={isDisabled}
               onBlur={(e) =>
-                onUpdate?.(0, field.id, Number(e.target.value))
+                handleFieldUpdateWithTouched(field.id, Number(e.target.value))
               }
             />
           )
@@ -426,7 +484,7 @@ export function TrackerDivGrid({
               placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
               disabled={isDisabled}
               onBlur={(e) =>
-                onUpdate?.(0, field.id, e.target.value)
+                handleFieldUpdateWithTouched(field.id, e.target.value)
               }
             />
           )
@@ -443,16 +501,24 @@ export function TrackerDivGrid({
     )
 
     const inputContent = (
-      <div
-        className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors border-input hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''}`}
-        onPointerDown={(e) => {
-          e.stopPropagation()
-        }}
-        onClick={(e) => {
-          focusInputInContainer(e.currentTarget)
-        }}
-      >
-        {renderInput()}
+      <div className="space-y-1">
+        <div
+          className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''} ${showError ? 'border-destructive/60 ring-1 ring-destructive/40' : 'border-input'}`}
+          title={showError ? validationError ?? undefined : undefined}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+          }}
+          onClick={(e) => {
+            focusInputInContainer(e.currentTarget)
+          }}
+        >
+          {renderInput()}
+        </div>
+        {showError && validationError ? (
+          <p className="text-xs text-destructive" role="alert">
+            {validationError}
+          </p>
+        ) : null}
       </div>
     )
 
@@ -469,6 +535,7 @@ export function TrackerDivGrid({
           onRemove={() => remove(field.id)}
           onMoveUp={() => move(field.id, 'up')}
           onMoveDown={() => move(field.id, 'down')}
+          onSettings={() => setSettingsFieldId(field.id)}
         >
           {inputContent}
         </SortableFieldRowEdit>
@@ -553,6 +620,18 @@ export function TrackerDivGrid({
           onSave={applyAddOption}
           onSaveAnother={applyAddOption}
           mode="add"
+        />
+      )}
+      {canEditLayout && schema && onSchemaChange && (
+        <FieldSettingsDialog
+          open={settingsFieldId != null}
+          onOpenChange={(open) => {
+            if (!open) setSettingsFieldId(null)
+          }}
+          fieldId={settingsFieldId}
+          gridId={grid.id}
+          schema={schema}
+          onSchemaChange={onSchemaChange}
         />
       )}
     </div>

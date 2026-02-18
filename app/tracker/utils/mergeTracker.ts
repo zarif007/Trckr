@@ -129,6 +129,25 @@ export function applyTrackerPatch(
     }
   }
 
+  const validations = { ...(base.validations ?? {}) } as Record<string, unknown>
+  if (patch.validations) {
+    for (const [key, value] of Object.entries(patch.validations)) {
+      if (value === null) {
+        delete validations[key]
+      } else {
+        validations[key] = value as any
+      }
+    }
+  }
+  if (patch.validationsRemove) {
+    for (const key of patch.validationsRemove) {
+      delete validations[key]
+    }
+  }
+  for (const key of Object.keys(validations)) {
+    if (!fieldIds.has(key)) delete validations[key]
+  }
+
   // --- Styles ---
   const styles = { ...(base.styles ?? {}) }
   if (patch.styles) {
@@ -157,6 +176,7 @@ export function applyTrackerPatch(
     fields,
     layoutNodes,
     bindings,
+    validations,
     dependsOn: patch.dependsOn ?? base.dependsOn,
     styles,
   }

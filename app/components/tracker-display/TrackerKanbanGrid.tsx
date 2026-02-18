@@ -42,6 +42,7 @@ import type {
   DependsOnRules,
 } from './types'
 import type { TrackerContextForOptions } from '@/lib/binding'
+import type { FieldValidationRule } from '@/lib/functions/types'
 
 export interface TrackerKanbanGridProps {
   tabId: string
@@ -49,6 +50,7 @@ export interface TrackerKanbanGridProps {
   layoutNodes: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -64,6 +66,7 @@ export function TrackerKanbanGrid({
   layoutNodes,
   fields,
   bindings = {},
+  validations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -88,6 +91,7 @@ export function TrackerKanbanGrid({
     layoutNodes,
     fields,
     bindings,
+    validations,
     gridData,
     trackerContext,
   })

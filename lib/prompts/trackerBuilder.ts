@@ -218,6 +218,26 @@ Tokens (all optional): fontSize ("xs"|"sm"|"base"|"lg"|"xl"), fontWeight, textCo
 
 Example — "make the tasks table font bigger": styles: { "tasks_grid": { "fontSize": "lg" } }
 Example — "green accents on kanban": styles: { "tasks_kanban_view": { "accentColor": "green" } }
+
+=== VALIDATIONS (TOP-LEVEL) ===
+
+Use a top-level "validations" object keyed by field id. Each field id maps to an array of validation rules.
+Basic constraints live in field.config (isRequired, min, max, minLength, maxLength). Use validations for regex and expression rules.
+
+Structure:
+validations: {
+  "<field_id>": [
+    { type: "required", message?: "..." },
+    { type: "min" | "max" | "minLength" | "maxLength", value: <number>, message?: "..." },
+    { type: "expr", expr: <ExprNode>, message?: "..." }
+  ]
+}
+
+ExprNode examples:
+- regex: { op: "regex", value: { op: "field", fieldId: "sku" }, pattern: "^[A-Z]{2}\\\\d{4}$" }
+- math: { op: "add", args: [ { op: "mul", args: [ { op: "field", fieldId: "b" }, { op: "const", value: 10 } ] }, ... ] }
+
+If no validations are needed, omit "validations" or use an empty object.
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `
 

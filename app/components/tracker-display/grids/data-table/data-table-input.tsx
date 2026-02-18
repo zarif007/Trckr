@@ -78,7 +78,12 @@ export function DataTableInput({
   const addOptionFieldMetadata: FieldMetadata = useMemo(() => {
     const meta: FieldMetadata = {}
     optionsGridFields?.forEach((f) => {
-      meta[f.id] = { name: f.label, type: f.type, config: f.config }
+      meta[f.id] = {
+        name: f.label,
+        type: f.type,
+        config: f.config,
+        validations: f.validations,
+      }
     })
     return meta
   }, [optionsGridFields])

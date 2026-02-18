@@ -34,6 +34,7 @@ export interface SortableColumnHeaderEditProps {
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onSettings?: () => void
 }
 
 export function SortableColumnHeaderEdit({
@@ -45,6 +46,7 @@ export function SortableColumnHeaderEdit({
   onRemove,
   onMoveUp,
   onMoveDown,
+  onSettings,
 }: SortableColumnHeaderEditProps) {
   const id = fieldSortableId(gridId, fieldId)
   const {
@@ -70,6 +72,7 @@ export function SortableColumnHeaderEdit({
       onRemove={onRemove}
       onMoveUp={onMoveUp}
       onMoveDown={onMoveDown}
+      onSettings={onSettings}
       inline
       sortable={{
         wrapperRef: setNodeRef,
@@ -92,6 +95,7 @@ export interface SortableFieldRowEditProps {
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onSettings?: () => void
   children: React.ReactNode
 }
 
@@ -105,6 +109,7 @@ export function SortableFieldRowEdit({
   onRemove,
   onMoveUp,
   onMoveDown,
+  onSettings,
   children,
 }: SortableFieldRowEditProps) {
   const id = fieldSortableId(gridId, fieldId)
@@ -132,6 +137,7 @@ export function SortableFieldRowEdit({
       onRemove={onRemove}
       onMoveUp={onMoveUp}
       onMoveDown={onMoveDown}
+      onSettings={onSettings}
       sortable={{
         wrapperRef: setNodeRef,
         wrapperStyle: style,

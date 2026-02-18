@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import {
   ColumnDef,
   flexRender,
@@ -90,11 +90,16 @@ export function DataTable<TData, TValue>({
   deleteable = true,
   editLayoutAble = true,
 }: DataTableProps<TData, TValue>) {
+  const [tableData, setTableData] = useState<TData[]>(data)
   const [sorting, setSorting] = useState<SortingState>([])
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    setTableData(data)
+  }, [data])
 
   const selectedRows = Object.keys(rowSelection)
     .map(Number)
@@ -241,8 +246,22 @@ export function DataTable<TData, TValue>({
 
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
 
+  const updateDraftCell = useCallback(
+    (rowIndex: number, columnId: string, value: any) => {
+      setTableData((prev) =>
+        prev.map((row, idx) =>
+          idx === rowIndex
+            ? ({ ...(row as any), [columnId]: value } as TData)
+            : row
+        )
+      )
+      onCellUpdate?.(rowIndex, columnId, value)
+    },
+    [onCellUpdate],
+  )
+
   const table = useReactTable({
-    data: data,
+    data: tableData,
     columns: columnsWithSelectionAndActions,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -256,7 +275,7 @@ export function DataTable<TData, TValue>({
       columnVisibility: effectiveVisibility,
     },
     meta: {
-      updateData: editable ? onCellUpdate : undefined,
+      updateData: editable ? updateDraftCell : undefined,
       fieldMetadata: fieldMetadata,
       tableStyles: ts,
       getFieldOverrides,

@@ -66,7 +66,14 @@ export function DataTableCell<TData, TValue>({
   }
 
   const validationError = fieldInfo
-    ? getValidationError(value, fieldInfo.type, effectiveConfig)
+    ? getValidationError({
+      value,
+      fieldId: cell.column.id,
+      fieldType: fieldInfo.type,
+      config: effectiveConfig,
+      rules: fieldInfo.validations,
+      rowValues: row.original as Record<string, unknown>,
+    })
     : null
   const showError = dirty && !!validationError
   const isMultiselect = fieldInfo?.type === 'multiselect' || fieldInfo?.type === 'dynamic_multiselect'

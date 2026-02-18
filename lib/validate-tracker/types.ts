@@ -2,6 +2,8 @@
  * Shared types for tracker validation.
  */
 
+import type { FieldValidationRule } from '@/lib/functions/types'
+
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 export interface BindingEntry {
   optionsGrid: string
@@ -21,6 +23,7 @@ export interface TrackerLike {
   }>
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number; row?: number; col?: number }>
   bindings?: Record<string, BindingEntry>
+  validations?: Record<string, FieldValidationRule[]>
   dependsOn?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
 }
 
@@ -36,12 +39,15 @@ export interface ValidationContext {
   sectionIds: Set<string>
   gridIds: Set<string>
   fieldIds: Set<string>
+  /** Set of "gridId.fieldId" for each (gridId, fieldId) in layoutNodes (like bindings). */
+  fieldPaths: Set<string>
   tabs: NonNullable<TrackerLike['tabs']>
   sections: NonNullable<TrackerLike['sections']>
   grids: NonNullable<TrackerLike['grids']>
   fields: NonNullable<TrackerLike['fields']>
   layoutNodes: NonNullable<TrackerLike['layoutNodes']>
   bindings: NonNullable<TrackerLike['bindings']>
+  validations: NonNullable<TrackerLike['validations']>
 }
 
 export type ValidatorResult = { errors?: string[]; warnings?: string[] }

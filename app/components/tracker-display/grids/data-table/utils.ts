@@ -10,6 +10,7 @@ import {
   DollarSign,
   Percent,
 } from 'lucide-react'
+import type { FieldValidationRule } from '@/lib/functions/types'
 
 export type FieldType =
   | 'string'
@@ -33,45 +34,6 @@ export interface FieldConfig {
   max?: number
   minLength?: number
   maxLength?: number
-}
-
-export function getValidationError(
-  value: unknown,
-  type: FieldType,
-  config?: FieldConfig | null
-): string | null {
-  if (!config) return null
-  if (config.isHidden || config.isDisabled) return null
-  const { isRequired, min, max, minLength, maxLength } = config
-  const isEmpty = (v: unknown) =>
-    v === undefined ||
-    v === null ||
-    v === '' ||
-    (Array.isArray(v) && v.length === 0)
-  if (isRequired && isEmpty(value)) return 'Required'
-  switch (type) {
-    case 'string':
-    case 'text': {
-      const s = typeof value === 'string' ? value : ''
-      if (typeof minLength === 'number' && s.length < minLength)
-        return `At least ${minLength} characters`
-      if (typeof maxLength === 'number' && s.length > maxLength)
-        return `At most ${maxLength} characters`
-      return null
-    }
-    case 'number':
-    case 'currency':
-    case 'percentage': {
-      if (value === '' || value === undefined || value === null) return null
-      const n = typeof value === 'number' ? value : parseFloat(String(value))
-      if (Number.isNaN(n)) return 'Enter a valid number'
-      if (typeof min === 'number' && n < min) return `Must be at least ${min}`
-      if (typeof max === 'number' && n > max) return `Must be at most ${max}`
-      return null
-    }
-    default:
-      return null
-  }
 }
 
 /** Sanitize value to fit config (clamp numbers, truncate strings). Returns value unchanged if no config. */
@@ -111,6 +73,7 @@ export interface OptionsGridFieldDef {
   label: string
   type: FieldType
   config?: FieldConfig
+  validations?: FieldValidationRule[]
 }
 
 export interface FieldMetadata {
@@ -119,6 +82,7 @@ export interface FieldMetadata {
     type: FieldType
     options?: (string | { id: string; label: string })[]
     config?: FieldConfig
+    validations?: FieldValidationRule[]
     /** Fields to show in the Add Option form (columns of the options grid). When set with onAddOption, dialog collects all values. */
     optionsGridFields?: OptionsGridFieldDef[]
     /** When set, select/multiselect shows "Add option". Pass full row (all option grid field values); returns the new option value for the select. */
@@ -127,6 +91,8 @@ export interface FieldMetadata {
     getBindingUpdatesFromRow?: (row: Record<string, unknown>) => Record<string, unknown>
   }
 }
+
+export { getValidationError } from '@/lib/field-validation'
 
 export const getFieldIcon = (type: FieldType) => {
   switch (type) {

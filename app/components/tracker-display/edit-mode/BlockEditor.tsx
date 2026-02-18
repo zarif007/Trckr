@@ -127,6 +127,7 @@ export function BlockEditor({
   fields,
   layoutNodes,
   bindings,
+  validations,
   styles,
   dependsOn,
   gridData,
@@ -428,21 +429,22 @@ export function BlockEditor({
                             editable
                             onNameChange={(name) => actions.renameGrid(grid.id, name)}
                           />
-                          <GridBlockContent
-                            tabId={tab.id}
-                            grid={grid}
-                            layoutNodes={layoutNodes}
-                            allLayoutNodes={layoutNodes}
-                            fields={fields}
-                            allGrids={grids}
-                            allFields={fields}
-                            bindings={bindings}
-                            styles={styles}
-                            dependsOn={dependsOn}
-                            gridData={gridData}
-                            onUpdate={onUpdate}
-                            onAddEntry={onAddEntry}
-                            onDeleteEntries={onDeleteEntries}
+                  <GridBlockContent
+                    tabId={tab.id}
+                    grid={grid}
+                    layoutNodes={layoutNodes}
+                    allLayoutNodes={layoutNodes}
+                    fields={fields}
+                    allGrids={grids}
+                    allFields={fields}
+                    bindings={bindings}
+                    validations={validations}
+                    styles={styles}
+                    dependsOn={dependsOn}
+                    gridData={gridData}
+                    onUpdate={onUpdate}
+                    onAddEntry={onAddEntry}
+                    onDeleteEntries={onDeleteEntries}
                             hideLabel
                           />
                         </div>

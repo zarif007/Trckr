@@ -63,11 +63,14 @@ export function EntryFormDialog({
         overrides
       )
       if (effectiveConfig?.isHidden || effectiveConfig?.isDisabled) return false
-      return !!getValidationError(
-        formData[columnId],
-        fieldInfo.type,
-        effectiveConfig
-      )
+      return !!getValidationError({
+        value: formData[columnId],
+        fieldId: columnId,
+        fieldType: fieldInfo.type,
+        config: effectiveConfig,
+        rules: fieldInfo.validations,
+        rowValues: formData,
+      })
     })
   }, [formData, fieldMetadata, orderedIds, getFieldOverrides])
 
@@ -116,11 +119,14 @@ export function EntryFormDialog({
           if (effectiveConfig?.isHidden) return null
 
           const value = formData[columnId] ?? ''
-          const error = getValidationError(
-            formData[columnId],
-            fieldInfo.type,
-            effectiveConfig
-          )
+          const error = getValidationError({
+            value: formData[columnId],
+            fieldId: columnId,
+            fieldType: fieldInfo.type,
+            config: effectiveConfig,
+            rules: fieldInfo.validations,
+            rowValues: formData,
+          })
           const showError = columnId in formData ? !!error : false
           const Icon = getFieldIcon(fieldInfo.type)
 

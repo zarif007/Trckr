@@ -8,6 +8,7 @@ import type {
   StyleOverrides,
   DependsOnRules,
 } from '../types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GridViewContent } from '../GridViewContent'
 import { normalizeGridViews } from '../view-utils'
@@ -21,6 +22,7 @@ export interface GridBlockContentProps {
   allGrids?: TrackerGrid[]
   allFields?: TrackerField[]
   bindings: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -46,6 +48,7 @@ export function GridBlockContent({
   allGrids,
   allFields,
   bindings,
+  validations,
   styles,
   dependsOn,
   gridData,
@@ -81,6 +84,7 @@ export function GridBlockContent({
           allGrids={allGrids}
           allFields={allFields}
           bindings={bindings}
+          validations={validations}
           styleOverrides={viewOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
@@ -125,6 +129,7 @@ export function GridBlockContent({
                 allGrids={allGrids}
                 allFields={allFields}
                 bindings={bindings}
+                validations={validations}
                 styleOverrides={viewOverrides}
                 dependsOn={dependsOn}
                 gridData={gridData}

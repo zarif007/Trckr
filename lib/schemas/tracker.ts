@@ -185,6 +185,12 @@ export const bindingsSchema = z
   .default({})
   .describe('Bindings for select/multiselect fields. Key is grid_id.field_id. MANDATORY for all select/multiselect fields.')
 
+/** Top-level validations map (fieldId -> rules). */
+export const validationsSchema = z
+  .record(z.string(), z.array(z.any()))
+  .default({})
+  .describe('Field validations keyed by field id. Rules are evaluated in order.')
+
 export const trackerSchema = z
   .object({
     tabs: z
@@ -252,6 +258,8 @@ export const trackerSchema = z
       )
       .default([])
       .describe('Array of atomic field definitions. Referenced by layoutNodes to place into grids.'),
+
+    validations: validationsSchema,
 
     layoutNodes: z
       .array(

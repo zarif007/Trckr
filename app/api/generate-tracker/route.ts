@@ -116,10 +116,11 @@ export async function POST(request: Request) {
               id: f.id,
               dataType: f.dataType,
               ui: f.ui,
-              config: f.config ?? {}, // validations, isRequired, isDisabled, isHidden
+              config: f.config ?? {}, // isRequired, isDisabled, isHidden, etc.
             })),
             layoutNodes: (msg.trackerData as any).layoutNodes || [],
             bindings: (msg.trackerData as any).bindings || {},
+            validations: (msg.trackerData as any).validations || {},
             dependsOn: (msg.trackerData as any).dependsOn || [],
           }
 
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
       - For new items, include all required fields (id, name, placeId, config, etc.).
       - For updates, include only changed fields (plus id).
       - For bindings, set keys in "bindings"; set a key to null to delete it. Optionally list keys in "bindingsRemove".
+      - For validations, set keys in "validations"; set a key to null to delete it. Optionally list keys in "validationsRemove".
       - For dependsOn, include the full updated dependsOn array if it changed.
 
       OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, type ReactNode } from 'react'
-import { GripVertical, Trash2, Plus } from 'lucide-react'
+import { GripVertical, Trash2, Plus, Settings2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface LabelWithBlockControlsProps {
@@ -10,6 +10,7 @@ export interface LabelWithBlockControlsProps {
   onRemove: () => void
   dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
   onAddBlockClick?: () => void
+  onSettings?: () => void
   isSortable?: boolean
   /** Optional class for the outer wrapper */
   className?: string
@@ -24,6 +25,7 @@ export function LabelWithBlockControls({
   onRemove,
   dragHandleProps = {},
   onAddBlockClick,
+  onSettings,
   isSortable = true,
   className,
 }: LabelWithBlockControlsProps) {
@@ -79,6 +81,19 @@ export function LabelWithBlockControls({
               aria-label="Add block below"
             >
               <Plus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+          {onSettings && (
+            <button
+              type="button"
+              className="flex items-center justify-center h-6 w-6 rounded shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSettings()
+              }}
+              aria-label="Field settings"
+            >
+              <Settings2 className="h-3.5 w-3.5" aria-hidden />
             </button>
           )}
           <button

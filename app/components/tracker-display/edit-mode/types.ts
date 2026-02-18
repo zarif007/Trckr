@@ -15,6 +15,7 @@ import type {
   StyleOverrides,
   DependsOnRules,
 } from '../types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 
 // ---------------------------------------------------------------------------
 // Flat block editor types
@@ -33,6 +34,7 @@ export interface BlockEditorProps {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData: Record<string, Array<Record<string, unknown>>>
@@ -54,6 +56,7 @@ export interface EditModeSchema {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, unknown>
   dependsOn?: DependsOnRules
 }
@@ -85,6 +88,7 @@ export interface ColumnHeaderEditProps {
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onSettings?: () => void
   /** When true, render inline (no left gutter) so header aligns with table body. */
   inline?: boolean
   sortable?: {
@@ -106,6 +110,7 @@ export interface FieldRowEditProps {
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onSettings?: () => void
   children: ReactNode
   sortable?: {
     wrapperRef: (node: HTMLElement | null) => void

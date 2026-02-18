@@ -22,6 +22,7 @@ export type {
 export { BlockWrapper } from './BlockWrapper'
 export { ColumnHeaderEdit } from './ColumnHeaderEdit'
 export { FieldRowEdit } from './FieldRowEdit'
+export { FieldSettingsDialog } from './FieldSettingsDialog'
 export {
   SortableColumnHeaderEdit,
   SortableFieldRowEdit,

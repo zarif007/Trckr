@@ -1,6 +1,6 @@
 'use client'
 
-import { GripVertical, Trash2 } from 'lucide-react'
+import { GripVertical, Trash2, Settings2 } from 'lucide-react'
 import { BlockWrapper } from './BlockWrapper'
 import type { ColumnHeaderEditProps } from './types'
 import { cn } from '@/lib/utils'
@@ -14,6 +14,7 @@ export function ColumnHeaderEdit({
   fieldId,
   label,
   onRemove,
+  onSettings,
   sortable,
   inline = false,
 }: ColumnHeaderEditProps) {
@@ -32,6 +33,22 @@ export function ColumnHeaderEdit({
         <GripVertical className="h-3.5 w-3.5" aria-hidden />
       </button>
       <span className="truncate font-medium text-foreground">{label}</span>
+      {onSettings && (
+        <button
+          type="button"
+          className={cn(
+            'flex items-center justify-center shrink-0 rounded hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors',
+            inline ? 'h-6 w-6 p-0' : 'h-6 w-6'
+          )}
+          onClick={(e) => {
+            e.stopPropagation()
+            onSettings()
+          }}
+          aria-label={`Field settings for ${label}`}
+        >
+          <Settings2 className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      )}
       <button
         type="button"
         className={cn(

@@ -10,6 +10,7 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from '../types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import { SectionBar, ViewBlockWrapper, GRIDS_CONTAINER, GRID_BLOCK_INNER } from '../layout'
 import { GridBlockHeader, GridBlockContent } from '../blocks'
 
@@ -22,6 +23,7 @@ export interface TrackerSectionProps {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -44,6 +46,7 @@ export function TrackerSection({
   fields,
   layoutNodes,
   bindings = {},
+  validations,
   styles,
   dependsOn,
   gridData,
@@ -77,6 +80,7 @@ export function TrackerSection({
                   allGrids={allGrids}
                   allFields={allFields}
                   bindings={bindings}
+                  validations={validations}
                   styles={styles}
                   dependsOn={dependsOn}
                   gridData={gridData}

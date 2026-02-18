@@ -11,9 +11,11 @@ import type { FieldRowEditProps } from './types'
 function FieldRowContent({
   labelContent,
   children,
+  onSettings,
 }: {
   labelContent: React.ReactNode
   children: React.ReactNode
+  onSettings?: () => void
 }) {
   const controls = useBlockControls()
   if (!controls) {
@@ -29,6 +31,7 @@ function FieldRowContent({
       <LabelWithBlockControls
         label={labelContent}
         onRemove={controls.onRemove}
+        onSettings={onSettings}
         dragHandleProps={controls.dragHandleProps}
         isSortable={controls.isSortable}
       />
@@ -42,6 +45,7 @@ export function FieldRowEdit({
   label,
   labelContent,
   onRemove,
+  onSettings,
   children,
   sortable,
 }: FieldRowEditProps) {
@@ -56,7 +60,7 @@ export function FieldRowEdit({
       dragHandleProps={sortable?.dragHandleProps}
       isDragging={sortable?.isDragging}
     >
-      <FieldRowContent labelContent={labelContent ?? label}>
+      <FieldRowContent labelContent={labelContent ?? label} onSettings={onSettings}>
         {children}
       </FieldRowContent>
     </BlockWrapper>

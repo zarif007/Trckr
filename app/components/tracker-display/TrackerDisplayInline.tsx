@@ -21,6 +21,7 @@ export function TrackerDisplayInline({
   fields,
   layoutNodes = [],
   bindings = {},
+  validations,
   styles,
   initialGridData,
   getDataRef,
@@ -155,7 +156,7 @@ export function TrackerDisplayInline({
   if (!normalizedTabs.length) return null
 
   const editModeSchema = editMode
-    ? { tabs, sections, grids, fields, layoutNodes, bindings, styles, dependsOn }
+    ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn }
     : undefined
 
   const content = (
@@ -184,6 +185,7 @@ export function TrackerDisplayInline({
             fields={effectiveFields}
             layoutNodes={effectiveLayoutNodes}
             bindings={effectiveBindings}
+            validations={validations}
             styles={styles}
             dependsOn={effectiveDependsOn}
             gridData={gridData}

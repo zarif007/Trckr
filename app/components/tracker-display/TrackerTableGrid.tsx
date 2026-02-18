@@ -1,6 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { DataTable } from './grids/data-table'
 import type { FieldMetadata } from './grids/data-table/utils'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -21,7 +22,7 @@ import { useMemo, useCallback, useState } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
-import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, ColumnHeaderEdit, SortableColumnHeaderEdit, fieldSortableId, parseFieldId } from './edit-mode'
+import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, SortableColumnHeaderEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from './edit-mode'
 import { Plus } from 'lucide-react'
 
 interface TrackerTableGridProps {
@@ -32,6 +33,7 @@ interface TrackerTableGridProps {
   allLayoutNodes?: TrackerLayoutNode[]
   fields: TrackerField[]
   bindings?: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
@@ -53,6 +55,7 @@ export function TrackerTableGrid({
   allLayoutNodes,
   fields,
   bindings = {},
+  validations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -66,6 +69,7 @@ export function TrackerTableGrid({
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const [addColumnOpen, setAddColumnOpen] = useState(false)
+  const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
   const { editMode, schema, onSchemaChange } = useEditMode()
   const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
@@ -233,6 +237,7 @@ export function TrackerTableGrid({
           label: f.ui.label,
           type: f.dataType as FieldMetadata[string]['type'],
           config: f.config as FieldMetadata[string]['config'],
+          validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id] ?? validations?.[f.id],
         }))
       onAddOption = (row: Record<string, unknown>) => {
         onAddEntryToGrid!(optionsGridId!, row)
@@ -261,6 +266,7 @@ export function TrackerTableGrid({
       type: field.dataType,
       options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
       config: field.config,
+      validations: validations?.[`${grid.id}.${field.id}`] ?? validations?.[field.id],
       optionsGridFields,
       onAddOption,
       getBindingUpdatesFromRow,
@@ -327,6 +333,7 @@ export function TrackerTableGrid({
               onRemove={() => remove(field.id)}
               onMoveUp={() => move(field.id, 'up')}
               onMoveDown={() => move(field.id, 'down')}
+              onSettings={() => setSettingsFieldId(field.id)}
             />
           )
           : field.ui.label,
@@ -353,6 +360,18 @@ export function TrackerTableGrid({
           existingFieldIds={connectedFieldNodes.map((n) => n.fieldId)}
           allFields={schema!.fields ?? []}
           onConfirm={handleAddColumnConfirm}
+        />
+      )}
+      {canEditLayout && schema && onSchemaChange && (
+        <FieldSettingsDialog
+          open={settingsFieldId != null}
+          onOpenChange={(open) => {
+            if (!open) setSettingsFieldId(null)
+          }}
+          fieldId={settingsFieldId}
+          gridId={grid.id}
+          schema={schema}
+          onSchemaChange={onSchemaChange}
         />
       )}
       <DataTable

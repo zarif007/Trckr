@@ -12,6 +12,7 @@ import type {
   StyleOverrides,
   DependsOnRules,
 } from '../types'
+import type { FieldValidationRule } from '@/lib/functions/types'
 import { TrackerSection } from './TrackerSection'
 import { useCanEditLayout, BlockEditor } from '../edit-mode'
 import { TAB_CONTENT_ROOT, TAB_CONTENT_INNER, SECTION_GROUP_ROOT } from '../layout'
@@ -23,6 +24,7 @@ export interface TrackerTabContentProps {
   fields: TrackerField[]
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
+  validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData: Record<string, Array<Record<string, unknown>>>
@@ -38,6 +40,7 @@ export function TrackerTabContent({
   fields,
   layoutNodes,
   bindings,
+  validations,
   styles,
   dependsOn,
   gridData,
@@ -73,6 +76,7 @@ export function TrackerTabContent({
           fields={fields}
           layoutNodes={layoutNodes}
           bindings={bindings}
+          validations={validations}
           styles={styles}
           dependsOn={dependsOn}
           gridData={gridData}
@@ -97,6 +101,7 @@ export function TrackerTabContent({
               fields={fields}
               layoutNodes={layoutNodes}
               bindings={bindings}
+              validations={validations}
               styles={styles}
               dependsOn={dependsOn}
               gridData={gridData}
