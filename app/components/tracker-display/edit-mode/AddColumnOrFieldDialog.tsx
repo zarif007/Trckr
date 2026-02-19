@@ -105,8 +105,7 @@ export function AddColumnOrFieldDialog({
           }
         }}
       >
-        <div className="relative px-6 pt-6 pb-5 bg-white dark:bg-gradient-to-br dark:from-primary/8 dark:via-background dark:to-background">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/80" />
+        <div className="relative border-b border-border/50 px-6 pt-6 pb-5 bg-background">
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-lg font-semibold tracking-tight">
               Add {labelName}

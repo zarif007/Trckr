@@ -275,10 +275,9 @@ export function FieldSettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-white dark:bg-background dark:backdrop-blur"
+        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-background"
       >
-        <div className="relative shrink-0 px-6 pt-6 pb-5 bg-white dark:bg-gradient-to-br dark:from-primary/8 dark:via-background dark:to-background">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/80" />
+        <div className="relative shrink-0 border-b border-border/50 px-6 pt-6 pb-5 bg-background">
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-lg font-semibold tracking-tight">
               Field settings
@@ -289,7 +288,7 @@ export function FieldSettingsDialog({
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-white dark:bg-transparent">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="space-y-5 px-6 py-5">
             <Tabs defaultValue="general" className="w-full">
               <TabsList className="inline-flex w-full rounded-xl bg-slate-100/80 dark:bg-muted/40 p-1 h-11 border border-border/50">
