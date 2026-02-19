@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sparkles, User, Loader2, Maximize2, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp } from 'lucide-react'
 import type { Message, TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerMessageListProps {
@@ -9,39 +9,8 @@ interface TrackerMessageListProps {
   isLoading: boolean
   /** Streamed object from useObject – typed loosely to accept PartialObject from AI SDK */
   object: unknown
-  setActiveTrackerData: (data: TrackerResponse) => void
-  setIsDialogOpen: (open: boolean) => void
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
-}
-
-function renderTrackerPreview(
-  trackerData: TrackerResponse,
-  onPreviewClick: () => void
-) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      onClick={onPreviewClick}
-      className="group relative max-w-sm p-5 rounded-md border border-border/50 bg-secondary/30 backdrop-blur-xl hover:border-primary/50 transition-all cursor-pointer"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="p-2.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-            <Sparkles className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="text-sm font-bold tracking-tight">Tracker Ready</p>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{trackerData.tabs?.[0]?.id || 'Custom Tracker'}</p>
-          </div>
-        </div>
-        <div className="p-2 rounded-md group-hover:bg-primary/10 text-muted-foreground group-hover:text-primary transition-colors">
-          <Maximize2 className="w-4 h-4" />
-        </div>
-      </div>
-    </motion.div>
-  )
 }
 
 function renderStreamingPreview() {
@@ -68,8 +37,6 @@ export function TrackerMessageList({
   messages,
   isLoading,
   object: streamedObject,
-  setActiveTrackerData,
-  setIsDialogOpen,
   setMessageThinkingOpen,
   messagesEndRef,
 }: TrackerMessageListProps) {
@@ -171,11 +138,8 @@ export function TrackerMessageList({
               </div>
             )}
             {message.trackerData && (
-              <div className="w-full">
-                {renderTrackerPreview(message.trackerData, () => {
-                  setActiveTrackerData(message.trackerData!)
-                  setIsDialogOpen(true)
-                })}
+              <div className="rounded-md border border-border/40 bg-secondary/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tracker updated in the left panel.
               </div>
             )}
           </div>
