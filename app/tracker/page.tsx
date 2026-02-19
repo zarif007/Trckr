@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
@@ -61,6 +61,7 @@ function TrackerAIView() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [leftWidth, setLeftWidth] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(true)
+  const [isChatOpen, setIsChatOpen] = useState(true)
   const [schema, setSchema] = useState<TrackerResponse>(
     () => INITIAL_TRACKER_SCHEMA as TrackerResponse
   )
@@ -78,7 +79,7 @@ function TrackerAIView() {
 
   useEffect(() => {
     const container = containerRef.current
-    if (!container) return
+    if (!container || !isChatOpen) return
 
     const clampWidth = () => {
       const rect = container.getBoundingClientRect()
@@ -93,7 +94,7 @@ function TrackerAIView() {
     clampWidth()
     window.addEventListener('resize', clampWidth)
     return () => window.removeEventListener('resize', clampWidth)
-  }, [])
+  }, [isChatOpen])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -148,10 +149,42 @@ function TrackerAIView() {
     <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
         <section
-          className={`flex flex-col min-w-[320px] border-r border-border/60 bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
-          style={{ width: leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%` }}
+          className={`relative h-full bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
+          style={{ width: isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%' }}
         >
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6">
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
+            <div className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
+              <button
+                type="button"
+                onClick={() => setEditMode(false)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={!editMode}
+                disabled={isStreamingTracker}
+              >
+                Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode(true)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={editMode}
+                disabled={isStreamingTracker}
+              >
+                Edit
+              </button>
+            </div>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsChatOpen((prev) => !prev)}
+              aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
+            >
+              <Bot className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="h-full overflow-y-auto px-4 py-6">
             {isStreamingTracker && streamedTracker ? (
               <TrackerDisplay
                 tabs={((streamedTracker.tabs || []) as unknown[]).filter(
@@ -196,107 +229,82 @@ function TrackerAIView() {
           </div>
         </section>
 
-        <div
-          className="w-2 shrink-0 cursor-col-resize bg-border/40 hover:bg-border/70 transition-colors"
-          onPointerDown={handlePointerDown}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Resize panels"
-        />
+        {isChatOpen && (
+          <>
+            <div
+              className="w-2 shrink-0 cursor-col-resize bg-border/40 hover:bg-border/70 transition-colors"
+              onPointerDown={handlePointerDown}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize panels"
+            />
 
-        <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden bg-background">
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Mode
-              </div>
-              <div
-                className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}
-                role="group"
-                aria-label="Edit or preview mode"
-              >
-                <button
-                  type="button"
-                  onClick={() => setEditMode(false)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                  aria-pressed={!editMode}
-                  disabled={isStreamingTracker}
-                >
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditMode(true)}
-                  className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                  aria-pressed={editMode}
-                  disabled={isStreamingTracker}
-                >
-                  Edit
-                </button>
-              </div>
-            </div>
-            {showStatusPanel && (
-              <TrackerStatusPanel
-                isLoading={isLoading}
-                validationErrors={validationErrors}
-                error={error}
-                generationErrorMessage={generationErrorMessage}
-                resumingAfterError={resumingAfterError}
-                onContinue={handleContinue}
-                messagesLength={messages.length}
-                hasGeneratedTracker={hasGeneratedTracker}
-              />
-            )}
+            <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden bg-background">
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
+                {showStatusPanel && (
+                  <TrackerStatusPanel
+                    isLoading={isLoading}
+                    validationErrors={validationErrors}
+                    error={error}
+                    generationErrorMessage={generationErrorMessage}
+                    resumingAfterError={resumingAfterError}
+                    onContinue={handleContinue}
+                    messagesLength={messages.length}
+                    hasGeneratedTracker={hasGeneratedTracker}
+                  />
+                )}
 
-            <AnimatePresence mode="wait">
-              {isChatEmpty ? (
-                <TrackerEmptyState
-                  key="empty-state"
-                  onApplySuggestion={applySuggestion}
-                  inputSlot={
-                    <TrackerInputArea
-                      input={input}
-                      setInput={setInput}
-                      isFocused={isFocused}
-                      setIsFocused={setIsFocused}
-                      handleSubmit={handleSubmit}
-                      applySuggestion={applySuggestion}
-                      isLoading={isLoading}
-                      isChatEmpty={isChatEmpty}
-                      textareaRef={textareaRef}
-                      variant="hero"
+                <AnimatePresence mode="wait">
+                  {isChatEmpty ? (
+                    <TrackerEmptyState
+                      key="empty-state"
+                      onApplySuggestion={applySuggestion}
+                      inputSlot={
+                        <TrackerInputArea
+                          input={input}
+                          setInput={setInput}
+                          isFocused={isFocused}
+                          setIsFocused={setIsFocused}
+                          handleSubmit={handleSubmit}
+                          applySuggestion={applySuggestion}
+                          isLoading={isLoading}
+                          isChatEmpty={isChatEmpty}
+                          textareaRef={textareaRef}
+                          variant="hero"
+                        />
+                      }
                     />
-                  }
-                />
-              ) : (
-                <TrackerMessageList
-                  key="chat-messages"
-                  messages={messages}
-                  isLoading={isLoading}
-                  object={object}
-                  setMessageThinkingOpen={setMessageThinkingOpen}
-                  messagesEndRef={messagesEndRef}
-                />
-              )}
-            </AnimatePresence>
-          </div>
+                  ) : (
+                    <TrackerMessageList
+                      key="chat-messages"
+                      messages={messages}
+                      isLoading={isLoading}
+                      object={object}
+                      setMessageThinkingOpen={setMessageThinkingOpen}
+                      messagesEndRef={messagesEndRef}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
 
-          {!isChatEmpty && (
-            <div className="border-t border-border/60 bg-background/90 backdrop-blur px-4 py-4">
-              <TrackerInputArea
-                input={input}
-                setInput={setInput}
-                isFocused={isFocused}
-                setIsFocused={setIsFocused}
-                handleSubmit={handleSubmit}
-                applySuggestion={applySuggestion}
-                isLoading={isLoading}
-                isChatEmpty={isChatEmpty}
-                textareaRef={textareaRef}
-              />
-            </div>
-          )}
-        </section>
+              {!isChatEmpty && (
+                <div className="border-t border-border/60 bg-background/90 backdrop-blur px-4 py-4">
+                  <TrackerInputArea
+                    input={input}
+                    setInput={setInput}
+                    isFocused={isFocused}
+                    setIsFocused={setIsFocused}
+                    handleSubmit={handleSubmit}
+                    applySuggestion={applySuggestion}
+                    isLoading={isLoading}
+                    isChatEmpty={isChatEmpty}
+                    textareaRef={textareaRef}
+                  />
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </div>
     </div>
   )
