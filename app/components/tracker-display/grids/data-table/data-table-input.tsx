@@ -205,10 +205,10 @@ export function DataTableInput({
             <Calendar
               mode="single"
               selected={value ? new Date(value) : undefined}
-              onSelect={(date) => {
+              onSelect={(selected) => {
                 if (isDisabled) return
-                if (date) {
-                  const newDate = new Date(date)
+                if (selected instanceof Date) {
+                  const newDate = new Date(selected)
                   newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
                   onChange(newDate.toISOString())
                 }

@@ -275,9 +275,9 @@ export function FieldSettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90"
+        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-white dark:bg-background dark:backdrop-blur"
       >
-        <div className="relative shrink-0 px-6 pt-6 pb-5 bg-gradient-to-br from-primary/8 via-background to-background">
+        <div className="relative shrink-0 px-6 pt-6 pb-5 bg-white dark:bg-gradient-to-br dark:from-primary/8 dark:via-background dark:to-background">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/80" />
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-lg font-semibold tracking-tight">
@@ -289,14 +289,14 @@ export function FieldSettingsDialog({
             </DialogDescription>
           </DialogHeader>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-white dark:bg-transparent">
           <div className="space-y-5 px-6 py-5">
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="inline-flex w-full rounded-xl bg-muted/40 p-1 h-11 border border-border/50">
+              <TabsList className="inline-flex w-full rounded-xl bg-slate-100/80 dark:bg-muted/40 p-1 h-11 border border-border/50">
                 <TabsTrigger
                   value="general"
                   className={cn(
-                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60',
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 dark:data-[state=active]:bg-background',
                     'transition-colors min-w-0'
                   )}
                 >
@@ -306,7 +306,7 @@ export function FieldSettingsDialog({
                 <TabsTrigger
                   value="validations"
                   className={cn(
-                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60',
+                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 dark:data-[state=active]:bg-background',
                     'transition-colors min-w-0'
                   )}
                 >
@@ -355,7 +355,7 @@ export function FieldSettingsDialog({
                     <span className="w-full border-t border-border/50" />
                   </div>
                   <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
-                    <span className="bg-background px-2 text-muted-foreground">Constraints</span>
+                    <span className="bg-white dark:bg-background px-2 text-muted-foreground">Constraints</span>
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -700,7 +700,7 @@ export function FieldSettingsDialog({
             </Tabs>
           </div>
         </div>
-        <DialogFooter className="shrink-0 flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+        <DialogFooter className="shrink-0 flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-white dark:bg-muted/20">
           <Button
             variant="outline"
             size="sm"

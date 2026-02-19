@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { TrackerModeChoice } from '@/app/components/tracker-page/TrackerModeChoice'
@@ -17,7 +17,7 @@ import {
 
 type TrackerMode = 'choice' | 'ai' | 'manual'
 
-export default function TrackerPage() {
+function TrackerPageContent() {
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<TrackerMode>(() => {
     const m = searchParams.get('mode')
@@ -50,6 +50,18 @@ export default function TrackerPage() {
 
   return (
     <TrackerAIView onBackToStart={() => setMode('choice')} />
+  )
+}
+
+export default function TrackerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen font-sans bg-background text-foreground flex flex-col pt-24 md:pt-40" />
+      }
+    >
+      <TrackerPageContent />
+    </Suspense>
   )
 }
 

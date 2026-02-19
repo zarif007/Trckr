@@ -10,17 +10,27 @@ import {
   DayPicker,
   getDefaultClassNames,
   type DayButton,
+  type DateRange,
+  type DayPickerProps,
+  type Modifiers,
 } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 
+type SelectHandler = (
+  selected: Date | DateRange | Date[] | undefined,
+  triggerDate: Date,
+  modifiers: Modifiers,
+  e: React.MouseEvent | React.KeyboardEvent
+) => void
+
 type CalendarProps = React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
   /** Called when a date is selected in single mode; use to close the popover. */
   onCloseRequest?: () => void
-  /** DayPicker's onSelect is only present when a selection mode is set; we declare it so the prop is always accepted. */
-  onSelect?: (date: Date | undefined, ...args: unknown[]) => void
+  /** Selection handler; signature depends on mode (single/range/multiple). */
+  onSelect?: SelectHandler
 }
 
 function Calendar({
@@ -37,10 +47,10 @@ function Calendar({
 }: CalendarProps) {
   const defaultClassNames = getDefaultClassNames()
 
-  const handleSelect = React.useCallback(
-    (date: Date | undefined, ...args: unknown[]) => {
-      onSelect?.(date, ...args)
-      if (props.mode === "single" && date) {
+  const handleSelect = React.useCallback<SelectHandler>(
+    (selected, triggerDate, modifiers, e) => {
+      onSelect?.(selected, triggerDate, modifiers, e)
+      if (props.mode === "single" && selected instanceof Date) {
         onCloseRequest?.()
       }
     },
@@ -49,6 +59,7 @@ function Calendar({
 
   return (
     <DayPicker
+      {...(props as Record<string, unknown>)}
       onSelect={handleSelect}
       showOutsideDays={showOutsideDays}
       className={cn(
@@ -193,7 +204,6 @@ function Calendar({
         },
         ...components,
       }}
-      {...props}
     />
   )
 }

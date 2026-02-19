@@ -552,10 +552,10 @@ export function TrackerDivGrid({
                 <Calendar
                   mode="single"
                   selected={value ? new Date(String(value)) : undefined}
-                  onSelect={(date) => {
+                  onSelect={(selected) => {
                     if (isDisabled) return
-                    if (date) {
-                      const newDate = new Date(date)
+                    if (selected instanceof Date) {
+                      const newDate = new Date(selected)
                       newDate.setMinutes(newDate.getMinutes() - newDate.getTimezoneOffset())
                       handleFieldUpdateWithTouched(field.id, newDate.toISOString())
                     }

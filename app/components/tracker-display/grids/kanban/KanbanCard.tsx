@@ -7,8 +7,17 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { TrackerCell } from '../../TrackerCell'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
-import type { TrackerFieldType } from '../../types'
+import type { TrackerFieldType, TrackerOption } from '../../types'
 import type { FieldMetadata } from '../data-table/utils'
+
+function toTrackerOptions(
+  raw: (string | { id: string; label: string })[] | undefined
+): TrackerOption[] | undefined {
+  if (!raw?.length) return undefined
+  return raw.map((o) =>
+    typeof o === 'string' ? { label: o, value: o } : { label: o.label, value: o.id, id: o.id }
+  )
+}
 
 export interface KanbanCardStyles {
   cardPadding?: string
@@ -78,7 +87,7 @@ export function KanbanCard({
       )}
       {cardFields.map((field) => {
         if (overrides[field.id]?.isHidden) return null
-        const options = fieldMetadata?.[field.id]?.options
+        const options = toTrackerOptions(fieldMetadata?.[field.id]?.options)
         return (
           <div key={field.id} className="mb-2 last:mb-0">
             <p className={`${labelFontSize} text-muted-foreground font-medium`}>{field.label}</p>

@@ -96,7 +96,7 @@ export function AddColumnOrFieldDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
-        className="sm:max-w-[500px] p-0 gap-0 overflow-hidden border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/90"
+        className="sm:max-w-[500px] p-0 gap-0 overflow-hidden border-border/60 bg-white dark:bg-background dark:backdrop-blur"
         onOpenAutoFocus={(e) => {
           const input = document.getElementById('new-label') as HTMLInputElement | null
           if (input) {
@@ -105,7 +105,7 @@ export function AddColumnOrFieldDialog({
           }
         }}
       >
-        <div className="relative px-6 pt-6 pb-5 bg-gradient-to-br from-primary/8 via-background to-background">
+        <div className="relative px-6 pt-6 pb-5 bg-white dark:bg-gradient-to-br dark:from-primary/8 dark:via-background dark:to-background">
           <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/80" />
           <DialogHeader className="space-y-1.5">
             <DialogTitle className="text-lg font-semibold tracking-tight">
@@ -160,7 +160,7 @@ export function AddColumnOrFieldDialog({
                 <span className="w-full border-t border-border/50" />
               </div>
               <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
-                <span className="bg-background px-2 text-muted-foreground">or create new</span>
+                <span className="bg-white dark:bg-background px-2 text-muted-foreground">or create new</span>
               </div>
             </div>
             <div className={cn('space-y-5', existingFieldId && 'opacity-55')}>
@@ -235,7 +235,7 @@ export function AddColumnOrFieldDialog({
             </div>
           </div>
         </div>
-        <DialogFooter className="flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-muted/20">
+        <DialogFooter className="flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-white dark:bg-muted/20">
           <Button variant="outline" size="sm" onClick={handleCancel} className="min-w-[84px]">
             Cancel
           </Button>
