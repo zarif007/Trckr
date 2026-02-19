@@ -15,6 +15,14 @@ import {
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 
+type CalendarProps = React.ComponentProps<typeof DayPicker> & {
+  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
+  /** Called when a date is selected in single mode; use to close the popover. */
+  onCloseRequest?: () => void
+  /** DayPicker's onSelect is only present when a selection mode is set; we declare it so the prop is always accepted. */
+  onSelect?: (date: Date | undefined, ...args: unknown[]) => void
+}
+
 function Calendar({
   className,
   classNames,
@@ -26,11 +34,7 @@ function Calendar({
   onSelect,
   onCloseRequest,
   ...props
-}: React.ComponentProps<typeof DayPicker> & {
-  buttonVariant?: React.ComponentProps<typeof Button>["variant"]
-  /** Called when a date is selected in single mode; use to close the popover. */
-  onCloseRequest?: () => void
-}) {
+}: CalendarProps) {
   const defaultClassNames = getDefaultClassNames()
 
   const handleSelect = React.useCallback(

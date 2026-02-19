@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import type {
   TrackerGrid,
   TrackerField,
@@ -57,10 +58,14 @@ export function GridBlockContent({
   onDeleteEntries,
   hideLabel = false,
 }: GridBlockContentProps) {
-  const gridLayoutNodes = layoutNodes
-    .filter((node) => node.gridId === grid.id)
-    .sort((a, b) => a.order - b.order)
-  const views = normalizeGridViews(grid)
+  const gridLayoutNodes = useMemo(
+    () =>
+      layoutNodes
+        .filter((node) => node.gridId === grid.id)
+        .sort((a, b) => a.order - b.order),
+    [layoutNodes, grid.id]
+  )
+  const views = useMemo(() => normalizeGridViews(grid), [grid])
 
   if (views.length === 1) {
     const viewOverrides =

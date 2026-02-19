@@ -8,16 +8,23 @@ interface TrackerCellProps {
   options?: TrackerOption[]
 }
 
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+})
+
 export function TrackerCell({ value, type, options }: TrackerCellProps) {
   if (value === null || value === undefined) return <span>-</span>
 
-  const getLabel = (val: string) => {
-    if (!options?.length) return val
-    const byValue = options.find((o) => String(o.value) === val)
-    if (byValue) return byValue.label ?? val
-    const byId = options.find((o) => o.id === val)
-    return byId?.label ?? val
+  const optionLabelByKey = new Map<string, string>()
+  if (options?.length) {
+    options.forEach((o) => {
+      const label = o.label ?? ''
+      if (o.value !== undefined) optionLabelByKey.set(String(o.value), label)
+      if (o.id !== undefined) optionLabelByKey.set(String(o.id), label)
+    })
   }
+  const getLabel = (val: string) => optionLabelByKey.get(val) ?? val
 
   switch (type) {
     case 'boolean':
@@ -60,10 +67,7 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
       return (
         <span>
           {!isNaN(currencyValue)
-            ? new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-            }).format(currencyValue)
+            ? currencyFormatter.format(currencyValue)
             : String(value)}
         </span>
       )

@@ -94,6 +94,19 @@ export function DataTableInput({
     [optionsGridFields]
   )
 
+  const selectOptions = useMemo(() => {
+    return (options ?? []).map((option) => {
+      const optValueRaw = typeof option === 'string' ? option : option.id
+      const optLabel = typeof option === 'string' ? option : option.label
+      const optValue =
+        (typeof optValueRaw === 'string'
+          ? optValueRaw
+          : String(optValueRaw ?? optLabel ?? '')
+        ).trim() || '__empty__'
+      return { value: optValue, label: optLabel }
+    })
+  }, [options])
+
   const initialOptionValues = useMemo(() => {
     const initial: Record<string, unknown> = {}
     optionsGridFields?.forEach((f) => {
@@ -249,12 +262,6 @@ export function DataTableInput({
       )
     case 'options': {
       const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
-      const selectOptions = (options ?? []).map((option) => {
-        const optValueRaw = typeof option === 'string' ? option : option.id
-        const optLabel = typeof option === 'string' ? option : option.label
-        const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
-        return { value: optValue, label: optLabel }
-      })
       return (
         <>
           <SearchableSelect
@@ -297,12 +304,6 @@ export function DataTableInput({
     }
     case 'dynamic_select': {
       const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
-      const selectOptions = (options ?? []).map((option) => {
-        const optValueRaw = typeof option === 'string' ? option : option.id
-        const optLabel = typeof option === 'string' ? option : option.label
-        const optValue = (typeof optValueRaw === 'string' ? optValueRaw : String(optValueRaw ?? optLabel ?? '')).trim() || '__empty__'
-        return { value: optValue, label: optLabel }
-      })
       return (
         <SearchableSelect
           options={selectOptions}

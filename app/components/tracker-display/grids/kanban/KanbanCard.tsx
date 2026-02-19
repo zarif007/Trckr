@@ -6,10 +6,9 @@ import { ChevronDown } from 'lucide-react'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { TrackerCell } from '../../TrackerCell'
-import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
-import type { TrackerFieldType, TrackerField, TrackerBindings } from '../../types'
-import type { TrackerContextForOptions } from '@/lib/binding'
+import type { TrackerFieldType } from '../../types'
+import type { FieldMetadata } from '../data-table/utils'
 
 export interface KanbanCardStyles {
   cardPadding?: string
@@ -22,13 +21,10 @@ export interface KanbanCardStyles {
 export interface KanbanCardProps {
   card: Record<string, unknown> & { _originalIdx?: number }
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
-  tabId: string
   gridId: string
-  bindings: TrackerBindings
   gridData: Record<string, Array<Record<string, unknown>>>
-  fields: TrackerField[]
   dependsOn?: import('../../types').DependsOnRules
-  trackerContext?: TrackerContextForOptions
+  fieldMetadata?: FieldMetadata
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
   styles?: KanbanCardStyles
@@ -37,13 +33,10 @@ export interface KanbanCardProps {
 export function KanbanCard({
   card,
   cardFields,
-  tabId,
   gridId,
-  bindings,
   gridData,
-  fields,
   dependsOn,
-  trackerContext,
+  fieldMetadata,
   isOverlay = false,
   onEditRow,
   styles = {},
@@ -85,10 +78,7 @@ export function KanbanCard({
       )}
       {cardFields.map((field) => {
         if (overrides[field.id]?.isHidden) return null
-        const fullField = fields.find((f) => f.id === field.id)
-        const options = fullField
-          ? resolveFieldOptionsV2(tabId, gridId, fullField, bindings, gridData, trackerContext)
-          : undefined
+        const options = fieldMetadata?.[field.id]?.options
         return (
           <div key={field.id} className="mb-2 last:mb-0">
             <p className={`${labelFontSize} text-muted-foreground font-medium`}>{field.label}</p>

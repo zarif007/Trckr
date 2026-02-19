@@ -180,17 +180,6 @@ export function TrackerTableGrid({
     (rowIndex: number, fieldId: string) => rowOverridesCache[rowIndex]?.[fieldId],
     [rowOverridesCache]
   )
-  const getFieldOverridesForRow = useCallback(
-    (rowIndex: number, rowData: Record<string, unknown>, fieldId: string) =>
-      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex, rowData)[fieldId],
-    [dependsOnForGrid, gridData, grid.id]
-  )
-  const getFieldOverridesForValues = useCallback(
-    (values: Record<string, unknown>, rowIndex: number) =>
-      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, rowIndex, values),
-    [dependsOnForGrid, gridData, grid.id]
-  )
-
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
     (values: Record<string, unknown>, fieldId: string) =>
@@ -450,7 +439,7 @@ export function TrackerTableGrid({
         data={rows}
         fieldMetadata={fieldMetadata}
         getFieldOverrides={getFieldOverrides}
-        getFieldOverridesForRow={getFieldOverridesForRow}
+        getRowOverrides={(rowIndex) => rowOverridesCache[rowIndex]}
         hiddenColumns={[...hiddenColumnIds]}
         getFieldOverridesForAdd={getFieldOverridesForAdd}
         onCellUpdate={handleCellUpdate}

@@ -337,13 +337,10 @@ export function TrackerKanbanGrid({
                               id={sortId}
                               card={card}
                               cardFields={cardFieldsDisplay}
-                              tabId={tabId}
                               gridId={grid.id}
-                              bindings={bindings}
                               gridData={gridData}
-                              fields={fields}
                               dependsOn={dependsOnForGrid}
-                              trackerContext={trackerContext ?? undefined}
+                              fieldMetadata={fieldMetadata}
                               onEditRow={setEditRowIndex}
                               styles={cardStyles}
                             />
@@ -371,13 +368,10 @@ export function TrackerKanbanGrid({
           <KanbanCard
             card={activeCard as Record<string, unknown> & { _originalIdx?: number }}
             cardFields={cardFieldsDisplay}
-            tabId={tabId}
             gridId={grid.id}
-            bindings={bindings}
             gridData={gridData}
-            fields={fields}
             dependsOn={dependsOnForGrid}
-            trackerContext={trackerContext ?? undefined}
+            fieldMetadata={fieldMetadata}
             isOverlay
             styles={cardStyles}
           />

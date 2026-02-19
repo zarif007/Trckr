@@ -11,12 +11,16 @@ interface DataTableCellProps<TData, TValue> {
   cell: Cell<TData, any>
   row: Row<TData>
   fieldMetadata?: FieldMetadata
+  rowValues: Record<string, unknown>
+  rowOverrides?: Record<string, Record<string, unknown>>
 }
 
 export function DataTableCell<TData, TValue>({
   cell,
   row,
   fieldMetadata,
+  rowValues,
+  rowOverrides,
 }: DataTableCellProps<TData, TValue>) {
   const isSelect = cell.column.id === 'select'
   const fieldInfo = fieldMetadata?.[cell.column.id]
@@ -24,30 +28,13 @@ export function DataTableCell<TData, TValue>({
     updateData?: (rowIndex: number, columnId: string, value: any) => void
     tableStyles?: ResolvedTableStyles
     getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
-    getFieldOverridesForRow?: (
-      rowIndex: number,
-      rowData: Record<string, unknown>,
-      fieldId: string
-    ) => Record<string, unknown> | undefined
     editable?: boolean
     gridId?: string
   }
-  const rowOriginal = row.original as Record<string, unknown>
-  const rowValues = (() => {
-    const base = { ...rowOriginal }
-    const gridId = meta?.gridId
-    const fieldMeta = fieldMetadata
-    if (gridId && fieldMeta) {
-      for (const columnId of Object.keys(fieldMeta)) {
-        base[`${gridId}.${columnId}`] = rowOriginal[columnId]
-      }
-    }
-    return base
-  })()
   const isEditable = meta?.editable !== false
   const tableStyles = meta?.tableStyles
   const overrides =
-    meta?.getFieldOverridesForRow?.(row.index, row.original as Record<string, unknown>, cell.column.id) ??
+    rowOverrides?.[cell.column.id] ??
     meta?.getFieldOverrides?.(row.index, cell.column.id)
   const effectiveConfig = fieldInfo
     ? applyFieldOverrides(

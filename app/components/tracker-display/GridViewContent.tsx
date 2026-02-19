@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import type {
   TrackerGrid,
   TrackerField,
@@ -53,16 +54,32 @@ export function GridViewContent({
   onDeleteEntries,
 }: GridViewContentProps) {
   const gridId = grid.id
-  const g = { ...grid, config: view.config ?? {} }
-  const trackerContext =
-    allGrids != null && allFields != null ? { grids: allGrids, fields: allFields } : undefined
+  const g = useMemo(
+    () => ({ ...grid, config: view.config ?? {} }),
+    [grid, view.config]
+  )
+  const trackerContext = useMemo(
+    () => (allGrids != null && allFields != null ? { grids: allGrids, fields: allFields } : undefined),
+    [allGrids, allFields]
+  )
 
-  const updateCell = onUpdate
-    ? (rowIndex: number, columnId: string, value: unknown) =>
-      onUpdate(gridId, rowIndex, columnId, value)
-    : undefined
-  const addEntry = onAddEntry ? (newRow: Record<string, unknown>) => onAddEntry(gridId, newRow) : undefined
-  const deleteEntries = onDeleteEntries ? (rowIndices: number[]) => onDeleteEntries(gridId, rowIndices) : undefined
+  const updateCell = useMemo(
+    () =>
+      onUpdate
+        ? (rowIndex: number, columnId: string, value: unknown) =>
+          onUpdate(gridId, rowIndex, columnId, value)
+        : undefined,
+    [onUpdate, gridId]
+  )
+  const addEntry = useMemo(
+    () => (onAddEntry ? (newRow: Record<string, unknown>) => onAddEntry(gridId, newRow) : undefined),
+    [onAddEntry, gridId]
+  )
+  const deleteEntries = useMemo(
+    () =>
+      onDeleteEntries ? (rowIndices: number[]) => onDeleteEntries(gridId, rowIndices) : undefined,
+    [onDeleteEntries, gridId]
+  )
 
   switch (view.type) {
     case 'table':

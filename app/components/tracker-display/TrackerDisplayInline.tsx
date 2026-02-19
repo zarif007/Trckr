@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { TrackerDisplayProps } from './types'
 import { TrackerTabContent } from './sections'
@@ -123,41 +123,49 @@ export function TrackerDisplayInline({
     }
   }, [gridData, getDataRef])
 
-  const handleUpdate = (
-    gridId: string,
-    rowIndex: number,
-    columnId: string,
-    value: unknown
-  ) => {
-    setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-      const next = [...current]
-      while (next.length <= rowIndex) next.push({})
-      next[rowIndex] = { ...next[rowIndex], [columnId]: value }
-      return { ...(prev ?? {}), [gridId]: next }
-    })
-  }
+  const handleUpdate = useCallback(
+    (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
+      setLocalGridData((prev) => {
+        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
+        const next = [...current]
+        while (next.length <= rowIndex) next.push({})
+        next[rowIndex] = { ...next[rowIndex], [columnId]: value }
+        return { ...(prev ?? {}), [gridId]: next }
+      })
+    },
+    [baseGridData]
+  )
 
-  const handleAddEntry = (gridId: string, newRow: Record<string, unknown>) => {
-    setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-      return { ...(prev ?? {}), [gridId]: [...current, newRow] }
-    })
-  }
+  const handleAddEntry = useCallback(
+    (gridId: string, newRow: Record<string, unknown>) => {
+      setLocalGridData((prev) => {
+        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
+        return { ...(prev ?? {}), [gridId]: [...current, newRow] }
+      })
+    },
+    [baseGridData]
+  )
 
-  const handleDeleteEntries = (gridId: string, rowIndices: number[]) => {
-    setLocalGridData((prev) => {
-      const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-      const filtered = current.filter((_, index) => !rowIndices.includes(index))
-      return { ...(prev ?? {}), [gridId]: filtered }
-    })
-  }
+  const handleDeleteEntries = useCallback(
+    (gridId: string, rowIndices: number[]) => {
+      setLocalGridData((prev) => {
+        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
+        const filtered = current.filter((_, index) => !rowIndices.includes(index))
+        return { ...(prev ?? {}), [gridId]: filtered }
+      })
+    },
+    [baseGridData]
+  )
+
+  const editModeSchema = useMemo(
+    () =>
+      editMode
+        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn }
+        : undefined,
+    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn]
+  )
 
   if (!normalizedTabs.length) return null
-
-  const editModeSchema = editMode
-    ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn }
-    : undefined
 
   const content = (
     <div className="w-full space-y-6 p-6 bg-card rounded-lg animate-in fade-in-0 duration-300">

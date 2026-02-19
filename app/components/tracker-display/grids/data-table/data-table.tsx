@@ -52,6 +52,11 @@ interface DataTableProps<TData, TValue> {
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
   /** For table cells/row details: resolve per-row field overrides (hidden/required/disabled). */
   getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
+  /** For table cells: resolve all field overrides for a row in one call. */
+  getRowOverrides?: (
+    rowIndex: number,
+    rowData: Record<string, unknown>
+  ) => Record<string, Record<string, unknown>> | undefined
   /** For table cells/row details: resolve overrides using the current row values. */
   getFieldOverridesForRow?: (
     rowIndex: number,
@@ -84,6 +89,7 @@ export function DataTable<TData, TValue>({
   getBindingUpdates,
   styleOverrides,
   getFieldOverrides,
+  getRowOverrides,
   getFieldOverridesForRow,
   getFieldOverridesForAdd,
   hiddenColumns,
@@ -478,44 +484,57 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody className={ts.tableBg ? 'bg-transparent' : undefined}>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, rowIdx) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                  className={cn(
-                    'group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent',
-                    ts.tableBg && '!bg-transparent',
-                    ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/30',
-                  )}
-                >
-                  {row.getVisibleCells().map((cell) => {
-                    if (cell.column.id === 'actions') {
+              table.getRowModel().rows.map((row, rowIdx) => {
+                const rowOriginal = row.original as Record<string, unknown>
+                const rowValues: Record<string, unknown> = { ...rowOriginal }
+                if (gridId && fieldMetadata) {
+                  for (const columnId of Object.keys(fieldMetadata)) {
+                    rowValues[`${gridId}.${columnId}`] = rowOriginal[columnId]
+                  }
+                }
+                const rowOverrides = getRowOverrides?.(row.index, rowOriginal)
+
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && 'selected'}
+                    className={cn(
+                      'group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent',
+                      ts.tableBg && '!bg-transparent',
+                      ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/30',
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      if (cell.column.id === 'actions') {
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            style={{ width: fixedWidth, minWidth: fixedWidth }}
+                            className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
+                          >
+                            <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </div>
+                          </TableCell>
+                        )
+                      }
                       return (
-                        <TableCell
+                        <DataTableCell
                           key={cell.id}
-                          style={{ width: fixedWidth, minWidth: fixedWidth }}
-                          className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
-                        >
-                          <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
-                          </div>
-                        </TableCell>
+                          cell={cell}
+                          row={row}
+                          fieldMetadata={fieldMetadata}
+                          rowValues={rowValues}
+                          rowOverrides={rowOverrides}
+                        />
                       )
-                    }
-                    return (
-                      <DataTableCell
-                        key={cell.id}
-                        cell={cell}
-                        row={row}
-                        fieldMetadata={fieldMetadata}
-                      />
-                    )
-                  })}
-                </TableRow>
-              ))
+                    })}
+                  </TableRow>
+                )
+              })
             ) : (
               <TableRow>
                 <TableCell
