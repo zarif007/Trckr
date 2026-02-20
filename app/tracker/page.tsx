@@ -2,7 +2,7 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot, Database, Layout } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Layout, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,6 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
@@ -19,7 +24,9 @@ import { EditModeUndoButton, useUndoKeyboardShortcut } from '@/app/components/tr
 import {
   INITIAL_TRACKER_SCHEMA,
 } from '@/app/components/tracker-display/tracker-editor'
-import { useTrackerChat, type TrackerResponse } from './hooks/useTrackerChat'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useTrackerChat, type Message, type TrackerResponse } from './hooks/useTrackerChat'
+import { useIsDesktop } from './hooks/useMediaQuery'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
@@ -38,6 +45,8 @@ const TrackerPanel = memo(function TrackerPanel({
   undo,
   canUndo,
   leftWidth,
+  fullWidth,
+  hideChatToggle,
 }: {
   schema: TrackerResponse
   editMode: boolean
@@ -51,9 +60,12 @@ const TrackerPanel = memo(function TrackerPanel({
   undo?: () => void
   canUndo?: boolean
   leftWidth: number | null
+  fullWidth?: boolean
+  hideChatToggle?: boolean
 }) {
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   useUndoKeyboardShortcut(editMode, canUndo ?? false, undo)
 
@@ -77,19 +89,23 @@ const TrackerPanel = memo(function TrackerPanel({
   return (
     <section
       className="relative h-full bg-background/60 rounded-lg transition-shadow duration-300"
-      style={{ width: isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%' }}
+      style={{
+        width: fullWidth ? '100%' : isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%',
+      }}
     >
       {isStreamingTracker && (
         <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden rounded-t-lg bg-muted/40">
           <div className="h-full w-1/3 min-w-[120px] rounded-full bg-primary animate-progress-bar" />
         </div>
       )}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
-        <div className={`inline-flex items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
+      <div
+        className={`absolute top-4 z-20 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm ${hideChatToggle ? 'right-2' : 'right-4'}`}
+      >
+        <div className={`inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
           <button
             type="button"
             onClick={() => setEditMode(false)}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
             aria-pressed={!editMode}
             disabled={isStreamingTracker}
           >
@@ -98,47 +114,109 @@ const TrackerPanel = memo(function TrackerPanel({
           <button
             type="button"
             onClick={() => setEditMode(true)}
-            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
             aria-pressed={editMode}
             disabled={isStreamingTracker}
           >
             Edit
           </button>
         </div>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="h-8 w-8"
-          onClick={() => setIsChatOpen((prev) => !prev)}
-          aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
-        >
-          <Bot className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
-          onClick={handleShowStructure}
-          aria-label="Show tracker structure (debug)"
-        >
-          <Layout className="h-3.5 w-3.5" />
-          Structure
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 gap-1.5 text-xs"
-          onClick={handleShowData}
-          aria-label="Show tracker data (debug)"
-        >
-          <Database className="h-3.5 w-3.5" />
-          Data
-        </Button>
-        <EditModeUndoButton
-          undo={undo}
-          canUndo={canUndo ?? false}
-          visible={editMode}
-        />
+        {!hideChatToggle && (
+          <Button
+            variant="secondary"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setIsChatOpen((prev) => !prev)}
+            aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
+          >
+            <Bot className="h-4 w-4" />
+          </Button>
+        )}
+        {hideChatToggle ? (
+          <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-8 shrink-0 p-0"
+                aria-label="More actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-2">
+              <div className="flex flex-col gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 justify-start gap-2 text-xs"
+                  onClick={() => {
+                    handleShowStructure()
+                    setMoreOpen(false)
+                  }}
+                  aria-label="Show tracker structure (debug)"
+                >
+                  <Layout className="h-3.5 w-3.5 shrink-0" />
+                  Structure
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 justify-start gap-2 text-xs"
+                  onClick={() => {
+                    handleShowData()
+                    setMoreOpen(false)
+                  }}
+                  aria-label="Show tracker data (debug)"
+                >
+                  <Database className="h-3.5 w-3.5 shrink-0" />
+                  Data
+                </Button>
+                {editMode && undo != null && (
+                  <EditModeUndoButton
+                    undo={() => {
+                      undo?.()
+                      setMoreOpen(false)
+                    }}
+                    canUndo={canUndo ?? false}
+                    visible
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-full justify-start gap-2 text-xs"
+                  />
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        ) : (
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={handleShowStructure}
+              aria-label="Show tracker structure (debug)"
+            >
+              <Layout className="h-3.5 w-3.5" />
+              Structure
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={handleShowData}
+              aria-label="Show tracker data (debug)"
+            >
+              <Database className="h-3.5 w-3.5" />
+              Data
+            </Button>
+            <EditModeUndoButton
+              undo={undo}
+              canUndo={canUndo ?? false}
+              visible={editMode}
+            />
+          </>
+        )}
       </div>
 
       <Dialog open={debugView !== null} onOpenChange={(open) => !open && setDebugView(null)}>
@@ -154,7 +232,9 @@ const TrackerPanel = memo(function TrackerPanel({
         </DialogContent>
       </Dialog>
 
-      <div className="h-full overflow-y-auto px-4 py-6">
+      <div
+        className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 sm:px-2 py-4' : 'px-4 py-6'}`}
+      >
         {isStreamingTracker && streamedTracker ? (
           <TrackerDisplay
             tabs={((streamedTracker.tabs || []) as unknown[]).filter(
@@ -245,10 +325,12 @@ function TrackerAIView() {
     isChatEmpty,
   } = useTrackerChat()
 
+  const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [leftWidth, setLeftWidth] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(true)
   const [isChatOpen, setIsChatOpen] = useState(true)
+  const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [schema, setSchema] = useState<TrackerResponse>(
     () => INITIAL_TRACKER_SCHEMA as TrackerResponse
   )
@@ -266,9 +348,16 @@ function TrackerAIView() {
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 
+  // When resizing from small to desktop, sync chat visibility with mobile tab
+  useEffect(() => {
+    if (isDesktop && mobileTab === 'chat') {
+      setIsChatOpen(true)
+    }
+  }, [isDesktop, mobileTab])
+
   useEffect(() => {
     const container = containerRef.current
-    if (!container || !isChatOpen) return
+    if (!container || !isChatOpen || !isDesktop) return
 
     const clampWidth = () => {
       const rect = container.getBoundingClientRect()
@@ -283,7 +372,7 @@ function TrackerAIView() {
     clampWidth()
     window.addEventListener('resize', clampWidth)
     return () => window.removeEventListener('resize', clampWidth)
-  }, [isChatOpen])
+  }, [isChatOpen, isDesktop])
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -330,6 +419,77 @@ function TrackerAIView() {
     }
   }, [isLoading])
 
+  const chatStatusPanelProps = {
+    isLoading,
+    validationErrors,
+    error,
+    generationErrorMessage,
+    resumingAfterError,
+    onContinue: handleContinue,
+    messagesLength: messages.length,
+    hasGeneratedTracker,
+  }
+
+  const chatPanelProps = {
+    showStatusPanel,
+    statusPanelProps: chatStatusPanelProps,
+    input,
+    setInput,
+    isFocused,
+    setIsFocused,
+    handleSubmit,
+    applySuggestion,
+    isLoading,
+    isChatEmpty,
+    textareaRef,
+    messages,
+    setMessageThinkingOpen,
+    messagesEndRef,
+    object,
+  }
+
+  if (!isDesktop) {
+    return (
+      <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
+        <div ref={containerRef} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <Tabs
+            value={mobileTab}
+            onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
+            className="flex-1 min-h-0 flex flex-col gap-0"
+          >
+            <div className="shrink-0 px-4 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+              <TrackerPanel
+                schema={schema}
+                editMode={editMode}
+                setEditMode={setEditMode}
+                isChatOpen={isChatOpen}
+                setIsChatOpen={setIsChatOpen}
+                isStreamingTracker={isStreamingTracker}
+                streamedTracker={streamedDisplayTracker ?? undefined}
+                trackerDataRef={trackerDataRef}
+                handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
+                undo={editMode ? undoable.undo : undefined}
+                canUndo={editMode ? undoable.canUndo : false}
+                leftWidth={leftWidth}
+                fullWidth
+                hideChatToggle
+              />
+            </TabsContent>
+            <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+              <TrackerChatPanel {...chatPanelProps} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
@@ -359,68 +519,7 @@ function TrackerAIView() {
             />
 
             <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden bg-background">
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
-                {showStatusPanel && (
-                  <TrackerStatusPanel
-                    isLoading={isLoading}
-                    validationErrors={validationErrors}
-                    error={error}
-                    generationErrorMessage={generationErrorMessage}
-                    resumingAfterError={resumingAfterError}
-                    onContinue={handleContinue}
-                    messagesLength={messages.length}
-                    hasGeneratedTracker={hasGeneratedTracker}
-                  />
-                )}
-
-                <AnimatePresence mode="wait">
-                  {isChatEmpty ? (
-                    <TrackerEmptyState
-                      key="empty-state"
-                      onApplySuggestion={applySuggestion}
-                      inputSlot={
-                        <TrackerInputArea
-                          input={input}
-                          setInput={setInput}
-                          isFocused={isFocused}
-                          setIsFocused={setIsFocused}
-                          handleSubmit={handleSubmit}
-                          applySuggestion={applySuggestion}
-                          isLoading={isLoading}
-                          isChatEmpty={isChatEmpty}
-                          textareaRef={textareaRef}
-                          variant="hero"
-                        />
-                      }
-                    />
-                  ) : (
-                    <TrackerMessageList
-                      key="chat-messages"
-                      messages={messages}
-                      isLoading={isLoading}
-                      object={object}
-                      setMessageThinkingOpen={setMessageThinkingOpen}
-                      messagesEndRef={messagesEndRef}
-                    />
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {!isChatEmpty && (
-                <div className="border-t border-border/60 bg-background/90 backdrop-blur px-4 py-4">
-                  <TrackerInputArea
-                    input={input}
-                    setInput={setInput}
-                    isFocused={isFocused}
-                    setIsFocused={setIsFocused}
-                    handleSubmit={handleSubmit}
-                    applySuggestion={applySuggestion}
-                    isLoading={isLoading}
-                    isChatEmpty={isChatEmpty}
-                    textareaRef={textareaRef}
-                  />
-                </div>
-              )}
+              <TrackerChatPanel {...chatPanelProps} />
             </section>
           </>
         )}
@@ -499,5 +598,104 @@ function TrackerStatusPanel({
         )}
       </div>
     </div>
+  )
+}
+
+function TrackerChatPanel({
+  showStatusPanel,
+  statusPanelProps,
+  input,
+  setInput,
+  isFocused,
+  setIsFocused,
+  handleSubmit,
+  applySuggestion,
+  isLoading,
+  isChatEmpty,
+  textareaRef,
+  messages,
+  setMessageThinkingOpen,
+  messagesEndRef,
+  object,
+}: {
+  showStatusPanel: boolean
+  statusPanelProps: {
+    isLoading: boolean
+    validationErrors: string[]
+    error: Error | undefined
+    generationErrorMessage: string | null
+    resumingAfterError: boolean
+    onContinue: () => void
+    messagesLength: number
+    hasGeneratedTracker: boolean
+  }
+  input: string
+  setInput: (v: string) => void
+  isFocused: boolean
+  setIsFocused: (v: boolean) => void
+  handleSubmit: () => void
+  applySuggestion: (suggestion: string) => void
+  isLoading: boolean
+  isChatEmpty: boolean
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
+  messages: Message[]
+  setMessageThinkingOpen: (idx: number, open: boolean) => void
+  messagesEndRef: React.RefObject<HTMLDivElement | null>
+  object: unknown
+}) {
+  return (
+    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-background">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
+        {showStatusPanel && <TrackerStatusPanel {...statusPanelProps} />}
+
+        <AnimatePresence mode="wait">
+          {isChatEmpty ? (
+            <TrackerEmptyState
+              key="empty-state"
+              onApplySuggestion={applySuggestion}
+              inputSlot={
+                <TrackerInputArea
+                  input={input}
+                  setInput={setInput}
+                  isFocused={isFocused}
+                  setIsFocused={setIsFocused}
+                  handleSubmit={handleSubmit}
+                  applySuggestion={applySuggestion}
+                  isLoading={isLoading}
+                  isChatEmpty={isChatEmpty}
+                  textareaRef={textareaRef}
+                  variant="hero"
+                />
+              }
+            />
+          ) : (
+            <TrackerMessageList
+              key="chat-messages"
+              messages={messages}
+              isLoading={isLoading}
+              object={object}
+              setMessageThinkingOpen={setMessageThinkingOpen}
+              messagesEndRef={messagesEndRef}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {!isChatEmpty && (
+        <div className="border-t border-border/60 bg-background/90 backdrop-blur px-4 py-4">
+          <TrackerInputArea
+            input={input}
+            setInput={setInput}
+            isFocused={isFocused}
+            setIsFocused={setIsFocused}
+            handleSubmit={handleSubmit}
+            applySuggestion={applySuggestion}
+            isLoading={isLoading}
+            isChatEmpty={isChatEmpty}
+            textareaRef={textareaRef}
+          />
+        </div>
+      )}
+    </section>
   )
 }
