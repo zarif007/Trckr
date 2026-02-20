@@ -9,6 +9,7 @@ import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
+import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
 
 export interface TrackerResponse extends TrackerDisplayProps { }
 
@@ -103,6 +104,11 @@ export function useTrackerChat() {
     if (activeTrackerRef.current) return activeTrackerRef.current
     const reversed = [...messagesRef.current].reverse()
     return reversed.find((msg) => msg.trackerData)?.trackerData ?? null
+  }
+
+  /** Current state to send to the API so the AI always starts from this (never from empty). */
+  const getCurrentTrackerForApi = (): TrackerResponse => {
+    return getBaseTracker() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse)
   }
 
   const trackerHasAnyData = (tracker?: TrackerLike | null) => {
@@ -311,6 +317,7 @@ export function useTrackerChat() {
     submit({
       query: userMessage,
       messages: messages,
+      currentTracker: getCurrentTrackerForApi(),
     })
   }
 
@@ -319,7 +326,11 @@ export function useTrackerChat() {
     const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
     const nextMessages = [...messages, continueMessage]
     setMessages(nextMessages)
-    submit({ query: CONTINUE_PROMPT, messages: nextMessages })
+    submit({
+      query: CONTINUE_PROMPT,
+      messages: nextMessages,
+      currentTracker: getCurrentTrackerForApi(),
+    })
     continueCountRef.current = 0
   }
 
@@ -330,7 +341,11 @@ export function useTrackerChat() {
     const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
     const nextMessages = [...messages, continueMessage]
     setMessages(nextMessages)
-    submit({ query: CONTINUE_PROMPT, messages: nextMessages })
+    submit({
+      query: CONTINUE_PROMPT,
+      messages: nextMessages,
+      currentTracker: getCurrentTrackerForApi(),
+    })
     setPendingContinue(false)
     continueCountRef.current += 1
   }, [pendingContinue, isLoading, messages])
