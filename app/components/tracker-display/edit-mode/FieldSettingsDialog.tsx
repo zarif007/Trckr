@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2, Settings2, ShieldCheck } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import { FIELD_TYPE_LABELS } from './utils'
@@ -291,24 +290,12 @@ export function FieldSettingsDialog({
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="space-y-5 px-6 py-5">
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="inline-flex w-full rounded-xl bg-slate-100/80 dark:bg-muted/40 p-1 h-11 border border-border/50">
-                <TabsTrigger
-                  value="general"
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 dark:data-[state=active]:bg-background',
-                    'transition-colors min-w-0'
-                  )}
-                >
+              <TabsList className="w-full">
+                <TabsTrigger value="general">
                   <Settings2 className="h-4 w-4 shrink-0" />
                   <span className="truncate">General</span>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="validations"
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-2 rounded-lg font-medium text-muted-foreground data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border data-[state=active]:border-border/60 dark:data-[state=active]:bg-background',
-                    'transition-colors min-w-0'
-                  )}
-                >
+                <TabsTrigger value="validations">
                   <ShieldCheck className="h-4 w-4 shrink-0" />
                   <span className="truncate">Validations</span>
                 </TabsTrigger>

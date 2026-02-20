@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, IBM_Plex_Mono, IBM_Plex_Sans, Inter, Space_Grotesk } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
-import NavBar from './components/NavBar'
+import NavBarWrapper from './components/NavBarWrapper'
 import './globals.css'
 
 const inter = Inter({
@@ -59,7 +59,7 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="trckr-theme"
         >
-          <NavBar />
+          <NavBarWrapper />
           <main className="max-w-full mx-auto">
             {children}
           </main>

@@ -237,6 +237,7 @@ validations: {
 ExprNode examples:
 - regex: { op: "regex", value: { op: "field", fieldId: "main_grid.sku" }, pattern: "^[A-Z]{2}\\\\d{4}$" }
 - math: { op: "add", args: [ { op: "mul", args: [ { op: "field", fieldId: "main_grid.b" }, { op: "const", value: 10 } ] }, ... ] }
+Comparison ops: prefer eq/neq/gt/gte/lt/lte. Symbol aliases (=, !=, >, >=, <, <=) are accepted but avoid mixing styles in the same expression.
 
 If no validations are needed, omit "validations" or use an empty object.
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.

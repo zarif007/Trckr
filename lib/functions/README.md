@@ -15,10 +15,10 @@ Each expression is a tree of nodes. Nodes are plain JSON objects.
 ### Node types
 
 - `const` — literal value
-- `field` — read a field value from the current row
+- `field` — read a field value from the current row (fieldId must be `gridId.fieldId`)
 - `add`, `mul` — numeric aggregation
 - `sub`, `div` — numeric math
-- `eq`, `neq`, `gt`, `gte`, `lt`, `lte` — comparisons
+- `eq`, `neq`, `gt`, `gte`, `lt`, `lte` — comparisons (symbol aliases `=`, `!=`, `>`, `>=`, `<`, `<=` are accepted)
 - `and`, `or`, `not` — boolean logic
 - `if` — conditional branching
 - `regex` — regex match against a string value
@@ -28,16 +28,16 @@ Example (a = (b * 10) + (c * 5)):
 ```json
 {
   "op": "eq",
-  "left": { "op": "field", "fieldId": "a" },
+  "left": { "op": "field", "fieldId": "main_grid.a" },
   "right": {
     "op": "add",
     "args": [
       { "op": "mul", "args": [
-        { "op": "field", "fieldId": "b" },
+        { "op": "field", "fieldId": "main_grid.b" },
         { "op": "const", "value": 10 }
       ]},
       { "op": "mul", "args": [
-        { "op": "field", "fieldId": "c" },
+        { "op": "field", "fieldId": "main_grid.c" },
         { "op": "const", "value": 5 }
       ]}
     ]
@@ -47,18 +47,18 @@ Example (a = (b * 10) + (c * 5)):
 
 ## Validation rules (top-level `validations`)
 
-Validations are stored as a **top-level map** keyed by `fieldId`:
+Validations are stored as a **top-level map** keyed by `gridId.fieldId`:
 
 ```json
 {
   "validations": {
-    "sku": [
+    "main_grid.sku": [
       { "type": "required", "message": "Required" },
       {
         "type": "expr",
         "expr": {
           "op": "regex",
-          "value": { "op": "field", "fieldId": "sku" },
+          "value": { "op": "field", "fieldId": "main_grid.sku" },
           "pattern": "^[A-Z]{2}\\d{4}$"
         },
         "message": "Format: AA0000"

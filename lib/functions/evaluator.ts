@@ -1,4 +1,5 @@
 import type { ExprNode, FunctionContext } from './types'
+import { normalizeExprOp } from './normalize'
 import { getExprOp } from './registry'
 
 const toNumber = (value: unknown): number => {
@@ -32,84 +33,86 @@ export function evaluateExpr(expr: ExprNode, ctx: FunctionContext): unknown {
     return custom(expr, ctx, (node) => evaluateExpr(node, ctx))
   }
 
-  switch (expr.op) {
+  const normalizedOp = normalizeExprOp(expr.op)
+  const normalizedExpr = (normalizedOp === expr.op ? expr : { ...expr, op: normalizedOp }) as ExprNode
+  switch (normalizedExpr.op) {
     case 'const':
-      return expr.value
+      return normalizedExpr.value
     case 'field':
-      return ctx.rowValues?.[expr.fieldId]
+      return ctx.rowValues?.[normalizedExpr.fieldId]
     case 'add': {
-      return expr.args.reduce((sum, arg) => sum + toNumber(evaluateExpr(arg, ctx)), 0)
+      return normalizedExpr.args.reduce((sum, arg) => sum + toNumber(evaluateExpr(arg, ctx)), 0)
     }
     case 'mul': {
-      return expr.args.reduce((product, arg) => product * toNumber(evaluateExpr(arg, ctx)), 1)
+      return normalizedExpr.args.reduce((product, arg) => product * toNumber(evaluateExpr(arg, ctx)), 1)
     }
     case 'sub': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return Number.NaN
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return left - right
     }
     case 'div': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return Number.NaN
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return right === 0 ? Number.NaN : left / right
     }
     case 'eq': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return undefined
       return Object.is(evaluateExpr(pair.left, ctx), evaluateExpr(pair.right, ctx))
     }
     case 'neq': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return undefined
       return !Object.is(evaluateExpr(pair.left, ctx), evaluateExpr(pair.right, ctx))
     }
     case 'gt': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return false
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return !Number.isNaN(left) && !Number.isNaN(right) && left > right
     }
     case 'gte': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return false
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return !Number.isNaN(left) && !Number.isNaN(right) && left >= right
     }
     case 'lt': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return false
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return !Number.isNaN(left) && !Number.isNaN(right) && left < right
     }
     case 'lte': {
-      const pair = getBinaryOperands(expr as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
       if (!pair) return false
       const left = toNumber(evaluateExpr(pair.left, ctx))
       const right = toNumber(evaluateExpr(pair.right, ctx))
       return !Number.isNaN(left) && !Number.isNaN(right) && left <= right
     }
     case 'and':
-      return expr.args.every((arg) => isTruthy(evaluateExpr(arg, ctx)))
+      return normalizedExpr.args.every((arg) => isTruthy(evaluateExpr(arg, ctx)))
     case 'or':
-      return expr.args.some((arg) => isTruthy(evaluateExpr(arg, ctx)))
+      return normalizedExpr.args.some((arg) => isTruthy(evaluateExpr(arg, ctx)))
     case 'not':
-      return !isTruthy(evaluateExpr(expr.arg, ctx))
+      return !isTruthy(evaluateExpr(normalizedExpr.arg, ctx))
     case 'if':
-      return isTruthy(evaluateExpr(expr.cond, ctx))
-        ? evaluateExpr(expr.then, ctx)
-        : evaluateExpr(expr.else, ctx)
+      return isTruthy(evaluateExpr(normalizedExpr.cond, ctx))
+        ? evaluateExpr(normalizedExpr.then, ctx)
+        : evaluateExpr(normalizedExpr.else, ctx)
     case 'regex': {
-      const value = evaluateExpr(expr.value, ctx)
+      const value = evaluateExpr(normalizedExpr.value, ctx)
       const str = value == null ? '' : String(value)
       try {
-        const re = new RegExp(expr.pattern, expr.flags)
+        const re = new RegExp(normalizedExpr.pattern, normalizedExpr.flags)
         return re.test(str)
       } catch {
         return false

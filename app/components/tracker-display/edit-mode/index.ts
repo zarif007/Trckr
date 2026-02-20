@@ -39,6 +39,8 @@ export {
   getNextLayoutOrder,
   getSimpleFieldTypes,
   SIMPLE_FIELD_TYPES,
+  createNewTabId,
+  getNextTabPlaceId,
   createNewSectionId,
   createNewGridId,
   getNextSectionPlaceId,

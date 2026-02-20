@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Bot } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,113 @@ import { useTrackerChat, type TrackerResponse } from './hooks/useTrackerChat'
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
 const DEFAULT_LEFT_RATIO = 0.75
+
+const TrackerPanel = memo(function TrackerPanel({
+  schema,
+  editMode,
+  setEditMode,
+  isChatOpen,
+  setIsChatOpen,
+  isStreamingTracker,
+  streamedTracker,
+  trackerDataRef,
+  handleSchemaChange,
+  leftWidth,
+}: {
+  schema: TrackerResponse
+  editMode: boolean
+  setEditMode: (v: boolean) => void
+  isChatOpen: boolean
+  setIsChatOpen: (v: boolean | ((prev: boolean) => boolean)) => void
+  isStreamingTracker: boolean
+  streamedTracker: TrackerResponse | undefined
+  trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
+  handleSchemaChange: (next: TrackerResponse) => void
+  leftWidth: number | null
+}) {
+  return (
+    <section
+      className={`relative h-full bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
+      style={{ width: isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%' }}
+    >
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
+        <div className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
+          <button
+            type="button"
+            onClick={() => setEditMode(false)}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            aria-pressed={!editMode}
+            disabled={isStreamingTracker}
+          >
+            Preview
+          </button>
+          <button
+            type="button"
+            onClick={() => setEditMode(true)}
+            className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+            aria-pressed={editMode}
+            disabled={isStreamingTracker}
+          >
+            Edit
+          </button>
+        </div>
+        <Button
+          variant="secondary"
+          size="icon"
+          className="h-8 w-8"
+          onClick={() => setIsChatOpen((prev) => !prev)}
+          aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
+        >
+          <Bot className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="h-full overflow-y-auto px-4 py-6">
+        {isStreamingTracker && streamedTracker ? (
+          <TrackerDisplay
+            tabs={((streamedTracker.tabs || []) as unknown[]).filter(
+              (t): t is TrackerResponse['tabs'][number] =>
+                !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name
+            ) as TrackerResponse['tabs']}
+            sections={((streamedTracker.sections || []) as unknown[]).filter(
+              (s): s is TrackerResponse['sections'][number] =>
+                !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name
+            ) as TrackerResponse['sections']}
+            grids={((streamedTracker.grids || []) as unknown[]).filter(
+              (g): g is TrackerResponse['grids'][number] =>
+                !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name
+            ) as TrackerResponse['grids']}
+            fields={((streamedTracker.fields || []) as unknown[]).filter(
+              (f): f is TrackerResponse['fields'][number] =>
+                !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)
+            ) as TrackerResponse['fields']}
+            layoutNodes={(streamedTracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
+            bindings={(streamedTracker.bindings || {}) as TrackerResponse['bindings']}
+            validations={(streamedTracker.validations || {}) as TrackerResponse['validations']}
+            styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
+            dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
+            getDataRef={trackerDataRef}
+          />
+        ) : (
+          <TrackerDisplay
+            tabs={schema.tabs}
+            sections={schema.sections}
+            grids={schema.grids}
+            fields={schema.fields}
+            layoutNodes={schema.layoutNodes}
+            bindings={schema.bindings}
+            validations={schema.validations}
+            styles={schema.styles}
+            dependsOn={schema.dependsOn}
+            getDataRef={trackerDataRef}
+            editMode={editMode}
+            onSchemaChange={editMode ? handleSchemaChange : undefined}
+          />
+        )}
+      </div>
+    </section>
+  )
+})
 
 function TrackerPageContent() {
   return <TrackerAIView />
@@ -148,86 +255,18 @@ function TrackerAIView() {
   return (
     <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
-        <section
-          className={`relative h-full bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
-          style={{ width: isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%' }}
-        >
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
-            <div className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={!editMode}
-                disabled={isStreamingTracker}
-              >
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMode(true)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={editMode}
-                disabled={isStreamingTracker}
-              >
-                Edit
-              </button>
-            </div>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setIsChatOpen((prev) => !prev)}
-              aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
-            >
-              <Bot className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="h-full overflow-y-auto px-4 py-6">
-            {isStreamingTracker && streamedTracker ? (
-              <TrackerDisplay
-                tabs={((streamedTracker.tabs || []) as unknown[]).filter(
-                  (t): t is TrackerResponse['tabs'][number] =>
-                    !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name
-                ) as TrackerResponse['tabs']}
-                sections={((streamedTracker.sections || []) as unknown[]).filter(
-                  (s): s is TrackerResponse['sections'][number] =>
-                    !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name
-                ) as TrackerResponse['sections']}
-                grids={((streamedTracker.grids || []) as unknown[]).filter(
-                  (g): g is TrackerResponse['grids'][number] =>
-                    !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name
-                ) as TrackerResponse['grids']}
-                fields={((streamedTracker.fields || []) as unknown[]).filter(
-                  (f): f is TrackerResponse['fields'][number] =>
-                    !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)
-                ) as TrackerResponse['fields']}
-                layoutNodes={(streamedTracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
-                bindings={(streamedTracker.bindings || {}) as TrackerResponse['bindings']}
-                validations={(streamedTracker.validations || {}) as TrackerResponse['validations']}
-                styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
-                dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
-                getDataRef={trackerDataRef}
-              />
-            ) : (
-              <TrackerDisplay
-                tabs={schema.tabs}
-                sections={schema.sections}
-                grids={schema.grids}
-                fields={schema.fields}
-                layoutNodes={schema.layoutNodes}
-                bindings={schema.bindings}
-                validations={schema.validations}
-                styles={schema.styles}
-                dependsOn={schema.dependsOn}
-                getDataRef={trackerDataRef}
-                editMode={editMode}
-                onSchemaChange={editMode ? handleSchemaChange : undefined}
-              />
-            )}
-          </div>
-        </section>
+        <TrackerPanel
+          schema={schema}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          isChatOpen={isChatOpen}
+          setIsChatOpen={setIsChatOpen}
+          isStreamingTracker={isStreamingTracker}
+          streamedTracker={streamedTracker}
+          trackerDataRef={trackerDataRef}
+          handleSchemaChange={handleSchemaChange}
+          leftWidth={leftWidth}
+        />
 
         {isChatOpen && (
           <>

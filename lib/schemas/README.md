@@ -90,18 +90,18 @@ Validation issues are returned as warnings (not errors) - invalid bindings are s
 
 ## Field validations (top-level)
 
-Validations are stored in a top-level map keyed by `fieldId`:
+Validations are stored in a top-level map keyed by `gridId.fieldId`:
 
 ```json
 {
   "validations": {
-    "sku": [
+    "main_grid.sku": [
       { "type": "required", "message": "Required" },
       {
         "type": "expr",
         "expr": {
           "op": "regex",
-          "value": { "op": "field", "fieldId": "sku" },
+          "value": { "op": "field", "fieldId": "main_grid.sku" },
           "pattern": "^[A-Z]{2}\\\\d{4}$"
         },
         "message": "Format: AA0000"

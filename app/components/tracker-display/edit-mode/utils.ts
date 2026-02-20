@@ -9,6 +9,7 @@ import type {
   TrackerFieldType,
   TrackerSection,
   TrackerGrid,
+  TrackerTab,
 } from '../types'
 
 /** All field types that can be created from the Add Field dialog. Includes simple types and option-based (options configured later). */
@@ -144,7 +145,24 @@ export function getCreatableFieldTypesWithLabels(): FieldTypeOption[] {
   }))
 }
 
-// --- Section / grid block editing ---
+// --- Tab / section / grid block editing ---
+
+/** Collision-safe tab id (e.g. tab_1, tab_2). */
+export function createNewTabId(existingIds: Set<string>): string {
+  let id = 'tab_1'
+  let n = 1
+  while (existingIds.has(id)) {
+    n += 1
+    id = `tab_${n}`
+  }
+  return id
+}
+
+/** Next placeId for tabs (after existing tabs). */
+export function getNextTabPlaceId(tabs: TrackerTab[]): number {
+  if (tabs.length === 0) return 0
+  return Math.max(...tabs.map((t) => t.placeId)) + 1
+}
 
 /** Collision-safe section id. */
 export function createNewSectionId(existingIds: Set<string>): string {

@@ -4,6 +4,7 @@
  */
 import type { ValidationContext, ValidatorResult } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
+import { normalizeExprOp } from '@/lib/functions/normalize'
 import { parsePath } from '@/lib/resolve-bindings'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -32,11 +33,13 @@ function validateExprNode(
 ): string[] {
   const errors: string[] = []
 
-  switch (node.op) {
+  const normalizedOp = normalizeExprOp(node.op)
+  const normalizedNode = (normalizedOp === node.op ? node : { ...node, op: normalizedOp }) as ExprNode
+  switch (normalizedNode.op) {
     case 'const':
       return errors
     case 'field': {
-      const ref = node.fieldId
+      const ref = normalizedNode.fieldId
       if (typeof ref !== 'string' || ref.trim().length === 0) {
         errors.push(`${path}.fieldId must be a non-empty string`)
       } else if (!ref.includes('.')) {
@@ -50,7 +53,7 @@ function validateExprNode(
     case 'mul':
     case 'and':
     case 'or': {
-      const args = (node as Extract<ExprNode, { op: 'add' | 'mul' | 'and' | 'or' }>).args
+      const args = (normalizedNode as Extract<ExprNode, { op: 'add' | 'mul' | 'and' | 'or' }>).args
       if (!Array.isArray(args) || args.length === 0) {
         errors.push(`${path}.args must be a non-empty array`)
         return errors
@@ -72,7 +75,7 @@ function validateExprNode(
     case 'gte':
     case 'lt':
     case 'lte': {
-      const pair = getBinaryOperands(node as Record<string, unknown>)
+      const pair = getBinaryOperands(normalizedNode as Record<string, unknown>)
       if (!pair) {
         errors.push(`${path} must have .left and .right, or .args with two expression nodes`)
         return errors
@@ -90,7 +93,7 @@ function validateExprNode(
       return errors
     }
     case 'not': {
-      const arg = (node as Extract<ExprNode, { op: 'not' }>).arg
+      const arg = (normalizedNode as Extract<ExprNode, { op: 'not' }>).arg
       if (!isExprNode(arg)) {
         errors.push(`${path}.arg is not a valid expression node`)
       } else {
@@ -99,7 +102,7 @@ function validateExprNode(
       return errors
     }
     case 'if': {
-      const triple = node as Extract<ExprNode, { op: 'if' }>
+      const triple = normalizedNode as Extract<ExprNode, { op: 'if' }>
       if (!isExprNode(triple.cond)) {
         errors.push(`${path}.cond is not a valid expression node`)
       } else {
@@ -118,7 +121,7 @@ function validateExprNode(
       return errors
     }
     case 'regex': {
-      const regex = node as Extract<ExprNode, { op: 'regex' }>
+      const regex = normalizedNode as Extract<ExprNode, { op: 'regex' }>
       if (!isExprNode(regex.value)) {
         errors.push(`${path}.value is not a valid expression node`)
       } else {

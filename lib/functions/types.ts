@@ -1,3 +1,20 @@
+type ComparisonOp =
+  | 'eq'
+  | 'neq'
+  | 'gt'
+  | 'gte'
+  | 'lt'
+  | 'lte'
+  | '='
+  | '=='
+  | '==='
+  | '!='
+  | '!=='
+  | '>'
+  | '>='
+  | '<'
+  | '<='
+
 export type ExprNode =
   | { op: 'const'; value: unknown }
   /** fieldId must be "gridId.fieldId" (e.g. main_grid.sku), like bindings. */
@@ -6,7 +23,7 @@ export type ExprNode =
   | { op: 'mul'; args: ExprNode[] }
   | { op: 'sub'; left: ExprNode; right: ExprNode }
   | { op: 'div'; left: ExprNode; right: ExprNode }
-  | { op: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'; left: ExprNode; right: ExprNode }
+  | { op: ComparisonOp; left: ExprNode; right: ExprNode }
   | { op: 'and' | 'or'; args: ExprNode[] }
   | { op: 'not'; arg: ExprNode }
   | { op: 'if'; cond: ExprNode; then: ExprNode; else: ExprNode }

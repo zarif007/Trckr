@@ -112,7 +112,7 @@ export function GridBlockContent({
         </div>
       )}
       <Tabs defaultValue={defaultTab} className="w-full">
-        <TabsList className="inline-flex h-9 items-center justify-center rounded-lg bg-muted p-1 text-muted-foreground">
+        <TabsList>
           {views.map((view) => (
             <TabsTrigger key={view.id} value={view.id}>
               {view.name}

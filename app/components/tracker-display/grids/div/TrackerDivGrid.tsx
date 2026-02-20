@@ -671,9 +671,13 @@ export function TrackerDivGrid({
           nodesInRow.length === 1 ? 'grid-cols-1' : nodesInRow.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
         return (
           <div key={rowKey} className={`grid ${gridCols} gap-4`}>
-            {nodesInRow.map((node) => {
+            {nodesInRow.map((node, nodeIndex) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
-              return <div key={node.fieldId}>{renderFieldContent(node, index)}</div>
+              return (
+                <div key={`${rowKey}-${nodeIndex}`}>
+                  {renderFieldContent(node, index)}
+                </div>
+              )
             })}
           </div>
         )
