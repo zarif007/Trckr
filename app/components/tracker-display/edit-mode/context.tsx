@@ -10,18 +10,26 @@ export interface EditModeContextValue {
   schema: TrackerDisplayProps | undefined
   /** Call with full updated schema when user adds/removes/reorders. */
   onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
+  /** Undo last edit-mode change. Set when parent uses useUndoableSchemaChange. */
+  undo?: () => void
+  /** Whether undo is available. */
+  canUndo?: boolean
 }
 
 const EditModeContext = createContext<EditModeContextValue>({
   editMode: false,
   schema: undefined,
   onSchemaChange: undefined,
+  undo: undefined,
+  canUndo: undefined,
 })
 
 export interface EditModeProviderProps {
   editMode: boolean
   schema: TrackerDisplayProps | undefined
   onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
+  undo?: () => void
+  canUndo?: boolean
   children: ReactNode
 }
 
@@ -30,11 +38,13 @@ export function EditModeProvider({
   editMode,
   schema,
   onSchemaChange,
+  undo,
+  canUndo,
   children,
 }: EditModeProviderProps) {
   const value = useMemo<EditModeContextValue>(
-    () => ({ editMode: !!editMode, schema, onSchemaChange }),
-    [editMode, schema, onSchemaChange]
+    () => ({ editMode: !!editMode, schema, onSchemaChange, undo, canUndo }),
+    [editMode, schema, onSchemaChange, undo, canUndo]
   )
   return (
     <EditModeContext.Provider value={value}>

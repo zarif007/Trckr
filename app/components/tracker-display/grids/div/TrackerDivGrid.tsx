@@ -125,8 +125,11 @@ function getPointerCoordinates(event: DragMoveEvent | DragEndEvent) {
   return coords
 }
 
+/** Rect-like shape used by getDropPlacementByPointer (compatible with DOM and @dnd-kit rects). */
+type RectLike = { top: number; left: number; right: number; bottom: number; width: number; height: number }
+
 function getDropPlacementByPointer(
-  overRect: ClientRect | null | undefined,
+  overRect: RectLike | null | undefined,
   pointer: { x: number; y: number } | null,
   previous: DropPlacement | null
 ): DropPlacement | null {

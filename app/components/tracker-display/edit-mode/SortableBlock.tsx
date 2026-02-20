@@ -122,7 +122,10 @@ export function SortableFieldRowEdit({
     isDragging,
   } = useSortable({ id })
 
-  const style: React.CSSProperties | undefined = undefined
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
 
   return (
     <FieldRowEdit

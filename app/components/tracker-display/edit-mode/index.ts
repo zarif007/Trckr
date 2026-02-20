@@ -7,6 +7,10 @@
  */
 
 export { EditModeProvider, useEditMode, useCanEditLayout } from './context'
+export { useUndoableSchemaChange } from './useUndoableSchemaChange'
+export type { UseUndoableSchemaChangeOptions, UseUndoableSchemaChangeResult } from './useUndoableSchemaChange'
+export { EditModeUndoButton, useUndoKeyboardShortcut } from './undo'
+export type { EditModeUndoButtonProps } from './undo'
 export type { EditModeContextValue, EditModeProviderProps } from './context'
 
 export { BlockEditor } from './BlockEditor'

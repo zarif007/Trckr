@@ -161,4 +161,8 @@ export interface TrackerDisplayProps {
   editMode?: boolean
   /** Called when schema is changed in edit mode. Pass updated full schema. */
   onSchemaChange?: (schema: TrackerDisplayProps) => void
+  /** Undo last edit-mode change. Provided when using useUndoableSchemaChange. */
+  undo?: () => void
+  /** Whether undo is available. */
+  canUndo?: boolean
 }

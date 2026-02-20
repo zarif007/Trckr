@@ -120,6 +120,8 @@ export function TrackerDisplayInline({
   dependsOn,
   editMode,
   onSchemaChange,
+  undo,
+  canUndo,
 }: TrackerDisplayProps) {
   const normalizedTabs = useMemo(
     () =>
@@ -498,6 +500,8 @@ export function TrackerDisplayInline({
         editMode={!!editMode}
         schema={editModeSchema}
         onSchemaChange={onSchemaChange}
+        undo={undo}
+        canUndo={canUndo}
       >
         {content}
       </EditModeProvider>

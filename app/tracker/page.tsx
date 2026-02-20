@@ -14,6 +14,8 @@ import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptySta
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
 import { TrackerDisplay } from '@/app/components/tracker-display'
+import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
+import { EditModeUndoButton, useUndoKeyboardShortcut } from '@/app/components/tracker-display/edit-mode/undo'
 import {
   INITIAL_TRACKER_SCHEMA,
 } from '@/app/components/tracker-display/tracker-editor'
@@ -33,6 +35,8 @@ const TrackerPanel = memo(function TrackerPanel({
   streamedTracker,
   trackerDataRef,
   handleSchemaChange,
+  undo,
+  canUndo,
   leftWidth,
 }: {
   schema: TrackerResponse
@@ -43,11 +47,15 @@ const TrackerPanel = memo(function TrackerPanel({
   isStreamingTracker: boolean
   streamedTracker: TrackerResponse | undefined
   trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
-  handleSchemaChange: (next: TrackerResponse) => void
+  handleSchemaChange?: (next: TrackerResponse) => void
+  undo?: () => void
+  canUndo?: boolean
   leftWidth: number | null
 }) {
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
+
+  useUndoKeyboardShortcut(editMode, canUndo ?? false, undo)
 
   const handleShowStructure = useCallback(() => {
     setDataSnapshot(null)
@@ -77,7 +85,7 @@ const TrackerPanel = memo(function TrackerPanel({
         </div>
       )}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
-        <div className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`inline-flex items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
           <button
             type="button"
             onClick={() => setEditMode(false)}
@@ -126,6 +134,11 @@ const TrackerPanel = memo(function TrackerPanel({
           <Database className="h-3.5 w-3.5" />
           Data
         </Button>
+        <EditModeUndoButton
+          undo={undo}
+          canUndo={canUndo ?? false}
+          visible={editMode}
+        />
       </div>
 
       <Dialog open={debugView !== null} onOpenChange={(open) => !open && setDebugView(null)}>
@@ -181,6 +194,8 @@ const TrackerPanel = memo(function TrackerPanel({
             getDataRef={trackerDataRef}
             editMode={editMode}
             onSchemaChange={editMode ? handleSchemaChange : undefined}
+            undo={undo}
+            canUndo={canUndo}
           />
         )}
       </div>
@@ -248,6 +263,8 @@ function TrackerAIView() {
     setSchema(next)
     setActiveTrackerData(next)
   }, [setActiveTrackerData])
+
+  const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 
   useEffect(() => {
     const container = containerRef.current
@@ -325,7 +342,9 @@ function TrackerAIView() {
           isStreamingTracker={isStreamingTracker}
           streamedTracker={streamedDisplayTracker ?? undefined}
           trackerDataRef={trackerDataRef}
-          handleSchemaChange={handleSchemaChange}
+          handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
+          undo={editMode ? undoable.undo : undefined}
+          canUndo={editMode ? undoable.canUndo : false}
           leftWidth={leftWidth}
         />
 
