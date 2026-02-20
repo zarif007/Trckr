@@ -5,7 +5,7 @@ Single-row form layout for tracker data. Displays one field per row by default, 
 ## What it is
 
 - **Component**: `TrackerDivGrid` — form-style grid for tracker sections
-- **Layout**: One field per row (stacked vertically)
+- **Layout**: Packed rows with up to 12 fields per row; drag left/right to join a row
 - **Uses**: Input, Textarea, Checkbox, Calendar, Popover, SearchableSelect, MultiSelect from `@/components/ui`
 - **Shared**: `EntryFormDialog` from `./data-table` for Add option; `FieldMetadata` / `OptionsGridFieldDef` from `./data-table/utils`
 

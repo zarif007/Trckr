@@ -28,6 +28,9 @@ export const CREATABLE_FIELD_TYPES: TrackerFieldType[] = [
   'dynamic_multiselect',
 ]
 
+/** Max columns per row for div (form) grids. */
+export const DIV_GRID_MAX_COLS = 12
+
 /** Human-readable labels for each creatable field type. */
 export const FIELD_TYPE_LABELS: Record<TrackerFieldType, string> = {
   string: 'Short text',
@@ -90,7 +93,7 @@ export function getNextLayoutOrder(
   return Math.max(...orders) + 1
 }
 
-/** Next (row, col) slot for div grid layout. New fields are always added in a new row (col 0); user can drag-and-drop to place beside others. */
+/** Next (row, col) slot for div grid layout. New fields are always added in a new row (col 0); user can drag-and-drop to place beside others (max 12 per row). */
 export function getNextRowCol(
   layoutNodes: TrackerLayoutNode[],
   gridId: string

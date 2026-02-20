@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import type { TrackerDisplayProps, TrackerField, TrackerLayoutNode } from '../types'
 import type { AddColumnOrFieldResult } from './types'
-import { createNewField, getNextLayoutOrder, getNextRowCol } from './utils'
+import { createNewField, getNextLayoutOrder, getNextRowCol, DIV_GRID_MAX_COLS } from './utils'
 
 /**
  * Hook that returns layout mutation actions for a single grid.
@@ -53,8 +53,8 @@ export function useLayoutActions(
       const reordered = swapped.map((n, i) => ({
         ...n,
         order: i,
-        row: Math.floor(i / 3),
-        col: i % 3,
+        row: Math.floor(i / DIV_GRID_MAX_COLS),
+        col: i % DIV_GRID_MAX_COLS,
       }))
       applySchemaChange([...rest, ...reordered])
     },
@@ -102,8 +102,8 @@ export function useLayoutActions(
           gridId,
           fieldId,
           order: i,
-          row: Math.floor(i / 3),
-          col: i % 3,
+          row: Math.floor(i / DIV_GRID_MAX_COLS),
+          col: i % DIV_GRID_MAX_COLS,
         }
       })
       applySchemaChange([...rest, ...reordered])

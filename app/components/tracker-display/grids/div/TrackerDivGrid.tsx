@@ -23,8 +23,8 @@ import {
   useSensors,
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core'
-import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
-import { SortableContext, rectSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core'
+import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -37,6 +37,7 @@ import {
 import type { FieldValidationRule } from '@/lib/functions/types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { useEditMode, useLayoutActions, SortableFieldRowEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from '../../edit-mode'
+import { DIV_GRID_MAX_COLS } from '../../edit-mode/utils'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from '../../tracker-options-context'
@@ -49,6 +50,20 @@ import { resolveDivStyles } from '@/lib/style-utils'
 
 const ADD_OPTION_VALUE = '__add_option__'
 const EMPTY_ROW: Record<string, unknown> = {}
+const GRID_COLS_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+  7: 'grid-cols-7',
+  8: 'grid-cols-8',
+  9: 'grid-cols-9',
+  10: 'grid-cols-10',
+  11: 'grid-cols-11',
+  12: 'grid-cols-12',
+}
 
 interface TrackerDivGridProps {
   tabId: string
@@ -83,6 +98,105 @@ function focusInputInContainer(container: HTMLElement) {
   }
 }
 
+type DropPlacement = 'left' | 'right' | 'above' | 'below'
+type DropIndicator = { overId: string; placement: DropPlacement } | null
+
+function getRectCenter(rect?: ClientRect | null) {
+  if (!rect) return null
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  }
+}
+
+function getDropPlacement(
+  activeRect?: ClientRect | null,
+  overRect?: ClientRect | null
+): DropPlacement | null {
+  const activeCenter = getRectCenter(activeRect)
+  const overCenter = getRectCenter(overRect)
+  if (!activeCenter || !overCenter) return null
+  const dx = activeCenter.x - overCenter.x
+  const dy = activeCenter.y - overCenter.y
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return dx < 0 ? 'left' : 'right'
+  }
+  return dy < 0 ? 'above' : 'below'
+}
+
+function splitRow(nodes: TrackerLayoutNode[], maxCols: number): TrackerLayoutNode[][] {
+  const rows: TrackerLayoutNode[][] = []
+  for (let i = 0; i < nodes.length; i += maxCols) {
+    rows.push(nodes.slice(i, i + maxCols))
+  }
+  return rows
+}
+
+function buildRowsFromNodes(
+  nodes: TrackerLayoutNode[],
+  maxCols: number
+): TrackerLayoutNode[][] {
+  if (nodes.length === 0) return []
+  const hasFullPos = nodes.every((n) => n.row != null && n.col != null)
+  if (!hasFullPos) {
+    const ordered = [...nodes].sort((a, b) => a.order - b.order)
+    return splitRow(ordered, maxCols)
+  }
+  const byRow = new Map<number, TrackerLayoutNode[]>()
+  nodes.forEach((node) => {
+    const rowKey = node.row ?? 0
+    const list = byRow.get(rowKey)
+    if (list) {
+      list.push(node)
+    } else {
+      byRow.set(rowKey, [node])
+    }
+  })
+  const rowKeys = [...byRow.keys()].sort((a, b) => a - b)
+  const rows: TrackerLayoutNode[][] = []
+  rowKeys.forEach((rowKey) => {
+    const rowNodes = (byRow.get(rowKey) ?? []).sort((a, b) => (a.col ?? 0) - (b.col ?? 0))
+    rows.push(...splitRow(rowNodes, maxCols))
+  })
+  return rows
+}
+
+function rebuildNodesFromRows(
+  rows: TrackerLayoutNode[][],
+  gridId: string,
+  existingByField: Map<string, TrackerLayoutNode>
+): TrackerLayoutNode[] {
+  const next: TrackerLayoutNode[] = []
+  let order = 0
+  rows.forEach((rowNodes, rowIndex) => {
+    rowNodes.forEach((node, colIndex) => {
+      const existing = existingByField.get(node.fieldId) ?? node
+      next.push({
+        ...existing,
+        gridId,
+        fieldId: node.fieldId,
+        order,
+        row: rowIndex,
+        col: colIndex,
+      })
+      order += 1
+    })
+  })
+  return next
+}
+
+function findRowIndex(
+  rows: TrackerLayoutNode[][],
+  fieldId: string
+): { rowIndex: number; colIndex: number } | null {
+  for (let r = 0; r < rows.length; r += 1) {
+    const row = rows[r]
+    const c = row.findIndex((n) => n.fieldId === fieldId)
+    if (c >= 0) return { rowIndex: r, colIndex: c }
+  }
+  return null
+}
+
 function TrackerDivGridInner({
   tabId,
   grid,
@@ -106,7 +220,7 @@ function TrackerDivGridInner({
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const { editMode, schema, onSchemaChange } = useEditMode()
-  const { remove, move, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
+  const { remove, move, applySchemaChange } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
 
@@ -250,30 +364,92 @@ function TrackerDivGridInner({
     [grid.id, fieldNodes]
   )
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null)
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDragId(String(event.active.id))
+    setDropIndicator(null)
+  }, [])
+  const handleDragMove = useCallback((event: DragMoveEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) {
+      setDropIndicator(null)
+      return
+    }
+    const placement = getDropPlacement(
+      event.active.rect.current.translated ?? event.active.rect.current.initial,
+      event.over?.rect
+    )
+    if (!placement) {
+      setDropIndicator(null)
+      return
+    }
+    setDropIndicator({ overId: String(over.id), placement })
   }, [])
   const handleFieldDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveDragId(null)
+      setDropIndicator(null)
       const { active, over } = event
-      if (!over || active.id === over.id || !reorder) return
-      const currentIds = fieldNodes.map((n) => n.fieldId)
+      if (!over || active.id === over.id || !applySchemaChange || !schema) return
       const activeParsed = parseFieldId(String(active.id))
       const overParsed = parseFieldId(String(over.id))
       if (!activeParsed || !overParsed || activeParsed.gridId !== grid.id || overParsed.gridId !== grid.id) return
-      const oldIndex = currentIds.indexOf(activeParsed.fieldId)
-      const newIndex = currentIds.indexOf(overParsed.fieldId)
-      if (oldIndex < 0 || newIndex < 0) return
-      const reordered = arrayMove(currentIds, oldIndex, newIndex)
-      reorder(reordered)
+      const placement =
+        getDropPlacement(
+          event.active.rect.current.translated ?? event.active.rect.current.initial,
+          event.over?.rect
+        ) ?? dropIndicator?.placement
+      if (!placement) return
+
+      const currentNodes = (schema.layoutNodes ?? []).filter((n) => n.gridId === grid.id)
+      const otherNodes = (schema.layoutNodes ?? []).filter((n) => n.gridId !== grid.id)
+      const existingByField = new Map(currentNodes.map((n) => [n.fieldId, n] as const))
+      const rows = buildRowsFromNodes(currentNodes, DIV_GRID_MAX_COLS)
+      const activeLoc = findRowIndex(rows, activeParsed.fieldId)
+      if (!activeLoc) return
+
+      const [activeNode] = rows[activeLoc.rowIndex].splice(activeLoc.colIndex, 1)
+      if (!activeNode) return
+      if (rows[activeLoc.rowIndex].length === 0) {
+        rows.splice(activeLoc.rowIndex, 1)
+      }
+
+      const overLoc = findRowIndex(rows, overParsed.fieldId)
+      if (!overLoc) return
+
+      const activeCenter = getRectCenter(
+        event.active.rect.current.translated ?? event.active.rect.current.initial
+      )
+      const overCenter = getRectCenter(event.over?.rect ?? null)
+      const verticalFallback: DropPlacement = activeCenter && overCenter && activeCenter.y < overCenter.y ? 'above' : 'below'
+
+      if (placement === 'left' || placement === 'right') {
+        const targetRow = rows[overLoc.rowIndex] ?? []
+        if (targetRow.length >= DIV_GRID_MAX_COLS) {
+          const insertRowIndex = verticalFallback === 'above' ? overLoc.rowIndex : overLoc.rowIndex + 1
+          rows.splice(insertRowIndex, 0, [activeNode])
+        } else {
+          const insertIndex = placement === 'left' ? overLoc.colIndex : overLoc.colIndex + 1
+          targetRow.splice(insertIndex, 0, activeNode)
+        }
+      } else {
+        const insertRowIndex = placement === 'above' ? overLoc.rowIndex : overLoc.rowIndex + 1
+        rows.splice(insertRowIndex, 0, [activeNode])
+      }
+
+      const nextNodes = rebuildNodesFromRows(rows, grid.id, existingByField)
+      applySchemaChange([...otherNodes, ...nextNodes])
     },
-    [grid.id, fieldNodes, reorder]
+    [applySchemaChange, dropIndicator?.placement, grid.id, schema]
   )
+  const handleDragCancel = useCallback(() => {
+    setActiveDragId(null)
+    setDropIndicator(null)
+  }, [])
 
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [addOptionOpen, setAddOptionOpen] = useState(false)
@@ -620,9 +796,9 @@ function TrackerDivGridInner({
     )
 
     const inputContent = (
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0">
         <div
-          className={`rounded-lg border bg-muted/30 focus-within:bg-background transition-colors hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''} ${showError ? 'border-destructive/60 ring-1 ring-destructive/40' : 'border-input'}`}
+          className={`min-w-0 rounded-lg border bg-muted/30 focus-within:bg-background transition-colors hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${ds.fontSize} ${field.dataType === 'text' ? 'h-auto' : ''} ${showError ? 'border-destructive/60 ring-1 ring-destructive/40' : 'border-input'}`}
           title={showError ? validationError ?? undefined : undefined}
           onPointerDown={(e) => {
             e.stopPropagation()
@@ -662,7 +838,7 @@ function TrackerDivGridInner({
     }
 
     return (
-      <div key={field.id} className="space-y-1.5">
+      <div key={field.id} className="space-y-1.5 min-w-0">
         {labelContent}
         {inputContent}
       </div>
@@ -670,18 +846,34 @@ function TrackerDivGridInner({
   }
 
   const fieldsContainer = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 min-w-0">
       {rowKeys.map((rowKey) => {
         const nodesInRow = nodesByRow.get(rowKey) ?? []
-        const gridCols =
-          nodesInRow.length === 1 ? 'grid-cols-1' : nodesInRow.length === 2 ? 'grid-cols-2' : 'grid-cols-3'
+        const safeCount = Math.min(Math.max(nodesInRow.length, 1), DIV_GRID_MAX_COLS)
+        const gridCols = GRID_COLS_CLASS[safeCount] ?? 'grid-cols-1'
         return (
-          <div key={rowKey} className={`grid ${gridCols} gap-4`}>
+          <div key={rowKey} className={`grid ${gridCols} gap-4 min-w-0`}>
             {nodesInRow.map((node, nodeIndex) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
+              const indicator =
+                canEditLayout && activeDragId && dropIndicator?.overId === fieldSortableId(grid.id, node.fieldId)
+                  ? dropIndicator.placement
+                  : null
               return (
-                <div key={`${rowKey}-${nodeIndex}`}>
+                <div key={`${rowKey}-${nodeIndex}`} className="relative min-w-0">
                   {renderFieldContent(node, index)}
+                  {indicator === 'left' && (
+                    <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary pointer-events-none" />
+                  )}
+                  {indicator === 'right' && (
+                    <span className="absolute inset-y-2 right-0 w-0.5 rounded-full bg-primary pointer-events-none" />
+                  )}
+                  {indicator === 'above' && (
+                    <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-primary pointer-events-none" />
+                  )}
+                  {indicator === 'below' && (
+                    <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary pointer-events-none" />
+                  )}
                 </div>
               )
             })}
@@ -692,13 +884,15 @@ function TrackerDivGridInner({
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 min-w-0">
       {canEditLayout ? (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
+          onDragMove={handleDragMove}
           onDragEnd={handleFieldDragEnd}
+          onDragCancel={handleDragCancel}
         >
           <SortableContext items={fieldSortableIds} strategy={rectSortingStrategy}>
             {fieldsContainer}
