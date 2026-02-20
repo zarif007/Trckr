@@ -319,6 +319,16 @@ body {
   animation: border-blink 1.5s ease-in-out infinite;
 }
 
+/* Top progress bar: moving bar while streaming */
+@keyframes progress-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-progress-bar {
+  animation: progress-bar 1.4s ease-in-out infinite;
+}
+
 /* Unified form field height – use on input, select trigger, multiselect trigger */
 .input-field-height {
   height: var(--height-field);

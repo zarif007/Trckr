@@ -17,14 +17,18 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  useDroppable,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  MeasuringStrategy,
   defaultDropAnimationSideEffects,
 } from '@dnd-kit/core'
 import type { DragEndEvent, DragMoveEvent, DragStartEvent } from '@dnd-kit/core'
 import { SortableContext, rectSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import { getEventCoordinates } from '@dnd-kit/utilities'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -50,6 +54,7 @@ import { resolveDivStyles } from '@/lib/style-utils'
 
 const ADD_OPTION_VALUE = '__add_option__'
 const EMPTY_ROW: Record<string, unknown> = {}
+const DROP_ZONE_PREFIX = 'field-drop'
 const GRID_COLS_CLASS: Record<number, string> = {
   1: 'grid-cols-1',
   2: 'grid-cols-2',
@@ -101,27 +106,68 @@ function focusInputInContainer(container: HTMLElement) {
 type DropPlacement = 'left' | 'right' | 'above' | 'below'
 type DropIndicator = { overId: string; placement: DropPlacement } | null
 
-function getRectCenter(rect?: ClientRect | null) {
-  if (!rect) return null
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2,
-  }
+function fieldDropZoneId(gridId: string, fieldId: string, placement: DropPlacement) {
+  return `${DROP_ZONE_PREFIX}::${gridId}::${fieldId}::${placement}`
 }
 
-function getDropPlacement(
-  activeRect?: ClientRect | null,
-  overRect?: ClientRect | null
+function parseDropZoneId(id: string): { gridId: string; fieldId: string; placement: DropPlacement } | null {
+  if (!id.startsWith(`${DROP_ZONE_PREFIX}::`)) return null
+  const parts = id.split('::')
+  if (parts.length !== 4) return null
+  const [, gridId, fieldId, placement] = parts
+  if (placement !== 'left' && placement !== 'right' && placement !== 'above' && placement !== 'below') return null
+  return { gridId, fieldId, placement }
+}
+
+function getPointerCoordinates(event: DragMoveEvent | DragEndEvent) {
+  const coords = getEventCoordinates(event.activatorEvent)
+  if (!coords) return null
+  return coords
+}
+
+function getDropPlacementByPointer(
+  overRect: ClientRect | null | undefined,
+  pointer: { x: number; y: number } | null,
+  previous: DropPlacement | null
 ): DropPlacement | null {
-  const activeCenter = getRectCenter(activeRect)
-  const overCenter = getRectCenter(overRect)
-  if (!activeCenter || !overCenter) return null
-  const dx = activeCenter.x - overCenter.x
-  const dy = activeCenter.y - overCenter.y
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return dx < 0 ? 'left' : 'right'
-  }
-  return dy < 0 ? 'above' : 'below'
+  if (!overRect || !pointer) return previous
+  const left = pointer.x - overRect.left
+  const right = overRect.right - pointer.x
+  const top = pointer.y - overRect.top
+  const bottom = overRect.bottom - pointer.y
+
+  const verticalEdgeZone = overRect.height * 0.25
+  if (top <= verticalEdgeZone) return 'above'
+  if (bottom <= verticalEdgeZone) return 'below'
+
+  const centerX = overRect.left + overRect.width / 2
+  return pointer.x < centerX ? 'left' : 'right'
+}
+
+function FieldDropZones({
+  gridId,
+  fieldId,
+  enabled,
+}: {
+  gridId: string
+  fieldId: string
+  enabled: boolean
+}) {
+  const leftZone = useDroppable({ id: fieldDropZoneId(gridId, fieldId, 'left') })
+  const rightZone = useDroppable({ id: fieldDropZoneId(gridId, fieldId, 'right') })
+  const topZone = useDroppable({ id: fieldDropZoneId(gridId, fieldId, 'above') })
+  const bottomZone = useDroppable({ id: fieldDropZoneId(gridId, fieldId, 'below') })
+
+  if (!enabled) return null
+
+  return (
+    <>
+      <div ref={topZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 top-0 h-[25%]" />
+      <div ref={bottomZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 bottom-0 h-[25%]" />
+      <div ref={leftZone.setNodeRef} className="pointer-events-none absolute left-0 top-[25%] bottom-[25%] w-1/2" />
+      <div ref={rightZone.setNodeRef} className="pointer-events-none absolute right-0 top-[25%] bottom-[25%] w-1/2" />
+    </>
+  )
 }
 
 function splitRow(nodes: TrackerLayoutNode[], maxCols: number): TrackerLayoutNode[][] {
@@ -365,44 +411,59 @@ function TrackerDivGridInner({
   )
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
   const [dropIndicator, setDropIndicator] = useState<DropIndicator>(null)
+  const lastOverIdRef = useRef<string | null>(null)
+  const collisionDetection = useCallback(
+    (args: Parameters<typeof pointerWithin>[0]) => {
+      const pointerCollisions = pointerWithin(args)
+      return pointerCollisions.length ? pointerCollisions : closestCenter(args)
+    },
+    []
+  )
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDragId(String(event.active.id))
+    lastOverIdRef.current = String(event.active.id)
     setDropIndicator(null)
   }, [])
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { active, over } = event
-    if (!over || active.id === over.id) {
+    if (over?.id) lastOverIdRef.current = String(over.id)
+    const overId = over?.id ? String(over.id) : lastOverIdRef.current
+    if (!overId || String(active.id) === overId) {
       setDropIndicator(null)
       return
     }
-    const placement = getDropPlacement(
-      event.active.rect.current.translated ?? event.active.rect.current.initial,
-      event.over?.rect
-    )
+    const zone = parseDropZoneId(overId)
+    const pointer = getPointerCoordinates(event)
+    const placement = zone?.placement ?? getDropPlacementByPointer(event.over?.rect, pointer, dropIndicator?.placement ?? null)
     if (!placement) {
       setDropIndicator(null)
       return
     }
-    setDropIndicator({ overId: String(over.id), placement })
-  }, [])
+    const targetFieldId = zone?.fieldId ?? parseFieldId(overId)?.fieldId
+    if (!targetFieldId) {
+      setDropIndicator(null)
+      return
+    }
+    setDropIndicator({ overId: fieldSortableId(grid.id, targetFieldId), placement })
+  }, [dropIndicator?.placement])
   const handleFieldDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveDragId(null)
       setDropIndicator(null)
       const { active, over } = event
-      if (!over || active.id === over.id || !applySchemaChange || !schema) return
+      const overId = over?.id ? String(over.id) : lastOverIdRef.current
+      lastOverIdRef.current = null
+      if (!overId || active.id === overId || !applySchemaChange || !schema) return
       const activeParsed = parseFieldId(String(active.id))
-      const overParsed = parseFieldId(String(over.id))
+      const zone = parseDropZoneId(overId)
+      const overParsed = zone ? { gridId: zone.gridId, fieldId: zone.fieldId } : parseFieldId(overId)
       if (!activeParsed || !overParsed || activeParsed.gridId !== grid.id || overParsed.gridId !== grid.id) return
-      const placement =
-        getDropPlacement(
-          event.active.rect.current.translated ?? event.active.rect.current.initial,
-          event.over?.rect
-        ) ?? dropIndicator?.placement
+      const pointer = getPointerCoordinates(event)
+      const placement = zone?.placement ?? getDropPlacementByPointer(event.over?.rect, pointer, dropIndicator?.placement ?? null)
       if (!placement) return
 
       const currentNodes = (schema.layoutNodes ?? []).filter((n) => n.gridId === grid.id)
@@ -421,11 +482,9 @@ function TrackerDivGridInner({
       const overLoc = findRowIndex(rows, overParsed.fieldId)
       if (!overLoc) return
 
-      const activeCenter = getRectCenter(
-        event.active.rect.current.translated ?? event.active.rect.current.initial
-      )
-      const overCenter = getRectCenter(event.over?.rect ?? null)
-      const verticalFallback: DropPlacement = activeCenter && overCenter && activeCenter.y < overCenter.y ? 'above' : 'below'
+      const overRect = event.over?.rect ?? null
+      const verticalFallback: DropPlacement =
+        pointer && overRect && pointer.y < overRect.top + overRect.height / 2 ? 'above' : 'below'
 
       if (placement === 'left' || placement === 'right') {
         const targetRow = rows[overLoc.rowIndex] ?? []
@@ -449,6 +508,7 @@ function TrackerDivGridInner({
   const handleDragCancel = useCallback(() => {
     setActiveDragId(null)
     setDropIndicator(null)
+    lastOverIdRef.current = null
   }, [])
 
   const [datePickerOpen, setDatePickerOpen] = useState(false)
@@ -862,6 +922,7 @@ function TrackerDivGridInner({
               return (
                 <div key={`${rowKey}-${nodeIndex}`} className="relative min-w-0">
                   {renderFieldContent(node, index)}
+                  <FieldDropZones gridId={grid.id} fieldId={node.fieldId} enabled={canEditLayout} />
                   {indicator === 'left' && (
                     <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary pointer-events-none" />
                   )}
@@ -888,7 +949,8 @@ function TrackerDivGridInner({
       {canEditLayout ? (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={collisionDetection}
+          measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
           onDragStart={handleDragStart}
           onDragMove={handleDragMove}
           onDragEnd={handleFieldDragEnd}

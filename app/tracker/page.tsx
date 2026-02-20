@@ -68,9 +68,14 @@ const TrackerPanel = memo(function TrackerPanel({
 
   return (
     <section
-      className={`relative h-full bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
+      className="relative h-full bg-background/60 rounded-lg transition-shadow duration-300"
       style={{ width: isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%' }}
     >
+      {isStreamingTracker && (
+        <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden rounded-t-lg bg-muted/40">
+          <div className="h-full w-1/3 min-w-[120px] rounded-full bg-primary animate-progress-bar" />
+        </div>
+      )}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm">
         <div className={`inline-flex rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
           <button
@@ -305,11 +310,12 @@ function TrackerAIView() {
     validationErrors.length > 0 ||
     (!isLoading && messages.length > 0 && !hasGeneratedTracker)
 
+  // Switch to preview as soon as the agent starts (streaming begins)
   useEffect(() => {
-    if (isStreamingTracker) {
+    if (isLoading) {
       setEditMode(false)
     }
-  }, [isStreamingTracker])
+  }, [isLoading])
 
   return (
     <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
