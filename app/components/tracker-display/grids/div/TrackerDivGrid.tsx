@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -61,6 +61,8 @@ interface TrackerDivGridProps {
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
+  gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
+  gridDataForThisGrid?: Array<Record<string, unknown>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void
@@ -81,7 +83,7 @@ function focusInputInContainer(container: HTMLElement) {
   }
 }
 
-export function TrackerDivGrid({
+function TrackerDivGridInner({
   tabId,
   grid,
   layoutNodes,
@@ -92,11 +94,15 @@ export function TrackerDivGrid({
   styleOverrides,
   dependsOn,
   gridData = {},
+  gridDataRef,
+  gridDataForThisGrid,
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
   trackerContext: trackerContextProp,
 }: TrackerDivGridProps) {
+  const fullGridData = gridDataRef?.current ?? gridData
+  const thisGridRows = gridDataForThisGrid ?? gridData?.[grid.id] ?? []
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const { editMode, schema, onSchemaChange } = useEditMode()
@@ -159,11 +165,11 @@ export function TrackerDivGrid({
         field.dataType === 'dynamic_multiselect'
       map.set(
         fieldId,
-        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext) : undefined
+        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, fullGridData, trackerContext) : undefined
       )
     })
     return map
-  }, [optionFieldIds, fieldsById, tabId, grid.id, bindings, gridData, trackerContext])
+  }, [optionFieldIds, fieldsById, tabId, grid.id, bindings, fullGridData, trackerContext])
   const bindingByFieldId = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getBindingForField> | undefined>()
     optionFieldIds.forEach((fieldId) => {
@@ -328,7 +334,7 @@ export function TrackerDivGrid({
     }
   }
 
-  const data = useMemo(() => gridData?.[grid.id]?.[0] ?? EMPTY_ROW, [gridData, grid.id])
+  const data = useMemo(() => thisGridRows[0] ?? EMPTY_ROW, [thisGridRows, grid.id])
   const [draftRow, setDraftRow] = useState<Record<string, unknown>>(() => data)
   const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(() => new Set())
   const [dirtyFieldIds, setDirtyFieldIds] = useState<Set<string>>(() => new Set())
@@ -371,8 +377,8 @@ export function TrackerDivGrid({
   )
 
   const fieldOverrides = useMemo(
-    () => resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, data),
-    [dependsOnForGrid, gridData, grid.id, data]
+    () => resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, data),
+    [dependsOnForGrid, fullGridData, grid.id, data]
   )
 
   const rowKeys = useMemo(() => [...nodesByRow.keys()].sort((a, b) => a - b), [nodesByRow])
@@ -435,7 +441,7 @@ export function TrackerDivGrid({
         const binding = bindingByFieldId.get(field.id)
         if (binding && binding.fieldMappings.length > 0) {
           const selectFieldPath = `${grid.id}.${field.id}`
-          const optionRow = findOptionRow(gridData, binding, selectedValue, selectFieldPath)
+          const optionRow = findOptionRow(fullGridData, binding, selectedValue, selectFieldPath)
           if (optionRow) {
             const updates = applyBindings(binding, optionRow, selectFieldPath)
             for (const update of updates) {
@@ -753,3 +759,5 @@ export function TrackerDivGrid({
     </div>
   )
 }
+
+export const TrackerDivGrid = memo(TrackerDivGridInner)

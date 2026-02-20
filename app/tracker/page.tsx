@@ -2,8 +2,14 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Layout } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
@@ -40,6 +46,26 @@ const TrackerPanel = memo(function TrackerPanel({
   handleSchemaChange: (next: TrackerResponse) => void
   leftWidth: number | null
 }) {
+  const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
+  const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
+
+  const handleShowStructure = useCallback(() => {
+    setDataSnapshot(null)
+    setDebugView('structure')
+  }, [])
+  const handleShowData = useCallback(() => {
+    const data = trackerDataRef.current?.() ?? {}
+    setDataSnapshot(data)
+    setDebugView('data')
+  }, [trackerDataRef])
+
+  const debugJson =
+    debugView === 'structure'
+      ? JSON.stringify(schema, null, 2)
+      : debugView === 'data' && dataSnapshot !== null
+        ? JSON.stringify(dataSnapshot, null, 2)
+        : ''
+
   return (
     <section
       className={`relative h-full bg-background/60 ${isStreamingTracker ? 'animate-border-blink' : ''}`}
@@ -75,7 +101,40 @@ const TrackerPanel = memo(function TrackerPanel({
         >
           <Bot className="h-4 w-4" />
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={handleShowStructure}
+          aria-label="Show tracker structure (debug)"
+        >
+          <Layout className="h-3.5 w-3.5" />
+          Structure
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={handleShowData}
+          aria-label="Show tracker data (debug)"
+        >
+          <Database className="h-3.5 w-3.5" />
+          Data
+        </Button>
       </div>
+
+      <Dialog open={debugView !== null} onOpenChange={(open) => !open && setDebugView(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {debugView === 'structure' ? 'Tracker structure' : 'Tracker data'}
+            </DialogTitle>
+          </DialogHeader>
+          <pre className="flex-1 min-h-0 overflow-auto rounded-md bg-muted/50 p-4 text-xs font-mono whitespace-pre-wrap break-words border border-border/60">
+            {debugJson || '{}'}
+          </pre>
+        </DialogContent>
+      </Dialog>
 
       <div className="h-full overflow-y-auto px-4 py-6">
         {isStreamingTracker && streamedTracker ? (

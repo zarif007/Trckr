@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, memo, type RefObject } from 'react'
 import { TabsContent } from '@/components/ui/tabs'
 import type {
   TrackerTab,
@@ -11,6 +11,7 @@ import type {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
+  GridDataRecord,
 } from '../types'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import { TrackerSection } from './TrackerSection'
@@ -27,13 +28,45 @@ export interface TrackerTabContentProps {
   validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
-  gridData: Record<string, Array<Record<string, unknown>>>
+  gridData: GridDataRecord
+  gridDataRef?: RefObject<GridDataRecord> | null
   onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries: (gridId: string, rowIndices: number[]) => void
 }
 
-export function TrackerTabContent({
+function tabGridIds(tab: TrackerTab, sections: ITrackerSection[], grids: TrackerGrid[]): string[] {
+  const sectionIdsInTab = new Set(
+    sections.filter((s) => s.tabId === tab.id).map((s) => s.id)
+  )
+  return grids.filter((g) => sectionIdsInTab.has(g.sectionId)).map((g) => g.id)
+}
+
+function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabContentProps): boolean {
+  if (
+    prev.tab !== next.tab ||
+    prev.sections !== next.sections ||
+    prev.grids !== next.grids ||
+    prev.fields !== next.fields ||
+    prev.layoutNodes !== next.layoutNodes ||
+    prev.bindings !== next.bindings ||
+    prev.validations !== next.validations ||
+    prev.styles !== next.styles ||
+    prev.dependsOn !== next.dependsOn ||
+    prev.onUpdate !== next.onUpdate ||
+    prev.onAddEntry !== next.onAddEntry ||
+    prev.onDeleteEntries !== next.onDeleteEntries
+  ) {
+    return false
+  }
+  const gridIds = tabGridIds(next.tab, next.sections, next.grids)
+  for (const id of gridIds) {
+    if (prev.gridData[id] !== next.gridData[id]) return false
+  }
+  return true
+}
+
+export const TrackerTabContent = memo(function TrackerTabContent({
   tab,
   sections,
   grids,
@@ -44,6 +77,7 @@ export function TrackerTabContent({
   styles,
   dependsOn,
   gridData,
+  gridDataRef,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -68,7 +102,7 @@ export function TrackerTabContent({
   // Do not pass onAddEntry/onDeleteEntries so Add Entry / add-data buttons are hidden.
   if (canEditLayout) {
     return (
-      <TabsContent key={tab.id} value={tab.id} className={TAB_CONTENT_ROOT}>
+      <TabsContent key={tab.id} value={tab.id} className={`${TAB_CONTENT_ROOT} data-[state=inactive]:hidden`} forceMount>
         <BlockEditor
           tab={tab}
           sections={sections}
@@ -80,6 +114,7 @@ export function TrackerTabContent({
           styles={styles}
           dependsOn={dependsOn}
           gridData={gridData}
+          gridDataRef={gridDataRef}
           onUpdate={onUpdate}
         />
       </TabsContent>
@@ -88,7 +123,7 @@ export function TrackerTabContent({
 
   // Normal display mode: same vertical structure as edit — TAB_CONTENT_INNER applies space-y-6 to section list
   return (
-    <TabsContent key={tab.id} value={tab.id} className={TAB_CONTENT_ROOT}>
+    <TabsContent key={tab.id} value={tab.id} className={`${TAB_CONTENT_ROOT} data-[state=inactive]:hidden`} forceMount>
       <div className={TAB_CONTENT_INNER}>
         {tabSections.map((section) => (
           <div key={section.id} className={SECTION_GROUP_ROOT}>
@@ -105,6 +140,7 @@ export function TrackerTabContent({
               styles={styles}
               dependsOn={dependsOn}
               gridData={gridData}
+              gridDataRef={gridDataRef}
               onUpdate={onUpdate}
               onAddEntry={onAddEntry}
               onDeleteEntries={onDeleteEntries}
@@ -114,4 +150,4 @@ export function TrackerTabContent({
       </div>
     </TabsContent>
   )
-}
+}, areTabContentPropsEqual)

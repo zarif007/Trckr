@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type RefObject } from 'react'
 import type {
   TrackerGrid,
   TrackerField,
@@ -8,6 +8,7 @@ import type {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
+  GridDataRecord,
 } from './types'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import type { GridType } from './types'
@@ -29,6 +30,8 @@ export interface GridViewContentProps {
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
+  gridDataRef?: RefObject<GridDataRecord> | null
+  gridDataForThisGrid?: Array<Record<string, unknown>>
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
@@ -49,6 +52,8 @@ export function GridViewContent({
   styleOverrides,
   dependsOn,
   gridData,
+  gridDataRef,
+  gridDataForThisGrid,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -95,6 +100,8 @@ export function GridViewContent({
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
@@ -115,6 +122,8 @@ export function GridViewContent({
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
@@ -134,6 +143,8 @@ export function GridViewContent({
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}

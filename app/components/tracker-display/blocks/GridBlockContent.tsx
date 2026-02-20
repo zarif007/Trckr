@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type RefObject } from 'react'
 import type {
   TrackerGrid,
   TrackerField,
@@ -8,6 +8,7 @@ import type {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
+  GridDataRecord,
 } from '../types'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -26,7 +27,8 @@ export interface GridBlockContentProps {
   validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  gridData?: GridDataRecord
+  gridDataRef?: RefObject<GridDataRecord> | null
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
@@ -53,6 +55,7 @@ export function GridBlockContent({
   styles,
   dependsOn,
   gridData,
+  gridDataRef,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -93,6 +96,8 @@ export function GridBlockContent({
           styleOverrides={viewOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridData?.[grid.id] ?? []}
           onUpdate={onUpdate}
           onAddEntry={onAddEntry}
           onDeleteEntries={onDeleteEntries}
@@ -138,6 +143,8 @@ export function GridBlockContent({
                 styleOverrides={viewOverrides}
                 dependsOn={dependsOn}
                 gridData={gridData}
+                gridDataRef={gridDataRef}
+                gridDataForThisGrid={gridData?.[grid.id] ?? []}
                 onUpdate={onUpdate}
                 onAddEntry={onAddEntry}
                 onDeleteEntries={onDeleteEntries}

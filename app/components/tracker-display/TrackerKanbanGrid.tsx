@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import {
@@ -54,13 +54,15 @@ export interface TrackerKanbanGridProps {
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
+  gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
+  gridDataForThisGrid?: Array<Record<string, unknown>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
   trackerContext?: TrackerContextForOptions
 }
 
-export function TrackerKanbanGrid({
+function TrackerKanbanGridInner({
   tabId,
   grid,
   layoutNodes,
@@ -70,11 +72,19 @@ export function TrackerKanbanGrid({
   styleOverrides,
   dependsOn,
   gridData = {},
+  gridDataRef,
+  gridDataForThisGrid,
   onUpdate,
   onAddEntry,
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerKanbanGridProps) {
+  const fullGridData = gridDataRef?.current ?? gridData
+  const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
+  const gridDataForKanban = useMemo(
+    () => ({ ...fullGridData, [grid.id]: thisGridRows }),
+    [fullGridData, thisGridRows, grid.id]
+  )
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
 
@@ -92,7 +102,7 @@ export function TrackerKanbanGrid({
     fields,
     bindings,
     validations,
-    gridData,
+    gridData: gridDataForKanban,
     trackerContext,
   })
 
@@ -174,7 +184,7 @@ export function TrackerKanbanGrid({
       const binding = getBindingForField(grid.id, fieldId, bindings, tabId)
       if (!binding?.fieldMappings?.length) return {}
       const selectFieldPath = `${grid.id}.${fieldId}`
-      const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+      const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
       if (!optionRow) return {}
       const updates = applyBindings(binding, optionRow, selectFieldPath)
       const result: Record<string, unknown> = {}
@@ -184,7 +194,7 @@ export function TrackerKanbanGrid({
       }
       return result
     },
-    [grid.id, bindings, tabId, gridData]
+    [grid.id, bindings, tabId, fullGridData]
   )
 
   const handleEditSave = useCallback(
@@ -199,7 +209,7 @@ export function TrackerKanbanGrid({
           const binding = getBindingForField(grid.id, columnId, bindings, tabId)
           if (binding?.fieldMappings?.length) {
             const selectFieldPath = `${grid.id}.${columnId}`
-            const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+            const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
             if (optionRow) {
               const updates = applyBindings(binding, optionRow, selectFieldPath)
               for (const update of updates) {
@@ -216,7 +226,7 @@ export function TrackerKanbanGrid({
       })
       setEditRowIndex(null)
     },
-    [editRowIndex, onUpdate, onCrossGridUpdate, kanbanFields, grid.id, bindings, tabId, gridData]
+    [editRowIndex, onUpdate, onCrossGridUpdate, kanbanFields, grid.id, bindings, tabId, fullGridData]
   )
 
   const cardStyles = useMemo(
@@ -277,7 +287,7 @@ export function TrackerKanbanGrid({
               onSaveAnother={(values) => onAddEntry(values)}
               getBindingUpdates={getBindingUpdates}
               getFieldOverrides={(values, fieldId) =>
-                resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values)[fieldId]
+                resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
               }
               gridId={grid.id}
             />
@@ -296,7 +306,7 @@ export function TrackerKanbanGrid({
           getFieldOverrides={(values, fieldId) =>
             resolveDependsOnOverrides(
               dependsOnForGrid,
-              gridData,
+              fullGridData,
               grid.id,
               editRowIndex ?? 0,
               values
@@ -338,7 +348,7 @@ export function TrackerKanbanGrid({
                               card={card}
                               cardFields={cardFieldsDisplay}
                               gridId={grid.id}
-                              gridData={gridData}
+                              gridData={gridDataForKanban}
                               dependsOn={dependsOnForGrid}
                               fieldMetadata={fieldMetadata}
                               onEditRow={setEditRowIndex}
@@ -369,7 +379,7 @@ export function TrackerKanbanGrid({
             card={activeCard as Record<string, unknown> & { _originalIdx?: number }}
             cardFields={cardFieldsDisplay}
             gridId={grid.id}
-            gridData={gridData}
+            gridData={gridDataForKanban}
             dependsOn={dependsOnForGrid}
             fieldMetadata={fieldMetadata}
             isOverlay
@@ -380,3 +390,5 @@ export function TrackerKanbanGrid({
     </DndContext>
   )
 }
+
+export const TrackerKanbanGrid = memo(TrackerKanbanGridInner)

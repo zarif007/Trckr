@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from 'react'
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -27,6 +27,84 @@ import {
   DEPENDS_ON_RULES_GRID,
   rulesGridRowsToDependsOn,
 } from '@/lib/depends-on-options'
+
+// Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
+function SortableTabRow({
+  tab,
+  editMode,
+  onSchemaChange,
+  onRenameTab,
+  onRemoveTab,
+}: {
+  tab: TrackerTab
+  editMode?: boolean
+  onSchemaChange?: TrackerDisplayProps['onSchemaChange']
+  onRenameTab: (tabId: string, name: string) => void
+  onRemoveTab: (tabId: string) => void
+}) {
+  const id = `tab-${tab.id}`
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id })
+  const style: CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center gap-0.5 ${isDragging ? 'opacity-50' : ''}`}
+    >
+      {editMode && onSchemaChange && (
+        <span
+          className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded text-muted-foreground/50 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6 hover:bg-muted/80"
+          aria-hidden
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-3.5 w-3.5 shrink-0" />
+        </span>
+      )}
+      <TabsTrigger value={tab.id}>
+        {editMode && onSchemaChange ? (
+          <span onClick={(e) => e.stopPropagation()} className="min-w-0 truncate">
+            <InlineEditableName
+              value={tab.name}
+              onChange={(name) => onRenameTab(tab.id, name)}
+              className="text-sm font-medium truncate"
+            />
+          </span>
+        ) : (
+          tab.name
+        )}
+      </TabsTrigger>
+      {editMode && onSchemaChange && (
+        <span className="flex min-w-0 max-w-0 shrink-0 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 rounded text-muted-foreground/50 hover:text-destructive"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onRemoveTab(tab.id)
+            }}
+            aria-label={`Remove tab ${tab.name}`}
+          >
+            <Trash2 className="h-3.5 w-3.5 shrink-0" />
+          </Button>
+        </span>
+      )}
+    </div>
+  )
+}
 
 export function TrackerDisplayInline({
   tabs,
@@ -121,6 +199,9 @@ export function TrackerDisplayInline({
     }
     return merged
   }, [baseGridData, localGridData])
+
+  const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
+  gridDataRef.current = gridData
 
   const effectiveDependsOn = useMemo(() => {
     if (!dependsOnAug) return dependsOn ?? []
@@ -326,72 +407,6 @@ export function TrackerDisplayInline({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
-  function SortableTabRow({ tab, index }: { tab: TrackerTab; index: number }) {
-    const id = `tab-${tab.id}`
-    const {
-      attributes,
-      listeners,
-      setNodeRef,
-      transform,
-      transition,
-      isDragging,
-    } = useSortable({ id })
-    const style: React.CSSProperties = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      animationDelay: `${index * 50}ms`,
-    }
-    return (
-      <div
-        ref={setNodeRef}
-        style={style}
-        className={`group flex items-center gap-0.5 animate-in fade-in-0 slide-in-from-left-2 duration-300 ${isDragging ? 'opacity-50' : ''}`}
-      >
-        {editMode && onSchemaChange && (
-          <span
-            className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded text-muted-foreground/50 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6 hover:bg-muted/80"
-            aria-hidden
-            {...attributes}
-            {...listeners}
-          >
-            <GripVertical className="h-3.5 w-3.5 shrink-0" />
-          </span>
-        )}
-        <TabsTrigger value={tab.id}>
-          {editMode && onSchemaChange ? (
-            <span onClick={(e) => e.stopPropagation()} className="min-w-0 truncate">
-              <InlineEditableName
-                value={tab.name}
-                onChange={(name) => handleRenameTab(tab.id, name)}
-                className="text-sm font-medium truncate"
-              />
-            </span>
-          ) : (
-            tab.name
-          )}
-        </TabsTrigger>
-        {editMode && onSchemaChange && (
-          <span className="flex min-w-0 max-w-0 shrink-0 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 shrink-0 rounded text-muted-foreground/50 hover:text-destructive"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                handleRemoveTab(tab.id)
-              }}
-              aria-label={`Remove tab ${tab.name}`}
-            >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" />
-            </Button>
-          </span>
-        )}
-      </div>
-    )
-  }
-
   if (!normalizedTabs.length && !editMode) return null
 
   const tabListContent =
@@ -407,18 +422,21 @@ export function TrackerDisplayInline({
               items={tabSortableIds}
               strategy={horizontalListSortingStrategy}
             >
-              {normalizedTabs.map((tab, index) => (
-                <SortableTabRow key={tab.id} tab={tab} index={index} />
+              {normalizedTabs.map((tab) => (
+                <SortableTabRow
+                  key={tab.id}
+                  tab={tab}
+                  editMode={editMode}
+                  onSchemaChange={onSchemaChange}
+                  onRenameTab={handleRenameTab}
+                  onRemoveTab={handleRemoveTab}
+                />
               ))}
             </SortableContext>
           </DndContext>
         ) : (
-          normalizedTabs.map((tab, index) => (
-            <div
-              key={tab.id}
-              className="flex items-center gap-0.5 animate-in fade-in-0 slide-in-from-left-2 duration-300"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
+          normalizedTabs.map((tab) => (
+            <div key={tab.id} className="flex items-center gap-0.5">
               <TabsTrigger value={tab.id}>
                 {tab.name}
               </TabsTrigger>
@@ -429,7 +447,7 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full space-y-6 p-6 bg-card rounded-lg animate-in fade-in-0 duration-300">
+    <div className="w-full space-y-6 p-6 bg-card rounded-lg">
       <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
         <div className="flex items-center gap-2">
           {tabListContent}
@@ -459,6 +477,7 @@ export function TrackerDisplayInline({
             styles={styles}
             dependsOn={effectiveDependsOn}
             gridData={gridData}
+            gridDataRef={gridDataRef}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}
             onDeleteEntries={handleDeleteEntries}

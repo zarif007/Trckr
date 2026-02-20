@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type RefObject } from 'react'
 import {
   TrackerSection as ITrackerSection,
   TrackerGrid,
@@ -9,6 +9,7 @@ import {
   TrackerBindings,
   StyleOverrides,
   DependsOnRules,
+  GridDataRecord,
 } from '../types'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import { SectionBar, ViewBlockWrapper, GRIDS_CONTAINER, GRID_BLOCK_INNER } from '../layout'
@@ -26,7 +27,8 @@ export interface TrackerSectionProps {
   validations?: Record<string, FieldValidationRule[]>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
-  gridData?: Record<string, Array<Record<string, unknown>>>
+  gridData?: GridDataRecord
+  gridDataRef?: RefObject<GridDataRecord> | null
   onUpdate?: (
     gridId: string,
     rowIndex: number,
@@ -50,6 +52,7 @@ export function TrackerSection({
   styles,
   dependsOn,
   gridData,
+  gridDataRef,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -84,6 +87,7 @@ export function TrackerSection({
                   styles={styles}
                   dependsOn={dependsOn}
                   gridData={gridData}
+                  gridDataRef={gridDataRef}
                   onUpdate={onUpdate}
                   onAddEntry={onAddEntry}
                   onDeleteEntries={onDeleteEntries}

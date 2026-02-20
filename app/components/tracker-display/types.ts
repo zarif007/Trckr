@@ -136,6 +136,9 @@ export type { DependsOnRule, DependsOnRules, FieldOverride } from '@/lib/depends
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
 import type { DependsOnRules } from '@/lib/depends-on'
 
+/** Grid data map: grid id -> array of row objects. Used in refs to avoid TSX >> parsing. */
+export type GridDataRecord = Record<string, Array<Record<string, unknown>>>
+
 export interface TrackerDisplayProps {
   tabs: TrackerTab[]
   sections: TrackerSection[]

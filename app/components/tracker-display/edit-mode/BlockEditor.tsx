@@ -131,6 +131,7 @@ export function BlockEditor({
   styles,
   dependsOn,
   gridData,
+  gridDataRef,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -442,6 +443,7 @@ export function BlockEditor({
                     styles={styles}
                     dependsOn={dependsOn}
                     gridData={gridData}
+                    gridDataRef={gridDataRef}
                     onUpdate={onUpdate}
                     onAddEntry={onAddEntry}
                     onDeleteEntries={onDeleteEntries}

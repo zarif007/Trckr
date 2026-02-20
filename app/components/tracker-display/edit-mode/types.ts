@@ -3,7 +3,8 @@
  * Keeps edit-mode-specific types in one place for easy modification.
  */
 
-import type { ReactNode } from 'react'
+import type { ReactNode, RefObject } from 'react'
+import type { GridDataRecord } from '../types'
 import type {
   TrackerField,
   TrackerLayoutNode,
@@ -38,6 +39,7 @@ export interface BlockEditorProps {
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData: Record<string, Array<Record<string, unknown>>>
+  gridDataRef?: RefObject<GridDataRecord> | null
   onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   /** When omitted (e.g. in edit/add layout mode), Add Entry and add-data buttons are hidden. */
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void

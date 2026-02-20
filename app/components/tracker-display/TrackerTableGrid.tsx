@@ -18,7 +18,7 @@ import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridDependsOn } from './hooks/useGridDependsOn'
-import { useMemo, useCallback, useState } from 'react'
+import { useMemo, useCallback, useState, memo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -38,6 +38,8 @@ interface TrackerTableGridProps {
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
+  gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
+  gridDataForThisGrid?: Array<Record<string, unknown>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   /** Add a row to any grid (e.g. options grid). Used for "Add option" in select/multiselect. */
@@ -48,7 +50,7 @@ interface TrackerTableGridProps {
   trackerContext?: TrackerContextForOptions
 }
 
-export function TrackerTableGrid({
+function TrackerTableGridInner({
   tabId,
   grid,
   layoutNodes,
@@ -59,6 +61,8 @@ export function TrackerTableGrid({
   styleOverrides,
   dependsOn,
   gridData = {},
+  gridDataRef,
+  gridDataForThisGrid,
   onUpdate,
   onAddEntry,
   onAddEntryToGrid,
@@ -66,6 +70,8 @@ export function TrackerTableGrid({
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerTableGridProps) {
+  const fullGridData = gridDataRef?.current ?? gridData
+  const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const [addColumnOpen, setAddColumnOpen] = useState(false)
@@ -111,7 +117,7 @@ export function TrackerTableGrid({
     [connectedFieldNodes, fieldsById]
   )
 
-  const rows = useMemo(() => gridData[grid.id] ?? [], [gridData, grid.id])
+  const rows = useMemo(() => thisGridRows, [thisGridRows])
 
   const fieldSortableIds = useMemo(
     () => connectedFieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -142,10 +148,10 @@ export function TrackerTableGrid({
     const out: Record<number, Record<string, import('@/lib/depends-on').FieldOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
-      out[idx] = resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, idx, row)
+      out[idx] = resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, idx, row)
     })
     return out
-  }, [dependsOnForGrid, gridData, grid.id])
+  }, [dependsOnForGrid, fullGridData, grid.id])
 
   const hiddenTargetFields = useMemo(() => {
     const targets = new Set<string>()
@@ -183,10 +189,10 @@ export function TrackerTableGrid({
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
     (values: Record<string, unknown>, fieldId: string) =>
-      resolveDependsOnOverrides(dependsOnForGrid, gridData, grid.id, 0, values, {
+      resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values, {
         onlyUseRowDataForSource: true,
       })[fieldId],
-    [dependsOnForGrid, gridData, grid.id]
+    [dependsOnForGrid, fullGridData, grid.id]
   )
 
   const handleAddColumnConfirm = useCallback(
@@ -207,11 +213,11 @@ export function TrackerTableGrid({
         field.dataType === 'dynamic_multiselect'
       map.set(
         field.id,
-        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, gridData, trackerContext) : undefined
+        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, fullGridData, trackerContext) : undefined
       )
     })
     return map
-  }, [tableFields, tabId, grid.id, bindings, gridData, trackerContext])
+  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext])
 
   const bindingByFieldId = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getBindingForField> | undefined>()
@@ -301,7 +307,7 @@ export function TrackerTableGrid({
         const binding = bindingByFieldId.get(columnId)
         if (binding && binding.fieldMappings.length > 0) {
           const selectFieldPath = `${grid.id}.${columnId}`
-          const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+          const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
           if (optionRow) {
             const updates = applyBindings(binding, optionRow, selectFieldPath)
             for (const update of updates) {
@@ -318,7 +324,7 @@ export function TrackerTableGrid({
         }
       }
     },
-    [bindingByFieldId, fieldsById, grid.id, gridData, onCrossGridUpdate, onUpdate]
+    [bindingByFieldId, fieldsById, grid.id, fullGridData, onCrossGridUpdate, onUpdate]
   )
 
   const getBindingUpdates = useCallback(
@@ -326,7 +332,7 @@ export function TrackerTableGrid({
       const binding = bindingByFieldId.get(fieldId)
       if (!binding?.fieldMappings?.length) return {}
       const selectFieldPath = `${grid.id}.${fieldId}`
-      const optionRow = findOptionRow(gridData, binding, value, selectFieldPath)
+      const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
       if (!optionRow) return {}
       const updates = applyBindings(binding, optionRow, selectFieldPath)
       const result: Record<string, unknown> = {}
@@ -336,7 +342,7 @@ export function TrackerTableGrid({
       }
       return result
     },
-    [bindingByFieldId, grid.id, gridData]
+    [bindingByFieldId, grid.id, fullGridData]
   )
 
   const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(
@@ -483,3 +489,5 @@ export function TrackerTableGrid({
 
   return tableContent
 }
+
+export const TrackerTableGrid = memo(TrackerTableGridInner)
