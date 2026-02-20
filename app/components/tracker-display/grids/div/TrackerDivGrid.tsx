@@ -162,10 +162,10 @@ function FieldDropZones({
 
   return (
     <>
-      <div ref={topZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 top-0 h-[25%]" />
-      <div ref={bottomZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 bottom-0 h-[25%]" />
-      <div ref={leftZone.setNodeRef} className="pointer-events-none absolute left-0 top-[25%] bottom-[25%] w-1/2" />
-      <div ref={rightZone.setNodeRef} className="pointer-events-none absolute right-0 top-[25%] bottom-[25%] w-1/2" />
+      <div ref={topZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 top-0 h-[20%]" />
+      <div ref={bottomZone.setNodeRef} className="pointer-events-none absolute left-0 right-0 bottom-0 h-[20%]" />
+      <div ref={leftZone.setNodeRef} className="pointer-events-none absolute left-0 top-[20%] bottom-[20%] w-1/2" />
+      <div ref={rightZone.setNodeRef} className="pointer-events-none absolute right-0 top-[20%] bottom-[20%] w-1/2" />
     </>
   )
 }
@@ -404,6 +404,13 @@ function TrackerDivGridInner({
     }
     return map
   }, [fieldNodes])
+  const rowKeyByFieldId = useMemo(() => {
+    const map = new Map<string, number>()
+    nodesByRow.forEach((nodes, rowKey) => {
+      nodes.forEach((node) => map.set(node.fieldId, rowKey))
+    })
+    return map
+  }, [nodesByRow])
 
   const fieldSortableIds = useMemo(
     () => fieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -433,22 +440,25 @@ function TrackerDivGridInner({
     if (over?.id) lastOverIdRef.current = String(over.id)
     const overId = over?.id ? String(over.id) : lastOverIdRef.current
     if (!overId || String(active.id) === overId) {
-      setDropIndicator(null)
+      setDropIndicator((prev) => (prev ? null : prev))
       return
     }
     const zone = parseDropZoneId(overId)
     const pointer = getPointerCoordinates(event)
     const placement = zone?.placement ?? getDropPlacementByPointer(event.over?.rect, pointer, dropIndicator?.placement ?? null)
     if (!placement) {
-      setDropIndicator(null)
+      setDropIndicator((prev) => (prev ? null : prev))
       return
     }
     const targetFieldId = zone?.fieldId ?? parseFieldId(overId)?.fieldId
     if (!targetFieldId) {
-      setDropIndicator(null)
+      setDropIndicator((prev) => (prev ? null : prev))
       return
     }
-    setDropIndicator({ overId: fieldSortableId(grid.id, targetFieldId), placement })
+    const next = { overId: fieldSortableId(grid.id, targetFieldId), placement }
+    setDropIndicator((prev) =>
+      prev && prev.overId === next.overId && prev.placement === next.placement ? prev : next
+    )
   }, [dropIndicator?.placement])
   const handleFieldDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -909,10 +919,14 @@ function TrackerDivGridInner({
     <div className="flex flex-col gap-4 min-w-0">
       {rowKeys.map((rowKey) => {
         const nodesInRow = nodesByRow.get(rowKey) ?? []
-        const safeCount = Math.min(Math.max(nodesInRow.length, 1), DIV_GRID_MAX_COLS)
-        const gridCols = GRID_COLS_CLASS[safeCount] ?? 'grid-cols-1'
+        const dropTargetFieldId = dropIndicator ? parseFieldId(dropIndicator.overId)?.fieldId : null
+        const isDropRow = dropTargetFieldId != null && rowKeyByFieldId.get(dropTargetFieldId) === rowKey
+        const gridCols = GRID_COLS_CLASS[Math.min(Math.max(nodesInRow.length, 1), DIV_GRID_MAX_COLS)] ?? 'grid-cols-1'
         return (
-          <div key={rowKey} className={`grid ${gridCols} gap-4 min-w-0`}>
+          <div
+            key={rowKey}
+            className={`grid ${gridCols} gap-4 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-lg p-1 -m-1' : ''}`}
+          >
             {nodesInRow.map((node, nodeIndex) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
               const indicator =
@@ -924,16 +938,16 @@ function TrackerDivGridInner({
                   {renderFieldContent(node, index)}
                   <FieldDropZones gridId={grid.id} fieldId={node.fieldId} enabled={canEditLayout} />
                   {indicator === 'left' && (
-                    <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary pointer-events-none" />
+                    <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary/80 pointer-events-none transition-opacity duration-150" />
                   )}
                   {indicator === 'right' && (
-                    <span className="absolute inset-y-2 right-0 w-0.5 rounded-full bg-primary pointer-events-none" />
+                    <span className="absolute inset-y-2 right-0 w-0.5 rounded-full bg-primary/80 pointer-events-none transition-opacity duration-150" />
                   )}
                   {indicator === 'above' && (
-                    <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-primary pointer-events-none" />
+                    <span className="absolute inset-x-2 top-0 h-0.5 rounded-full bg-primary/80 pointer-events-none transition-opacity duration-150" />
                   )}
                   {indicator === 'below' && (
-                    <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary pointer-events-none" />
+                    <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary/80 pointer-events-none transition-opacity duration-150" />
                   )}
                 </div>
               )

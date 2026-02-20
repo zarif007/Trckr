@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
@@ -291,6 +291,11 @@ export function useTrackerChat() {
     lastObjectRef.current = object as MultiAgentSchema | undefined
   }, [object])
 
+  /** Resolved tracker for streaming UI: full tracker or base + trackerPatch. Use this so 2nd+ requests show streaming when LLM returns a patch. */
+  const streamedDisplayTracker = useMemo(() => {
+    return buildTrackerFromResponse(object as MultiAgentSchema | undefined)
+  }, [object])
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -401,6 +406,7 @@ export function useTrackerChat() {
     isLoading,
     error,
     object,
+    streamedDisplayTracker,
     isDialogOpen,
     setIsDialogOpen,
     activeTrackerData,

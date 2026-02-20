@@ -26,7 +26,11 @@ export function getOptionGridLabelAndValueFieldIds(
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   if (nodes.length < 1) return null
 
-  const fieldIds = nodes.map((n) => n.fieldId)
+  const fieldIds = nodes
+    .map((n) => n.fieldId)
+    .filter((id): id is string => typeof id === 'string')
+  if (fieldIds.length < 1) return null
+
   const hasLabel = fieldIds.find((id) => id.endsWith('_label') || id.endsWith('_opt_label'))
   const hasValue = fieldIds.find((id) => id.endsWith('_value') || id.endsWith('_opt_value'))
   if (hasLabel && hasValue) {

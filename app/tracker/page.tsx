@@ -218,6 +218,7 @@ function TrackerAIView() {
     isLoading,
     error,
     object,
+    streamedDisplayTracker,
     activeTrackerData,
     setActiveTrackerData,
     generationErrorMessage,
@@ -297,12 +298,7 @@ function TrackerAIView() {
     [messages]
   )
 
-  const streamedTracker = useMemo(() => {
-    const typed = object as { tracker?: TrackerResponse } | undefined
-    return typed?.tracker
-  }, [object])
-
-  const isStreamingTracker = Boolean(isLoading && streamedTracker)
+  const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
 
   const showStatusPanel =
     Boolean(error) ||
@@ -327,7 +323,7 @@ function TrackerAIView() {
           isChatOpen={isChatOpen}
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
-          streamedTracker={streamedTracker}
+          streamedTracker={streamedDisplayTracker ?? undefined}
           trackerDataRef={trackerDataRef}
           handleSchemaChange={handleSchemaChange}
           leftWidth={leftWidth}

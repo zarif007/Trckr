@@ -17,7 +17,10 @@ function getFieldIdsInGrid(
   gridId: string,
   layoutNodes: Array<{ gridId: string; fieldId: string }>
 ): string[] {
-  return layoutNodes.filter((n) => n.gridId === gridId).map((n) => n.fieldId)
+  return layoutNodes
+    .filter((n) => n.gridId === gridId)
+    .map((n) => n.fieldId)
+    .filter((id): id is string => typeof id === 'string')
 }
 
 function extractCoreName(fieldId: string): string {
