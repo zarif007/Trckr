@@ -23,6 +23,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
 import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, SortableColumnHeaderEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from './edit-mode'
+import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 
 interface TrackerTableGridProps {
@@ -391,14 +392,18 @@ function TrackerTableGridInner({
   if (connectedFieldNodes.length === 0 && canEditLayout) {
     return (
       <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setAddColumnOpen(true)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add column
-        </button>
+        <div className="flex h-8 items-center justify-end pb-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setAddColumnOpen(true)}
+            className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
+            aria-label="Add column"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add column
+          </Button>
+        </div>
         <div className="p-6 rounded-md border border-dashed border-border text-muted-foreground text-sm text-center">
           No columns yet. Add a column to get started.
         </div>
@@ -466,14 +471,18 @@ function TrackerTableGridInner({
   if (canEditLayout) {
     return (
       <div className="w-full min-w-0 space-y-2">
-        <button
-          type="button"
-          onClick={() => setAddColumnOpen(true)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add column
-        </button>
+        <div className="flex h-8 items-center justify-end pb-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setAddColumnOpen(true)}
+            className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
+            aria-label="Add column"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add column
+          </Button>
+        </div>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
