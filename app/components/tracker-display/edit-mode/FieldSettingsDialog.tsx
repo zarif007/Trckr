@@ -28,6 +28,7 @@ import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import { FIELD_TYPE_LABELS } from './utils'
 import type { TrackerFieldType } from '../types'
+import { ExprRuleEditor } from './ExprRuleEditor'
 
 const RULE_TYPES: Array<FieldValidationRule['type']> = [
   'required',
@@ -97,11 +98,31 @@ export function FieldSettingsDialog({
   const [minLength, setMinLength] = useState('')
   const [maxLength, setMaxLength] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
-  const [exprDrafts, setExprDrafts] = useState<Record<number, string>>({})
-  const [exprErrors, setExprErrors] = useState<Record<number, string>>({})
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [jsonDraft, setJsonDraft] = useState('')
   const [jsonError, setJsonError] = useState<string | null>(null)
+  const [exprDrafts, setExprDrafts] = useState<Record<number, string>>({})
+
+  const availableFields = useMemo(() => {
+    if (!gridId || !schema) return []
+    const fieldsById = new Map(schema.fields.map((f) => [f.id, f]))
+    const nodes = (schema.layoutNodes ?? [])
+      .filter((n) => n.gridId === gridId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    const seen = new Set<string>()
+    const out = []
+    for (const node of nodes) {
+      if (!node.fieldId || seen.has(node.fieldId)) continue
+      seen.add(node.fieldId)
+      const fieldRef = fieldsById.get(node.fieldId)
+      out.push({
+        fieldId: `${gridId}.${node.fieldId}`,
+        label: fieldRef?.ui?.label ?? node.fieldId,
+        dataType: fieldRef?.dataType,
+      })
+    }
+    return out
+  }, [gridId, schema?.fields, schema?.layoutNodes])
 
   useEffect(() => {
     if (!open || !field) return
@@ -116,14 +137,6 @@ export function FieldSettingsDialog({
     const validationKey = gridId ? `${gridId}.${field.id}` : ''
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
-    const nextExprDrafts: Record<number, string> = {}
-    nextRules.forEach((rule, idx) => {
-      if (rule.type === 'expr') {
-        nextExprDrafts[idx] = JSON.stringify(rule.expr, null, 2)
-      }
-    })
-    setExprDrafts(nextExprDrafts)
-    setExprErrors({})
     setJsonDraft(JSON.stringify(nextRules, null, 2))
     setJsonError(null)
     setAdvancedOpen(false)
@@ -168,37 +181,6 @@ export function FieldSettingsDialog({
     })
   }
 
-  const handleExprChange = (index: number, nextText: string) => {
-    setExprDrafts((prev) => ({ ...prev, [index]: nextText }))
-  }
-
-  const handleExprBlur = (index: number) => {
-    const draft = exprDrafts[index]
-    if (draft == null) return
-    try {
-      const parsed = JSON.parse(draft) as ExprNode
-      updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr: parsed })
-      setExprErrors((prev) => {
-        const next = { ...prev }
-        delete next[index]
-        return next
-      })
-    } catch (err) {
-      setExprErrors((prev) => ({ ...prev, [index]: 'Invalid JSON expression' }))
-    }
-  }
-
-  const applyExprPreset = (index: number, expr: ExprNode) => {
-    const str = JSON.stringify(expr, null, 2)
-    setExprDrafts((prev) => ({ ...prev, [index]: str }))
-    updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr })
-    setExprErrors((prev) => {
-      const next = { ...prev }
-      delete next[index]
-      return next
-    })
-  }
-
   const handleApplyJson = () => {
     try {
       const parsed = JSON.parse(jsonDraft)
@@ -208,14 +190,6 @@ export function FieldSettingsDialog({
       }
       const nextRules = parsed.map(ensureRuleDefaults) as FieldValidationRule[]
       setRules(nextRules)
-      const nextExprDrafts: Record<number, string> = {}
-      nextRules.forEach((rule, idx) => {
-        if (rule.type === 'expr') {
-          nextExprDrafts[idx] = JSON.stringify(rule.expr, null, 2)
-        }
-      })
-      setExprDrafts(nextExprDrafts)
-      setExprErrors({})
       setJsonError(null)
     } catch {
       setJsonError('Invalid JSON')
@@ -548,59 +522,16 @@ export function FieldSettingsDialog({
                             )}
 
                           {rule.type === 'expr' && (
-                            <div className="space-y-3">
-                              <div>
-                                <p className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-                                  Custom expression
-                                </p>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                  Validation passes when the expression returns true. Use presets below or edit JSON for advanced logic.
-                                </p>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => applyExprPreset(index, { op: 'const', value: true })}
-                                  className="h-8 text-xs"
-                                >
-                                  Always valid
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => applyExprPreset(index, { op: 'const', value: false })}
-                                  className="h-8 text-xs"
-                                >
-                                  Always invalid
-                                </Button>
-                              </div>
-                              <div className="space-y-1.5">
-                                <label
-                                  htmlFor={`rule-expr-${index}`}
-                                  className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide"
-                                >
-                                  JSON (advanced)
-                                </label>
-                                <Textarea
-                                  id={`rule-expr-${index}`}
-                                  value={exprDrafts[index] ?? JSON.stringify(rule.expr, null, 2)}
-                                  onChange={(e) => handleExprChange(index, e.target.value)}
-                                  onBlur={() => handleExprBlur(index)}
-                                  placeholder='e.g. {"op": "const", "value": true}'
-                                  className="font-mono text-xs min-h-[100px] rounded-lg border-border/60 bg-muted/20 placeholder:text-muted-foreground/60"
-                                  aria-invalid={Boolean(exprErrors[index])}
-                                  aria-describedby={exprErrors[index] ? `rule-expr-error-${index}` : undefined}
-                                />
-                                {exprErrors[index] && (
-                                  <p id={`rule-expr-error-${index}`} className="text-xs text-destructive">
-                                    {exprErrors[index]}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
+                            <ExprRuleEditor
+                              expr={rule.expr}
+                              gridId={gridId ?? ''}
+                              fieldId={field.id}
+                              availableFields={availableFields}
+                              currentTracker={schema}
+                              onChange={(nextExpr) =>
+                                updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr: nextExpr })
+                              }
+                            />
                           )}
 
                           <div className="space-y-2">
