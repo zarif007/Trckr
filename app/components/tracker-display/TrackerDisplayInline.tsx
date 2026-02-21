@@ -449,9 +449,9 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full space-y-6 p-6 bg-card rounded-lg">
-      <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full">
-        <div className="flex items-center gap-2">
+    <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-lg">
+      <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full min-w-0">
+        <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}
           {editMode && onSchemaChange && (
             <Button

@@ -30,8 +30,13 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
-import { Settings2, ChevronDown, Plus } from 'lucide-react'
+import { Settings2, ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
 import { EntryFormDialog } from './entry-form-dialog'
@@ -104,6 +109,7 @@ export function DataTable<TData, TValue>({
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
 
   useEffect(() => {
@@ -340,93 +346,123 @@ export function DataTable<TData, TValue>({
     [columns]
   )
 
+  const hasActions = addable || deleteable
+
   return (
-    <div className="w-full space-y-4">
-      <div className="flex justify-end gap-2">
-        {deleteable && (
-          <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-            <DialogTrigger asChild>
+    <div className="w-full">
+      {hasActions && (
+        <div className="flex h-8 items-center justify-end gap-0.5 pb-2">
+          {deleteable && (
+            <>
+              <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={selectedRows.length === 0}
+                    className="h-7 min-w-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
+                    aria-label="Bulk actions"
+                  >
+                    Bulk
+                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-52 rounded-lg border-border/50 p-1.5 shadow-lg">
+                  <div className="flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 justify-start gap-2 rounded-md px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setBulkOpen(false)
+                        setDeleteConfirmOpen(true)
+                      }}
+                      aria-label={`Delete ${selectedRows.length} selected`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                      Delete {selectedRows.length} selected
+                    </Button>
+                    {/* Add more bulk actions here later, e.g. Duplicate, Export selected */}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <DialogContent className="sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle>Delete Entries</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Are you sure you want to delete {selectedRows.length} row
+                      {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
+                      undone.
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
+                      Delete
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+          {addable && (
+            <>
               <Button
                 size="sm"
-                variant="destructive"
-                disabled={selectedRows.length === 0}
+                variant="ghost"
+                onClick={() => setShowAddDialog(true)}
+                className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
+                aria-label="New entry"
               >
-                Delete ({selectedRows.length})
+                <Plus className="h-3.5 w-3.5" />
+                New
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[400px]">
-              <DialogHeader>
-                <DialogTitle>Delete Entries</DialogTitle>
-              </DialogHeader>
-              <div className="py-4">
-                <p className="text-sm text-muted-foreground">
-                  Are you sure you want to delete {selectedRows.length} row
-                  {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
-                  undone.
-                </p>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDeleteConfirmOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
-                  Delete
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
-        {addable && (
-          <>
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => setShowAddDialog(true)}
-              className="font-medium"
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Entry
-            </Button>
-            <EntryFormDialog
-              open={showAddDialog}
-              onOpenChange={setShowAddDialog}
-              title="Add New Entry"
-              submitLabel="Add Entry"
-              fieldMetadata={fieldMetadata ?? {}}
-              fieldOrder={addFieldOrder}
-              initialValues={{}}
-              onSave={handleAddEntry}
-              onSaveAnother={handleAddEntryAndStayOpen}
-              getBindingUpdates={getBindingUpdates}
-              getFieldOverrides={getFieldOverridesForAdd}
-              gridId={gridId}
-            />
-          </>
-        )}
-        <EntryFormDialog
-          open={rowDetailsOpenForIndex !== null}
-          onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
-          title="Row Details"
-          submitLabel="Done"
-          fieldMetadata={fieldMetadata ?? {}}
-          fieldOrder={addFieldOrder}
-          initialValues={
-            rowDetailsRow
-              ? { ...(rowDetailsRow.original as Record<string, unknown>) }
-              : {}
-          }
-          onSave={handleEditSave}
-          getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={getFieldOverridesForAdd}
-          gridId={gridId}
-          mode="edit"
-        />
-      </div>
-      <div className={cn('rounded-md overflow-x-auto', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
+              <EntryFormDialog
+                open={showAddDialog}
+                onOpenChange={setShowAddDialog}
+                title="Add New Entry"
+                submitLabel="Add Entry"
+                fieldMetadata={fieldMetadata ?? {}}
+                fieldOrder={addFieldOrder}
+                initialValues={{}}
+                onSave={handleAddEntry}
+                onSaveAnother={handleAddEntryAndStayOpen}
+                getBindingUpdates={getBindingUpdates}
+                getFieldOverrides={getFieldOverridesForAdd}
+                gridId={gridId}
+              />
+            </>
+          )}
+        </div>
+      )}
+      <EntryFormDialog
+        open={rowDetailsOpenForIndex !== null}
+        onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
+        title="Row Details"
+        submitLabel="Done"
+        fieldMetadata={fieldMetadata ?? {}}
+        fieldOrder={addFieldOrder}
+        initialValues={
+          rowDetailsRow
+            ? { ...(rowDetailsRow.original as Record<string, unknown>) }
+            : {}
+        }
+        onSave={handleEditSave}
+        getBindingUpdates={getBindingUpdates}
+        getFieldOverrides={getFieldOverridesForAdd}
+        gridId={gridId}
+        mode="edit"
+      />
+      <div className={cn('rounded-lg overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
         <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
           <TableHeader className={ts.headerBg}>
             {table.getHeaderGroups().map((headerGroup) => (

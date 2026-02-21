@@ -2,7 +2,7 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot, Database, Layout, MoreHorizontal } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -99,27 +99,54 @@ const TrackerPanel = memo(function TrackerPanel({
         </div>
       )}
       <div
-        className={`absolute top-4 z-20 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm ${hideChatToggle ? 'right-2' : 'right-4'}`}
+        className={`absolute top-4 z-20 flex flex-wrap items-center justify-end gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-4'}`}
       >
         <div className={`inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
-          <button
-            type="button"
-            onClick={() => setEditMode(false)}
-            className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-            aria-pressed={!editMode}
-            disabled={isStreamingTracker}
-          >
-            Preview
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditMode(true)}
-            className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-            aria-pressed={editMode}
-            disabled={isStreamingTracker}
-          >
-            Edit
-          </button>
+          {hideChatToggle ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditMode(false)}
+                className={`p-1.5 rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={!editMode}
+                aria-label="Preview"
+                disabled={isStreamingTracker}
+              >
+                <Eye className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode(true)}
+                className={`p-1.5 rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={editMode}
+                aria-label="Edit"
+                disabled={isStreamingTracker}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setEditMode(false)}
+                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={!editMode}
+                disabled={isStreamingTracker}
+              >
+                Preview
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditMode(true)}
+                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                aria-pressed={editMode}
+                disabled={isStreamingTracker}
+              >
+                Edit
+              </button>
+            </>
+          )}
         </div>
         {!hideChatToggle && (
           <Button
@@ -233,7 +260,7 @@ const TrackerPanel = memo(function TrackerPanel({
       </Dialog>
 
       <div
-        className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 sm:px-2 py-4' : 'px-4 py-6'}`}
+        className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
       >
         {isStreamingTracker && streamedTracker ? (
           <TrackerDisplay
@@ -450,14 +477,14 @@ function TrackerAIView() {
 
   if (!isDesktop) {
     return (
-      <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
+      <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-16 md:pt-20">
         <div ref={containerRef} className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Tabs
             value={mobileTab}
             onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
             className="flex-1 min-h-0 flex flex-col gap-0"
           >
-            <div className="shrink-0 px-4 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+            <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="preview">Preview</TabsTrigger>
                 <TabsTrigger value="chat">Chat</TabsTrigger>

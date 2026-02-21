@@ -911,7 +911,7 @@ function TrackerDivGridInner({
     }
 
     return (
-      <div key={field.id} className="space-y-1.5 min-w-0">
+      <div key={field.id} className="space-y-1 min-w-0">
         {labelContent}
         {inputContent}
       </div>
@@ -919,7 +919,7 @@ function TrackerDivGridInner({
   }
 
   const fieldsContainer = (
-    <div className="flex flex-col gap-4 min-w-0">
+    <div className="flex flex-col gap-2.5 min-w-0">
       {rowKeys.map((rowKey) => {
         const nodesInRow = nodesByRow.get(rowKey) ?? []
         const dropTargetFieldId = dropIndicator ? parseFieldId(dropIndicator.overId)?.fieldId : null
@@ -928,7 +928,7 @@ function TrackerDivGridInner({
         return (
           <div
             key={rowKey}
-            className={`grid ${gridCols} gap-4 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-lg p-1 -m-1' : ''}`}
+            className={`grid ${gridCols} gap-2.5 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-lg p-1 -m-1' : ''}`}
           >
             {nodesInRow.map((node, nodeIndex) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
@@ -962,7 +962,7 @@ function TrackerDivGridInner({
   )
 
   return (
-    <div className="space-y-3 min-w-0">
+    <div className="space-y-2 min-w-0">
       {canEditLayout ? (
         <DndContext
           sensors={sensors}

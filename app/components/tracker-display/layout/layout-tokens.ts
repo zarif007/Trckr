@@ -14,22 +14,22 @@ export const SECTION_TO_GRIDS_GAP = 'mt-3'
 export const GRID_STACK_GAP = 'space-y-6'
 
 /** Section group root: one section bar + its grids. Same in edit and view. */
-export const SECTION_GROUP_ROOT = 'w-full min-w-0'
+export const SECTION_GROUP_ROOT = 'w-full min-w-0 pt-5'
 
-/** Grids container: gap from section bar (mt-3) + gap between grids (space-y-6). Reuse everywhere. */
+/** Grids container: gap from section bar + gap between grids. Compact so sections are easily distinguishable. */
 export const GRIDS_CONTAINER =
-  'space-y-6 mt-3 w-full min-w-0'
+  'space-y-3 mt-2 w-full min-w-0'
 
 /** Wrapper for each grid block (edit SortableBlockItem content, view ViewBlockWrapper content). */
 export const GRID_ITEM_WRAPPER = 'w-full min-w-0'
 
 /** Inner content of a grid block: header + GridBlockContent. */
-export const GRID_BLOCK_INNER = 'w-full min-w-0 space-y-2.5'
+export const GRID_BLOCK_INNER = 'w-full min-w-0 space-y-1.5'
 
 /** Tab content root: top margin only. Vertical stack (space-y-6) lives on the inner wrapper. */
 export const TAB_CONTENT_ROOT = 'mt-5 w-full'
 
-/** Inner wrapper that holds section list — applies space-y-6 so vertical gap is identical in edit and view. */
+/** Inner wrapper that holds section list — space-y-6 so sections have clear margin/separation. */
 export const TAB_CONTENT_INNER = 'space-y-6 w-full min-w-0'
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
