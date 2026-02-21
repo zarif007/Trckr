@@ -12,7 +12,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
@@ -23,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Trash2, Settings2, ShieldCheck } from 'lucide-react'
+import { Plus, Trash2, Settings2, ShieldCheck, Copy, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react'
 import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import { FIELD_TYPE_LABELS } from './utils'
@@ -98,9 +97,8 @@ export function FieldSettingsDialog({
   const [minLength, setMinLength] = useState('')
   const [maxLength, setMaxLength] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
-  const [advancedOpen, setAdvancedOpen] = useState(false)
-  const [jsonDraft, setJsonDraft] = useState('')
-  const [jsonError, setJsonError] = useState<string | null>(null)
+  const [structureOpen, setStructureOpen] = useState(false)
+  const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [exprDrafts, setExprDrafts] = useState<Record<number, string>>({})
 
   const availableFields = useMemo(() => {
@@ -137,16 +135,9 @@ export function FieldSettingsDialog({
     const validationKey = gridId ? `${gridId}.${field.id}` : ''
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
-    setJsonDraft(JSON.stringify(nextRules, null, 2))
-    setJsonError(null)
-    setAdvancedOpen(false)
+    setStructureOpen(false)
+    setShowJsonInStructure(false)
   }, [open, field, schema, gridId])
-
-  useEffect(() => {
-    if (!advancedOpen) {
-      setJsonDraft(JSON.stringify(rules, null, 2))
-    }
-  }, [rules, advancedOpen])
 
   if (!open || !field || !schema || !onSchemaChange) return null
 
@@ -179,21 +170,6 @@ export function FieldSettingsDialog({
       }
       return next
     })
-  }
-
-  const handleApplyJson = () => {
-    try {
-      const parsed = JSON.parse(jsonDraft)
-      if (!Array.isArray(parsed)) {
-        setJsonError('JSON must be an array of rules')
-        return
-      }
-      const nextRules = parsed.map(ensureRuleDefaults) as FieldValidationRule[]
-      setRules(nextRules)
-      setJsonError(null)
-    } catch {
-      setJsonError('Invalid JSON')
-    }
   }
 
   const handleSave = () => {
@@ -444,7 +420,11 @@ export function FieldSettingsDialog({
                   <>
                     <div className="space-y-4">
                       {rules.map((rule, index) => (
-                        <div key={index} className="rounded-lg border border-border/60 p-4 space-y-3">
+                        <div
+                          key={index}
+                          id={`rule-card-${index}`}
+                          className="rounded-lg border border-border/60 p-4 space-y-3 scroll-mt-4"
+                        >
                           <div className="flex items-center gap-3">
                             <div className="flex-1">
                               <label
@@ -588,28 +568,94 @@ export function FieldSettingsDialog({
                 <div className="pt-4 border-t border-border/60 space-y-2">
                   <button
                     type="button"
-                    className="text-sm text-muted-foreground hover:text-foreground"
-                    onClick={() => setAdvancedOpen((prev) => !prev)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => setStructureOpen((prev) => !prev)}
+                    aria-expanded={structureOpen}
                   >
-                    {advancedOpen ? 'Hide advanced JSON' : 'Show advanced JSON'}
+                    {structureOpen ? (
+                      <ChevronDown className="h-4 w-4 shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0" />
+                    )}
+                    {structureOpen ? 'Hide rule summary' : 'View rule summary'}
                   </button>
-                  {advancedOpen && (
-                    <div className="space-y-2">
-                      <Textarea
-                        value={jsonDraft}
-                        onChange={(e) => setJsonDraft(e.target.value)}
-                        className="font-mono text-xs min-h-[160px]"
-                        aria-invalid={Boolean(jsonError)}
-                        aria-describedby={jsonError ? 'advanced-json-error' : undefined}
-                      />
-                      {jsonError && (
-                        <p id="advanced-json-error" className="text-xs text-destructive">
-                          {jsonError}
-                        </p>
+                  {structureOpen && (
+                    <div className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Click a rule to jump to it in the form above. Changes in the form update this summary.
+                      </p>
+                      {rules.length === 0 ? (
+                        <p className="text-sm text-muted-foreground italic py-2">No rules yet.</p>
+                      ) : (
+                        <ul className="space-y-2">
+                          {rules.map((rule, index) => (
+                            <li key={index}>
+                              <button
+                                type="button"
+                                className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 hover:border-border transition-colors"
+                                onClick={() => {
+                                  document.getElementById(`rule-card-${index}`)?.scrollIntoView({
+                                    behavior: 'smooth',
+                                    block: 'center',
+                                  })
+                                }}
+                              >
+                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                  {index + 1}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <span className="font-medium text-sm">{RULE_TYPE_LABELS[rule.type]}</span>
+                                  <span className="text-muted-foreground text-sm ml-2">
+                                    {rule.type !== 'required' && rule.type !== 'expr' && (
+                                      <>→ {String(rule.value ?? 0)}</>
+                                    )}
+                                  </span>
+                                  {rule.message && (
+                                    <p className="text-xs text-muted-foreground mt-0.5 truncate" title={rule.message}>
+                                      “{rule.message}”
+                                    </p>
+                                  )}
+                                </div>
+                                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
                       )}
-                      <Button type="button" variant="secondary" size="sm" onClick={handleApplyJson}>
-                        Apply JSON
-                      </Button>
+                      <div className="pt-2 border-t border-border/40">
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => setShowJsonInStructure((prev) => !prev)}
+                          aria-expanded={showJsonInStructure}
+                        >
+                          {showJsonInStructure ? (
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          ) : (
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          )}
+                          {showJsonInStructure ? 'Hide raw JSON' : 'See raw JSON'}
+                        </button>
+                        {showJsonInStructure && (
+                          <div className="relative mt-2">
+                            <pre className="rounded-lg border border-border/60 bg-muted/30 p-4 font-mono text-xs overflow-x-auto min-h-[100px] max-h-[180px] overflow-y-auto">
+                              {JSON.stringify(rules, null, 2)}
+                            </pre>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="absolute top-2 right-2 h-7 gap-1 text-muted-foreground hover:text-foreground text-xs"
+                              onClick={() => {
+                                void navigator.clipboard.writeText(JSON.stringify(rules, null, 2))
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                              Copy
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

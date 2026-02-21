@@ -49,29 +49,31 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
         .passthrough(),
     ])
 
-  return z.union([
-    constNode,
-    fieldNode,
-    variadic('add'),
-    variadic('mul'),
-    binary('sub'),
-    binary('div'),
-    binary('eq'),
-    binary('neq'),
-    binary('gt'),
-    binary('gte'),
-    binary('lt'),
-    binary('lte'),
-    binary('='),
-    binary('=='),
-    binary('==='),
-    binary('!='),
-    binary('!=='),
-    binary('>'),
-    binary('>='),
-    binary('<'),
-    binary('<='),
-  ])
+  return z
+    .union([
+      constNode,
+      fieldNode,
+      variadic('add'),
+      variadic('mul'),
+      binary('sub'),
+      binary('div'),
+      binary('eq'),
+      binary('neq'),
+      binary('gt'),
+      binary('gte'),
+      binary('lt'),
+      binary('lte'),
+      binary('='),
+      binary('=='),
+      binary('==='),
+      binary('!='),
+      binary('!=='),
+      binary('>'),
+      binary('>='),
+      binary('<'),
+      binary('<='),
+    ])
+    .transform((val): ExprNode => normalizeExprNode(val as ExprNode))
 })
 
 export const exprOutputSchema = z.object({

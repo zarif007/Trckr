@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -65,7 +65,7 @@ const NODE_BODY_CLASSES = 'px-3 pb-2 pt-2'
 const NODE_DELETE_BUTTON_CLASSES =
   'nodrag inline-flex h-5 w-5 items-center justify-center rounded border border-border/60 text-muted-foreground hover:text-destructive hover:border-destructive/60 hover:bg-destructive/10'
 const HANDLE_CLASSES = '!h-2.5 !w-2.5 !border-2 !bg-primary !border-foreground/30'
-const EDGE_STYLE = {
+const EDGE_STYLE: CSSProperties = {
   stroke: 'hsl(var(--foreground) / 0.35)',
   strokeWidth: 2,
   strokeLinecap: 'round',
@@ -221,14 +221,14 @@ export function ExprFlowBuilder({
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<string[]>([])
 
   const initialGraph = useMemo(() => exprToGraph(normalizeExprNode(expr)), [expr])
-  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(
-    initialGraph.nodes as FlowNode[]
+  const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>(
+    initialGraph.nodes as Node<FlowNodeData>[]
   )
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
+  const [edges, setEdges, onEdgesChange] = useEdgesState(
     initialGraph.edges.map((edge) => ({
       ...EDGE_DEFAULTS,
       ...edge,
-      style: { ...EDGE_STYLE, ...(edge.style ?? {}) },
+      style: { ...EDGE_STYLE, ...(edge.style ?? {}) } as CSSProperties,
       markerEnd: edge.markerEnd ?? EDGE_MARKER,
     }))
   )
@@ -290,7 +290,7 @@ export function ExprFlowBuilder({
       nextGraph.edges.map((edge) => ({
         ...EDGE_DEFAULTS,
         ...edge,
-        style: { ...EDGE_STYLE, ...(edge.style ?? {}) },
+        style: { ...EDGE_STYLE, ...(edge.style ?? {}) } as CSSProperties,
         markerEnd: edge.markerEnd ?? EDGE_MARKER,
       }))
     )
