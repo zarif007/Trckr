@@ -475,50 +475,55 @@ function TrackerAIView() {
     object,
   }
 
-  if (!isDesktop) {
-    return (
-      <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-16 md:pt-20">
-        <div ref={containerRef} className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <Tabs
-            value={mobileTab}
-            onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
-            className="flex-1 min-h-0 flex flex-col gap-0"
-          >
-            <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
-              <TabsList className="w-full grid grid-cols-2">
-                <TabsTrigger value="preview">Preview</TabsTrigger>
-                <TabsTrigger value="chat">Chat</TabsTrigger>
-              </TabsList>
-            </div>
-            <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
-              <TrackerPanel
-                schema={schema}
-                editMode={editMode}
-                setEditMode={setEditMode}
-                isChatOpen={isChatOpen}
-                setIsChatOpen={setIsChatOpen}
-                isStreamingTracker={isStreamingTracker}
-                streamedTracker={streamedDisplayTracker ?? undefined}
-                trackerDataRef={trackerDataRef}
-                handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
-                undo={editMode ? undoable.undo : undefined}
-                canUndo={editMode ? undoable.canUndo : false}
-                leftWidth={leftWidth}
-                fullWidth
-                hideChatToggle
-              />
-            </TabsContent>
-            <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
-              <TrackerChatPanel {...chatPanelProps} />
-            </TabsContent>
-          </Tabs>
-        </div>
+  // Render both layouts and show/hide with CSS so the correct one appears on first paint (no blink).
+  const mobileLayout = (
+    <div
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-16 md:pt-20 md:hidden"
+      aria-hidden={isDesktop}
+    >
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Tabs
+          value={mobileTab}
+          onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
+          className="flex-1 min-h-0 flex flex-col gap-0"
+        >
+          <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+            <TrackerPanel
+              schema={schema}
+              editMode={editMode}
+              setEditMode={setEditMode}
+              isChatOpen={isChatOpen}
+              setIsChatOpen={setIsChatOpen}
+              isStreamingTracker={isStreamingTracker}
+              streamedTracker={streamedDisplayTracker ?? undefined}
+              trackerDataRef={trackerDataRef}
+              handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
+              undo={editMode ? undoable.undo : undefined}
+              canUndo={editMode ? undoable.canUndo : false}
+              leftWidth={leftWidth}
+              fullWidth
+              hideChatToggle
+            />
+          </TabsContent>
+          <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+            <TrackerChatPanel {...chatPanelProps} />
+          </TabsContent>
+        </Tabs>
       </div>
-    )
-  }
+    </div>
+  )
 
-  return (
-    <div className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20">
+  const desktopLayout = (
+    <div
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20 hidden md:flex"
+      aria-hidden={!isDesktop}
+    >
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
         <TrackerPanel
           schema={schema}
@@ -552,6 +557,13 @@ function TrackerAIView() {
         )}
       </div>
     </div>
+  )
+
+  return (
+    <>
+      {mobileLayout}
+      {desktopLayout}
+    </>
   )
 }
 
