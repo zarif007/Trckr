@@ -463,7 +463,7 @@ export function FieldSettingsDialog({
                                   id={`rule-type-${index}`}
                                   className="mt-2 h-10 w-full rounded-lg border-border/60 bg-background/90"
                                 >
-                                  <SelectValue />
+                                  <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectGroup>

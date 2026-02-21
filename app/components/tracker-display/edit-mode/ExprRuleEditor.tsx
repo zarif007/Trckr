@@ -5,6 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Maximize2 } from 'lucide-react'
 import type { ExprNode } from '@/lib/functions/types'
 import { exprSchema, normalizeExprNode } from '@/lib/schemas/expr'
 import { ExprFlowBuilder } from './ExprFlowBuilder'
@@ -33,6 +35,7 @@ export function ExprRuleEditor({
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiError, setAiError] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
+  const [visualDialogOpen, setVisualDialogOpen] = useState(false)
 
   const trackerPayload = useMemo(() => {
     if (!currentTracker) return null
@@ -148,7 +151,36 @@ export function ExprRuleEditor({
           <TabsTrigger value="ai">AI prompt</TabsTrigger>
         </TabsList>
         <TabsContent value="visual" className="mt-4">
-          <ExprFlowBuilder expr={expr} availableFields={availableFields} onChange={applyExpr} />
+          <ExprFlowBuilder
+            expr={expr}
+            availableFields={availableFields}
+            onChange={applyExpr}
+            headerAction={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setVisualDialogOpen(true)}
+                className="border border-foreground/20 bg-foreground/5 text-foreground/70 hover:bg-foreground/10"
+              >
+                <Maximize2 />
+                <span className="sr-only">Expand visual builder</span>
+              </Button>
+            }
+          />
+          <Dialog open={visualDialogOpen} onOpenChange={setVisualDialogOpen}>
+            <DialogContent className="w-[calc(100vw-2rem)] h-[calc(100vh-2rem)] max-w-none max-h-none sm:max-w-none p-4 overflow-hidden">
+              <DialogHeader>
+                <DialogTitle className="text-base">Visual expression builder</DialogTitle>
+              </DialogHeader>
+              <ExprFlowBuilder
+                expr={expr}
+                availableFields={availableFields}
+                onChange={applyExpr}
+                flowHeightClassName="h-[calc(100vh-16rem)] min-h-[420px]"
+              />
+            </DialogContent>
+          </Dialog>
         </TabsContent>
         <TabsContent value="json" className="mt-4 space-y-2">
           <Textarea

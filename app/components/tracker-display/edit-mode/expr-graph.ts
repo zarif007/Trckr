@@ -163,11 +163,15 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
   const nodes: ExprFlowNode[] = []
   const edges: Edge[] = []
   let row = 0
+  const depthById = new Map<string, number>()
+  let maxDepth = 1
 
   const build = (node: ExprNode, depth: number): string => {
     const id = nextId()
     const position = placeNode(depth, row)
     row += 1
+    depthById.set(id, depth)
+    maxDepth = Math.max(maxDepth, depth)
 
     if (node.op === 'field') {
       nodes.push({
@@ -227,12 +231,14 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
   }
 
   const rootId = build(expr, 1)
+  const rootNode = nodes.find((node) => node.id === rootId)
   const resultId = nextId()
   nodes.push({
     id: resultId,
     type: 'result',
-    position: { x: 0, y: 0 },
+    position: { x: 0, y: rootNode?.position.y ?? 0 },
     data: {},
+    deletable: false,
   })
   edges.push({
     id: `${rootId}-${resultId}-in`,
@@ -241,7 +247,21 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
     targetHandle: RESULT_HANDLE_ID,
   })
 
-  return { nodes, edges }
+  const orientedNodes = nodes.map((node) => {
+    if (node.id === resultId) {
+      return {
+        ...node,
+        position: { ...node.position, x: maxDepth * 240 },
+      }
+    }
+    const depth = depthById.get(node.id) ?? 1
+    return {
+      ...node,
+      position: { ...node.position, x: (maxDepth - depth) * 240 },
+    }
+  })
+
+  return { nodes: orientedNodes, edges }
 }
 
 export const FLOW_CONSTANTS = {
