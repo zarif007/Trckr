@@ -132,6 +132,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 4. Fields
 - One object per data column/value. Fields: id (snake_case), dataType ("string"|"number"|"date"|"options"|"multiselect"|"boolean"|"text"|"link"|"currency"|"percentage"), ui: { label, placeholder? }, config (REQUIRED).
 - config standard: { isRequired?, isDisabled?, isHidden?, defaultValue?, min?, max?, minLength?, maxLength? }. For options/multiselect the bindings object (top-level) is required; do not use optionMapId/optionTableId.
+- SELECT VS DYNAMIC SELECT: Use dataType "options" for single-select and "multiselect" for multi-select in almost all cases. These use bindings and options grids. Use "dynamic_select" or "dynamic_multiselect" ONLY when explicitly requested and when there is a function to back it (e.g. a built-in like all_field_paths for rule builders). Do NOT generate dynamic_select or dynamic_multiselect unless the user or requirements explicitly mention dynamic options or a specific function-backed select; default to "options" and "multiselect" with bindings.
 - isDisabled: when true, input is read-only. Set for computed or system fields.
 - isHidden: when true, field is not rendered. Set for internal-only fields.
 
@@ -207,6 +208,7 @@ CRITICAL for revisions:
 8. The options grid in Shared tab can have additional fields beyond the single option field (e.g. price, description) for use in fieldMappings.
 9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
 10. If the user asks for conditional behavior (show/hide/require/disable fields), include a dependsOn array with the required rules.
+11. Use "options" and "multiselect" for select fields (with bindings). Do not use "dynamic_select" or "dynamic_multiselect" unless explicitly mentioned and only when a function backs the options (e.g. built-in dynamic option functions).
 
 === STYLES (only when user explicitly asks for visual changes) ===
 
