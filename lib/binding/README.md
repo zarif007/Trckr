@@ -107,4 +107,4 @@ Import from `@/lib/binding`:
 
 ## See also
 
-- **lib/bindings-grid** — Bindings table on the Shared tab: grid structure, column spec, and conversion between bindings and grid rows for editing.
+- Bindings are now configured per-field in the Field Settings dialog (edit mode).

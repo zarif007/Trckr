@@ -28,12 +28,7 @@ import {
   DEPENDS_ON_OPTIONS_SECTION_ID,
   rulesGridRowsToDependsOn,
 } from '@/lib/depends-on-options'
-import {
-  ensureBindingsGrid,
-  bindingsGridRowsToBindings,
-  BINDINGS_GRID_ID,
-  BINDINGS_SECTION_ID,
-} from '@/lib/bindings-grid'
+// Bindings grid (Shared tab) intentionally unused; bindings are configured per field settings now.
 
 const DEFAULT_SHARED_TAB: TrackerTab = {
   id: SHARED_TAB_ID,
@@ -189,30 +184,21 @@ export function TrackerDisplayInline({
 
   const sharedTabAug = useMemo(() => {
     if (!hasSharedTabInView) return null
-    const bindingsAug = ensureBindingsGrid({
+    const dependsOnAug = ensureDependsOnOptionGrids({
       sections: sections ?? [],
       grids: grids ?? [],
       fields: fields ?? [],
       layoutNodes: layoutNodes ?? [],
       bindings: bindings ?? {},
-    })
-    const dependsOnAug = ensureDependsOnOptionGrids({
-      sections: bindingsAug.sections,
-      grids: bindingsAug.grids,
-      fields: bindingsAug.fields,
-      layoutNodes: bindingsAug.layoutNodes,
-      bindings: bindings ?? {},
       dependsOn: dependsOn ?? [],
     })
     const mergedSeedGridData = {
-      ...bindingsAug.seedGridData,
       ...dependsOnAug.seedGridData,
     }
     const sectionsWithOrder = dependsOnAug.sections.map((s) => {
       if (s.tabId !== SHARED_TAB_ID) return s
-      if (s.id === BINDINGS_SECTION_ID) return { ...s, placeId: 0 }
-      if (s.id === DEPENDS_ON_OPTIONS_SECTION_ID) return { ...s, placeId: 1 }
-      return { ...s, placeId: Math.max(2, (s.placeId ?? 0)) }
+      if (s.id === DEPENDS_ON_OPTIONS_SECTION_ID) return { ...s, placeId: 0 }
+      return { ...s, placeId: Math.max(1, (s.placeId ?? 0)) }
     })
     return {
       sections: sectionsWithOrder,
@@ -221,7 +207,7 @@ export function TrackerDisplayInline({
       layoutNodes: dependsOnAug.layoutNodes,
       bindings: dependsOnAug.bindings,
       seedGridData: mergedSeedGridData,
-      hasBindingsGrid: true,
+      hasBindingsGrid: false,
     }
   }, [hasSharedTabInView, sections, grids, fields, layoutNodes, bindings, dependsOn])
 
@@ -251,11 +237,7 @@ export function TrackerDisplayInline({
   const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
   gridDataRef.current = gridData
 
-  const effectiveBindings = useMemo(() => {
-    if (!sharedTabAug?.hasBindingsGrid) return bindings ?? {}
-    const rows = gridData[BINDINGS_GRID_ID]
-    return bindingsGridRowsToBindings(rows)
-  }, [sharedTabAug?.hasBindingsGrid, gridData, bindings])
+  const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
 
   const effectiveDependsOn = useMemo(() => {
     if (!sharedTabAug) return dependsOn ?? []

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -21,13 +21,29 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
+  SearchableSelect,
 } from '@/components/ui/select'
-import { Plus, Trash2, Settings2, ShieldCheck, Copy, ChevronDown, ChevronRight, ArrowRight } from 'lucide-react'
+import { Plus, Trash2, Settings2, ShieldCheck, Copy, ChevronDown, ChevronRight, ArrowRight, Wand2, X } from 'lucide-react'
 import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
-import { FIELD_TYPE_LABELS } from './utils'
+import type { TrackerBindingEntry } from '@/lib/types/tracker-bindings'
+import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from './utils'
 import type { TrackerFieldType } from '../types'
 import { ExprRuleEditor } from './ExprRuleEditor'
+import { FieldMappingsEditor } from '../bindings/FieldMappingsEditor'
+import {
+  buildGridFieldMap,
+  buildOptionsGridOptions,
+  buildFieldPathOptions,
+  buildPathLabelMap,
+  ensureValueMapping,
+  normalizeMappings,
+  resolvePathLabel,
+  suggestFieldMappings,
+  validateBindingDraft,
+  type BindingDraft,
+} from '../bindings/bindings-utils'
+import { parsePath } from '@/lib/resolve-bindings'
 
 const RULE_TYPES: Array<FieldValidationRule['type']> = [
   'required',
@@ -91,6 +107,7 @@ export function FieldSettingsDialog({
 
   const [label, setLabel] = useState('')
   const [placeholder, setPlaceholder] = useState('')
+  const [dataType, setDataType] = useState<TrackerFieldType>('string')
   const [isRequired, setIsRequired] = useState(false)
   const [min, setMin] = useState('')
   const [max, setMax] = useState('')
@@ -100,6 +117,9 @@ export function FieldSettingsDialog({
   const [structureOpen, setStructureOpen] = useState(false)
   const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [exprDrafts, setExprDrafts] = useState<Record<number, string>>({})
+  const [bindingEnabled, setBindingEnabled] = useState(false)
+  const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
+  const [bindingDirty, setBindingDirty] = useState(false)
 
   const availableFields = useMemo(() => {
     if (!gridId || !schema) return []
@@ -122,10 +142,81 @@ export function FieldSettingsDialog({
     return out
   }, [gridId, schema?.fields, schema?.layoutNodes])
 
+  const bindingKey = useMemo(() => {
+    if (!gridId || !field) return ''
+    return `${gridId}.${field.id}`
+  }, [gridId, field])
+
+  const isBindable = dataType === 'options' || dataType === 'multiselect'
+
+  const gridFieldMap = useMemo(
+    () => buildGridFieldMap(schema?.layoutNodes ?? []),
+    [schema?.layoutNodes]
+  )
+
+  const pathLabelMap = useMemo(
+    () => buildPathLabelMap(schema?.layoutNodes ?? [], schema?.grids ?? [], schema?.fields ?? []),
+    [schema?.layoutNodes, schema?.grids, schema?.fields]
+  )
+
+  const optionsGridOptions = useMemo(
+    () => buildOptionsGridOptions(schema?.grids ?? []),
+    [schema?.grids]
+  )
+
+  const allGridOptions = useMemo(
+    () =>
+      (schema?.grids ?? [])
+        .map((g) => ({ value: g.id, label: g.name ?? g.id }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [schema?.grids]
+  )
+
+  const allFieldPathOptions = useMemo(
+    () => buildFieldPathOptions(schema?.layoutNodes ?? [], schema?.grids ?? [], schema?.fields ?? []),
+    [schema?.layoutNodes, schema?.grids, schema?.fields]
+  )
+
+  const getGridFieldOptions = useCallback(
+    (gridIdValue?: string | null) => {
+      if (!gridIdValue) return []
+      const fieldIds = gridFieldMap.get(gridIdValue)
+      if (!fieldIds || fieldIds.size === 0) return []
+      const options = Array.from(fieldIds).map((fieldIdValue) => {
+        const path = `${gridIdValue}.${fieldIdValue}`
+        return {
+          value: path,
+          label:
+            pathLabelMap.get(path) ??
+            resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? []),
+        }
+      })
+      return options.sort((a, b) => a.label.localeCompare(b.label))
+    },
+    [gridFieldMap, pathLabelMap, schema?.grids, schema?.fields]
+  )
+
+  const defaultBindingDraft = useCallback((): BindingDraft => {
+    return {
+      key: bindingKey,
+      optionsGrid: '',
+      labelField: '',
+      fieldMappings: [],
+    }
+  }, [bindingKey])
+
+  useEffect(() => {
+    if (isBindable) return
+    setBindingEnabled(false)
+    setBindingDraft(null)
+    setBindingDirty(false)
+  }, [isBindable])
+
   useEffect(() => {
     if (!open || !field) return
     setLabel(field.ui.label ?? '')
     setPlaceholder(field.ui.placeholder ?? '')
+    setDataType(field.dataType)
     setIsRequired(Boolean(field.config?.isRequired))
     setMin(field.config?.min != null ? String(field.config.min) : '')
     setMax(field.config?.max != null ? String(field.config.max) : '')
@@ -137,12 +228,133 @@ export function FieldSettingsDialog({
     setRules(nextRules)
     setStructureOpen(false)
     setShowJsonInStructure(false)
-  }, [open, field, schema, gridId])
+    const isBindableField = field.dataType === 'options' || field.dataType === 'multiselect'
+    if (isBindableField && bindingKey) {
+      const existingBinding = schema?.bindings?.[bindingKey] as TrackerBindingEntry | undefined
+      if (existingBinding) {
+        setBindingEnabled(true)
+        setBindingDraft({
+          key: bindingKey,
+          optionsGrid: existingBinding.optionsGrid ?? '',
+          labelField: existingBinding.labelField ?? '',
+          fieldMappings: Array.isArray(existingBinding.fieldMappings)
+            ? [...existingBinding.fieldMappings]
+            : [],
+        })
+      } else {
+        setBindingEnabled(false)
+        setBindingDraft(defaultBindingDraft())
+      }
+      setBindingDirty(false)
+    } else {
+      setBindingEnabled(false)
+      setBindingDraft(null)
+      setBindingDirty(false)
+    }
+  }, [open, field, schema, gridId, bindingKey, defaultBindingDraft])
+
+  const bindingValidation = useMemo(() => {
+    if (!bindingEnabled || !bindingDraft) return { isValid: true, errors: {} as Record<string, string> }
+    return validateBindingDraft(
+      { ...bindingDraft, key: bindingKey },
+      {
+        existingKeys: new Set(Object.keys(schema?.bindings ?? {})),
+        originalKey: bindingKey,
+        gridFieldMap,
+      }
+    )
+  }, [bindingEnabled, bindingDraft, bindingKey, schema?.bindings, gridFieldMap])
+
+  const autoPopulateSources = useMemo(() => {
+    if (!gridId || !field?.id) return []
+    const targetPath = `${gridId}.${field.id}`
+    const sources = new Set<string>()
+    for (const entry of Object.values(schema?.bindings ?? {})) {
+      if (!entry || typeof entry !== 'object') continue
+      const mappings = (entry as TrackerBindingEntry).fieldMappings ?? []
+      for (const mapping of mappings) {
+        if (!mapping || typeof mapping !== 'object') continue
+        if (mapping.to === targetPath && typeof mapping.from === 'string') {
+          sources.add(mapping.from)
+        }
+      }
+    }
+    return Array.from(sources)
+  }, [schema?.bindings, gridId, field?.id])
+
+  const typeOptions = useMemo(() => {
+    const options = getCreatableFieldTypesWithLabels()
+    if (field && !options.some((o) => o.value === field.dataType)) {
+      return [
+        { value: field.dataType, label: FIELD_TYPE_LABELS[field.dataType] ?? field.dataType, group: 'Other' as const },
+        ...options,
+      ]
+    }
+    return options
+  }, [field])
+
+  const groupedTypes = useMemo(
+    () =>
+      typeOptions.reduce<Record<string, typeof typeOptions>>((acc, opt) => {
+        const g = opt.group ?? 'Other'
+        if (!acc[g]) acc[g] = []
+        acc[g].push(opt)
+        return acc
+      }, {}),
+    [typeOptions]
+  )
 
   if (!open || !field || !schema || !onSchemaChange) return null
 
   const updateRule = (index: number, nextRule: FieldValidationRule) => {
     setRules((prev) => prev.map((r, i) => (i === index ? ensureRuleDefaults(nextRule) : r)))
+  }
+
+  const setBindingDraftValue = (next: BindingDraft) => {
+    setBindingDraft(next)
+    setBindingDirty(true)
+  }
+
+  const applyAutoMappings = () => {
+    if (!bindingDraft) return
+    const existing = normalizeMappings(bindingDraft.fieldMappings)
+    const suggestions = suggestFieldMappings({
+      selectFieldPath: bindingKey,
+      optionsGrid: bindingDraft.optionsGrid,
+      labelField: bindingDraft.labelField,
+      existingMappings: existing,
+      gridFieldMap,
+    })
+    if (suggestions.length === 0) return
+    setBindingDraftValue({ ...bindingDraft, fieldMappings: [...existing, ...suggestions] })
+  }
+
+  const renderBindingSelect = (
+    value: string,
+    onChange: (next: string) => void,
+    options: Array<{ value: string; label: string }>,
+    placeholder: string
+  ) => {
+    if (options.length === 0) {
+      return (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+        />
+      )
+    }
+    return (
+      <SearchableSelect
+        options={options}
+        value={value || '__empty__'}
+        onValueChange={(val) => onChange(val === '__empty__' ? '' : val)}
+        placeholder={placeholder}
+        searchPlaceholder={placeholder}
+        className="w-full h-10"
+      />
+    )
   }
 
   const handleRuleTypeChange = (index: number, nextType: FieldValidationRule['type']) => {
@@ -192,6 +404,7 @@ export function FieldSettingsDialog({
       f.id === field.id
         ? {
           ...f,
+          dataType,
           ui: { ...f.ui, label: label.trim() || f.ui.label, placeholder: placeholder || undefined },
           config: nextConfig,
         }
@@ -208,18 +421,37 @@ export function FieldSettingsDialog({
       }
     }
 
+    const nextBindings = { ...(schema.bindings ?? {}) }
+    if (bindingKey) {
+      if (!isBindable) {
+        delete nextBindings[bindingKey]
+      } else if (!bindingEnabled) {
+        delete nextBindings[bindingKey]
+      } else if (bindingDraft) {
+        let fieldMappings = normalizeMappings(bindingDraft.fieldMappings)
+        fieldMappings = ensureValueMapping(fieldMappings, bindingDraft.labelField, bindingKey)
+        nextBindings[bindingKey] = {
+          optionsGrid: bindingDraft.optionsGrid.trim(),
+          labelField: bindingDraft.labelField.trim(),
+          fieldMappings,
+        }
+      }
+    }
+
     onSchemaChange({
       ...schema,
       fields: nextFields,
       validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
+      bindings: nextBindings,
     })
 
     onOpenChange(false)
   }
 
-  const isNumeric = NUMERIC_TYPES.includes(field.dataType)
-  const isText = TEXT_TYPES.includes(field.dataType)
-  const typeLabel = FIELD_TYPE_LABELS[field.dataType] ?? field.dataType
+  const isNumeric = NUMERIC_TYPES.includes(dataType)
+  const isText = TEXT_TYPES.includes(dataType)
+  const disableSave = isBindable && bindingEnabled && bindingDraft && !bindingValidation.isValid
+  const groupOrder = ['Text', 'Numbers', 'Date & time', 'Choice', 'Other']
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,7 +464,7 @@ export function FieldSettingsDialog({
               Field settings
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
-              Edit label, placeholder, and validation rules for this field.
+              Edit label, placeholder, validation rules, and bindings for this field.
               <span className="block mt-1 text-xs opacity-90">Field: {field.id}</span>
             </DialogDescription>
           </DialogHeader>
@@ -249,6 +481,12 @@ export function FieldSettingsDialog({
                   <ShieldCheck className="h-4 w-4 shrink-0" />
                   <span className="truncate">Validations</span>
                 </TabsTrigger>
+                {isBindable && (
+                  <TabsTrigger value="bindings">
+                    <ArrowRight className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Bindings</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
               <TabsContent value="general" className="mt-5 space-y-5">
                 <div className="space-y-4">
@@ -295,6 +533,32 @@ export function FieldSettingsDialog({
                   </div>
                 </div>
                 <div className="space-y-4">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                    Auto population
+                  </p>
+                  {!gridId ? (
+                    <p className="text-xs text-muted-foreground">
+                      Place this field in a grid to see auto-population sources.
+                    </p>
+                  ) : autoPopulateSources.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No auto-population sources. Add mappings in bindings to populate this field.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {autoPopulateSources.map((path) => (
+                        <div
+                          key={path}
+                          className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
+                          title={path}
+                        >
+                          {resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? [])}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-4">
                   <div className="flex items-center gap-3">
                     <Checkbox
                       id="field-settings-required"
@@ -308,9 +572,39 @@ export function FieldSettingsDialog({
                       Required
                     </label>
                   </div>
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                    Type: {typeLabel}
-                  </p>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="field-settings-data-type"
+                      className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold block"
+                    >
+                      Data type
+                    </label>
+                    <Select value={dataType} onValueChange={(v) => setDataType(v as TrackerFieldType)}>
+                      <SelectTrigger
+                        id="field-settings-data-type"
+                        className="h-10 w-full rounded-lg border-border/60 bg-background/90 max-w-xs"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groupOrder.map(
+                          (groupKey) =>
+                            groupedTypes[groupKey]?.length > 0 && (
+                              <SelectGroup key={groupKey}>
+                                <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                  {groupKey}
+                                </SelectLabel>
+                                {groupedTypes[groupKey].map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   {isNumeric && (
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -381,6 +675,166 @@ export function FieldSettingsDialog({
                   )}
                 </div>
               </TabsContent>
+              {isBindable && (
+                <TabsContent value="bindings" className="mt-5 space-y-5">
+                  {!gridId ? (
+                    <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Bindings require this field to be placed in a grid.
+                      </p>
+                    </div>
+                  ) : !bindingEnabled ? (
+                    <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        No binding yet. Bindings connect this select field to an options grid.
+                      </p>
+                      <Button
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={() => {
+                          setBindingEnabled(true)
+                          setBindingDraft(defaultBindingDraft())
+                          setBindingDirty(true)
+                        }}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create binding
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                          Select field
+                        </p>
+                        <div className="text-sm font-medium mt-1">
+                          {resolvePathLabel(bindingKey, schema?.grids ?? [], schema?.fields ?? [])}
+                        </div>
+                        <div className="text-xs text-muted-foreground">{bindingKey}</div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                            Options grid
+                          </label>
+                          {bindingDraft &&
+                            renderBindingSelect(
+                              bindingDraft.optionsGrid,
+                              (val) => {
+                                if (!bindingDraft) return
+                                setBindingDraftValue({
+                                  ...bindingDraft,
+                                  optionsGrid: val,
+                                })
+                              },
+                              allGridOptions.length > 0 ? allGridOptions : optionsGridOptions,
+                              'Options grid'
+                            )}
+                          {bindingValidation.errors.optionsGrid && (
+                            <div className="text-xs text-destructive">{bindingValidation.errors.optionsGrid}</div>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                            Label field
+                          </label>
+                          {bindingDraft &&
+                            renderBindingSelect(
+                              bindingDraft.labelField,
+                              (val) => {
+                                if (!bindingDraft) return
+                                setBindingDraftValue({ ...bindingDraft, labelField: val })
+                              },
+                              bindingDraft.optionsGrid
+                                ? getGridFieldOptions(bindingDraft.optionsGrid)
+                                : allFieldPathOptions,
+                              'Label field'
+                            )}
+                          {bindingValidation.errors.labelField && (
+                            <div className="text-xs text-destructive">{bindingValidation.errors.labelField}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                            Field mappings
+                          </label>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5"
+                            onClick={applyAutoMappings}
+                          >
+                            <Wand2 className="h-3.5 w-3.5" />
+                            Auto-map
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Mappings control auto‑population. When a user selects an option, values from the
+                          options grid fields (left) are copied into target fields on this grid (right).
+                        </p>
+                        {bindingDraft && (
+                            <FieldMappingsEditor
+                              value={bindingDraft.fieldMappings}
+                              onChange={(next) =>
+                                setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
+                              }
+                              fromOptions={
+                                bindingDraft.optionsGrid
+                                  ? getGridFieldOptions(bindingDraft.optionsGrid)
+                                  : allFieldPathOptions
+                              }
+                              toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
+                              className="w-full"
+                            />
+                        )}
+                        {bindingValidation.errors.fieldMappings && (
+                          <div className="text-xs text-destructive">{bindingValidation.errors.fieldMappings}</div>
+                        )}
+                        {bindingDraft && (
+                          <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+                            <div className="font-medium text-foreground/80">Preview</div>
+                            {normalizeMappings(bindingDraft.fieldMappings).length === 0 ? (
+                              <div>No mappings yet. Auto-map or add rows.</div>
+                            ) : (
+                              normalizeMappings(bindingDraft.fieldMappings).map((m, idx) => (
+                                <div key={idx}>
+                                  {resolvePathLabel(m.from, schema?.grids ?? [], schema?.fields ?? [])} →{' '}
+                                  {resolvePathLabel(m.to, schema?.grids ?? [], schema?.fields ?? [])}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        {!bindingValidation.isValid && bindingDirty && (
+                          <div className="text-xs text-destructive flex items-center gap-1">
+                            <X className="h-3.5 w-3.5" />
+                            Fix binding errors before saving.
+                          </div>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setBindingEnabled(false)
+                            setBindingDirty(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Remove binding
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              )}
               <TabsContent value="validations" className="mt-5 space-y-5">
                 {rules.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
@@ -672,7 +1126,7 @@ export function FieldSettingsDialog({
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave} className="min-w-[104px]">
+          <Button size="sm" onClick={handleSave} className="min-w-[104px]" disabled={disableSave ?? false}>
             Save
           </Button>
         </DialogFooter>

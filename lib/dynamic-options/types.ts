@@ -41,16 +41,12 @@ export type DynamicOptionsFn = (
 
 /** Built-in function ids. Add new ids here when adding new functions. */
 export const DYNAMIC_OPTIONS_ALL_FIELD_PATHS = 'all_field_paths'
-export const DYNAMIC_OPTIONS_ALL_FIELD_PATHS_INCLUDING_SHARED = 'all_field_paths_including_shared'
-export const DYNAMIC_OPTIONS_ALL_GRIDS = 'all_grids'
 export const DYNAMIC_OPTIONS_ALL_OPERATORS = 'all_operators'
 export const DYNAMIC_OPTIONS_ALL_ACTIONS = 'all_actions'
 export const DYNAMIC_OPTIONS_ALL_RULE_SET_VALUES = 'all_rule_set_values'
 
 export const KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS = [
   DYNAMIC_OPTIONS_ALL_FIELD_PATHS,
-  DYNAMIC_OPTIONS_ALL_FIELD_PATHS_INCLUDING_SHARED,
-  DYNAMIC_OPTIONS_ALL_GRIDS,
   DYNAMIC_OPTIONS_ALL_OPERATORS,
   DYNAMIC_OPTIONS_ALL_ACTIONS,
   DYNAMIC_OPTIONS_ALL_RULE_SET_VALUES,
