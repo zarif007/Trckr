@@ -44,6 +44,8 @@ export interface DependsOnTableProps {
   fields: TrackerField[]
   /** Optional style overrides to match grid tables (e.g. from tracker styles). */
   styleOverrides?: import('./types').StyleOverrides
+  /** When true and rules are empty, render the table wrapper with a "No rules" message instead of null. */
+  showEmptyState?: boolean
 }
 
 export function DependsOnTable({
@@ -51,10 +53,28 @@ export function DependsOnTable({
   grids,
   fields,
   styleOverrides,
+  showEmptyState = false,
 }: DependsOnTableProps) {
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
 
-  if (!rules?.length) return null
+  if (!rules?.length) {
+    if (showEmptyState) {
+      return (
+        <div
+          className={cn(
+            'rounded-md overflow-x-auto',
+            ts.borderStyle,
+            ts.accentBorder,
+            ts.tableBg || 'bg-card/50',
+            'px-4 py-6 text-center text-sm text-muted-foreground'
+          )}
+        >
+          No rules.
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div

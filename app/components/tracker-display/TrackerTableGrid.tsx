@@ -211,7 +211,8 @@ function TrackerTableGridInner({
         field.dataType === 'options' ||
         field.dataType === 'multiselect' ||
         field.dataType === 'dynamic_select' ||
-        field.dataType === 'dynamic_multiselect'
+        field.dataType === 'dynamic_multiselect' ||
+        field.dataType === 'field_mappings'
       map.set(
         field.id,
         needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, fullGridData, trackerContext) : undefined

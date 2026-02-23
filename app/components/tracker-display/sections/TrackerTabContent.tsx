@@ -98,8 +98,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
     [tab.id, sections, grids]
   )
 
-  // Edit mode: render flat Notion-like block editor (full width so BlockEditor's ml-auto right-aligns).
-  // Do not pass onAddEntry/onDeleteEntries so Add Entry / add-data buttons are hidden.
+  // Edit mode: render flat Notion-like block editor. Pass onAddEntry/onDeleteEntries so Shared-tab grids (Field mappings, Rules) can add/delete rows.
   if (canEditLayout) {
     return (
       <TabsContent key={tab.id} value={tab.id} className={`${TAB_CONTENT_ROOT} data-[state=inactive]:hidden`} forceMount>
@@ -116,12 +115,14 @@ export const TrackerTabContent = memo(function TrackerTabContent({
           gridData={gridData}
           gridDataRef={gridDataRef}
           onUpdate={onUpdate}
+          onAddEntry={onAddEntry}
+          onDeleteEntries={onDeleteEntries}
         />
       </TabsContent>
     )
   }
 
-  // Normal display mode: same vertical structure as edit — TAB_CONTENT_INNER applies space-y-6 to section list
+  // Normal display mode: sections (including Field mappings and Rules grids on Shared tab) use normal data table
   return (
     <TabsContent key={tab.id} value={tab.id} className={`${TAB_CONTENT_ROOT} data-[state=inactive]:hidden`} forceMount>
       <div className={TAB_CONTENT_INNER}>

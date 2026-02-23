@@ -79,6 +79,7 @@ export function DataTableCell<TData, TValue>({
     : null
   const showError = dirty && !!validationError
   const isMultiselect = fieldInfo?.type === 'multiselect' || fieldInfo?.type === 'dynamic_multiselect'
+  const isFieldMappings = fieldInfo?.type === 'field_mappings'
 
   return (
     <TableCell
@@ -90,7 +91,7 @@ export function DataTableCell<TData, TValue>({
       className={cn(
         "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",
         !isSelect && "cursor-text hover:bg-muted/50 focus-within:bg-muted",
-        isMultiselect && "overflow-hidden",
+        (isMultiselect || isFieldMappings) && "overflow-hidden",
         showError && "ring-2 ring-destructive ring-inset"
       )}
       title={showError ? validationError! : undefined}
@@ -101,7 +102,7 @@ export function DataTableCell<TData, TValue>({
         </div>
       ) : fieldInfo ? (
         isHidden ? null : (
-          <div className={cn(isMultiselect && "min-w-0 overflow-hidden w-full")}>
+          <div className={cn((isMultiselect || isFieldMappings) && "min-w-0 overflow-hidden w-full")}>
             <DataTableInput
               value={value}
               onChange={handleUpdate}

@@ -25,8 +25,22 @@ import {
   ensureDependsOnOptionGrids,
   SHARED_TAB_ID,
   DEPENDS_ON_RULES_GRID,
+  DEPENDS_ON_OPTIONS_SECTION_ID,
   rulesGridRowsToDependsOn,
 } from '@/lib/depends-on-options'
+import {
+  ensureBindingsGrid,
+  bindingsGridRowsToBindings,
+  BINDINGS_GRID_ID,
+  BINDINGS_SECTION_ID,
+} from '@/lib/bindings-grid'
+
+const DEFAULT_SHARED_TAB: TrackerTab = {
+  id: SHARED_TAB_ID,
+  name: 'Shared',
+  placeId: 999,
+  config: {},
+}
 
 // Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
 function SortableTabRow({
@@ -40,7 +54,8 @@ function SortableTabRow({
   editMode?: boolean
   onSchemaChange?: TrackerDisplayProps['onSchemaChange']
   onRenameTab: (tabId: string, name: string) => void
-  onRemoveTab: (tabId: string) => void
+  /** When undefined, remove button is hidden (e.g. for non-removable Shared tab). */
+  onRemoveTab: ((tabId: string) => void) | undefined
 }) {
   const id = `tab-${tab.id}`
   const {
@@ -84,7 +99,7 @@ function SortableTabRow({
           tab.name
         )}
       </TabsTrigger>
-      {editMode && onSchemaChange && (
+      {editMode && onSchemaChange && onRemoveTab && (
         <span className="flex min-w-0 max-w-0 shrink-0 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6">
           <Button
             type="button"
@@ -123,12 +138,19 @@ export function TrackerDisplayInline({
   undo,
   canUndo,
 }: TrackerDisplayProps) {
-  const normalizedTabs = useMemo(
-    () =>
-      (tabs ?? [])
-        .filter((tab) => !tab.config?.isHidden)
-        .sort((a, b) => a.placeId - b.placeId),
-    [tabs]
+  const normalizedTabs = useMemo(() => {
+    const list = (tabs ?? []).filter((tab) => !tab.config?.isHidden)
+    const hasShared = list.some((t) => t.id === SHARED_TAB_ID)
+    if (!hasShared) {
+      return [...list, DEFAULT_SHARED_TAB].sort((a, b) => a.placeId - b.placeId)
+    }
+    return list.sort((a, b) => a.placeId - b.placeId)
+  }, [tabs])
+
+  /** True when the Shared tab is in the displayed tab list (so we show Bindings + Rules sections there). */
+  const hasSharedTabInView = useMemo(
+    () => normalizedTabs.some((t) => t.id === SHARED_TAB_ID),
+    [normalizedTabs]
   )
 
   const [activeTabId, setActiveTabId] = useState(normalizedTabs[0]?.id ?? '')
@@ -165,34 +187,58 @@ export function TrackerDisplayInline({
     Record<string, Array<Record<string, unknown>>>
   >(() => ({}))
 
-  const hasSharedTab = (tabs ?? []).some((t) => t.id === SHARED_TAB_ID)
-  const dependsOnAug = useMemo(() => {
-    if (!hasSharedTab) return null
-    return ensureDependsOnOptionGrids({
+  const sharedTabAug = useMemo(() => {
+    if (!hasSharedTabInView) return null
+    const bindingsAug = ensureBindingsGrid({
       sections: sections ?? [],
       grids: grids ?? [],
       fields: fields ?? [],
       layoutNodes: layoutNodes ?? [],
       bindings: bindings ?? {},
+    })
+    const dependsOnAug = ensureDependsOnOptionGrids({
+      sections: bindingsAug.sections,
+      grids: bindingsAug.grids,
+      fields: bindingsAug.fields,
+      layoutNodes: bindingsAug.layoutNodes,
+      bindings: bindings ?? {},
       dependsOn: dependsOn ?? [],
     })
-  }, [hasSharedTab, sections, grids, fields, layoutNodes, bindings, dependsOn])
+    const mergedSeedGridData = {
+      ...bindingsAug.seedGridData,
+      ...dependsOnAug.seedGridData,
+    }
+    const sectionsWithOrder = dependsOnAug.sections.map((s) => {
+      if (s.tabId !== SHARED_TAB_ID) return s
+      if (s.id === BINDINGS_SECTION_ID) return { ...s, placeId: 0 }
+      if (s.id === DEPENDS_ON_OPTIONS_SECTION_ID) return { ...s, placeId: 1 }
+      return { ...s, placeId: Math.max(2, (s.placeId ?? 0)) }
+    })
+    return {
+      sections: sectionsWithOrder,
+      grids: dependsOnAug.grids,
+      fields: dependsOnAug.fields,
+      layoutNodes: dependsOnAug.layoutNodes,
+      bindings: dependsOnAug.bindings,
+      seedGridData: mergedSeedGridData,
+      hasBindingsGrid: true,
+    }
+  }, [hasSharedTabInView, sections, grids, fields, layoutNodes, bindings, dependsOn])
 
-  const effectiveSections = dependsOnAug ? dependsOnAug.sections : (sections ?? [])
-  const effectiveGrids = dependsOnAug ? dependsOnAug.grids : (grids ?? [])
-  const effectiveFields = dependsOnAug ? dependsOnAug.fields : (fields ?? [])
-  const effectiveLayoutNodes = dependsOnAug ? dependsOnAug.layoutNodes : (layoutNodes ?? [])
-  const effectiveBindings = dependsOnAug ? dependsOnAug.bindings : (bindings ?? {})
+  const effectiveSections = sharedTabAug ? sharedTabAug.sections : (sections ?? [])
+  const effectiveGrids = sharedTabAug ? sharedTabAug.grids : (grids ?? [])
+  const effectiveFields = sharedTabAug ? sharedTabAug.fields : (fields ?? [])
+  const effectiveLayoutNodes = sharedTabAug ? sharedTabAug.layoutNodes : (layoutNodes ?? [])
 
   const baseGridData = useMemo(() => {
     const merged = { ...seedGridData }
-    if (dependsOnAug) {
-      for (const [gridId, rows] of Object.entries(dependsOnAug.seedGridData)) {
+    if (sharedTabAug) {
+      for (const [gridId, rows] of Object.entries(sharedTabAug.seedGridData)) {
         merged[gridId] = rows
       }
     }
     return merged
-  }, [seedGridData, dependsOnAug])
+  }, [seedGridData, sharedTabAug])
 
   const gridData = useMemo(() => {
     const merged = { ...baseGridData }
@@ -205,11 +251,17 @@ export function TrackerDisplayInline({
   const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
   gridDataRef.current = gridData
 
+  const effectiveBindings = useMemo(() => {
+    if (!sharedTabAug?.hasBindingsGrid) return bindings ?? {}
+    const rows = gridData[BINDINGS_GRID_ID]
+    return bindingsGridRowsToBindings(rows)
+  }, [sharedTabAug?.hasBindingsGrid, gridData, bindings])
+
   const effectiveDependsOn = useMemo(() => {
-    if (!dependsOnAug) return dependsOn ?? []
+    if (!sharedTabAug) return dependsOn ?? []
     const rulesRows = gridData[DEPENDS_ON_RULES_GRID]
     return rulesGridRowsToDependsOn(rulesRows)
-  }, [dependsOnAug, gridData, dependsOn])
+  }, [sharedTabAug, gridData, dependsOn])
 
   useEffect(() => {
     if (getDataRef) {
@@ -285,7 +337,7 @@ export function TrackerDisplayInline({
 
   const handleRemoveTab = useCallback(
     (tabId: string) => {
-      if (!onSchemaChange) return
+      if (!onSchemaChange || tabId === SHARED_TAB_ID) return
       const tabList = (tabs ?? []).filter((t) => t.id !== tabId)
       const sectionIdsInTab = new Set(
         (sections ?? []).filter((s) => s.tabId === tabId).map((s) => s.id)
@@ -431,7 +483,7 @@ export function TrackerDisplayInline({
                   editMode={editMode}
                   onSchemaChange={onSchemaChange}
                   onRenameTab={handleRenameTab}
-                  onRemoveTab={handleRemoveTab}
+                  onRemoveTab={tab.id === SHARED_TAB_ID ? undefined : handleRemoveTab}
                 />
               ))}
             </SortableContext>

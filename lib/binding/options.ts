@@ -62,7 +62,11 @@ export function resolveFieldOptionsV2(
   if (field == null) return undefined
 
   const dataType = field.dataType
-  if (dataType === 'dynamic_select' || dataType === 'dynamic_multiselect') {
+  if (
+    dataType === 'dynamic_select' ||
+    dataType === 'dynamic_multiselect' ||
+    dataType === 'field_mappings'
+  ) {
     const config = (field.config ?? {}) as { dynamicOptionsFunction?: string }
     const functionId = config.dynamicOptionsFunction
     if (functionId && trackerContext) {

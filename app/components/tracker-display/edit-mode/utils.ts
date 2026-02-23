@@ -31,7 +31,7 @@ export const CREATABLE_FIELD_TYPES: TrackerFieldType[] = [
 /** Max columns per row for div (form) grids. */
 export const DIV_GRID_MAX_COLS = 12
 
-/** Human-readable labels for each creatable field type. */
+/** Human-readable labels for each field type. (field_mappings is internal to Bindings grid.) */
 export const FIELD_TYPE_LABELS: Record<TrackerFieldType, string> = {
   string: 'Short text',
   number: 'Number',
@@ -45,6 +45,7 @@ export const FIELD_TYPE_LABELS: Record<TrackerFieldType, string> = {
   multiselect: 'Multi select',
   dynamic_select: 'Dynamic single select',
   dynamic_multiselect: 'Dynamic multi select',
+  field_mappings: 'Fields mapping',
 }
 
 /** @deprecated Use getCreatableFieldTypes() or getCreatableFieldTypesWithLabels() instead. */

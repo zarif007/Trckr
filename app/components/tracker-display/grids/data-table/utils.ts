@@ -20,6 +20,7 @@ export type FieldType =
   | 'multiselect'
   | 'dynamic_select'
   | 'dynamic_multiselect'
+  | 'field_mappings'
   | 'boolean'
   | 'text'
   | 'link'
@@ -111,6 +112,7 @@ export const getFieldIcon = (type: FieldType) => {
       return List
     case 'multiselect':
     case 'dynamic_multiselect':
+    case 'field_mappings':
       return Tags
     case 'link':
       return Link

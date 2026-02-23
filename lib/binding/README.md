@@ -67,12 +67,12 @@ Label and value fields for the select are never mapped to other targets; they ar
 
 ```
 lib/binding/
-├── README.md      # This file
-├── index.ts       # Public API re-exports
-├── types.ts       # TrackerLike, TrackerContextForOptions, ResolvedOption
+├── README.md       # This file
+├── index.ts        # Public API re-exports
+├── types.ts        # TrackerLike, TrackerContextForOptions, ResolvedOption
 ├── schema-build.ts # getOptionGridLabelAndValueFieldIds, buildBindingsFromSchema
-├── enrich.ts      # enrichBindingsFromSchema
-└── options.ts     # resolveFieldOptionsLegacy, resolveFieldOptionsV2, getFieldBinding
+├── enrich.ts       # enrichBindingsFromSchema
+└── options.ts      # resolveFieldOptionsLegacy, resolveFieldOptionsV2, getFieldBinding
 ```
 
 ---
@@ -101,6 +101,10 @@ Import from `@/lib/binding`:
 
 ## Dependencies
 
-- **lib/types/tracker-bindings** — not used in types; options.ts uses TrackerBindings, TrackerBindingEntry for resolution.  
-- **lib/resolve-bindings** — path/lookup and option resolution (buildFieldPath, getBindingForField, resolveOptionsFromBinding). enrich uses normalizeOptionsGridId.  
-- **lib/dynamic-options** — getDynamicOptions for dynamic_select/dynamic_multiselect; types.ts uses DynamicOptionsContext for TrackerContextForOptions.
+- **lib/types/tracker-bindings** — options.ts uses `TrackerBindings`, `TrackerBindingEntry` for resolution.  
+- **lib/resolve-bindings** — path/lookup and option resolution (`buildFieldPath`, `getBindingForField`, `resolveOptionsFromBinding`). enrich uses `normalizeOptionsGridId`.  
+- **lib/dynamic-options** — `getDynamicOptions` for dynamic_select/dynamic_multiselect; types.ts uses `DynamicOptionsContext` for `TrackerContextForOptions`.
+
+## See also
+
+- **lib/bindings-grid** — Bindings table on the Shared tab: grid structure, column spec, and conversion between bindings and grid rows for editing.

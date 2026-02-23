@@ -15,7 +15,10 @@ import { FieldType, FieldConfig, type FieldMetadata, type OptionsGridFieldDef } 
 import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS } from '@/lib/style-utils'
 import { MultiSelect } from '@/components/ui/multi-select'
+import { Button } from '@/components/ui/button'
+import { Plus, Trash2 } from 'lucide-react'
 import { EntryFormDialog } from './entry-form-dialog'
+import type { FieldMapping } from '@/lib/types/tracker-bindings'
 
 interface DataTableInputProps {
   value: any
@@ -349,6 +352,91 @@ export function DataTableInput({
           )}
         </>
       )
+    case 'field_mappings': {
+      const mappings: FieldMapping[] = Array.isArray(value)
+        ? value.filter((m): m is FieldMapping => m && typeof m === 'object' && typeof (m as FieldMapping).from === 'string' && typeof (m as FieldMapping).to === 'string')
+        : []
+      const updateAt = (index: number, next: FieldMapping) => {
+        const nextList = [...mappings]
+        nextList[index] = next
+        onChange(nextList)
+      }
+      const removeAt = (index: number) => {
+        const nextList = mappings.filter((_, i) => i !== index)
+        onChange(nextList)
+      }
+      const append = () => onChange([...mappings, { from: '', to: '' }])
+      const summary = mappings.length === 0 ? 'No mappings' : `${mappings.length} mapping${mappings.length === 1 ? '' : 's'}`
+      const editor = (
+        <div className="flex flex-col gap-1.5 w-full min-w-0 max-w-[420px]">
+          {mappings.map((m, i) => (
+            <div key={i} className="flex items-center gap-1.5 flex-wrap">
+              <SearchableSelect
+                options={selectOptions}
+                value={m.from || '__empty__'}
+                onValueChange={(v) => updateAt(i, { ...m, from: v === '__empty__' ? '' : v })}
+                placeholder="From"
+                searchPlaceholder="From..."
+                className={cn(inlineInputClass, 'flex-1 min-w-[80px]')}
+                disabled={isDisabled}
+              />
+              <span className="text-muted-foreground shrink-0">→</span>
+              <SearchableSelect
+                options={selectOptions}
+                value={m.to || '__empty__'}
+                onValueChange={(v) => updateAt(i, { ...m, to: v === '__empty__' ? '' : v })}
+                placeholder="To"
+                searchPlaceholder="To..."
+                className={cn(inlineInputClass, 'flex-1 min-w-[80px]')}
+                disabled={isDisabled}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={() => removeAt(i)}
+                disabled={isDisabled}
+                aria-label="Remove mapping"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full justify-center gap-1.5 h-7 text-muted-foreground"
+            onClick={append}
+            disabled={isDisabled}
+          >
+            <Plus className="size-3.5" />
+            Add mapping
+          </Button>
+        </div>
+      )
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                inlineInputClass,
+                'w-full text-left px-2 py-1.5 rounded border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
+                className
+              )}
+              disabled={isDisabled}
+            >
+              <span className="truncate block">{summary}</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-3" align="start" sideOffset={4}>
+            {editor}
+          </PopoverContent>
+        </Popover>
+      )
+    }
     case 'link':
       return (
         <Input

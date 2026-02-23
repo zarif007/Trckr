@@ -319,14 +319,22 @@ function SearchableSelect({
               {filteredOptions.map((option) => {
                 const optValue = typeof option === "string" ? option : option.value
                 const optLabel = typeof option === "string" ? option : option.label
+                const handleSelect = () => {
+                  setOpen(false)
+                  setSearchValue("")
+                  onValueChange?.(optValue)
+                }
                 return (
                   <CommandItem
                     key={optValue}
                     value={optLabel}
-                    onSelect={() => {
-                      onValueChange?.(optValue)
-                      setOpen(false)
-                      setSearchValue("")
+                    onSelect={handleSelect}
+                    onPointerDown={(e) => {
+                      // Ensure first click closes and selects (cmdk onSelect can miss first click in portals)
+                      if (e.button === 0) {
+                        e.preventDefault()
+                        handleSelect()
+                      }
                     }}
                     className="cursor-pointer"
                   >
@@ -346,9 +354,17 @@ function SearchableSelect({
                 <CommandItem
                   value={addOptionLabel}
                   onSelect={() => {
-                    onAddOptionClick()
                     setOpen(false)
                     setSearchValue("")
+                    onAddOptionClick()
+                  }}
+                  onPointerDown={(e) => {
+                    if (e.button === 0) {
+                      e.preventDefault()
+                      setOpen(false)
+                      setSearchValue("")
+                      onAddOptionClick()
+                    }
                   }}
                   className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
                 >

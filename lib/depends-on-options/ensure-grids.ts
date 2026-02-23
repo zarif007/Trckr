@@ -39,7 +39,7 @@ export function ensureDependsOnOptionGrids(
       ...outSections,
       {
         id: DEPENDS_ON_OPTIONS_SECTION_ID,
-        name: 'Depends On options',
+        name: 'Rules',
         tabId: SHARED_TAB_ID,
         placeId: maxPlaceId + 1,
         config: {},
@@ -58,6 +58,7 @@ export function ensureDependsOnOptionGrids(
         placeId: outGrids.filter((g) => g.sectionId === DEPENDS_ON_OPTIONS_SECTION_ID).length + 1,
         config: {},
         type: 'table',
+        views: [{ id: `${DEPENDS_ON_RULES_GRID}_table_view`, name: 'Table', type: 'table', config: {} }],
       },
     ]
     gridIds.add(DEPENDS_ON_RULES_GRID)

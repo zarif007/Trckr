@@ -6,6 +6,7 @@ export type TrackerFieldType =
   | 'multiselect'
   | 'dynamic_select'
   | 'dynamic_multiselect'
+  | 'field_mappings'
   | 'boolean'
   | 'text'
   | 'link'
