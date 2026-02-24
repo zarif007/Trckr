@@ -534,7 +534,7 @@ export function FieldSettingsDialog({
                 </div>
                 <div className="space-y-4">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                    Auto population
+                    Getting Data from
                   </p>
                   {!gridId ? (
                     <p className="text-xs text-muted-foreground">
@@ -777,19 +777,19 @@ export function FieldSettingsDialog({
                           options grid fields (left) are copied into target fields on this grid (right).
                         </p>
                         {bindingDraft && (
-                            <FieldMappingsEditor
-                              value={bindingDraft.fieldMappings}
-                              onChange={(next) =>
-                                setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
-                              }
-                              fromOptions={
-                                bindingDraft.optionsGrid
-                                  ? getGridFieldOptions(bindingDraft.optionsGrid)
-                                  : allFieldPathOptions
-                              }
-                              toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
-                              className="w-full"
-                            />
+                          <FieldMappingsEditor
+                            value={bindingDraft.fieldMappings}
+                            onChange={(next) =>
+                              setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
+                            }
+                            fromOptions={
+                              bindingDraft.optionsGrid
+                                ? getGridFieldOptions(bindingDraft.optionsGrid)
+                                : allFieldPathOptions
+                            }
+                            toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
+                            className="w-full"
+                          />
                         )}
                         {bindingValidation.errors.fieldMappings && (
                           <div className="text-xs text-destructive">{bindingValidation.errors.fieldMappings}</div>

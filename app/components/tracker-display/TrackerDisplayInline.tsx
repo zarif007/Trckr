@@ -37,6 +37,11 @@ const DEFAULT_SHARED_TAB: TrackerTab = {
   config: {},
 }
 
+function getPreferredTabId(tabs: TrackerTab[]): string {
+  const nonShared = tabs.find((tab) => tab.id !== SHARED_TAB_ID)
+  return nonShared?.id ?? tabs[0]?.id ?? ''
+}
+
 // Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
 function SortableTabRow({
   tab,
@@ -148,16 +153,25 @@ export function TrackerDisplayInline({
     [normalizedTabs]
   )
 
-  const [activeTabId, setActiveTabId] = useState(normalizedTabs[0]?.id ?? '')
+  const [activeTabId, setActiveTabId] = useState(() => getPreferredTabId(normalizedTabs))
+  const userSelectedTabRef = useRef(false)
 
   useEffect(() => {
     if (normalizedTabs.length > 0) {
       const tabExists = normalizedTabs.some((tab) => tab.id === activeTabId)
-      if (!activeTabId || !tabExists) {
-        setActiveTabId(normalizedTabs[0].id)
+      const hasNonShared = normalizedTabs.some((tab) => tab.id !== SHARED_TAB_ID)
+      const shouldAutoMoveFromShared =
+        activeTabId === SHARED_TAB_ID && hasNonShared && !userSelectedTabRef.current
+      if (!activeTabId || !tabExists || shouldAutoMoveFromShared) {
+        setActiveTabId(getPreferredTabId(normalizedTabs))
       }
     }
   }, [normalizedTabs, activeTabId])
+
+  const handleTabChange = useCallback((nextTabId: string) => {
+    userSelectedTabRef.current = true
+    setActiveTabId(nextTabId)
+  }, [])
 
   const seedGridData = useMemo(() => {
     const fromBindings = getInitialGridDataFromBindings(bindings ?? {})
@@ -484,7 +498,7 @@ export function TrackerDisplayInline({
 
   const content = (
     <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-lg">
-      <Tabs value={activeTabId} onValueChange={setActiveTabId} className="w-full min-w-0">
+      <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}
           {editMode && onSchemaChange && (

@@ -26,6 +26,72 @@ const CONTINUE_PROMPT =
   'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
 
 const MAX_AUTO_CONTINUES = 3
+const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
+const DEFAULT_SHARED_TAB_ID = 'shared_tab'
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value != null && typeof value === 'object' && !Array.isArray(value)
+
+const isEmptyObject = (value: unknown): boolean =>
+  !isPlainObject(value) || Object.keys(value).length === 0
+
+const isDefaultTabConfig = (value: unknown): boolean => {
+  if (!isPlainObject(value)) return true
+  for (const [key, v] of Object.entries(value)) {
+    if (key !== 'isHidden') return false
+    if (v !== false && v !== undefined) return false
+  }
+  return true
+}
+
+/**
+ * Detect untouched first-run scaffold so we don't force patch mode:
+ * - tabs are only default Overview (+ optional default Shared)
+ * - no sections/grids/fields/layout nodes/bindings/validations/styles/dependsOn
+ */
+const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): boolean => {
+  if (!tracker) return true
+  const trackerWithExtras = tracker as TrackerLike & { styles?: unknown }
+
+  const sections = Array.isArray(tracker.sections) ? tracker.sections : []
+  const grids = Array.isArray(tracker.grids) ? tracker.grids : []
+  const fields = Array.isArray(tracker.fields) ? tracker.fields : []
+  const layoutNodes = Array.isArray(tracker.layoutNodes) ? tracker.layoutNodes : []
+  const dependsOn = Array.isArray(tracker.dependsOn) ? tracker.dependsOn : []
+
+  if (sections.length > 0 || grids.length > 0 || fields.length > 0 || layoutNodes.length > 0) {
+    return false
+  }
+
+  if (!isEmptyObject(tracker.bindings) || !isEmptyObject(tracker.validations) || !isEmptyObject(trackerWithExtras.styles)) {
+    return false
+  }
+  if (dependsOn.length > 0) return false
+
+  const tabs = Array.isArray(tracker.tabs) ? tracker.tabs : []
+  if (tabs.length === 0 || tabs.length > 2) return false
+
+  let sawOverview = false
+  for (const tab of tabs) {
+    if (!tab || typeof tab.id !== 'string') return false
+    if (!isDefaultTabConfig(tab.config)) return false
+
+    if (tab.id === DEFAULT_OVERVIEW_TAB_ID) {
+      sawOverview = true
+      if ((tab.name ?? 'Overview') !== 'Overview') return false
+      continue
+    }
+
+    if (tab.id === DEFAULT_SHARED_TAB_ID) {
+      if ((tab.name ?? 'Shared') !== 'Shared') return false
+      continue
+    }
+
+    return false
+  }
+
+  return sawOverview
+}
 
 export const suggestions = [
   {
@@ -79,7 +145,7 @@ export function useTrackerChat() {
   const [messages, setMessages] = useState<Message[]>([])
   const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [activeTrackerData, setActiveTrackerData] = useState<TrackerResponse | null>(null)
+  const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
@@ -91,6 +157,7 @@ export function useTrackerChat() {
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
+  const firstRunUserDraftRef = useRef<TrackerResponse | null>(null)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -106,9 +173,32 @@ export function useTrackerChat() {
     return reversed.find((msg) => msg.trackerData)?.trackerData ?? null
   }
 
-  /** Current state to send to the API so the AI always starts from this (never from empty). */
-  const getCurrentTrackerForApi = (): TrackerResponse => {
-    return getBaseTracker() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse)
+  /**
+   * Current state sent to the API.
+   * - If we already have a tracker, send it so the model can generate a patch.
+   * - For the first request, send null when state is untouched default scaffold.
+   * - For the first request with manual edits, include the edited state.
+   */
+  const getCurrentTrackerForApi = (): TrackerResponse | null => {
+    const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
+    if (!hasGeneratedTracker) {
+      return firstRunUserDraftRef.current
+    }
+    return getBaseTracker()
+  }
+
+  const setResolvedTrackerData = (next: TrackerResponse | null) => {
+    _setActiveTrackerData(next)
+  }
+
+  const setActiveTrackerData = (next: TrackerResponse | null) => {
+    _setActiveTrackerData(next)
+    const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
+    if (!hasGeneratedTracker) {
+      firstRunUserDraftRef.current = isUntouchedFirstRunScaffold(next as TrackerLike | null)
+        ? null
+        : next
+    }
   }
 
   const trackerHasAnyData = (tracker?: TrackerLike | null) => {
@@ -123,7 +213,9 @@ export function useTrackerChat() {
 
   const buildTrackerFromResponse = (response?: MultiAgentSchema) => {
     if (!response) return null
-    const base = getBaseTracker()
+    // Keep merge base aligned with what we send to the API:
+    // if we don't have a tracker yet, use the same initial schema baseline.
+    const base = getBaseTracker() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse)
     let rawTracker = response.tracker as TrackerLike | undefined
 
     if (!rawTracker && response.trackerPatch && base) {
@@ -203,7 +295,7 @@ export function useTrackerChat() {
         setPendingQuery(null)
         if (hasValidTracker) {
           continueCountRef.current = 0
-          setActiveTrackerData(tracker as TrackerResponse)
+          setResolvedTrackerData(tracker as TrackerResponse)
         } else {
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
             setPendingContinue(true)
@@ -229,7 +321,7 @@ export function useTrackerChat() {
             managerData: partial.manager,
           }
           setMessages((prev) => [...prev, assistantMessage])
-          if (partialTracker) setActiveTrackerData(partialTracker as TrackerResponse)
+          if (partialTracker) setResolvedTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
             setPendingContinue(true)
             setGenerationErrorMessage(

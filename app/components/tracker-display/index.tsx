@@ -10,9 +10,6 @@ export { TrackerDisplayInline as TrackerDisplay } from './TrackerDisplayInline'
 /** Standalone table for displaying depends-on rules (e.g. in an admin or rules-editor view). */
 export { DependsOnTable } from './DependsOnTable'
 
-/** Table for viewing and editing select/multiselect field bindings (options grid, label field, mappings). */
-export { BindingsTable } from './BindingsTable'
-
 /** Reusable layout primitives (tokens, SectionBar, ViewBlockWrapper, InlineEditableName). */
 export {
   SectionBar,

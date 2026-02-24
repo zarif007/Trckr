@@ -4,6 +4,19 @@
 
 import { MAX_CONTEXT_MESSAGES_PER_ROLE } from './constants'
 
+const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
+const DEFAULT_SHARED_TAB_ID = 'shared_tab'
+const DEPENDS_ON_OPTIONS_SECTION_ID = 'depends_on_options_section'
+const DEPENDS_ON_RULES_GRID = 'depends_on_rules_grid'
+const RULES_GRID_FIELD_IDS = new Set([
+  'rule_source',
+  'rule_operator',
+  'rule_value',
+  'rule_action',
+  'rule_set',
+  'rule_targets',
+])
+
 /** Minimal shape for chat messages we read from */
 interface ChatMessage {
   role?: string
@@ -26,6 +39,104 @@ export interface NormalizedTrackerState {
   bindings?: Record<string, unknown>
   validations?: Record<string, unknown>
   dependsOn?: unknown[]
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value)
+}
+
+function isEmptyRecord(value: unknown): boolean {
+  return !isPlainRecord(value) || Object.keys(value).length === 0
+}
+
+function isDefaultTabConfig(value: unknown): boolean {
+  if (!isPlainRecord(value)) return true
+  for (const [key, v] of Object.entries(value)) {
+    if (key !== 'isHidden') return false
+    if (v !== false && v !== undefined) return false
+  }
+  return true
+}
+
+function isDependsOnScaffoldSection(section: { id: string; tabId?: string }): boolean {
+  return section.id === DEPENDS_ON_OPTIONS_SECTION_ID && section.tabId === DEFAULT_SHARED_TAB_ID
+}
+
+function isDependsOnScaffoldGrid(grid: { id: string; sectionId?: string }): boolean {
+  return grid.id === DEPENDS_ON_RULES_GRID && grid.sectionId === DEPENDS_ON_OPTIONS_SECTION_ID
+}
+
+function isDependsOnScaffoldField(field: { id: string }): boolean {
+  return RULES_GRID_FIELD_IDS.has(field.id)
+}
+
+function isDependsOnScaffoldLayoutNode(node: { gridId: string; fieldId: string }): boolean {
+  return node.gridId === DEPENDS_ON_RULES_GRID && RULES_GRID_FIELD_IDS.has(node.fieldId)
+}
+
+/**
+ * First-run untouched scaffold:
+ * - only default tabs (Overview, optional Shared)
+ * - no user-created structural data
+ * - ignore internal Depends On scaffold rows/fields if present
+ */
+function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
+  const meaningfulSections = state.sections.filter((s) => !isDependsOnScaffoldSection(s))
+  const meaningfulGrids = state.grids.filter((g) => !isDependsOnScaffoldGrid(g))
+  const meaningfulFields = state.fields.filter((f) => !isDependsOnScaffoldField(f))
+  const meaningfulLayout = (state.layoutNodes ?? [])
+    .filter((n): n is { gridId: string; fieldId: string } => {
+      if (!n || typeof n !== 'object') return false
+      const o = n as Record<string, unknown>
+      return typeof o.gridId === 'string' && typeof o.fieldId === 'string'
+    })
+    .filter((n) => !isDependsOnScaffoldLayoutNode(n))
+
+  const bindings = state.bindings ?? {}
+  const validations = state.validations ?? {}
+  const meaningfulBindingKeys = Object.keys(bindings).filter(
+    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+  )
+  const meaningfulValidationKeys = Object.keys(validations).filter(
+    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+  )
+
+  if (
+    meaningfulSections.length > 0 ||
+    meaningfulGrids.length > 0 ||
+    meaningfulFields.length > 0 ||
+    meaningfulLayout.length > 0 ||
+    meaningfulBindingKeys.length > 0 ||
+    meaningfulValidationKeys.length > 0
+  ) {
+    return false
+  }
+
+  const dependsOn = Array.isArray(state.dependsOn) ? state.dependsOn : []
+  if (dependsOn.length > 0) return false
+
+  if (state.tabs.length === 0 || state.tabs.length > 2) return false
+
+  let sawOverview = false
+  for (const tab of state.tabs) {
+    if (!tab.id) return false
+    if (!isDefaultTabConfig(tab.config)) return false
+
+    if (tab.id === DEFAULT_OVERVIEW_TAB_ID) {
+      sawOverview = true
+      if ((tab.name ?? 'Overview') !== 'Overview') return false
+      continue
+    }
+
+    if (tab.id === DEFAULT_SHARED_TAB_ID) {
+      if ((tab.name ?? 'Shared') !== 'Shared') return false
+      continue
+    }
+
+    return false
+  }
+
+  return sawOverview
 }
 
 function toRecordArray(value: unknown): Array<Record<string, unknown>> {
@@ -125,5 +236,6 @@ export function buildConversationContext(messages: unknown[]): string {
 export function buildCurrentStateBlock(currentTracker: unknown): string {
   const state = normalizeTrackerState(currentTracker)
   if (!state) return ''
+  if (isUntouchedDefaultState(state)) return ''
   return `Current Tracker State (JSON): ${JSON.stringify(state, null, 2)}\n\n`
 }
