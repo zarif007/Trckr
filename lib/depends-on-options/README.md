@@ -6,8 +6,8 @@ Technical documentation for the **Depends On options** feature: how the Shared t
 
 ## What it is
 
-- **Purpose:** Let users configure **conditional field behavior** (hide, require, disable, or set a value) via a **Rules** table in the **Shared** tab, instead of editing raw `dependsOn` config.
-- **Behavior:** When the tracker has a Shared tab, the code ensures a "Depends On options" section and a "Rules" grid exist. Each row in that grid is one rule: source field, operator, value, action, set value, and target fields. Options for source/target/operator/action/set come from **dynamic-options** (by function id), not from this package.
+- **Purpose:** Let users configure **conditional field behavior** (hide, require, disable) via a **Rules** table in the **Shared** tab, instead of editing raw `dependsOn` config.
+- **Behavior:** When the tracker has a Shared tab, the code ensures a "Depends On options" section and a "Rules" grid exist. Each row in that grid is one rule: source field, operator, value, action (hide/require/disable), set (boolean for override value), and target fields. Options for source/target/operator/action/set come from **dynamic-options** (by function id), not from this package.
 - **Bidirectional:** Existing `dependsOn` rules are turned into seed rows for the Rules grid; when the user edits the grid, rows are converted back to `DependsOnRule[]` and used as the effective `dependsOn` for the display.
 
 ---

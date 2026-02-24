@@ -174,9 +174,43 @@ function TrackerKanbanGridInner({
       const currentGroup = currentCard?.[groupByFieldId]
       if (String(currentGroup ?? '').trim() !== nextGroupIdTrimmed) {
         onUpdate(cardIdx, groupByFieldId, nextGroupIdTrimmed)
+
+        // Apply bindings when group-by field changes (e.g. drag to another column)
+        const groupingField = kanbanFields.find((f) => f.id === groupByFieldId)
+        if (groupingField && (groupingField.dataType === 'options' || groupingField.dataType === 'multiselect')) {
+          const binding = getBindingForField(grid.id, groupByFieldId, bindings, tabId)
+          if (binding?.fieldMappings?.length) {
+            const selectFieldPath = `${grid.id}.${groupByFieldId}`
+            const optionRow = findOptionRow(fullGridData, binding, nextGroupIdTrimmed, selectFieldPath)
+            if (optionRow) {
+              const updates = applyBindings(binding, optionRow, selectFieldPath)
+              for (const update of updates) {
+                const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
+                if (targetGridId && targetFieldId) {
+                  if (onCrossGridUpdate) {
+                    onCrossGridUpdate(targetGridId, cardIdx, targetFieldId, update.value)
+                  } else if (targetGridId === grid.id) {
+                    onUpdate(cardIdx, targetFieldId, update.value)
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
-    [groupByFieldId, rows, onUpdate, validGroupIds]
+    [
+      groupByFieldId,
+      rows,
+      onUpdate,
+      onCrossGridUpdate,
+      validGroupIds,
+      kanbanFields,
+      grid.id,
+      bindings,
+      tabId,
+      fullGridData,
+    ]
   )
 
   const getBindingUpdates = useCallback(
@@ -303,6 +337,7 @@ function TrackerKanbanGridInner({
           fieldOrder={fieldOrder}
           initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
           onSave={handleEditSave}
+          getBindingUpdates={getBindingUpdates}
           getFieldOverrides={(values, fieldId) =>
             resolveDependsOnOverrides(
               dependsOnForGrid,

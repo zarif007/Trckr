@@ -6,6 +6,14 @@
 
 import type { DependsOnRule } from '@/lib/depends-on'
 
+const VALID_ACTIONS: DependsOnRule['action'][] = ['isHidden', 'isRequired', 'isDisabled']
+
+function toValidAction(raw: unknown): DependsOnRule['action'] {
+  return VALID_ACTIONS.includes(raw as DependsOnRule['action'])
+    ? (raw as DependsOnRule['action'])
+    : 'isHidden'
+}
+
 export function rulesGridRowsToDependsOn(
   rows: Array<Record<string, unknown>> | undefined
 ): DependsOnRule[] {
@@ -35,7 +43,7 @@ export function rulesGridRowsToDependsOn(
       source: String(source),
       operator: (row.rule_operator as DependsOnRule['operator']) ?? 'eq',
       value: row.rule_value,
-      action: (row.rule_action as DependsOnRule['action']) ?? 'isHidden',
+      action: toValidAction(row.rule_action),
       set: setValue,
       targets: targets.map(String),
     })

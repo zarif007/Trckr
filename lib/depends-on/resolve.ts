@@ -14,17 +14,14 @@ import type {
 } from './types'
 import { compareValues } from './compare'
 
-function normalizeAction(
-  action: unknown
-): keyof FieldOverride | 'setValue' | null {
+function normalizeAction(action: unknown): keyof FieldOverride | null {
   if (!action) return null
   if (
     action === 'isHidden' ||
     action === 'isRequired' ||
-    action === 'isDisabled' ||
-    action === 'set'
+    action === 'isDisabled'
   ) {
-    return action === 'set' ? 'setValue' : (action as keyof FieldOverride)
+    return action as keyof FieldOverride
   }
   const normalized = String(action)
     .trim()
@@ -35,7 +32,6 @@ function normalizeAction(
     return 'isRequired'
   if (normalized === 'disabled' || normalized === 'isdisabled')
     return 'isDisabled'
-  if (normalized === 'set') return 'setValue'
   return null
 }
 
@@ -51,10 +47,10 @@ export function resolveDependsOnOverrides(
 
   const onlyUseRowDataForSource = options?.onlyUseRowDataForSource === true
 
-  type DecisionValue = { priority: number; order: number; value: boolean | unknown }
+  type DecisionValue = { priority: number; order: number; value: boolean }
   const decisions: Record<
     string,
-    Partial<Record<keyof FieldOverride | 'setValue', DecisionValue>>
+    Partial<Record<keyof FieldOverride, DecisionValue>>
   > = {}
   const ruleMeta: Record<
     string,
@@ -114,45 +110,27 @@ export function resolveDependsOnOverrides(
       const action = normalizeAction(rule.action)
       if (!action) continue
 
-      if (action !== 'setValue') {
-        ruleMeta[targetFieldId] = ruleMeta[targetFieldId] ?? {}
-        ruleMeta[targetFieldId][action] = ruleMeta[targetFieldId][action] ?? {
-          hasShowRule: false,
-        }
-        if (action === 'isHidden' && setValue === false) {
-          ruleMeta[targetFieldId][action].hasShowRule = true
-        }
+      ruleMeta[targetFieldId] = ruleMeta[targetFieldId] ?? {}
+      ruleMeta[targetFieldId][action] = ruleMeta[targetFieldId][action] ?? {
+        hasShowRule: false,
+      }
+      if (action === 'isHidden' && setValue === false) {
+        ruleMeta[targetFieldId][action].hasShowRule = true
       }
 
       if (!matches) continue
 
       decisions[targetFieldId] = decisions[targetFieldId] ?? {}
-      if (action === 'setValue') {
-        const existing = decisions[targetFieldId].setValue
-        const valueToSet = rule.set
-        if (
-          !existing ||
-          priority > existing.priority ||
-          (priority === existing.priority && order > existing.order)
-        ) {
-          decisions[targetFieldId].setValue = {
-            priority,
-            order,
-            value: valueToSet,
-          }
-        }
-      } else {
-        const existing = decisions[targetFieldId][action]
-        if (
-          !existing ||
-          priority > existing.priority ||
-          (priority === existing.priority && order > existing.order)
-        ) {
-          decisions[targetFieldId][action] = {
-            priority,
-            order,
-            value: !!setValue,
-          }
+      const existing = decisions[targetFieldId][action]
+      if (
+        !existing ||
+        priority > existing.priority ||
+        (priority === existing.priority && order > existing.order)
+      ) {
+        decisions[targetFieldId][action] = {
+          priority,
+          order,
+          value: !!setValue,
         }
       }
     }
@@ -178,16 +156,13 @@ export function resolveDependsOnOverrides(
 
   const overrides: Record<string, FieldOverride> = {}
   Object.entries(decisions).forEach(([fieldId, actions]) => {
-    const setVal = (actions as { setValue?: DecisionValue }).setValue?.value
-    const out: FieldOverride = {
+    overrides[fieldId] = {
       isHidden: (actions.isHidden?.value as boolean | undefined) ?? undefined,
       isRequired:
         (actions.isRequired?.value as boolean | undefined) ?? undefined,
       isDisabled:
         (actions.isDisabled?.value as boolean | undefined) ?? undefined,
     }
-    if (setVal !== undefined) out.value = setVal
-    overrides[fieldId] = out
   })
 
   return overrides

@@ -140,7 +140,7 @@ export const stylesSchema = z
 // DEPENDS-ON (conditional field actions)
 
 const dependsOnActionEnum = z
-  .enum(['isHidden', 'isRequired', 'isDisabled', 'set'])
+  .enum(['isHidden', 'isRequired', 'isDisabled'])
   .catch('isHidden')
 
 export const dependsOnRuleSchema = z
@@ -148,8 +148,8 @@ export const dependsOnRuleSchema = z
     source: z.string().describe('Source field path (grid_id.field_id)'),
     operator: z.string().optional().describe('Comparison operator (e.g. =, !=, >, contains, in, is_empty)'),
     value: z.any().optional().describe('Value to compare against'),
-    action: dependsOnActionEnum.describe('Target field property to set (or "set" to write a value to targets)'),
-    set: z.union([z.boolean(), z.any()]).optional().describe('For isHidden/isRequired/isDisabled: value to set (default true). For action "set": value to write to target fields.'),
+    action: dependsOnActionEnum.describe('Target field property to set (hide/require/disable)'),
+    set: z.union([z.boolean(), z.any()]).optional().describe('For isHidden/isRequired/isDisabled: value to set (default true).'),
     targets: z.array(z.string()).default([]).describe('Target field paths (grid_id.field_id)'),
     priority: z.coerce.number().optional().describe('Priority for conflict resolution; higher wins'),
   })

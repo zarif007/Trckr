@@ -1,13 +1,13 @@
 # Depends-on
 
-Technical documentation for the **depends-on** rule engine: how conditional field behavior (hide, require, disable, set value) is defined by rules and resolved from grid data.
+Technical documentation for the **depends-on** rule engine: how conditional field behavior (hide, require, disable) is defined by rules and resolved from grid data.
 
 ---
 
 ## What it is
 
-- **Purpose:** Evaluate **depends-on rules** against current grid data and produce **per-field overrides** (isHidden, isRequired, isDisabled, value) for a given grid and row. No UI here—only types, condition evaluation, indexing, and resolution.
-- **Rule shape:** Each rule has a **source** (field path), **operator** (eq, in, contains, …), **value**, **action** (isHidden, isRequired, isDisabled, set), optional **set** (boolean or value), and **targets** (field paths). When the source value matches the condition, the action is applied to the target fields.
+- **Purpose:** Evaluate **depends-on rules** against current grid data and produce **per-field overrides** (isHidden, isRequired, isDisabled) for a given grid and row. No UI here—only types, condition evaluation, indexing, and resolution.
+- **Rule shape:** Each rule has a **source** (field path), **operator** (eq, in, contains, …), **value**, **action** (isHidden, isRequired, isDisabled), optional **set** (boolean for the override value), and **targets** (field paths). When the source value matches the condition, the action is applied to the target fields.
 - **Consumers:** Tracker grids (table, div, kanban), data-table cells, and entry-form dialog use the index and `resolveDependsOnOverrides`; **depends-on-options** uses only the types (`DependsOnRule`, `DependsOnRules`) to define the Rules grid and convert rows ↔ rules.
 
 ---
@@ -15,7 +15,7 @@ Technical documentation for the **depends-on** rule engine: how conditional fiel
 ## What it does
 
 1. **Types** (`types.ts`)  
-   Defines `DependsOnRule`, `DependsOnRules`, `DependsOnOperator`, `DependsOnAction`, `FieldOverride`, `DependsOnIndex`, `EnrichedDependsOnRule`, `ParsedPath`, `ResolveDependsOnOptions`. Single source of truth for the rule model.
+   Defines `DependsOnRule`, `DependsOnRules`, `DependsOnOperator`, `DependsOnAction`, `FieldOverride`, `DependsOnIndex`, `EnrichedDependsOnRule`, `ParsedPath`, `ResolveDependsOnOptions`. Single source of truth for the rule model. Actions are isHidden, isRequired, isDisabled (no "set").
 
 2. **Condition evaluation** (`compare.ts`)  
    - `normalizeOperator(op)` — normalizes `=`/`==` → `eq`, `!=`/`!==` → `neq`.  
@@ -31,10 +31,10 @@ Technical documentation for the **depends-on** rule engine: how conditional fiel
    - `filterDependsOnRulesForGrid(rules, gridId)` — convenience: build index and return rules for that grid.
 
 5. **Overrides merge** (`overrides.ts`)  
-   `applyFieldOverrides(base, override)` merges a `FieldOverride` onto a base config object. Override values win when defined. Used by cells and forms to apply resolved overrides (hidden, required, disabled, value) to field config.
+   `applyFieldOverrides(base, override)` merges a `FieldOverride` onto a base config object. Override values win when defined. Used by cells and forms to apply resolved overrides (hidden, required, disabled) to field config.
 
 6. **Resolution** (`resolve.ts`)  
-   `resolveDependsOnOverrides(rules, gridData, targetGridId, rowIndex, rowDataOverride?, options?)` returns `Record<fieldId, FieldOverride>` for the given row. For each rule it: reads the source value from grid data (or `rowDataOverride` when same-grid and option `onlyUseRowDataForSource` or override has the field); runs the condition; if it matches, applies the action to each target field in that grid. Priority and order break ties; for isHidden, “show” rules (set false) are handled so a field is hidden only if no show rule wins.
+   `resolveDependsOnOverrides(rules, gridData, targetGridId, rowIndex, rowDataOverride?, options?)` returns `Record<fieldId, FieldOverride>` for the given row. For each rule it: reads the source value from grid data (or `rowDataOverride` when same-grid and option `onlyUseRowDataForSource` or override has the field); runs the condition; if it matches, applies the action to each target field in that grid. Priority and order break ties; for isHidden, “show” rules (set false) are handled so a field is hidden only if no show rule wins. Only actions isHidden, isRequired, isDisabled are supported (no "set value" action).
 
 ---
 
@@ -44,7 +44,7 @@ Technical documentation for the **depends-on** rule engine: how conditional fiel
 
 1. **Index once per grid/render:** Consumer calls `buildDependsOnIndex(dependsOn)`, then `getRulesForGrid(index, gridId)` to get rules that affect that grid.
 2. **Resolve per row:** For each row (and optionally for an “add” row with `rowDataOverride`), call `resolveDependsOnOverrides(rules, gridData, targetGridId, rowIndex, rowDataOverride?, options?)`. Result is overrides keyed by field id.
-3. **Apply to UI:** For each cell/field, call `applyFieldOverrides(fieldConfig, overrides[fieldId])` and use the result for visibility, required, disabled, and value.
+3. **Apply to UI:** For each cell/field, call `applyFieldOverrides(fieldConfig, overrides[fieldId])` and use the result for visibility, required, and disabled.
 
 ### Operators
 
@@ -107,12 +107,12 @@ Import from `@/lib/depends-on`:
 |--------|-------------|
 | **Types** | |
 | `DependsOnOperator` | Union of supported comparison operators. |
-| `DependsOnAction` | `'isHidden' \| 'isRequired' \| 'isDisabled' \| 'set'`. |
+| `DependsOnAction` | `'isHidden' \| 'isRequired' \| 'isDisabled'`. |
 | `DependsOnRule` | Rule: source, operator?, value?, action, set?, targets, priority?. |
 | `DependsOnRules` | `DependsOnRule[]`. |
 | `ParsedPath` | `{ tabId: null, gridId, fieldId }`. |
 | `EnrichedDependsOnRule` | Rule + _parsedSource, _parsedTargets, _compare. |
-| `FieldOverride` | `{ isHidden?, isRequired?, isDisabled?, value? }`. |
+| `FieldOverride` | `{ isHidden?, isRequired?, isDisabled? }`. |
 | `DependsOnIndex` | `{ rulesBySource, rulesByTarget, rulesByGridId }`. |
 | `ResolveDependsOnOptions` | `{ onlyUseRowDataForSource? }`. |
 | **Index** | |

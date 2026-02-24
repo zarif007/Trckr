@@ -28,14 +28,14 @@ export type DependsOnOperator =
   | 'is_empty'
   | 'not_empty'
 
-export type DependsOnAction = 'isHidden' | 'isRequired' | 'isDisabled' | 'set'
+export type DependsOnAction = 'isHidden' | 'isRequired' | 'isDisabled'
 
 export type DependsOnRule = {
   source: FieldPath
   operator?: DependsOnOperator
   value?: unknown
   action: DependsOnAction
-  /** For isHidden/isRequired/isDisabled: value to set (default true). For action 'set': value to write to target fields. */
+  /** For isHidden/isRequired/isDisabled: value to set (default true). */
   set?: boolean | unknown
   targets: FieldPath[]
   priority?: number
@@ -57,7 +57,6 @@ export type FieldOverride = {
   isHidden?: boolean
   isRequired?: boolean
   isDisabled?: boolean
-  /** When action is 'set': value to apply to the target field (display and/or write to grid). */
   value?: unknown
 }
 
