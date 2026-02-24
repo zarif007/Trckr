@@ -34,6 +34,7 @@ export type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
+  FieldCalculationRule,
   FieldValidationRule,
   StyleOverrides,
   DependsOnRules,

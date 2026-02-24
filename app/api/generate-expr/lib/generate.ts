@@ -8,7 +8,7 @@ export interface GenerateExprResult {
 }
 
 export async function generateExpr(inputs: ExprPromptInputs): Promise<GenerateExprResult> {
-  const system = buildSystemPrompt()
+  const system = buildSystemPrompt(inputs.purpose)
   const prompt = buildUserPrompt(inputs)
   const { object } = await generateObject({
     model: deepseek('deepseek-chat'),

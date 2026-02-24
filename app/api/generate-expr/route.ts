@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       return Response.json({ error: parsed.error }, { status: parsed.status })
     }
 
-    const { prompt, gridId, fieldId, currentTracker } = parsed
+    const { prompt, gridId, fieldId, purpose, currentTracker } = parsed
     const availableFields = deriveAvailableFields(currentTracker, gridId)
 
     try {
@@ -29,6 +29,7 @@ export async function POST(request: Request) {
         prompt,
         gridId,
         fieldId,
+        purpose,
         availableFields,
       })
       return Response.json({ expr })

@@ -2,7 +2,7 @@
  * Shared types for tracker validation.
  */
 
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 export interface BindingEntry {
@@ -24,6 +24,7 @@ export interface TrackerLike {
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number; row?: number; col?: number }>
   bindings?: Record<string, BindingEntry>
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   dependsOn?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
 }
 
@@ -48,6 +49,7 @@ export interface ValidationContext {
   layoutNodes: NonNullable<TrackerLike['layoutNodes']>
   bindings: NonNullable<TrackerLike['bindings']>
   validations: NonNullable<TrackerLike['validations']>
+  calculations: NonNullable<TrackerLike['calculations']>
 }
 
 export type ValidatorResult = { errors?: string[]; warnings?: string[] }

@@ -23,9 +23,9 @@ import {
   SelectValue,
   SearchableSelect,
 } from '@/components/ui/select'
-import { Plus, Trash2, Settings2, ShieldCheck, Copy, ChevronDown, ChevronRight, ArrowRight, Wand2, X } from 'lucide-react'
+import { Plus, Trash2, Settings2, ShieldCheck, Sigma, Copy, ChevronDown, ChevronRight, ArrowRight, Wand2, X } from 'lucide-react'
 import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
-import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import type { TrackerBindingEntry } from '@/lib/types/tracker-bindings'
 import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from './utils'
 import type { TrackerFieldType } from '../types'
@@ -67,6 +67,7 @@ const NUMERIC_TYPES: TrackerFieldType[] = ['number', 'currency', 'percentage']
 const TEXT_TYPES: TrackerFieldType[] = ['string', 'text', 'link']
 
 const defaultExpr: ExprNode = { op: 'const', value: true }
+const defaultCalculationExpr: ExprNode = { op: 'const', value: 0 }
 
 const toNumberOrUndefined = (value: string): number | undefined => {
   if (value.trim() === '') return undefined
@@ -86,7 +87,7 @@ interface FieldSettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   fieldId: string | null
-  /** When set, validations are keyed by gridId.fieldId (like bindings). */
+  /** When set, validations/calculations are keyed by gridId.fieldId (like bindings). */
   gridId?: string | null
   schema: TrackerDisplayProps | undefined
   onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
@@ -114,6 +115,7 @@ export function FieldSettingsDialog({
   const [minLength, setMinLength] = useState('')
   const [maxLength, setMaxLength] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
+  const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
   const [structureOpen, setStructureOpen] = useState(false)
   const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [exprDrafts, setExprDrafts] = useState<Record<number, string>>({})
@@ -226,6 +228,8 @@ export function FieldSettingsDialog({
     const validationKey = gridId ? `${gridId}.${field.id}` : ''
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
+    const nextCalculation = validationKey ? (schema?.calculations?.[validationKey] ?? null) : null
+    setCalculationRule(nextCalculation && nextCalculation.expr ? nextCalculation : null)
     setStructureOpen(false)
     setShowJsonInStructure(false)
     const isBindableField = field.dataType === 'options' || field.dataType === 'multiselect'
@@ -420,6 +424,14 @@ export function FieldSettingsDialog({
         delete nextValidations[validationKey]
       }
     }
+    const nextCalculations = { ...(schema.calculations ?? {}) }
+    if (validationKey) {
+      if (calculationRule?.expr) {
+        nextCalculations[validationKey] = calculationRule
+      } else {
+        delete nextCalculations[validationKey]
+      }
+    }
 
     const nextBindings = { ...(schema.bindings ?? {}) }
     if (bindingKey) {
@@ -442,6 +454,7 @@ export function FieldSettingsDialog({
       ...schema,
       fields: nextFields,
       validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
+      calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
       bindings: nextBindings,
     })
 
@@ -464,7 +477,7 @@ export function FieldSettingsDialog({
               Field settings
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
-              Edit label, placeholder, validation rules, and bindings for this field.
+              Edit label, placeholder, validation rules, calculations, and bindings for this field.
               <span className="block mt-1 text-xs opacity-90">Field: {field.id}</span>
             </DialogDescription>
           </DialogHeader>
@@ -480,6 +493,10 @@ export function FieldSettingsDialog({
                 <TabsTrigger value="validations">
                   <ShieldCheck className="h-4 w-4 shrink-0" />
                   <span className="truncate">Validations</span>
+                </TabsTrigger>
+                <TabsTrigger value="calculations">
+                  <Sigma className="h-4 w-4 shrink-0" />
+                  <span className="truncate">Calculations</span>
                 </TabsTrigger>
                 {isBindable && (
                   <TabsTrigger value="bindings">
@@ -835,6 +852,52 @@ export function FieldSettingsDialog({
                   )}
                 </TabsContent>
               )}
+              <TabsContent value="calculations" className="mt-5 space-y-5">
+                {!gridId ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Place this field in a grid to configure calculations.
+                    </p>
+                  </div>
+                ) : !calculationRule ? (
+                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      No calculation configured. Add one expression to compute this field value.
+                    </p>
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => setCalculationRule({ expr: defaultCalculationExpr })}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add calculation
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <ExprRuleEditor
+                      mode="calculation"
+                      expr={calculationRule.expr}
+                      gridId={gridId ?? ''}
+                      fieldId={field.id}
+                      availableFields={availableFields}
+                      currentTracker={schema}
+                      onChange={(nextExpr) => setCalculationRule({ expr: nextExpr })}
+                    />
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setCalculationRule(null)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove calculation
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
               <TabsContent value="validations" className="mt-5 space-y-5">
                 {rules.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">

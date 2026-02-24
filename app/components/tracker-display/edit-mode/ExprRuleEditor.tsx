@@ -19,6 +19,7 @@ interface ExprRuleEditorProps {
   fieldId: string
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
+  mode?: 'validation' | 'calculation'
   onChange: (expr: ExprNode) => void
 }
 
@@ -28,6 +29,7 @@ export function ExprRuleEditor({
   fieldId,
   availableFields,
   currentTracker,
+  mode = 'validation',
   onChange,
 }: ExprRuleEditorProps) {
   const [jsonDraft, setJsonDraft] = useState('')
@@ -94,6 +96,7 @@ export function ExprRuleEditor({
           prompt: aiPrompt.trim(),
           gridId,
           fieldId,
+          purpose: mode,
           currentTracker: trackerPayload,
         }),
       })
@@ -118,32 +121,36 @@ export function ExprRuleEditor({
     <div className="space-y-3">
       <div>
         <p className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-          Custom expression
+          {mode === 'calculation' ? 'Calculation expression' : 'Custom expression'}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          Validation passes when the expression returns true. Use JSON, AI, or the visual builder.
+          {mode === 'calculation'
+            ? 'Expression output becomes the target field value. Use JSON, AI, or the visual builder.'
+            : 'Validation passes when the expression returns true. Use JSON, AI, or the visual builder.'}
         </p>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => applyExpr({ op: 'const', value: true })}
-          className="h-8 text-xs"
-        >
-          Always valid
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => applyExpr({ op: 'const', value: false })}
-          className="h-8 text-xs"
-        >
-          Always invalid
-        </Button>
-      </div>
+      {mode === 'validation' && (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => applyExpr({ op: 'const', value: true })}
+            className="h-8 text-xs"
+          >
+            Always valid
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => applyExpr({ op: 'const', value: false })}
+            className="h-8 text-xs"
+          >
+            Always invalid
+          </Button>
+        </div>
+      )}
       <Tabs defaultValue="visual" className="w-full">
         <TabsList className="w-full">
           <TabsTrigger value="visual">Visual</TabsTrigger>

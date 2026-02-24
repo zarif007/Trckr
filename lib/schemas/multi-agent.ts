@@ -102,6 +102,8 @@ export const trackerPatchSchema = z
     bindingsRemove: z.array(z.string()).optional(),
     validations: z.record(z.string(), z.any()).optional(),
     validationsRemove: z.array(z.string()).optional(),
+    calculations: z.record(z.string(), z.any()).optional(),
+    calculationsRemove: z.array(z.string()).optional(),
     dependsOn: z.array(z.any()).optional(),
     /** Patch style overrides keyed by grid/view id. Set a key to null to remove it. */
     styles: z.record(z.string(), z.any()).optional(),

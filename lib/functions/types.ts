@@ -34,6 +34,10 @@ export type FieldValidationRule =
   | { type: 'min' | 'max' | 'minLength' | 'maxLength'; value: number; message?: string }
   | { type: 'expr'; expr: ExprNode; message?: string }
 
+export interface FieldCalculationRule {
+  expr: ExprNode
+}
+
 export interface FunctionContext {
   rowValues: Record<string, unknown>
   fieldId: string

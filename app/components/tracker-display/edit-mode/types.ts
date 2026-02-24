@@ -16,7 +16,7 @@ import type {
   StyleOverrides,
   DependsOnRules,
 } from '../types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 // ---------------------------------------------------------------------------
 // Flat block editor types
@@ -36,6 +36,7 @@ export interface BlockEditorProps {
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData: Record<string, Array<Record<string, unknown>>>
@@ -59,6 +60,7 @@ export interface EditModeSchema {
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, unknown>
   dependsOn?: DependsOnRules
 }

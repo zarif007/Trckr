@@ -41,6 +41,7 @@ export function getCombinedSystemPrompt(): string {
   - For updates, include only changed fields (plus id).
   - For bindings, set keys in "bindings"; set a key to null to delete it. Optionally list keys in "bindingsRemove".
   - For validations, set keys in "validations"; set a key to null to delete it. Optionally list keys in "validationsRemove".
+  - For calculations, set keys in "calculations"; set a key to null to delete it. Optionally list keys in "calculationsRemove".
   - For dependsOn, include the full updated dependsOn array if it changed.
 
   OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).

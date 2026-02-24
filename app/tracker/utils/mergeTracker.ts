@@ -1,5 +1,5 @@
 import type { TrackerDisplayProps, TrackerLayoutNode } from '@/app/components/tracker-display/types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
 
 type PatchItem<T> = Partial<T> & { id?: string; _delete?: boolean }
@@ -34,6 +34,12 @@ const coerceValidationRules = (value: unknown): FieldValidationRule[] | null => 
   // Empty arrays are allowed (explicitly clearing validations for a field).
   return value.filter(isFieldValidationRule)
 }
+
+const isFieldCalculationRule = (value: unknown): value is FieldCalculationRule =>
+  isPlainObject(value) && isExprNode(value.expr)
+
+const coerceCalculationRule = (value: unknown): FieldCalculationRule | null =>
+  isFieldCalculationRule(value) ? value : null
 
 const mergeWithNested = <T extends Record<string, unknown>>(
   base: T,
@@ -204,6 +210,42 @@ export function applyTrackerPatch(
     normalizedValidations[key] = existing ? [...existing, ...rules] : rules
   }
 
+  const calculations: Record<string, FieldCalculationRule> = { ...(base.calculations ?? {}) }
+  if (patch.calculations) {
+    for (const [key, value] of Object.entries(patch.calculations)) {
+      if (value === null) {
+        delete calculations[key]
+      } else {
+        const rule = coerceCalculationRule(value)
+        if (rule) calculations[key] = rule
+      }
+    }
+  }
+  if (patch.calculationsRemove) {
+    for (const key of patch.calculationsRemove) {
+      delete calculations[key]
+    }
+  }
+
+  // Normalize calculations keys to "gridId.fieldId" (like bindings/validations).
+  // Any legacy bare fieldId keys are mapped to their grid(s) via layoutNodes.
+  const normalizedCalculations: Record<string, FieldCalculationRule> = {}
+  for (const [key, rule] of Object.entries(calculations)) {
+    if (!key.includes('.')) {
+      const fieldId = key
+      if (!fieldIds.has(fieldId)) continue
+      const gridSet = gridsByFieldId.get(fieldId)
+      if (!gridSet || gridSet.size === 0) continue
+      for (const gridId of gridSet) {
+        normalizedCalculations[`${gridId}.${fieldId}`] = rule
+      }
+      continue
+    }
+    const [gridId, fieldId] = key.split('.')
+    if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
+    normalizedCalculations[key] = rule
+  }
+
   // --- Styles ---
   const styles = { ...(base.styles ?? {}) }
   if (patch.styles) {
@@ -233,6 +275,7 @@ export function applyTrackerPatch(
     layoutNodes,
     bindings,
     validations: normalizedValidations,
+    calculations: normalizedCalculations,
     dependsOn: patch.dependsOn ?? base.dependsOn,
     styles,
   }

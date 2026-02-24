@@ -5,6 +5,8 @@ import { DataTableInput } from './data-table-input'
 import { FormDialog } from './form-dialog'
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { applyFieldOverrides } from '@/lib/depends-on'
+import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
+import type { FieldCalculationRule } from '@/lib/functions/types'
 
 export interface EntryFormDialogProps {
   open: boolean
@@ -26,6 +28,8 @@ export interface EntryFormDialogProps {
   mode?: 'add' | 'edit'
   /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
   gridId?: string
+  /** Calculations keyed by "gridId.fieldId" (target paths). */
+  calculations?: Record<string, FieldCalculationRule>
 }
 
 export function EntryFormDialog({
@@ -42,12 +46,38 @@ export function EntryFormDialog({
   getFieldOverrides,
   mode = 'add',
   gridId,
+  calculations,
 }: EntryFormDialogProps) {
   const orderedIds = useMemo(
     () => fieldOrder ?? Object.keys(fieldMetadata),
     [fieldOrder, fieldMetadata]
   )
   const [formData, setFormData] = useState<Record<string, unknown>>(initialValues)
+
+  const compiledCalculationPlan = useMemo(() => {
+    if (!gridId || !calculations || Object.keys(calculations).length === 0) return null
+    return compileCalculationsForGrid(gridId, calculations)
+  }, [calculations, gridId])
+
+  const applyCalculatedValues = useCallback(
+    (values: Record<string, unknown>, changedFieldIds: string[]) => {
+      if (!compiledCalculationPlan) return values
+      return applyCompiledCalculationsForRow({
+        plan: compiledCalculationPlan,
+        row: values,
+        changedFieldIds,
+      }).row
+    },
+    [compiledCalculationPlan]
+  )
+
+  const recordsEqual = (a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+    for (const key of keys) {
+      if (!Object.is(a[key], b[key])) return false
+    }
+    return true
+  }
 
   const rowValuesForValidation = useMemo(() => {
     const base = { ...formData }
@@ -64,10 +94,11 @@ export function EntryFormDialog({
   const prevOpenRef = useRef(false)
   useEffect(() => {
     if (open && !prevOpenRef.current) {
-      setFormData(initialValues ?? {})
+      const base = initialValues ?? {}
+      setFormData(applyCalculatedValues(base, orderedIds))
     }
     prevOpenRef.current = open
-  }, [open, initialValues])
+  }, [open, initialValues, applyCalculatedValues, orderedIds])
 
   const hasError = useMemo(() => {
     return orderedIds.some((columnId) => {
@@ -91,17 +122,20 @@ export function EntryFormDialog({
   }, [formData, fieldMetadata, orderedIds, getFieldOverrides, rowValuesForValidation])
 
   const handleSave = useCallback(() => {
-    onSave(formData)
+    const resolved = applyCalculatedValues(formData, orderedIds)
+    onSave(resolved)
     setFormData({})
     onOpenChange(false)
-  }, [formData, onSave, onOpenChange])
+  }, [formData, onSave, onOpenChange, applyCalculatedValues, orderedIds])
 
   const handleSaveAndContinue = useCallback(() => {
     if (!onSaveAnother) return
-    onSaveAnother(formData)
+    const resolved = applyCalculatedValues(formData, orderedIds)
+    onSaveAnother(resolved)
     // Reset form for the next entry but keep dialog open
-    setFormData(initialValues ?? {})
-  }, [formData, onSaveAnother, initialValues])
+    const base = initialValues ?? {}
+    setFormData(applyCalculatedValues(base, orderedIds))
+  }, [formData, onSaveAnother, initialValues, applyCalculatedValues, orderedIds])
 
   const handleCancel = useCallback(() => {
     setFormData({})
@@ -190,15 +224,18 @@ export function EntryFormDialog({
                       const next: Record<string, unknown> = changed
                         ? { ...prev, [columnId]: sanitized }
                         : { ...prev }
+                      const changedKeys = new Set<string>([columnId])
 
                       for (const [k, v] of Object.entries(bindingUpdates)) {
                         if (!Object.is(next[k], v)) {
                           next[k] = v
                           changed = true
+                          changedKeys.add(k)
                         }
                       }
-
-                      return changed ? next : prev
+                      const calculated = applyCalculatedValues(next, Array.from(changedKeys))
+                      if (!changed && recordsEqual(prev, calculated)) return prev
+                      return calculated
                     })
                   }}
                   type={fieldInfo.type}

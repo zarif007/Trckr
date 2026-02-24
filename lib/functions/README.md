@@ -1,12 +1,12 @@
 # Functions (Expression Engine)
 
-Trckr uses a shared, JSON-based expression engine for **validations** (now) and **computations** (later). The goal is a safe, deterministic format that is easy for both manual builders and LLMs to generate.
+Trckr uses a shared, JSON-based expression engine for **validations** and **calculations**. The goal is a safe, deterministic format that is easy for both manual builders and LLMs to generate.
 
 ## Why this exists
 
 - No `eval` or arbitrary code execution
 - JSON-serializable and table-friendly
-- Reusable for multiple features (validations, computations)
+- Reusable for multiple features (validations, calculations)
 
 ## Expression AST
 
@@ -80,7 +80,12 @@ First failing rule returns the error message.
 - Expressions are validated before use
 - Unknown operators are rejected by schema validation
 
+## Runtime compilation caches
+
+- Calculations use a compiled per-grid dependency plan (`compileCalculationsForGrid`) and a cache-backed wrapper (`applyCalculationsForRow`) to avoid rebuilding the dependency graph on every field change.
+- Validations use compiled field plans (`compileValidationPlan`) and an internal cache in `getValidationError` so repeated checks can reuse normalized rule pipelines.
+
 ## Extending
 
 To add new operators, register a custom evaluator in `lib/functions/registry.ts`.
-Future computation features can reuse the same AST without changes.
+Future features can reuse the same AST without changes.

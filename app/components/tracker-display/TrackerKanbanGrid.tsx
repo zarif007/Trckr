@@ -42,7 +42,7 @@ import type {
   DependsOnRules,
 } from './types'
 import type { TrackerContextForOptions } from '@/lib/binding'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 export interface TrackerKanbanGridProps {
   tabId: string
@@ -51,6 +51,7 @@ export interface TrackerKanbanGridProps {
   fields: TrackerField[]
   bindings?: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -69,6 +70,7 @@ function TrackerKanbanGridInner({
   fields,
   bindings = {},
   validations,
+  calculations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -102,6 +104,7 @@ function TrackerKanbanGridInner({
     fields,
     bindings,
     validations,
+    calculations,
     gridData: gridDataForKanban,
     trackerContext,
   })
@@ -324,6 +327,7 @@ function TrackerKanbanGridInner({
                 resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
               }
               gridId={grid.id}
+              calculations={calculations}
             />
           </>
         )}
@@ -348,6 +352,7 @@ function TrackerKanbanGridInner({
             )[fieldId]
           }
           gridId={grid.id}
+          calculations={calculations}
         />
 
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">

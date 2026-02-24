@@ -21,6 +21,7 @@ import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
 import { createNewTabId, getNextTabPlaceId } from './edit-mode'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
+import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
 import {
   ensureDependsOnOptionGrids,
   SHARED_TAB_ID,
@@ -129,6 +130,7 @@ export function TrackerDisplayInline({
   layoutNodes = [],
   bindings = {},
   validations,
+  calculations,
   styles,
   initialGridData,
   getDataRef,
@@ -251,6 +253,15 @@ export function TrackerDisplayInline({
   const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
   gridDataRef.current = gridData
 
+  const compiledCalculationsByGrid = useMemo(() => {
+    const plans = new Map<string, ReturnType<typeof compileCalculationsForGrid>>()
+    if (!calculations || Object.keys(calculations).length === 0) return plans
+    for (const grid of effectiveGrids) {
+      plans.set(grid.id, compileCalculationsForGrid(grid.id, calculations))
+    }
+    return plans
+  }, [calculations, effectiveGrids])
+
   const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
 
   const effectiveDependsOn = useMemo(() => {
@@ -274,21 +285,38 @@ export function TrackerDisplayInline({
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
         const next = [...current]
         while (next.length <= rowIndex) next.push({})
-        next[rowIndex] = { ...next[rowIndex], [columnId]: value }
+        const row = { ...next[rowIndex], [columnId]: value }
+        const plan = compiledCalculationsByGrid.get(gridId)
+        const calculated = plan
+          ? applyCompiledCalculationsForRow({
+              plan,
+              row,
+              changedFieldIds: [columnId],
+            }).row
+          : row
+        next[rowIndex] = calculated
         return { ...(prev ?? {}), [gridId]: next }
       })
     },
-    [baseGridData]
+    [baseGridData, compiledCalculationsByGrid]
   )
 
   const handleAddEntry = useCallback(
     (gridId: string, newRow: Record<string, unknown>) => {
       setLocalGridData((prev) => {
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        return { ...(prev ?? {}), [gridId]: [...current, newRow] }
+        const plan = compiledCalculationsByGrid.get(gridId)
+        const calculated = plan
+          ? applyCompiledCalculationsForRow({
+              plan,
+              row: newRow,
+              changedFieldIds: Object.keys(newRow),
+            }).row
+          : newRow
+        return { ...(prev ?? {}), [gridId]: [...current, calculated] }
       })
     },
-    [baseGridData]
+    [baseGridData, compiledCalculationsByGrid]
   )
 
   const handleDeleteEntries = useCallback(
@@ -305,9 +333,9 @@ export function TrackerDisplayInline({
   const editModeSchema = useMemo(
     () =>
       editMode
-        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn }
+        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn }
         : undefined,
-    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn]
+    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn]
   )
 
   const handleAddTab = useCallback(() => {
@@ -325,11 +353,12 @@ export function TrackerDisplayInline({
       layoutNodes: layoutNodes ?? [],
       bindings: bindings ?? {},
       validations,
+      calculations,
       styles,
       dependsOn,
     })
     setActiveTabId(id)
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn, onSchemaChange])
+  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, onSchemaChange])
 
   const handleRemoveTab = useCallback(
     (tabId: string) => {
@@ -354,6 +383,7 @@ export function TrackerDisplayInline({
         layoutNodes: nextLayoutNodes,
         bindings: bindings ?? {},
         validations,
+        calculations,
         styles,
         dependsOn,
       })
@@ -370,6 +400,7 @@ export function TrackerDisplayInline({
       layoutNodes,
       bindings,
       validations,
+      calculations,
       styles,
       dependsOn,
       onSchemaChange,
@@ -391,11 +422,12 @@ export function TrackerDisplayInline({
         layoutNodes: layoutNodes ?? [],
         bindings: bindings ?? {},
         validations,
+        calculations,
         styles,
         dependsOn,
       })
     },
-    [tabs, sections, grids, fields, layoutNodes, bindings, validations, styles, dependsOn, onSchemaChange]
+    [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, onSchemaChange]
   )
 
   const handleTabDragEnd = useCallback(
@@ -431,6 +463,7 @@ export function TrackerDisplayInline({
         layoutNodes: layoutNodes ?? [],
         bindings: bindings ?? {},
         validations,
+        calculations,
         styles,
         dependsOn,
       })
@@ -444,6 +477,7 @@ export function TrackerDisplayInline({
       layoutNodes,
       bindings,
       validations,
+      calculations,
       styles,
       dependsOn,
       onSchemaChange,
@@ -524,6 +558,7 @@ export function TrackerDisplayInline({
             layoutNodes={effectiveLayoutNodes}
             bindings={effectiveBindings}
             validations={validations}
+            calculations={calculations}
             styles={styles}
             dependsOn={effectiveDependsOn}
             gridData={gridData}

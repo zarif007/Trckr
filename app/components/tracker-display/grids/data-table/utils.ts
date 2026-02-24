@@ -10,7 +10,7 @@ import {
   DollarSign,
   Percent,
 } from 'lucide-react'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 export type FieldType =
   | 'string'
@@ -75,6 +75,7 @@ export interface OptionsGridFieldDef {
   type: FieldType
   config?: FieldConfig
   validations?: FieldValidationRule[]
+  calculation?: FieldCalculationRule
 }
 
 export interface FieldMetadata {
@@ -84,6 +85,7 @@ export interface FieldMetadata {
     options?: (string | { id: string; label: string })[]
     config?: FieldConfig
     validations?: FieldValidationRule[]
+    calculation?: FieldCalculationRule
     /** Fields to show in the Add Option form (columns of the options grid). When set with onAddOption, dialog collects all values. */
     optionsGridFields?: OptionsGridFieldDef[]
     /** When set, select/multiselect shows "Add option". Pass full row (all option grid field values); returns the new option value for the select. */

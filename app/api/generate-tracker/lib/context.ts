@@ -38,6 +38,7 @@ export interface NormalizedTrackerState {
   layoutNodes?: unknown[]
   bindings?: Record<string, unknown>
   validations?: Record<string, unknown>
+  calculations?: Record<string, unknown>
   dependsOn?: unknown[]
 }
 
@@ -94,10 +95,14 @@ function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
 
   const bindings = state.bindings ?? {}
   const validations = state.validations ?? {}
+  const calculations = state.calculations ?? {}
   const meaningfulBindingKeys = Object.keys(bindings).filter(
     (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
   )
   const meaningfulValidationKeys = Object.keys(validations).filter(
+    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+  )
+  const meaningfulCalculationKeys = Object.keys(calculations).filter(
     (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
   )
 
@@ -107,7 +112,8 @@ function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
     meaningfulFields.length > 0 ||
     meaningfulLayout.length > 0 ||
     meaningfulBindingKeys.length > 0 ||
-    meaningfulValidationKeys.length > 0
+    meaningfulValidationKeys.length > 0 ||
+    meaningfulCalculationKeys.length > 0
   ) {
     return false
   }
@@ -185,6 +191,7 @@ export function normalizeTrackerState(source: unknown): NormalizedTrackerState |
     layoutNodes: Array.isArray(t.layoutNodes) ? t.layoutNodes : [],
     bindings: t.bindings && typeof t.bindings === 'object' ? (t.bindings as Record<string, unknown>) : {},
     validations: t.validations && typeof t.validations === 'object' ? (t.validations as Record<string, unknown>) : {},
+    calculations: t.calculations && typeof t.calculations === 'object' ? (t.calculations as Record<string, unknown>) : {},
     dependsOn: Array.isArray(t.dependsOn) ? t.dependsOn : [],
   }
 }

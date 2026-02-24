@@ -13,7 +13,7 @@ import type {
   DependsOnRules,
   GridDataRecord,
 } from '../types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import { TrackerSection } from './TrackerSection'
 import { useCanEditLayout, BlockEditor } from '../edit-mode'
 import { TAB_CONTENT_ROOT, TAB_CONTENT_INNER, SECTION_GROUP_ROOT } from '../layout'
@@ -26,6 +26,7 @@ export interface TrackerTabContentProps {
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData: GridDataRecord
@@ -51,6 +52,7 @@ function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabC
     prev.layoutNodes !== next.layoutNodes ||
     prev.bindings !== next.bindings ||
     prev.validations !== next.validations ||
+    prev.calculations !== next.calculations ||
     prev.styles !== next.styles ||
     prev.dependsOn !== next.dependsOn ||
     prev.onUpdate !== next.onUpdate ||
@@ -74,6 +76,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   layoutNodes,
   bindings,
   validations,
+  calculations,
   styles,
   dependsOn,
   gridData,
@@ -110,6 +113,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
           layoutNodes={layoutNodes}
           bindings={bindings}
           validations={validations}
+          calculations={calculations}
           styles={styles}
           dependsOn={dependsOn}
           gridData={gridData}
@@ -138,6 +142,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
               layoutNodes={layoutNodes}
               bindings={bindings}
               validations={validations}
+              calculations={calculations}
               styles={styles}
               dependsOn={dependsOn}
               gridData={gridData}

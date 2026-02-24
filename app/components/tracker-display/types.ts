@@ -121,8 +121,8 @@ export type TrackerOption = {
 
 import type { StyleOverrides } from '@/lib/schemas/tracker'
 export type { StyleOverrides }
-import type { FieldValidationRule } from '@/lib/functions/types'
-export type { FieldValidationRule }
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
+export type { FieldCalculationRule, FieldValidationRule }
 
 // Re-export binding types from lib for backward compatibility
 export type {
@@ -148,6 +148,8 @@ export interface TrackerDisplayProps {
   layoutNodes?: TrackerLayoutNode[]
   /** Field validations keyed by "gridId.fieldId" (like bindings). */
   validations?: Record<string, FieldValidationRule[]>
+  /** Field calculations keyed by "gridId.fieldId" (target path). */
+  calculations?: Record<string, FieldCalculationRule>
   /** Conditional field actions (hide/require/disable). */
   dependsOn?: DependsOnRules
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */

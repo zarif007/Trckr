@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { DataTable } from './grids/data-table'
 import type { FieldMetadata } from './grids/data-table/utils'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import {
   TrackerGrid,
@@ -35,6 +35,7 @@ interface TrackerTableGridProps {
   fields: TrackerField[]
   bindings?: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
@@ -59,6 +60,7 @@ function TrackerTableGridInner({
   fields,
   bindings = {},
   validations,
+  calculations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -281,6 +283,7 @@ function TrackerTableGridInner({
         options: opts?.map((o) => ({ id: o.id ?? String(o.value ?? ''), label: o.label ?? '' })),
         config: field.config,
         validations: validations?.[`${grid.id}.${field.id}`],
+        calculation: calculations?.[`${grid.id}.${field.id}`],
         optionsGridFields,
         onAddOption,
         getBindingUpdatesFromRow,
@@ -295,6 +298,7 @@ function TrackerTableGridInner({
     fieldsById,
     layoutNodesByGridId,
     validations,
+    calculations,
     onAddEntryToGrid,
   ])
 
@@ -461,6 +465,7 @@ function TrackerTableGridInner({
         config={grid.config}
         styleOverrides={styleOverrides}
         gridId={grid.id}
+        calculations={calculations}
         addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
         editable={grid.config?.isRowEditAble !== false}
         deleteable={onDeleteEntries != null && grid.config?.isRowDeleteAble !== false}

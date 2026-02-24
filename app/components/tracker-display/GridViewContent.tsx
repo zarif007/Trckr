@@ -10,7 +10,7 @@ import type {
   DependsOnRules,
   GridDataRecord,
 } from './types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { GridType } from './types'
 import { TrackerTableGrid } from './TrackerTableGrid'
 import { TrackerKanbanGrid } from './TrackerKanbanGrid'
@@ -27,6 +27,7 @@ export interface GridViewContentProps {
   allFields?: TrackerField[]
   bindings: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -49,6 +50,7 @@ export function GridViewContent({
   allFields,
   bindings,
   validations,
+  calculations,
   styleOverrides,
   dependsOn,
   gridData,
@@ -97,6 +99,7 @@ export function GridViewContent({
           fields={fields}
           bindings={bindings}
           validations={validations}
+          calculations={calculations}
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
@@ -119,6 +122,7 @@ export function GridViewContent({
           fields={fields}
           bindings={bindings}
           validations={validations}
+          calculations={calculations}
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}
@@ -140,6 +144,7 @@ export function GridViewContent({
           fields={fields}
           bindings={bindings}
           validations={validations}
+          calculations={calculations}
           styleOverrides={styleOverrides}
           dependsOn={dependsOn}
           gridData={gridData}

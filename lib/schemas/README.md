@@ -112,3 +112,25 @@ Validations are stored in a top-level map keyed by `gridId.fieldId`:
 ```
 
 Validation rules run after basic config constraints (`isRequired`, `min`, `max`, `minLength`, `maxLength`) and return the first failing error.
+
+## Field calculations (top-level)
+
+Calculations are stored in a top-level map keyed by target `gridId.fieldId`:
+
+```json
+{
+  "calculations": {
+    "sales_grid.amount": {
+      "expr": {
+        "op": "mul",
+        "args": [
+          { "op": "field", "fieldId": "sales_grid.rate" },
+          { "op": "field", "fieldId": "sales_grid.quantity" }
+        ]
+      }
+    }
+  }
+}
+```
+
+Each target field has one expression rule that computes the value for that field.

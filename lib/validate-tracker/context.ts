@@ -12,6 +12,7 @@ export function buildValidationContext(tracker: TrackerLike): ValidationContext 
   const layoutNodes = tracker.layoutNodes ?? []
   const bindings = tracker.bindings ?? {}
   const validations = tracker.validations ?? {}
+  const calculations = tracker.calculations ?? {}
 
   const gridIds = new Set(grids.map((g) => g.id))
   const fieldIds = new Set(fields.map((f) => f.id))
@@ -35,5 +36,6 @@ export function buildValidationContext(tracker: TrackerLike): ValidationContext 
     layoutNodes,
     bindings,
     validations,
+    calculations,
   }
 }

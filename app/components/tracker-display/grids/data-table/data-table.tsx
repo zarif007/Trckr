@@ -42,6 +42,7 @@ import { DataTableCell } from './data-table-cell'
 import { EntryFormDialog } from './entry-form-dialog'
 import type { StyleOverrides } from '../../types'
 import { resolveTableStyles } from '@/lib/style-utils'
+import type { FieldCalculationRule } from '@/lib/functions/types'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -82,6 +83,8 @@ interface DataTableProps<TData, TValue> {
   editLayoutAble?: boolean
   /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
   gridId?: string
+  /** Calculations keyed by "gridId.fieldId" (target paths). */
+  calculations?: Record<string, FieldCalculationRule>
 }
 
 export function DataTable<TData, TValue>({
@@ -103,6 +106,7 @@ export function DataTable<TData, TValue>({
   deleteable = true,
   editLayoutAble = true,
   gridId,
+  calculations,
 }: DataTableProps<TData, TValue>) {
   const [tableData, setTableData] = useState<TData[]>(data)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -439,6 +443,7 @@ export function DataTable<TData, TValue>({
                 getBindingUpdates={getBindingUpdates}
                 getFieldOverrides={getFieldOverridesForAdd}
                 gridId={gridId}
+                calculations={calculations}
               />
             </>
           )}
@@ -460,6 +465,7 @@ export function DataTable<TData, TValue>({
         getBindingUpdates={getBindingUpdates}
         getFieldOverrides={getFieldOverridesForAdd}
         gridId={gridId}
+        calculations={calculations}
         mode="edit"
       />
       <div className={cn('rounded-lg overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>

@@ -40,6 +40,7 @@ function toDisplayProps(data: TrackerResponse): TrackerDisplayProps {
     layoutNodes: data.layoutNodes ?? [],
     bindings: data.bindings ?? {},
     validations: data.validations ?? {},
+    calculations: data.calculations ?? {},
     styles: data.styles,
     dependsOn: data.dependsOn ?? [],
   }
@@ -62,7 +63,7 @@ export function TrackerDialog({
   onSchemaChange,
 }: TrackerDialogProps) {
   const object = streamedObject as {
-    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; styles?: unknown; dependsOn?: unknown[] }
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; dependsOn?: unknown[] }
     trackerPatch?: unknown
   } | undefined
   const handleOpenChange = (next: boolean) => {
@@ -97,6 +98,7 @@ export function TrackerDialog({
       layoutNodes: schema.layoutNodes ?? [],
       bindings: schema.bindings ?? {},
       validations: schema.validations ?? {},
+      calculations: schema.calculations ?? {},
       styles: schema.styles,
       dependsOn: schema.dependsOn ?? [],
     }
@@ -156,6 +158,7 @@ export function TrackerDialog({
               layoutNodes={(tracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
               bindings={(tracker.bindings || {}) as TrackerResponse['bindings']}
               validations={(tracker.validations || {}) as TrackerResponse['validations']}
+              calculations={(tracker.calculations || {}) as TrackerResponse['calculations']}
               styles={(tracker.styles || {}) as TrackerResponse['styles']}
               dependsOn={(tracker.dependsOn || []) as TrackerResponse['dependsOn']}
               getDataRef={trackerDataRef}
@@ -189,6 +192,7 @@ export function TrackerDialog({
                   layoutNodes={activeTrackerData.layoutNodes}
                   bindings={activeTrackerData.bindings}
                   validations={activeTrackerData.validations}
+                  calculations={activeTrackerData.calculations}
                   styles={activeTrackerData.styles}
                   dependsOn={activeTrackerData.dependsOn}
                   getDataRef={trackerDataRef}

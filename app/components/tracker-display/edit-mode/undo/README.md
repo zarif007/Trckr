@@ -6,7 +6,7 @@ Modular undo for tracker layout edits in edit mode. Lets users revert the last s
 
 - **History stack**: Before each schema change, the current schema is pushed onto a stack (max 50 steps). Undo pops the last schema and applies it.
 - **UI**: An "Undo" button (optional) and a global keyboard shortcut **Ctrl+Z** (Windows/Linux) or **Cmd+Z** (macOS).
-- **Scope**: Only affects layout/schema changes made in edit mode (tabs, sections, grids, fields, validations). Does not touch grid data or chat.
+- **Scope**: Only affects layout/schema changes made in edit mode (tabs, sections, grids, fields, validations, calculations). Does not touch grid data or chat.
 
 ## How it works
 

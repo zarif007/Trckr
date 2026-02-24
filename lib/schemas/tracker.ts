@@ -191,6 +191,12 @@ export const validationsSchema = z
   .default({})
   .describe('Field validations keyed by field id. Rules are evaluated in order.')
 
+/** Top-level calculations map (target fieldId -> expression rule). */
+export const calculationsSchema = z
+  .record(z.string(), z.object({ expr: z.any() }).passthrough())
+  .default({})
+  .describe('Field calculations keyed by target field id (grid_id.field_id).')
+
 export const trackerSchema = z
   .object({
     tabs: z
@@ -260,6 +266,8 @@ export const trackerSchema = z
       .describe('Array of atomic field definitions. Referenced by layoutNodes to place into grids.'),
 
     validations: validationsSchema,
+
+    calculations: calculationsSchema,
 
     layoutNodes: z
       .array(

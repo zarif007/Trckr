@@ -7,7 +7,7 @@ import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
 
@@ -47,7 +47,7 @@ const isDefaultTabConfig = (value: unknown): boolean => {
 /**
  * Detect untouched first-run scaffold so we don't force patch mode:
  * - tabs are only default Overview (+ optional default Shared)
- * - no sections/grids/fields/layout nodes/bindings/validations/styles/dependsOn
+ * - no sections/grids/fields/layout nodes/bindings/validations/calculations/styles/dependsOn
  */
 const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): boolean => {
   if (!tracker) return true
@@ -63,7 +63,12 @@ const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): b
     return false
   }
 
-  if (!isEmptyObject(tracker.bindings) || !isEmptyObject(tracker.validations) || !isEmptyObject(trackerWithExtras.styles)) {
+  if (
+    !isEmptyObject(tracker.bindings) ||
+    !isEmptyObject(tracker.validations) ||
+    !isEmptyObject((tracker as TrackerLike & { calculations?: unknown }).calculations) ||
+    !isEmptyObject(trackerWithExtras.styles)
+  ) {
     return false
   }
   if (dependsOn.length > 0) return false
@@ -223,12 +228,13 @@ export function useTrackerChat() {
     }
 
     if (!rawTracker) return null
-    // Ensure validations keys are always "gridId.fieldId" (like bindings).
-    const normalizeValidations = (tracker: TrackerLike): TrackerLike => {
+    // Ensure validations/calculations keys are always "gridId.fieldId" (like bindings).
+    const normalizeValidationAndCalculations = (tracker: TrackerLike): TrackerLike => {
       const grids = tracker.grids ?? []
       const fields = tracker.fields ?? []
       const layoutNodes = tracker.layoutNodes ?? []
       const validations = tracker.validations ?? {}
+      const calculations = (tracker as TrackerLike & { calculations?: Record<string, FieldCalculationRule> }).calculations ?? {}
 
       const gridIds = new Set(grids.map((g) => g.id))
       const fieldIds = new Set(fields.map((f) => f.id))
@@ -259,10 +265,26 @@ export function useTrackerChat() {
         const existing = normalized[key]
         normalized[key] = existing ? [...existing, ...rules] : rules
       }
+      const normalizedCalculations: Record<string, FieldCalculationRule> = {}
+      for (const [key, rule] of Object.entries(calculations)) {
+        if (!key.includes('.')) {
+          const fieldId = key
+          if (!fieldIds.has(fieldId)) continue
+          const gridSet = gridsByFieldId.get(fieldId)
+          if (!gridSet || gridSet.size === 0) continue
+          for (const gridId of gridSet) {
+            normalizedCalculations[`${gridId}.${fieldId}`] = rule
+          }
+          continue
+        }
+        const [gridId, fieldId] = key.split('.')
+        if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
+        normalizedCalculations[key] = rule
+      }
 
-      return { ...tracker, validations: normalized }
+      return { ...tracker, validations: normalized, calculations: normalizedCalculations } as TrackerLike
     }
-    rawTracker = normalizeValidations(rawTracker)
+    rawTracker = normalizeValidationAndCalculations(rawTracker)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
     return tracker as TrackerResponse

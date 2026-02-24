@@ -41,8 +41,9 @@ Validators are pure with respect to the context: they read only and do not mutat
 | **DependsOn** | `validators/depends-on.ts` | Warnings | Each `dependsOn` rule has a valid `source` (grid + field) and each target path has valid grid + field. |
 | **Bindings** | `validators/bindings.ts` | Warnings | Binding keys are valid grid.field paths; optionsGrid exists and is an options grid; labelField and fieldMappings reference existing fields; value mapping (to = field path) exists; dynamic_select/dynamic_multiselect use known function ids; select/multiselect fields in layout have a bindings entry. |
 | **Validations** | `validators/validations.ts` | Errors | Validation keys must be `"gridId.fieldId"` (like bindings, e.g. `main_grid.sku`). Every field is in a grid; there is no bare `fieldId` key. Expr rules must reference fields by `gridId.fieldId`. |
+| **Calculations** | `validators/calculations.ts` | Errors | Calculation keys must be `"gridId.fieldId"` target paths. Rules must have `{ expr }`; expression field references must be valid, in the same grid as target, and calculation dependencies must not form cycles. |
 
-Layout and validations produce **errors**; the rest produce **warnings** so that invalid bits are skipped at runtime without failing the whole schema.
+Layout, validations, and calculations produce **errors**; the rest produce **warnings** so that invalid bits are skipped at runtime without failing the whole schema.
 
 ### Auto-fix
 
@@ -90,7 +91,9 @@ validate-tracker/
     ├── layout.ts       # Layout/section/grid reference checks
     ├── options-fields.ts
     ├── depends-on.ts
-    └── bindings.ts
+    ├── bindings.ts
+    ├── validations.ts
+    └── calculations.ts
 ```
 
 Adding a new check: implement a function `(ctx: ValidationContext) => ValidatorResult` (and `tracker` if needed), export it from `validators/index.ts`, and add it to the list in `index.ts` inside `validateTracker`.

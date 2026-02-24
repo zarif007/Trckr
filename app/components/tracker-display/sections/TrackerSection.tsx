@@ -11,7 +11,7 @@ import {
   DependsOnRules,
   GridDataRecord,
 } from '../types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import { SectionBar, ViewBlockWrapper, GRIDS_CONTAINER, GRID_BLOCK_INNER } from '../layout'
 import { GridBlockHeader, GridBlockContent } from '../blocks'
 
@@ -25,6 +25,7 @@ export interface TrackerSectionProps {
   layoutNodes: TrackerLayoutNode[]
   bindings?: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   dependsOn?: DependsOnRules
   gridData?: GridDataRecord
@@ -49,6 +50,7 @@ export function TrackerSection({
   layoutNodes,
   bindings = {},
   validations,
+  calculations,
   styles,
   dependsOn,
   gridData,
@@ -84,6 +86,7 @@ export function TrackerSection({
                   allFields={allFields}
                   bindings={bindings}
                   validations={validations}
+                  calculations={calculations}
                   styles={styles}
                   dependsOn={dependsOn}
                   gridData={gridData}

@@ -3,7 +3,7 @@
  */
 
 export type ParseResult =
-  | { ok: true; prompt: string; gridId: string; fieldId: string; currentTracker: unknown }
+  | { ok: true; prompt: string; gridId: string; fieldId: string; purpose: 'validation' | 'calculation'; currentTracker: unknown }
   | { ok: false; error: string; status: number }
 
 export function getErrorMessage(error: unknown): string {
@@ -32,6 +32,7 @@ export function parseRequestBody(body: unknown): ParseResult {
   const prompt = b.prompt
   const gridId = b.gridId
   const fieldId = b.fieldId
+  const purpose = b.purpose
   const currentTracker = b.currentTracker
 
   if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
@@ -58,6 +59,11 @@ export function parseRequestBody(body: unknown): ParseResult {
     }
   }
 
+  const normalizedPurpose =
+    purpose === 'calculation' || purpose === 'validation'
+      ? purpose
+      : 'validation'
+
   if (!process.env.DEEPSEEK_API_KEY) {
     return {
       ok: false,
@@ -71,6 +77,7 @@ export function parseRequestBody(body: unknown): ParseResult {
     prompt: prompt.trim(),
     gridId: gridId.trim(),
     fieldId: fieldId.trim(),
+    purpose: normalizedPurpose,
     currentTracker: currentTracker ?? null,
   }
 }

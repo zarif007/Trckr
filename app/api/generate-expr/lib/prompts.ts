@@ -4,17 +4,24 @@ export interface ExprPromptInputs {
   prompt: string
   gridId: string
   fieldId: string
+  purpose: 'validation' | 'calculation'
   availableFields: AvailableField[]
 }
 
-export function buildSystemPrompt(): string {
+export function buildSystemPrompt(purpose: 'validation' | 'calculation'): string {
+  const purposeRules =
+    purpose === 'calculation'
+      ? '- The expression should compute the target field value (number/string/boolean/etc), not a validation boolean unless explicitly requested.'
+      : '- The expression should evaluate to a boolean/truthy result suitable for validation checks.'
   return `
-You are generating a JSON expression AST for field validation.
+You are generating a JSON expression AST for ${purpose === 'calculation' ? 'field calculation' : 'field validation'}.
 
 Rules:
 - Output ONLY valid JSON with a single top-level object: { "expr": <ExprNode> }.
 - Supported ops: const, field, add, mul, sub, div, eq, neq, gt, gte, lt, lte.
 - "field" nodes must use fieldId in "gridId.fieldId" format from the provided list.
+- Prefer same-grid field references unless explicitly instructed otherwise.
+${purposeRules}
 - Use canonical shapes:
   - const: { "op": "const", "value": <literal> }
   - field: { "op": "field", "fieldId": "grid.field" }
@@ -32,9 +39,10 @@ function formatAvailableFields(fields: AvailableField[]): string {
 }
 
 export function buildUserPrompt(inputs: ExprPromptInputs): string {
-  const { prompt, gridId, fieldId, availableFields } = inputs
+  const { prompt, gridId, fieldId, purpose, availableFields } = inputs
   const fieldList = formatAvailableFields(availableFields)
   return `
+Mode: ${purpose}
 Target grid: ${gridId}
 Target field: ${fieldId}
 Target field path: ${gridId}.${fieldId}

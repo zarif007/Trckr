@@ -5,7 +5,7 @@ import { resolveFieldOptionsV2 } from '@/lib/binding'
 import type { TrackerGrid, TrackerField, TrackerLayoutNode, TrackerBindings } from '../../types'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import type { FieldMetadata } from '../data-table/utils'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
   String(o.id ?? o.value ?? o.label ?? '').trim()
@@ -17,6 +17,7 @@ export interface UseKanbanGroupsParams {
   fields: TrackerField[]
   bindings: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   gridData: Record<string, Array<Record<string, unknown>>>
   trackerContext?: TrackerContextForOptions | null
 }
@@ -38,6 +39,7 @@ export function useKanbanGroups({
   fields,
   bindings,
   validations,
+  calculations,
   gridData,
   trackerContext,
 }: UseKanbanGroupsParams): UseKanbanGroupsResult | null {
@@ -132,10 +134,11 @@ export function useKanbanGroups({
         options: opts?.map((o) => ({ id: toOptionId(o), label: o.label ?? '' })),
         config: field.config,
         validations: validations?.[`${grid.id}.${field.id}`],
+        calculation: calculations?.[`${grid.id}.${field.id}`],
       }
     })
     return meta
-  }, [tabId, grid.id, kanbanFields, bindings, gridData, trackerContext, validations])
+  }, [tabId, grid.id, kanbanFields, bindings, gridData, trackerContext, validations, calculations])
 
   const fieldOrder = useMemo(() => kanbanFields.map((f) => f.id), [kanbanFields])
 

@@ -128,6 +128,7 @@ export function BlockEditor({
   layoutNodes,
   bindings,
   validations,
+  calculations,
   styles,
   dependsOn,
   gridData,
@@ -440,6 +441,7 @@ export function BlockEditor({
                     allFields={fields}
                     bindings={bindings}
                     validations={validations}
+                    calculations={calculations}
                     styles={styles}
                     dependsOn={dependsOn}
                     gridData={gridData}

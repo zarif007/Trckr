@@ -242,6 +242,25 @@ ExprNode examples:
 Comparison ops: prefer eq/neq/gt/gte/lt/lte. Symbol aliases (=, !=, >, >=, <, <=) are accepted but avoid mixing styles in the same expression.
 
 If no validations are needed, omit "validations" or use an empty object.
+
+=== CALCULATIONS (TOP-LEVEL) ===
+
+Use a top-level "calculations" object keyed by target "<grid_id>.<field_id>".
+Each target has exactly one expression rule:
+
+calculations: {
+  "<grid_id>.<field_id>": {
+    expr: <ExprNode>
+  }
+}
+
+Rules:
+1. Key must be "grid_id.field_id" (no tab).
+2. expr must produce the target value (not a boolean validation result).
+3. Field references inside expr must use "grid_id.field_id".
+4. Keep references in the same grid as the target field unless the user explicitly asks otherwise.
+5. If no calculations are needed, omit "calculations" or use an empty object.
+
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `
 

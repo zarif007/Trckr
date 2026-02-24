@@ -38,7 +38,7 @@ import {
   StyleOverrides,
   DependsOnRules,
 } from '../../types'
-import type { FieldValidationRule } from '@/lib/functions/types'
+import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import { resolveFieldOptionsV2 } from '@/lib/binding'
 import { useEditMode, useLayoutActions, SortableFieldRowEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from '../../edit-mode'
 import { DIV_GRID_MAX_COLS } from '../../edit-mode/utils'
@@ -51,6 +51,7 @@ import type { FieldMetadata } from '../data-table/utils'
 import { getValidationError } from '../data-table/utils'
 import { EntryFormDialog } from '../data-table/entry-form-dialog'
 import { resolveDivStyles } from '@/lib/style-utils'
+import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
 
 const ADD_OPTION_VALUE = '__add_option__'
 const EMPTY_ROW: Record<string, unknown> = {}
@@ -78,6 +79,7 @@ interface TrackerDivGridProps {
   fields: TrackerField[]
   bindings?: TrackerBindings
   validations?: Record<string, FieldValidationRule[]>
+  calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
   dependsOn?: DependsOnRules
   gridData?: Record<string, Array<Record<string, unknown>>>
@@ -254,6 +256,7 @@ function TrackerDivGridInner({
   fields,
   bindings = {},
   validations,
+  calculations,
   styleOverrides,
   dependsOn,
   gridData = {},
@@ -575,11 +578,9 @@ function TrackerDivGridInner({
       const currentVal = draftRow[addOptionContext.fieldId] ?? data[addOptionContext.fieldId]
       const current = Array.isArray(currentVal) ? currentVal : []
       const next = [...current.map(String), newValue]
-      setDraftRow((prev) => ({ ...prev, [addOptionContext!.fieldId]: next }))
-      onUpdate?.(0, addOptionContext.fieldId, next)
+      handleFieldUpdateWithTouched(addOptionContext.fieldId, next)
     } else {
-      setDraftRow((prev) => ({ ...prev, [addOptionContext.fieldId]: newValue }))
-      onUpdate?.(0, addOptionContext.fieldId, newValue)
+      handleFieldUpdateWithTouched(addOptionContext.fieldId, newValue)
     }
   }
 
@@ -609,13 +610,30 @@ function TrackerDivGridInner({
     return base
   }, [draftRow, data, grid.id, fieldNodes])
 
+  const compiledCalculationPlan = useMemo(() => {
+    if (!calculations || Object.keys(calculations).length === 0) return null
+    return compileCalculationsForGrid(grid.id, calculations)
+  }, [calculations, grid.id])
+
   const handleFieldUpdate = useCallback(
     (fieldId: string, value: unknown) => {
+      const base = { ...data, ...draftRow, [fieldId]: value }
+      const calc = compiledCalculationPlan
+        ? applyCompiledCalculationsForRow({
+            plan: compiledCalculationPlan,
+            row: base,
+            changedFieldIds: [fieldId],
+          })
+        : { row: base, updatedFieldIds: [], skippedCyclicTargets: [] }
+
       setDirtyFieldIds((prev) => new Set(prev).add(fieldId))
-      setDraftRow((prev) => ({ ...prev, [fieldId]: value }))
-      onUpdate?.(0, fieldId, value)
+      setDraftRow(calc.row)
+      const updates = new Set<string>([fieldId, ...calc.updatedFieldIds])
+      for (const id of updates) {
+        onUpdate?.(0, id, calc.row[id])
+      }
     },
-    [onUpdate]
+    [compiledCalculationPlan, data, draftRow, onUpdate]
   )
   const handleFieldUpdateWithTouched = useCallback(
     (fieldId: string, value: unknown) => {
@@ -1014,6 +1032,7 @@ function TrackerDivGridInner({
           onSave={applyAddOption}
           onSaveAnother={applyAddOption}
           gridId={addOptionContext.optionsGridId}
+          calculations={calculations}
           mode="add"
         />
       )}

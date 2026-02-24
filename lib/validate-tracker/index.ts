@@ -11,11 +11,12 @@ import {
   validateDependsOn,
   validateBindings,
   validateValidations,
+  validateCalculations,
 } from './validators'
 
 export type { TrackerLike, ValidationResult, BindingEntry } from './types'
 export { autoFixBindings } from './auto-fix'
-export { validateBindings, validateDependsOn, validateValidations } from './validators'
+export { validateBindings, validateDependsOn, validateValidations, validateCalculations } from './validators'
 
 function mergeResults(
   results: Array<{ errors?: string[]; warnings?: string[] }>
@@ -41,6 +42,7 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
     validateDependsOn(tracker, ctx),
     validateBindings(ctx),
     validateValidations(ctx),
+    validateCalculations(ctx),
   ]
 
   const { errors, warnings } = mergeResults(results)
