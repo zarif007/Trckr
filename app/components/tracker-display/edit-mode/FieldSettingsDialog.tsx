@@ -549,7 +549,7 @@ export function FieldSettingsDialog({
                       {autoPopulateSources.map((path) => (
                         <div
                           key={path}
-                          className="rounded-full border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
+                          className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
                           title={path}
                         >
                           {resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? [])}
