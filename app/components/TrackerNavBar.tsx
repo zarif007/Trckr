@@ -1,10 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import ThemeToggle from './ThemeToggle'
+import { TeamSwitcher, TeamMembersDialog } from './teams'
 
 export default function TrackerNavBar() {
+  const [membersOpen, setMembersOpen] = useState(false)
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background shadow-[0_1px_0_0_hsl(var(--border)/0.5)]">
       <nav className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center">
@@ -17,11 +22,22 @@ export default function TrackerNavBar() {
             <span>Back</span>
           </Link>
 
-          <div className="flex items-center gap-1 justify-end">
+          <div className="flex items-center gap-2 justify-end">
+            <TeamSwitcher />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setMembersOpen(true)}
+              aria-label="Team members and invite"
+            >
+              <Users className="h-4 w-4" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>
       </nav>
+      <TeamMembersDialog open={membersOpen} onOpenChange={setMembersOpen} />
     </header>
   )
 }

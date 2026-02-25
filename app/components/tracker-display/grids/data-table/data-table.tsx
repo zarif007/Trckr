@@ -78,13 +78,19 @@ interface DataTableProps<TData, TValue> {
   /** When false, cells and row details are read-only. Default true. */
   editable?: boolean
   /** When false, hide Delete button and row selection. Default true. */
-  deleteable?: boolean
+  deletable?: boolean
   /** When false, hide column visibility / grid layout settings. Default true. */
   editLayoutAble?: boolean
   /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
   gridId?: string
   /** Calculations keyed by "gridId.fieldId" (target paths). */
   calculations?: Record<string, FieldCalculationRule>
+  /** Default page size. Default 10. */
+  pageSize?: number
+  /** Optional page size options for selector (e.g. [10, 25, 50]). */
+  pageSizeOptions?: number[]
+  /** Initial sort (column id and direction). */
+  defaultSort?: { id: string; desc?: boolean }
 }
 
 export function DataTable<TData, TValue>({
@@ -103,13 +109,21 @@ export function DataTable<TData, TValue>({
   hiddenColumns,
   addable = true,
   editable = true,
-  deleteable = true,
+  deletable = true,
   editLayoutAble = true,
   gridId,
   calculations,
+  pageSize: pageSizeProp,
+  pageSizeOptions: _pageSizeOptions,
+  defaultSort: defaultSortProp,
 }: DataTableProps<TData, TValue>) {
+  const pageSize = pageSizeProp ?? 10
   const [tableData, setTableData] = useState<TData[]>(data)
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>(() =>
+    defaultSortProp
+      ? [{ id: defaultSortProp.id, desc: defaultSortProp.desc ?? false }]
+      : []
+  )
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -150,7 +164,7 @@ export function DataTable<TData, TValue>({
 
   const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
     () => [
-      ...(deleteable
+      ...(deletable
         ? [
           {
             id: 'select',
@@ -167,6 +181,7 @@ export function DataTable<TData, TValue>({
                   onCheckedChange={(value) =>
                     table.toggleAllPageRowsSelected(!!value)
                   }
+                  aria-label="Select all rows on this page"
                 />
               </div>
             ),
@@ -175,6 +190,7 @@ export function DataTable<TData, TValue>({
                 <Checkbox
                   checked={row.getIsSelected()}
                   onCheckedChange={(value) => row.toggleSelected(!!value)}
+                  aria-label={`Select row ${row.index + 1}`}
                 />
               </div>
             ),
@@ -252,15 +268,15 @@ export function DataTable<TData, TValue>({
               size="icon"
               className="h-6 w-6 p-0"
               onClick={() => setRowDetailsOpenForIndex(row.index)}
+              aria-label={`View full details for row ${row.index + 1}`}
             >
               <ChevronDown className="h-4 w-4" />
-              <span className="sr-only">View full details</span>
             </Button>
           )
         },
       } as ColumnDef<TData, TValue>,
     ],
-    [columns, deleteable, editLayoutAble],
+    [columns, deletable, editLayoutAble],
   )
 
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
@@ -288,6 +304,9 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
+    initialState: {
+      pagination: { pageSize },
+    },
     state: {
       sorting,
       rowSelection,
@@ -350,13 +369,13 @@ export function DataTable<TData, TValue>({
     [columns]
   )
 
-  const hasActions = addable || deleteable
+  const hasActions = addable || deletable
 
   return (
     <div className="w-full">
       {hasActions && (
         <div className="flex h-8 items-center justify-end gap-0.5 pb-2">
-          {deleteable && (
+          {deletable && (
             <>
               <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
                 <PopoverTrigger asChild>

@@ -10,6 +10,9 @@ export { TrackerDisplayInline as TrackerDisplay } from './TrackerDisplayInline'
 /** Standalone table for displaying depends-on rules (e.g. in an admin or rules-editor view). */
 export { DependsOnTable } from './DependsOnTable'
 
+/** Error boundary so one broken grid does not take down the page. */
+export { TrackerDisplayErrorBoundary } from './TrackerDisplayErrorBoundary'
+
 /** Reusable layout primitives (tokens, SectionBar, ViewBlockWrapper, InlineEditableName). */
 export {
   SectionBar,

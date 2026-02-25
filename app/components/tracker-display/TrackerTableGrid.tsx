@@ -468,8 +468,11 @@ function TrackerTableGridInner({
         calculations={calculations}
         addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
         editable={grid.config?.isRowEditAble !== false}
-        deleteable={onDeleteEntries != null && grid.config?.isRowDeleteAble !== false}
+        deletable={onDeleteEntries != null && (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false}
         editLayoutAble={grid.config?.isEditAble !== false}
+        pageSize={grid.config?.pageSize}
+        pageSizeOptions={grid.config?.pageSizeOptions}
+        defaultSort={grid.config?.defaultSort}
       />
     </>
   )

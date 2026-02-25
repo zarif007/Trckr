@@ -2,7 +2,7 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,7 +18,7 @@ import {
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
-import { TrackerDisplay } from '@/app/components/tracker-display'
+import { TrackerDisplay, TrackerDisplayErrorBoundary } from '@/app/components/tracker-display'
 import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
 import { EditModeUndoButton, useUndoKeyboardShortcut } from '@/app/components/tracker-display/edit-mode/undo'
 import {
@@ -27,6 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTrackerChat, type Message, type TrackerResponse } from './hooks/useTrackerChat'
 import { useIsDesktop } from './hooks/useMediaQuery'
+import { ShareTrackerDialog } from '@/app/components/teams'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
@@ -47,6 +48,8 @@ const TrackerPanel = memo(function TrackerPanel({
   leftWidth,
   fullWidth,
   hideChatToggle,
+  onShareClick,
+  trackerName: _trackerName,
 }: {
   schema: TrackerResponse
   editMode: boolean
@@ -62,6 +65,8 @@ const TrackerPanel = memo(function TrackerPanel({
   leftWidth: number | null
   fullWidth?: boolean
   hideChatToggle?: boolean
+  onShareClick?: () => void
+  trackerName?: string
 }) {
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
@@ -199,6 +204,21 @@ const TrackerPanel = memo(function TrackerPanel({
                   <Database className="h-3.5 w-3.5 shrink-0" />
                   Data
                 </Button>
+                {onShareClick && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 justify-start gap-2 text-xs"
+                    onClick={() => {
+                      onShareClick()
+                      setMoreOpen(false)
+                    }}
+                    aria-label="Share tracker with team"
+                  >
+                    <Share2 className="h-3.5 w-3.5 shrink-0" />
+                    Share
+                  </Button>
+                )}
                 {editMode && undo != null && (
                   <EditModeUndoButton
                     undo={() => {
@@ -237,6 +257,18 @@ const TrackerPanel = memo(function TrackerPanel({
               <Database className="h-3.5 w-3.5" />
               Data
             </Button>
+            {onShareClick && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={onShareClick}
+                aria-label="Share tracker with team"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </Button>
+            )}
             <EditModeUndoButton
               undo={undo}
               canUndo={canUndo ?? false}
@@ -262,6 +294,7 @@ const TrackerPanel = memo(function TrackerPanel({
       <div
         className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
       >
+        <TrackerDisplayErrorBoundary>
         {isStreamingTracker && streamedTracker ? (
           <TrackerDisplay
             tabs={((streamedTracker.tabs || []) as unknown[]).filter(
@@ -307,6 +340,7 @@ const TrackerPanel = memo(function TrackerPanel({
             canUndo={canUndo}
           />
         )}
+        </TrackerDisplayErrorBoundary>
       </div>
     </section>
   )
@@ -360,9 +394,11 @@ function TrackerAIView() {
   const [editMode, setEditMode] = useState(true)
   const [isChatOpen, setIsChatOpen] = useState(true)
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [schema, setSchema] = useState<TrackerResponse>(
     () => INITIAL_TRACKER_SCHEMA as TrackerResponse
   )
+  const trackerName = schema?.tabs?.[0]?.name ?? 'Tracker'
 
   useEffect(() => {
     if (activeTrackerData) {
@@ -511,6 +547,8 @@ function TrackerAIView() {
               leftWidth={leftWidth}
               fullWidth
               hideChatToggle
+              onShareClick={() => setShareDialogOpen(true)}
+              trackerName={trackerName}
             />
           </TabsContent>
           <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
@@ -540,6 +578,8 @@ function TrackerAIView() {
           undo={editMode ? undoable.undo : undefined}
           canUndo={editMode ? undoable.canUndo : false}
           leftWidth={leftWidth}
+          onShareClick={() => setShareDialogOpen(true)}
+          trackerName={trackerName}
         />
 
         {isChatOpen && (
@@ -565,6 +605,15 @@ function TrackerAIView() {
     <>
       {mobileLayout}
       {desktopLayout}
+      <ShareTrackerDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        trackerName={trackerName}
+        onShare={(teamId, defaultRole) => {
+          // Persist TrackerMeta (teamId, defaultRole) via API when backend is ready
+          console.info('Share tracker with team', teamId, defaultRole)
+        }}
+      />
     </>
   )
 }

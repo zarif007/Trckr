@@ -51,10 +51,18 @@ export type TrackerGridConfig = {
   isRowAddAble?: boolean
   /** When false, cells and row details are read-only. Default true. */
   isRowEditAble?: boolean
-  /** When false, hide Delete button and row selection. Default true. */
+  /** When false, hide Delete button and row selection. Default true. (Prefer isRowDeletable.) */
   isRowDeleteAble?: boolean
+  /** Alias for isRowDeleteAble. When false, hide Delete. Default true. */
+  isRowDeletable?: boolean
   /** When false, hide column visibility / grid layout settings. Default true. */
   isEditAble?: boolean
+  /** Table: default page size. Default 10. */
+  pageSize?: number
+  /** Table: optional page size options for selector. */
+  pageSizeOptions?: number[]
+  /** Table: initial sort { id: columnId, desc?: boolean }. */
+  defaultSort?: { id: string; desc?: boolean }
   [key: string]: unknown
 }
 

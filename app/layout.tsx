@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono, IBM_Plex_Mono, IBM_Plex_Sans, Inter, Space_Grotesk } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import { TeamProvider } from '@/lib/teams'
 import NavBarWrapper from './components/NavBarWrapper'
 import './globals.css'
 
@@ -59,10 +60,12 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="trckr-theme"
         >
-          <NavBarWrapper />
-          <main className="max-w-full mx-auto">
-            {children}
-          </main>
+          <TeamProvider>
+            <NavBarWrapper />
+            <main className="max-w-full mx-auto">
+              {children}
+            </main>
+          </TeamProvider>
         </ThemeProvider>
       </body>
     </html>

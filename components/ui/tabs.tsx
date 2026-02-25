@@ -29,7 +29,7 @@ function TabsList({
       className={cn(
         theme.border.subtle,
         theme.radius.md,
-        'inline-flex w-fit items-center gap-1 border bg-muted/70 px-1 py-0.5 backdrop-blur transition-colors',
+        'inline-flex w-fit items-center gap-1 border bg-muted/70 p-0.5 backdrop-blur transition-colors',
         'ring-1 ring-inset ring-border/30',
         className
       )}

@@ -59,6 +59,7 @@ export interface TrackerKanbanGridProps {
   gridDataForThisGrid?: Array<Record<string, unknown>>
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
+  onDeleteEntries?: (rowIndices: number[]) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
   trackerContext?: TrackerContextForOptions
 }
@@ -78,9 +79,13 @@ function TrackerKanbanGridInner({
   gridDataForThisGrid,
   onUpdate,
   onAddEntry,
+  onDeleteEntries,
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerKanbanGridProps) {
+  const addable = (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false && onAddEntry != null
+  const editable = grid.config?.isRowEditAble !== false
+  const deleteable = (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false && onDeleteEntries != null
   const fullGridData = gridDataRef?.current ?? gridData
   const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
   const gridDataForKanban = useMemo(
@@ -291,7 +296,7 @@ function TrackerKanbanGridInner({
       onDragEnd={handleDragEnd}
     >
       <div className="w-full space-y-4">
-        {onAddEntry != null && (
+        {addable && (
           <>
             <div className="flex justify-end gap-2">
               <Button
@@ -332,28 +337,30 @@ function TrackerKanbanGridInner({
           </>
         )}
 
-        <EntryFormDialog
-          open={editRowIndex !== null}
-          onOpenChange={(open) => !open && setEditRowIndex(null)}
-          title="Row Details"
-          submitLabel="Update Entry"
-          fieldMetadata={fieldMetadata}
-          fieldOrder={fieldOrder}
-          initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
-          onSave={handleEditSave}
-          getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={(values, fieldId) =>
-            resolveDependsOnOverrides(
-              dependsOnForGrid,
-              fullGridData,
-              grid.id,
-              editRowIndex ?? 0,
-              values
-            )[fieldId]
-          }
-          gridId={grid.id}
-          calculations={calculations}
-        />
+        {editable && (
+          <EntryFormDialog
+            open={editRowIndex !== null}
+            onOpenChange={(open) => !open && setEditRowIndex(null)}
+            title="Row Details"
+            submitLabel="Update Entry"
+            fieldMetadata={fieldMetadata}
+            fieldOrder={fieldOrder}
+            initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
+            onSave={handleEditSave}
+            getBindingUpdates={getBindingUpdates}
+            getFieldOverrides={(values, fieldId) =>
+              resolveDependsOnOverrides(
+                dependsOnForGrid,
+                fullGridData,
+                grid.id,
+                editRowIndex ?? 0,
+                values
+              )[fieldId]
+            }
+            gridId={grid.id}
+            calculations={calculations}
+          />
+        )}
 
         <div className="flex gap-4 overflow-x-auto pb-4 items-start">
           {groups.map((group) => {
@@ -391,7 +398,12 @@ function TrackerKanbanGridInner({
                               gridData={gridDataForKanban}
                               dependsOn={dependsOnForGrid}
                               fieldMetadata={fieldMetadata}
-                              onEditRow={setEditRowIndex}
+                              onEditRow={editable ? setEditRowIndex : undefined}
+                              onDeleteRow={
+                                deleteable && onDeleteEntries
+                                  ? () => onDeleteEntries([card._originalIdx])
+                                  : undefined
+                              }
                               styles={cardStyles}
                             />
                           )

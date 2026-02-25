@@ -132,6 +132,7 @@ export function GridViewContent({
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
           onAddEntry={addEntry}
+          onDeleteEntries={deleteEntries}
         />
       )
     case 'div':
