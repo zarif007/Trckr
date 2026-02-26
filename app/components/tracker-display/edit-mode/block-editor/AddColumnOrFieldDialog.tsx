@@ -22,9 +22,9 @@ import {
 } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { TrackerFieldType } from '../types'
-import type { AddColumnOrFieldDialogProps } from './types'
-import { getCreatableFieldTypesWithLabels } from './utils'
+import type { TrackerFieldType } from '../../types'
+import type { AddColumnOrFieldDialogProps } from '../types'
+import { getCreatableFieldTypesWithLabels } from '../utils'
 
 /**
  * Dialog to add a new column (table) or field (div): create new or add existing.

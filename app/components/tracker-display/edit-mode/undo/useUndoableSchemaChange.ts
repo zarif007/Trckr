@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useCallback, useState } from 'react'
-import type { TrackerDisplayProps } from '../types'
+import type { TrackerDisplayProps } from '../../types'
 
 export interface UseUndoableSchemaChangeOptions {
   /** Maximum number of undo steps to keep. Default 50. */

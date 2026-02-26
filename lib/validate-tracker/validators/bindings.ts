@@ -4,7 +4,11 @@
  */
 
 import { parsePath } from '@/lib/resolve-bindings'
-import { KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS } from '@/lib/dynamic-options'
+import {
+  KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS,
+  dynamicConnectorSchema,
+  dynamicOptionFunctionSchema,
+} from '@/lib/dynamic-options'
 import type { ValidationContext, ValidatorResult } from '../types'
 
 function getFieldGridInfo(
@@ -22,6 +26,54 @@ function getFieldGridInfo(
 
 export function validateBindings(ctx: ValidationContext): ValidatorResult {
   const warnings: string[] = []
+  const builtInFunctionIds = new Set<string>(KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS as readonly string[])
+  const customFunctions = ctx.dynamicOptions.functions ?? {}
+  const customConnectors = ctx.dynamicOptions.connectors ?? {}
+  const customFunctionIds = new Set<string>(Object.keys(customFunctions))
+
+  for (const builtIn of builtInFunctionIds) {
+    if (customFunctionIds.has(builtIn)) {
+      warnings.push(
+        `dynamicOptions.functions overrides reserved built-in id "${builtIn}" (built-ins cannot be overridden)`
+      )
+    }
+  }
+
+  for (const [connectorId, connector] of Object.entries(customConnectors)) {
+    const parsedConnector = dynamicConnectorSchema.safeParse(connector)
+    if (!parsedConnector.success) {
+      warnings.push(`dynamicOptions.connectors["${connectorId}"] is invalid`)
+    }
+  }
+
+  for (const [functionId, definition] of Object.entries(customFunctions)) {
+    const parsedFunction = dynamicOptionFunctionSchema.safeParse(definition)
+    if (!parsedFunction.success) {
+      warnings.push(`dynamicOptions.functions["${functionId}"] is invalid`)
+      continue
+    }
+    const fn = parsedFunction.data
+    if (
+      ('source' in fn) &&
+      fn.source.kind === 'http_get' &&
+      !customConnectors[fn.source.connectorId]
+    ) {
+      warnings.push(
+        `dynamicOptions.functions["${functionId}"] references missing connector "${fn.source.connectorId}"`
+      )
+    }
+    if ('graph' in fn) {
+      const httpNodes = fn.graph.nodes.filter((node) => node.kind === 'source.http_get')
+      for (const node of httpNodes) {
+        const connectorId = node.config.connectorId
+        if (!customConnectors[connectorId]) {
+          warnings.push(
+            `dynamicOptions.functions["${functionId}"] graph node "${node.id}" references missing connector "${connectorId}"`
+          )
+        }
+      }
+    }
+  }
 
   for (const [fieldPath, entry] of Object.entries(ctx.bindings)) {
     const { gridId, fieldId } = parsePath(fieldPath)
@@ -72,10 +124,9 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
     if (field.dataType === 'dynamic_select' || field.dataType === 'dynamic_multiselect') {
       const functionId = (field.config as { dynamicOptionsFunction?: string } | undefined)
         ?.dynamicOptionsFunction
-      if (
-        functionId &&
-        !(KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS as readonly string[]).includes(functionId)
-      ) {
+      if (!functionId) {
+        warnings.push(`Dynamic select field "${field.id}" is missing config.dynamicOptionsFunction`)
+      } else if (!builtInFunctionIds.has(functionId) && !customFunctionIds.has(functionId)) {
         warnings.push(
           `Dynamic select field "${field.id}" uses unknown dynamicOptionsFunction "${functionId}"`
         )

@@ -24,13 +24,14 @@ import {
   SearchableSelect,
 } from '@/components/ui/select'
 import { Plus, Trash2, Settings2, ShieldCheck, Sigma, Copy, ChevronDown, ChevronRight, ArrowRight, Wand2, X } from 'lucide-react'
-import type { TrackerDisplayProps, TrackerFieldConfig } from '../types'
+import type { TrackerDisplayProps, TrackerFieldConfig } from '../../types'
 import type { FieldCalculationRule, FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import type { TrackerBindingEntry } from '@/lib/types/tracker-bindings'
-import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from './utils'
-import type { TrackerFieldType } from '../types'
-import { ExprRuleEditor } from './ExprRuleEditor'
-import { FieldMappingsEditor } from '../bindings/FieldMappingsEditor'
+import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from '../utils'
+import type { TrackerFieldType } from '../../types'
+import { ExprRuleEditor } from '../expr'
+import { FieldMappingsEditor } from '../../bindings/FieldMappingsEditor'
+import { DynamicOptionsBuilder } from '../dynamic-options'
 import {
   buildGridFieldMap,
   buildOptionsGridOptions,
@@ -42,8 +43,9 @@ import {
   suggestFieldMappings,
   validateBindingDraft,
   type BindingDraft,
-} from '../bindings/bindings-utils'
+} from '../../bindings/bindings-utils'
 import { parsePath } from '@/lib/resolve-bindings'
+import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
 
 const RULE_TYPES: Array<FieldValidationRule['type']> = [
   'required',
@@ -122,6 +124,20 @@ export function FieldSettingsDialog({
   const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
   const [bindingDirty, setBindingDirty] = useState(false)
+  const [dynamicOptionsDraft, setDynamicOptionsDraft] = useState<DynamicOptionsDefinitions>({})
+  const [dynamicFunctionId, setDynamicFunctionId] = useState('')
+  const [dynamicOptionsArgsText, setDynamicOptionsArgsText] = useState('')
+  const [dynamicCacheTtlText, setDynamicCacheTtlText] = useState('')
+  const [dynamicConfigError, setDynamicConfigError] = useState<string | null>(null)
+  const [dynamicBuilderState, setDynamicBuilderState] = useState<{
+    canSave: boolean
+    compileErrors: string[]
+    previewError: string | null
+  }>({
+    canSave: false,
+    compileErrors: ['Run preview to validate the dynamic function'],
+    previewError: null,
+  })
 
   const availableFields = useMemo(() => {
     if (!gridId || !schema) return []
@@ -150,6 +166,7 @@ export function FieldSettingsDialog({
   }, [gridId, field])
 
   const isBindable = dataType === 'options' || dataType === 'multiselect'
+  const isDynamicField = dataType === 'dynamic_select' || dataType === 'dynamic_multiselect'
 
   const gridFieldMap = useMemo(
     () => buildGridFieldMap(schema?.layoutNodes ?? []),
@@ -215,6 +232,19 @@ export function FieldSettingsDialog({
   }, [isBindable])
 
   useEffect(() => {
+    if (dataType === 'dynamic_select' || dataType === 'dynamic_multiselect') return
+    setDynamicFunctionId('')
+    setDynamicOptionsArgsText('')
+    setDynamicCacheTtlText('')
+    setDynamicConfigError(null)
+    setDynamicBuilderState({
+      canSave: false,
+      compileErrors: ['Run preview to validate the dynamic function'],
+      previewError: null,
+    })
+  }, [dataType])
+
+  useEffect(() => {
     if (!open || !field) return
     setLabel(field.ui.label ?? '')
     setPlaceholder(field.ui.placeholder ?? '')
@@ -255,6 +285,24 @@ export function FieldSettingsDialog({
       setBindingDraft(null)
       setBindingDirty(false)
     }
+    setDynamicOptionsDraft((schema?.dynamicOptions as DynamicOptionsDefinitions | undefined) ?? {})
+    setDynamicFunctionId(
+      (field.config as { dynamicOptionsFunction?: string } | undefined)?.dynamicOptionsFunction ?? ''
+    )
+    const dynamicArgs = (field.config as { dynamicOptionsArgs?: Record<string, unknown> } | undefined)
+      ?.dynamicOptionsArgs
+    setDynamicOptionsArgsText(dynamicArgs ? JSON.stringify(dynamicArgs, null, 2) : '')
+    const dynamicTtl = (field.config as { dynamicOptionsCacheTtlSeconds?: number } | undefined)
+      ?.dynamicOptionsCacheTtlSeconds
+    setDynamicCacheTtlText(
+      typeof dynamicTtl === 'number' && Number.isFinite(dynamicTtl) ? String(dynamicTtl) : ''
+    )
+    setDynamicConfigError(null)
+    setDynamicBuilderState({
+      canSave: false,
+      compileErrors: ['Run preview to validate the dynamic function'],
+      previewError: null,
+    })
   }, [open, field, schema, gridId, bindingKey, defaultBindingDraft])
 
   const bindingValidation = useMemo(() => {
@@ -389,6 +437,7 @@ export function FieldSettingsDialog({
   }
 
   const handleSave = () => {
+    setDynamicConfigError(null)
     const nextConfig: TrackerFieldConfig = {
       ...(field.config ?? {}),
       isRequired,
@@ -396,6 +445,47 @@ export function FieldSettingsDialog({
       max: toNumberOrUndefined(max),
       minLength: toNumberOrUndefined(minLength),
       maxLength: toNumberOrUndefined(maxLength),
+    }
+
+    if (isDynamicField) {
+      if (!dynamicBuilderState.canSave) {
+        setDynamicConfigError(
+          dynamicBuilderState.previewError ??
+          dynamicBuilderState.compileErrors[0] ??
+          'Dynamic function must be valid and previewed before saving.'
+        )
+        return
+      }
+      nextConfig.dynamicOptionsFunction = dynamicFunctionId.trim() || undefined
+      if (dynamicOptionsArgsText.trim()) {
+        try {
+          const parsed = JSON.parse(dynamicOptionsArgsText)
+          if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+            setDynamicConfigError('Dynamic args must be a JSON object.')
+            return
+          }
+          nextConfig.dynamicOptionsArgs = parsed as Record<string, unknown>
+        } catch {
+          setDynamicConfigError('Dynamic args JSON is invalid.')
+          return
+        }
+      } else {
+        nextConfig.dynamicOptionsArgs = undefined
+      }
+      const parsedTtl = dynamicCacheTtlText.trim() === '' ? undefined : Number(dynamicCacheTtlText)
+      if (parsedTtl !== undefined) {
+        if (!Number.isFinite(parsedTtl) || parsedTtl <= 0) {
+          setDynamicConfigError('Cache TTL must be a positive number.')
+          return
+        }
+        nextConfig.dynamicOptionsCacheTtlSeconds = parsedTtl
+      } else {
+        nextConfig.dynamicOptionsCacheTtlSeconds = undefined
+      }
+    } else {
+      nextConfig.dynamicOptionsFunction = undefined
+      nextConfig.dynamicOptionsArgs = undefined
+      nextConfig.dynamicOptionsCacheTtlSeconds = undefined
     }
 
     Object.keys(nextConfig).forEach((key) => {
@@ -456,6 +546,7 @@ export function FieldSettingsDialog({
       validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
       calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
       bindings: nextBindings,
+      dynamicOptions: dynamicOptionsDraft,
     })
 
     onOpenChange(false)
@@ -463,7 +554,9 @@ export function FieldSettingsDialog({
 
   const isNumeric = NUMERIC_TYPES.includes(dataType)
   const isText = TEXT_TYPES.includes(dataType)
-  const disableSave = isBindable && bindingEnabled && bindingDraft && !bindingValidation.isValid
+  const disableSave =
+    (isBindable && bindingEnabled && bindingDraft && !bindingValidation.isValid) ||
+    (isDynamicField && !dynamicBuilderState.canSave)
   const groupOrder = ['Text', 'Numbers', 'Date & time', 'Choice', 'Other']
 
   return (
@@ -502,6 +595,12 @@ export function FieldSettingsDialog({
                   <TabsTrigger value="bindings">
                     <ArrowRight className="h-4 w-4 shrink-0" />
                     <span className="truncate">Bindings</span>
+                  </TabsTrigger>
+                )}
+                {isDynamicField && (
+                  <TabsTrigger value="dynamicOptions">
+                    <Wand2 className="h-4 w-4 shrink-0" />
+                    <span className="truncate">Dynamic options</span>
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -849,6 +948,26 @@ export function FieldSettingsDialog({
                         </Button>
                       </div>
                     </div>
+                  )}
+                </TabsContent>
+              )}
+              {isDynamicField && (
+                <TabsContent value="dynamicOptions" className="mt-5 space-y-5">
+                  <DynamicOptionsBuilder
+                    schema={schema}
+                    fieldId={field.id}
+                    functionId={dynamicFunctionId}
+                    onFunctionIdChange={setDynamicFunctionId}
+                    argsText={dynamicOptionsArgsText}
+                    onArgsTextChange={setDynamicOptionsArgsText}
+                    cacheTtlText={dynamicCacheTtlText}
+                    onCacheTtlTextChange={setDynamicCacheTtlText}
+                    dynamicOptionsDraft={dynamicOptionsDraft}
+                    onDynamicOptionsDraftChange={setDynamicOptionsDraft}
+                    onValidationStateChange={setDynamicBuilderState}
+                  />
+                  {dynamicConfigError && (
+                    <p className="text-xs text-destructive">{dynamicConfigError}</p>
                   )}
                 </TabsContent>
               )}

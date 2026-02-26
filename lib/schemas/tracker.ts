@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options/user-functions/schema'
 
 const fieldName = () =>
   z
@@ -290,6 +291,7 @@ export const trackerSchema = z
     bindings: bindingsSchema,
 
     styles: stylesSchema,
+    dynamicOptions: dynamicOptionsDefinitionsSchema.optional(),
   })
   .passthrough()
 

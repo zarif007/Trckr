@@ -20,22 +20,22 @@ import { CSS } from '@dnd-kit/utilities'
 import { BlockWrapper } from './BlockWrapper'
 import { BlockCommandInput } from './BlockCommandInput'
 import { AddColumnOrFieldDialog } from './AddColumnOrFieldDialog'
-import { useEditMode } from './context'
-import { useSectionGridActions } from './useSectionGridActions'
-import { useLayoutActions } from './useLayoutActions'
-import { getOrCreateSectionAndGridForField, getOrCreateSectionForGrid } from './ensureContainer'
-import { createNewGridId, getNextGridPlaceId } from './utils'
-import { GridBlockContent, GridBlockHeader } from '../blocks'
-import { SectionBar, InlineEditableName } from '../layout'
+import { useEditMode } from '../context'
+import { useSectionGridActions } from '../useSectionGridActions'
+import { useLayoutActions } from '../useLayoutActions'
+import { getOrCreateSectionAndGridForField, getOrCreateSectionForGrid } from '../ensureContainer'
+import { createNewGridId, getNextGridPlaceId } from '../utils'
+import { GridBlockContent, GridBlockHeader } from '../../blocks'
+import { SectionBar, InlineEditableName } from '../../layout'
 import {
   SECTION_STACK_GAP,
   SECTION_GROUP_ROOT,
   GRIDS_CONTAINER,
   GRID_ITEM_WRAPPER,
   GRID_BLOCK_INNER,
-} from '../layout'
-import type { FlatBlock, BlockEditorProps, AddColumnOrFieldResult } from './types'
-import type { TrackerSection, TrackerGrid } from '../types'
+} from '../../layout'
+import type { FlatBlock, BlockEditorProps, AddColumnOrFieldResult } from '../types'
+import type { TrackerSection, TrackerGrid } from '../../types'
 
 // ---------------------------------------------------------------------------
 // Sortable ID helpers

@@ -9,8 +9,29 @@ import { registerBuiltInDynamicOptions } from './functions'
 registerBuiltInDynamicOptions()
 
 export * from './types'
+export { graphToPipelineAst, pipelineAstToGraph } from './pipeline-ast'
 export {
   getDynamicOptions,
   registerDynamicOptionsFunction,
   getRegisteredDynamicOptionsIds,
 } from './registry'
+export {
+  resolveDynamicOptions,
+  resolveDynamicOptionsSync,
+  executeDynamicOptionFunction,
+  clearDynamicOptionsCache,
+  dynamicOptionFunctionSchema,
+  dynamicOptionFunctionDslSchema,
+  dynamicOptionFunctionGraphSchema,
+  dynamicConnectorSchema,
+  dynamicOptionsDefinitionsSchema,
+  dynamicValueSelectorSchema,
+  dynamicOptionTransformSchema,
+  dynamicOptionSourceSchema,
+  dynamicOptionOutputMappingSchema,
+  dynamicFunctionGraphSchema,
+  dynamicFunctionGraphNodeSchema,
+  dynamicFunctionGraphEdgeSchema,
+  compileDynamicOptionFunctionGraph,
+  generateDynamicOptionFunctionOutputSchema,
+} from './user-functions'

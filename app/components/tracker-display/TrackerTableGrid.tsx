@@ -12,13 +12,13 @@ import {
   DependsOnRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
-import { resolveFieldOptionsV2 } from '@/lib/binding'
+import { resolveFieldOptionsV2, resolveFieldOptionsV2Async } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridDependsOn } from './hooks/useGridDependsOn'
-import { useMemo, useCallback, useState, memo } from 'react'
+import { useMemo, useCallback, useState, useEffect, memo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
@@ -79,6 +79,9 @@ function TrackerTableGridInner({
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const [addColumnOpen, setAddColumnOpen] = useState(false)
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
+  const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
+    Record<string, ReturnType<typeof resolveFieldOptionsV2> | undefined>
+  >({})
   const { editMode, schema, onSchemaChange } = useEditMode()
   const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
@@ -121,6 +124,14 @@ function TrackerTableGridInner({
   )
 
   const rows = useMemo(() => thisGridRows, [thisGridRows])
+  const runtimeForDynamicOptions = useMemo(
+    () => ({
+      currentGridId: grid.id,
+      rowIndex: 0,
+      currentRow: thisGridRows[0] ?? {},
+    }),
+    [grid.id, thisGridRows]
+  )
 
   const fieldSortableIds = useMemo(
     () => connectedFieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
@@ -215,13 +226,70 @@ function TrackerTableGridInner({
         field.dataType === 'dynamic_select' ||
         field.dataType === 'dynamic_multiselect' ||
         field.dataType === 'field_mappings'
-      map.set(
-        field.id,
-        needsOptions ? resolveFieldOptionsV2(tabId, grid.id, field, bindings, fullGridData, trackerContext) : undefined
+      if (!needsOptions) {
+        map.set(field.id, undefined)
+        return
+      }
+      const syncOptions = resolveFieldOptionsV2(
+        tabId,
+        grid.id,
+        field,
+        bindings,
+        fullGridData,
+        trackerContext,
+        runtimeForDynamicOptions
       )
+      map.set(field.id, asyncDynamicFieldOptions[field.id] ?? syncOptions)
     })
     return map
-  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext])
+  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext, asyncDynamicFieldOptions])
+
+  useEffect(() => {
+    let cancelled = false
+    const dynamicFields = tableFields.filter(
+      (field) =>
+        field.dataType === 'dynamic_select' ||
+        field.dataType === 'dynamic_multiselect' ||
+        field.dataType === 'field_mappings'
+    )
+    if (!trackerContext || dynamicFields.length === 0) {
+      setAsyncDynamicFieldOptions((prev) =>
+        Object.keys(prev).length === 0 ? prev : {}
+      )
+      return
+    }
+
+    ;(async () => {
+      const entries = await Promise.all(
+        dynamicFields.map(async (field) => {
+          try {
+            const options = await resolveFieldOptionsV2Async(
+              tabId,
+              grid.id,
+              field,
+              bindings,
+              fullGridData,
+              trackerContext,
+              runtimeForDynamicOptions
+            )
+            return [field.id, options] as const
+          } catch {
+            return [field.id, [] as ReturnType<typeof resolveFieldOptionsV2>] as const
+          }
+        })
+      )
+      if (cancelled) return
+      const next: Record<string, ReturnType<typeof resolveFieldOptionsV2> | undefined> = {}
+      for (const [fieldId, options] of entries) {
+        next[fieldId] = options
+      }
+      setAsyncDynamicFieldOptions(next)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext, runtimeForDynamicOptions])
 
   const bindingByFieldId = useMemo(() => {
     const map = new Map<string, ReturnType<typeof getBindingForField> | undefined>()

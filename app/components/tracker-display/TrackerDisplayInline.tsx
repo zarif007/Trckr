@@ -132,6 +132,7 @@ export function TrackerDisplayInline({
   validations,
   calculations,
   styles,
+  dynamicOptions,
   initialGridData,
   getDataRef,
   dependsOn,
@@ -333,9 +334,9 @@ export function TrackerDisplayInline({
   const editModeSchema = useMemo(
     () =>
       editMode
-        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn }
+        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions }
         : undefined,
-    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn]
+    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions]
   )
 
   const handleAddTab = useCallback(() => {
@@ -344,7 +345,7 @@ export function TrackerDisplayInline({
     const existingIds = new Set(tabList.map((t) => t.id))
     const id = createNewTabId(existingIds)
     const placeId = getNextTabPlaceId(tabList)
-    const newTab = { id, name: 'New tab', placeId }
+    const newTab = { id, name: 'New tab', placeId, config: {} }
     onSchemaChange({
       tabs: [...tabList, newTab],
       sections: sections ?? [],
@@ -356,9 +357,10 @@ export function TrackerDisplayInline({
       calculations,
       styles,
       dependsOn,
+      dynamicOptions,
     })
     setActiveTabId(id)
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, onSchemaChange])
+  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange])
 
   const handleRemoveTab = useCallback(
     (tabId: string) => {
@@ -386,6 +388,7 @@ export function TrackerDisplayInline({
         calculations,
         styles,
         dependsOn,
+        dynamicOptions,
       })
       if (activeTabId === tabId) {
         const next = tabList[0]?.id ?? ''
@@ -403,6 +406,7 @@ export function TrackerDisplayInline({
       calculations,
       styles,
       dependsOn,
+      dynamicOptions,
       onSchemaChange,
       activeTabId,
     ]
@@ -425,9 +429,10 @@ export function TrackerDisplayInline({
         calculations,
         styles,
         dependsOn,
+        dynamicOptions,
       })
     },
-    [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, onSchemaChange]
+    [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange]
   )
 
   const handleTabDragEnd = useCallback(
@@ -466,6 +471,7 @@ export function TrackerDisplayInline({
         calculations,
         styles,
         dependsOn,
+        dynamicOptions,
       })
     },
     [
@@ -480,6 +486,7 @@ export function TrackerDisplayInline({
       calculations,
       styles,
       dependsOn,
+      dynamicOptions,
       onSchemaChange,
     ]
   )
@@ -578,6 +585,8 @@ export function TrackerDisplayInline({
       fields={effectiveFields}
       layoutNodes={effectiveLayoutNodes}
       sections={effectiveSections}
+      dynamicOptions={dynamicOptions}
+      gridData={gridData}
     >
       <EditModeProvider
         editMode={!!editMode}

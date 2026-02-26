@@ -23,6 +23,7 @@ import { Trash2 } from 'lucide-react'
 import { compileExprFromGraph, exprToGraph, FLOW_CONSTANTS, type ExprFlowNodeData } from './expr-graph'
 import type { ExprNode } from '@/lib/functions/types'
 import { normalizeExprNode } from '@/lib/schemas/expr'
+import { FlowBuilderLayout } from '@/lib/flow-builder'
 import { cn } from '@/lib/utils'
 import type { AvailableField, ExprFlowOperator, ExprFlowNodeType } from './expr-types'
 
@@ -340,9 +341,8 @@ export function ExprFlowBuilder({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
-      const bounds = wrapperRef.current?.getBoundingClientRect()
       const data = event.dataTransfer.getData('application/reactflow')
-      if (!data || !rfInstance || !bounds) return
+      if (!data || !rfInstance) return
       let parsed: { type?: ExprFlowNodeType; op?: ExprFlowOperator } = {}
       try {
         parsed = JSON.parse(data)
@@ -351,8 +351,8 @@ export function ExprFlowBuilder({
       }
       if (!parsed.type) return
       const position = rfInstance.screenToFlowPosition({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+        x: event.clientX,
+        y: event.clientY,
       })
       createNode(parsed.type, position, parsed.op)
     },
@@ -387,82 +387,75 @@ export function ExprFlowBuilder({
     []
   )
 
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>Drag nodes from the palette, connect them, then click Apply.</span>
-        {(headerAction || selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) && (
-          <div className="flex items-center gap-2">
-            {(selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) && (
-              <Button type="button" size="sm" variant="secondary" onClick={deleteSelection}>
-                <Trash2 className="h-3.5 w-3.5" />
-                Delete selected
-              </Button>
-            )}
-            {headerAction}
-          </div>
-        )}
-      </div>
-      <div className="flex gap-3">
-        <div className="w-[170px] shrink-0 space-y-2">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Nodes</p>
-          {paletteItems.map((item) => (
-            <div
-              key={`${item.type}-${item.op ?? item.label}`}
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(
-                  'application/reactflow',
-                  JSON.stringify({ type: item.type, op: item.op })
-                )
-                event.dataTransfer.effectAllowed = 'move'
-              }}
-              className="cursor-grab rounded-lg border border-border/70 bg-muted/30 px-2 py-1 text-xs text-foreground/80 transition active:cursor-grabbing active:scale-[0.98] hover:bg-muted/40"
-            >
-              {item.label}
-            </div>
-          ))}
-        </div>
+  const palette = (
+    <div className="space-y-2">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Nodes</p>
+      {paletteItems.map((item) => (
         <div
-          className={cn(
-            'flex-1 rounded-xl border border-border/60 bg-muted/20 p-2',
-            flowHeightClassName ?? 'h-[360px]'
-          )}
-          ref={wrapperRef}
+          key={`${item.type}-${item.op ?? item.label}`}
+          draggable
+          onDragStart={(event) => {
+            event.dataTransfer.setData(
+              'application/reactflow',
+              JSON.stringify({ type: item.type, op: item.op })
+            )
+            event.dataTransfer.effectAllowed = 'move'
+          }}
+          className="cursor-grab rounded-lg border border-border/70 bg-muted/30 px-2 py-1 text-xs text-foreground/80 transition active:cursor-grabbing active:scale-[0.98] hover:bg-muted/40"
         >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            defaultEdgeOptions={EDGE_DEFAULTS}
-            connectionLineType={ConnectionLineType.SmoothStep}
-            connectionLineStyle={EDGE_STYLE}
-            fitView
-            onInit={setRfInstance}
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-            deleteKeyCode={['Backspace', 'Delete']}
-            onSelectionChange={onSelectionChange}
-            className="!bg-transparent"
-          >
-            <Background
-              gap={22}
-              size={1}
-              color="hsl(var(--foreground) / 0.14)"
-              variant={BackgroundVariant.Dots}
-            />
-          </ReactFlow>
+          {item.label}
         </div>
-      </div>
-      {compileError && <p className="text-xs text-destructive">{compileError}</p>}
-      <div className="flex justify-end">
-        <Button type="button" size="sm" variant="secondary" onClick={handleCompile}>
-          Apply visual expression
-        </Button>
-      </div>
+      ))}
     </div>
+  )
+
+  return (
+    <FlowBuilderLayout
+      headerText="Drag nodes from the palette, connect them, then click Apply."
+      headerRight={
+        headerAction ||
+        ((selectedNodeIds.length > 0 || selectedEdgeIds.length > 0) ? (
+          <Button type="button" size="sm" variant="secondary" onClick={deleteSelection}>
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete selected
+          </Button>
+        ) : undefined)
+      }
+      palette={palette}
+      canvasMinHeight="360px"
+      applyError={compileError}
+      onApply={handleCompile}
+      applyLabel="Apply visual expression"
+      paletteClassName="w-[140px]"
+      canvasClassName="flex flex-col min-h-0"
+    >
+      <div ref={wrapperRef} className={cn('w-full h-full min-h-[320px]', flowHeightClassName ?? 'h-[360px]')}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          defaultEdgeOptions={EDGE_DEFAULTS}
+          connectionLineType={ConnectionLineType.SmoothStep}
+          connectionLineStyle={EDGE_STYLE}
+          fitView
+          onInit={setRfInstance}
+          onDrop={onDrop}
+          onDragOver={onDragOver}
+          deleteKeyCode={['Backspace', 'Delete']}
+          onSelectionChange={onSelectionChange}
+          className="!bg-transparent h-full"
+        >
+          <Background
+            gap={22}
+            size={1}
+            color="hsl(var(--foreground) / 0.14)"
+            variant={BackgroundVariant.Dots}
+          />
+        </ReactFlow>
+      </div>
+    </FlowBuilderLayout>
   )
 }

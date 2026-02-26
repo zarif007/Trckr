@@ -19,8 +19,11 @@ import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptySta
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
 import { TrackerDisplay, TrackerDisplayErrorBoundary } from '@/app/components/tracker-display'
-import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
-import { EditModeUndoButton, useUndoKeyboardShortcut } from '@/app/components/tracker-display/edit-mode/undo'
+import {
+  useUndoableSchemaChange,
+  EditModeUndoButton,
+  useUndoKeyboardShortcut,
+} from '@/app/components/tracker-display/edit-mode'
 import {
   INITIAL_TRACKER_SCHEMA,
 } from '@/app/components/tracker-display/tracker-editor'
@@ -319,6 +322,7 @@ const TrackerPanel = memo(function TrackerPanel({
             calculations={(streamedTracker.calculations || {}) as TrackerResponse['calculations']}
             styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
             dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
+            dynamicOptions={(streamedTracker.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
             getDataRef={trackerDataRef}
           />
         ) : (
@@ -333,6 +337,7 @@ const TrackerPanel = memo(function TrackerPanel({
             calculations={schema.calculations}
             styles={schema.styles}
             dependsOn={schema.dependsOn}
+            dynamicOptions={schema.dynamicOptions}
             getDataRef={trackerDataRef}
             editMode={editMode}
             onSchemaChange={editMode ? handleSchemaChange : undefined}

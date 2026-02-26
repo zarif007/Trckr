@@ -9,5 +9,6 @@ export { enrichBindingsFromSchema } from './enrich'
 export {
   resolveFieldOptionsLegacy,
   resolveFieldOptionsV2,
+  resolveFieldOptionsV2Async,
   getFieldBinding,
 } from './options'

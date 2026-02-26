@@ -92,6 +92,12 @@ export type TrackerFieldConfig = {
   isDisabled?: boolean
   isHidden?: boolean
   defaultValue?: unknown
+  /** Dynamic function id used by dynamic_select/dynamic_multiselect fields. */
+  dynamicOptionsFunction?: string
+  /** Optional runtime args passed to dynamic option function. */
+  dynamicOptionsArgs?: Record<string, unknown>
+  /** Optional field-level override for dynamic option cache TTL (seconds). */
+  dynamicOptionsCacheTtlSeconds?: number
   min?: number
   max?: number
   minLength?: number
@@ -131,6 +137,7 @@ import type { StyleOverrides } from '@/lib/schemas/tracker'
 export type { StyleOverrides }
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 export type { FieldCalculationRule, FieldValidationRule }
+import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
 
 // Re-export binding types from lib for backward compatibility
 export type {
@@ -166,6 +173,8 @@ export interface TrackerDisplayProps {
   styles?: Record<string, StyleOverrides>
   /** Optional initial grid data (e.g. for demos). Key is grid id, value is array of row objects. */
   initialGridData?: Record<string, Array<Record<string, unknown>>>
+  /** Optional tracker-local dynamic option function/connectors definitions. */
+  dynamicOptions?: DynamicOptionsDefinitions
   /** Optional ref the display will set to a getter that returns current grid data (values only). */
   getDataRef?: React.MutableRefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
   /** When true, layout is editable (add/remove/reorder columns and fields). */

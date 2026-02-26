@@ -109,6 +109,8 @@ export const trackerPatchSchema = z
     styles: z.record(z.string(), z.any()).optional(),
     /** Array of grid/view ids whose style overrides should be removed. */
     stylesRemove: z.array(z.string()).optional(),
+    /** Patch dynamic options function/connector definitions. */
+    dynamicOptions: z.record(z.string(), z.any()).optional(),
   })
   .passthrough()
 

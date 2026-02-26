@@ -1,7 +1,7 @@
 'use client'
 
-import type { BlockWrapperProps } from './types'
-import { BlockControlsProvider } from '../layout/block-controls-context'
+import type { BlockWrapperProps } from '../types'
+import { BlockControlsProvider } from '../../layout/block-controls-context'
 import { cn } from '@/lib/utils'
 
 /**

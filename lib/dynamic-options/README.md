@@ -125,3 +125,80 @@ Import from `@/lib/dynamic-options`:
 | `all_rule_set_values` | `all-rule-set-values.ts` | Boolean-like options: True / False. |
 
 Each built-in is independent: its options and logic live only in its own file and in the registry.
+
+---
+
+## Dynamic Select 2.0 (User Functions)
+
+Trackers can now define per-tracker dynamic functions and connectors at top-level:
+
+```json
+{
+  "dynamicOptions": {
+    "functions": {
+      "status_options": {
+        "id": "status_options",
+        "name": "Status options",
+        "version": 1,
+        "source": { "kind": "grid_rows", "gridId": "tasks_grid" },
+        "transforms": [{ "kind": "unique", "by": "status" }],
+        "output": { "label": "status", "value": "status", "id": "status" },
+        "enabled": true
+      }
+    },
+    "connectors": {
+      "countries_api": {
+        "id": "countries_api",
+        "name": "Countries API",
+        "type": "rest",
+        "baseUrl": "https://example.com",
+        "auth": { "type": "secret_ref", "secretRefId": "COUNTRIES_API_KEY" }
+      }
+    }
+  }
+}
+```
+
+Resolver behavior:
+- Built-ins keep precedence and remain reserved ids.
+- If id is not built-in, resolver checks `dynamicOptions.functions`.
+- `http_get` sources require server resolution (`/api/dynamic-options/resolve`).
+- Resolver returns metadata (`fromCache`, `fetchedAt`, `expiresAt`, `durationMs`, `source`).
+
+Key exports:
+- `resolveDynamicOptions` / `resolveDynamicOptionsSync`
+- `executeDynamicOptionFunction`
+- `dynamicOptionFunctionSchema`, `dynamicConnectorSchema`, `dynamicOptionsDefinitionsSchema`
+
+### Graph Engine (2.1)
+
+Custom functions also support a graph engine:
+
+```json
+{
+  "id": "country_currency_options",
+  "name": "Country currencies",
+  "version": 1,
+  "engine": "graph_v1",
+  "graph": {
+    "entryNodeId": "start_1",
+    "returnNodeId": "output_1",
+    "nodes": [
+      { "id": "start_1", "kind": "control.start", "position": { "x": 40, "y": 160 }, "config": {} },
+      { "id": "http_1", "kind": "source.http_get", "position": { "x": 260, "y": 160 }, "config": { "connectorId": "countries_api", "path": "/currencies" } },
+      { "id": "ai_1", "kind": "ai.extract_options", "position": { "x": 480, "y": 160 }, "config": { "prompt": "Extract rows with label/value" } },
+      { "id": "output_1", "kind": "output.options", "position": { "x": 700, "y": 160 }, "config": { "mapping": { "label": "label", "value": "value" } } }
+    ],
+    "edges": [
+      { "id": "e1", "source": "start_1", "target": "http_1" },
+      { "id": "e2", "source": "http_1", "target": "ai_1" },
+      { "id": "e3", "source": "ai_1", "target": "output_1" }
+    ]
+  }
+}
+```
+
+Notes:
+- Built-in IDs are still reserved and evaluated first.
+- Graph compile validates DAG shape, required connections, and connector references.
+- `source.http_get` and `ai.extract_options` are server-only and resolve through `/api/dynamic-options/resolve`.

@@ -7,32 +7,31 @@
  */
 
 export { EditModeProvider, useEditMode, useCanEditLayout } from './context'
-export { useUndoableSchemaChange } from './useUndoableSchemaChange'
-export type { UseUndoableSchemaChangeOptions, UseUndoableSchemaChangeResult } from './useUndoableSchemaChange'
-export { EditModeUndoButton, useUndoKeyboardShortcut } from './undo'
-export type { EditModeUndoButtonProps } from './undo'
+export {
+  useUndoableSchemaChange,
+  EditModeUndoButton,
+  useUndoKeyboardShortcut,
+} from './undo'
+export type {
+  UseUndoableSchemaChangeOptions,
+  UseUndoableSchemaChangeResult,
+  EditModeUndoButtonProps,
+} from './undo'
 export type { EditModeContextValue, EditModeProviderProps } from './context'
 
-export { BlockEditor } from './BlockEditor'
+export { BlockEditor } from './block-editor'
 export { useLayoutActions } from './useLayoutActions'
 export { useSectionGridActions } from './useSectionGridActions'
 
-export { AddColumnOrFieldDialog } from './AddColumnOrFieldDialog'
-export { BlockCommandInput } from './BlockCommandInput'
-export type {
-  BlockCommandInputProps,
-  BlockCommandItem,
-} from './BlockCommandInput'
-export { BlockWrapper } from './BlockWrapper'
-export { ColumnHeaderEdit } from './ColumnHeaderEdit'
-export { FieldRowEdit } from './FieldRowEdit'
-export { FieldSettingsDialog } from './FieldSettingsDialog'
+export { AddColumnOrFieldDialog, BlockCommandInput, BlockWrapper, ColumnHeaderEdit, FieldRowEdit } from './block-editor'
+export type { BlockCommandInputProps, BlockCommandItem } from './block-editor'
+export { FieldSettingsDialog } from './field-settings'
 export {
   SortableColumnHeaderEdit,
   SortableFieldRowEdit,
   fieldSortableId,
   parseFieldId,
-} from './SortableBlock'
+} from './block-editor'
 
 export { getOrCreateSectionAndGridForField } from './ensureContainer'
 export type { EnsureContainerResult } from './ensureContainer'
@@ -63,3 +62,5 @@ export type {
   BlockVariant,
   BlockWrapperProps,
 } from './types'
+
+export type { AvailableField } from './expr'

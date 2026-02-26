@@ -1,4 +1,4 @@
-import type { AvailableField } from '@/app/components/tracker-display/edit-mode/expr-types'
+import type { AvailableField } from '@/app/components/tracker-display/edit-mode'
 
 export interface ExprPromptInputs {
   prompt: string

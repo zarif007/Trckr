@@ -3,6 +3,7 @@
  */
 
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
+import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
 
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 export interface BindingEntry {
@@ -26,6 +27,7 @@ export interface TrackerLike {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   dependsOn?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
+  dynamicOptions?: DynamicOptionsDefinitions
 }
 
 export interface ValidationResult {
@@ -50,6 +52,7 @@ export interface ValidationContext {
   bindings: NonNullable<TrackerLike['bindings']>
   validations: NonNullable<TrackerLike['validations']>
   calculations: NonNullable<TrackerLike['calculations']>
+  dynamicOptions: NonNullable<TrackerLike['dynamicOptions']>
 }
 
 export type ValidatorResult = { errors?: string[]; warnings?: string[] }

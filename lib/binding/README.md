@@ -15,7 +15,7 @@ Technical documentation for the **binding** module: building and enriching bindi
 
 1. **Types** (`types.ts`)  
    - `TrackerLike` — tracker schema shape used when building/enriching bindings (tabs, sections, grids, fields, layoutNodes, bindings).  
-   - `TrackerContextForOptions` — alias for `DynamicOptionsContext` (grids, fields, layoutNodes?, sections?) passed when resolving options; matches dynamic-options so one context works for both bindings and dynamic selects.  
+   - `TrackerContextForOptions` — alias for `DynamicOptionsContext` (grids, fields, gridData?, layoutNodes?, sections?, dynamicOptions?) passed when resolving options; one context works for bindings, built-ins, and user-created dynamic functions.  
    - `ResolvedOption` — normalized option shape (label, value, id?) for Select/MultiSelect.
 
 2. **Schema build** (`schema-build.ts`)  
@@ -27,7 +27,8 @@ Technical documentation for the **binding** module: building and enriching bindi
 
 4. **Options** (`options.ts`)  
    - `resolveFieldOptionsLegacy(field, gridData?)` — options from inline `field.config.options` only.  
-   - `resolveFieldOptionsV2(tabId, gridId, field, bindings, gridData, trackerContext?)` — options from bindings + gridData, or from dynamic option function (dynamic_select/dynamic_multiselect), or fallback to legacy.  
+   - `resolveFieldOptionsV2(tabId, gridId, field, bindings, gridData, trackerContext?)` — sync options (bindings + gridData, built-ins/local dynamic functions, or legacy).  
+   - `resolveFieldOptionsV2Async(tabId, gridId, field, bindings, gridData, trackerContext?, options?)` — async options path for remote dynamic functions (`http_get`) via `/api/dynamic-options/resolve`.  
    - `getFieldBinding(gridId, fieldId, bindings?, tabId?)` — re-export from resolve-bindings for convenience.
 
 ---
@@ -45,10 +46,11 @@ Technical documentation for the **binding** module: building and enriching bindi
 ### Option resolution flow
 
 1. For a cell/field, the grid calls `resolveFieldOptionsV2(tabId, gridId, field, bindings, gridData, trackerContext)`.  
-2. If field is `dynamic_select` or `dynamic_multiselect`, use `getDynamicOptions(field.config.dynamicOptionsFunction, trackerContext)`.  
-3. Else if the field has a binding, use `getBindingForField` + `resolveOptionsFromBinding` (from resolve-bindings) to get options from the option grid rows.  
-4. Else use `resolveFieldOptionsLegacy(field)` (inline `config.options`).  
-5. Result is normalized to `ResolvedOption[]` (label, value, id).
+2. If field is `dynamic_select` or `dynamic_multiselect`, resolve by function id (built-in first, then tracker-local `dynamicOptions.functions`).  
+3. Async path (`resolveFieldOptionsV2Async`) calls `/api/dynamic-options/resolve` for server-side sources like `http_get`.  
+4. Else if the field has a binding, use `getBindingForField` + `resolveOptionsFromBinding` (from resolve-bindings) to get options from the option grid rows.  
+5. Else use `resolveFieldOptionsLegacy(field)` (inline `config.options`).  
+6. Result is normalized to `ResolvedOption[]` (label, value, id).
 
 ### Enrich matching strategies
 
@@ -94,7 +96,8 @@ Import from `@/lib/binding`:
 | `enrichBindingsFromSchema(tracker)` | Infer fieldMappings from option grid → main grid field ids. |
 | **Options** | |
 | `resolveFieldOptionsLegacy(field, gridData?)` | Options from inline config.options. |
-| `resolveFieldOptionsV2(tabId, gridId, field, bindings, gridData, trackerContext?)` | Options from bindings, dynamic function, or legacy. |
+| `resolveFieldOptionsV2(tabId, gridId, field, bindings, gridData, trackerContext?)` | Sync options from bindings, dynamic function, or legacy. |
+| `resolveFieldOptionsV2Async(tabId, gridId, field, bindings, gridData, trackerContext?, options?)` | Async options with remote function resolution support. |
 | `getFieldBinding(gridId, fieldId, bindings?, tabId?)` | Binding entry for field (re-export from resolve-bindings). |
 
 ---
@@ -103,7 +106,7 @@ Import from `@/lib/binding`:
 
 - **lib/types/tracker-bindings** — options.ts uses `TrackerBindings`, `TrackerBindingEntry` for resolution.  
 - **lib/resolve-bindings** — path/lookup and option resolution (`buildFieldPath`, `getBindingForField`, `resolveOptionsFromBinding`). enrich uses `normalizeOptionsGridId`.  
-- **lib/dynamic-options** — `getDynamicOptions` for dynamic_select/dynamic_multiselect; types.ts uses `DynamicOptionsContext` for `TrackerContextForOptions`.
+- **lib/dynamic-options** — dynamic options resolvers (`resolveDynamicOptions`), schemas, and built-ins used by sync/async field option resolution.
 
 ## See also
 

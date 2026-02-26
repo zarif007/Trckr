@@ -2,7 +2,7 @@
 
 import { GripVertical, Trash2, Settings2 } from 'lucide-react'
 import { BlockWrapper } from './BlockWrapper'
-import type { ColumnHeaderEditProps } from './types'
+import type { ColumnHeaderEditProps } from '../types'
 import { cn } from '@/lib/utils'
 
 /**

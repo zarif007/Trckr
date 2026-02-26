@@ -1,6 +1,7 @@
 import type { TrackerDisplayProps, TrackerLayoutNode } from '@/app/components/tracker-display/types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
+import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options'
 
 type PatchItem<T> = Partial<T> & { id?: string; _delete?: boolean }
 type LayoutNodePatch = Partial<TrackerLayoutNode> & { gridId?: string; fieldId?: string; _delete?: boolean }
@@ -266,6 +267,14 @@ export function applyTrackerPatch(
     }
   }
 
+  // --- Dynamic options definitions ---
+  const dynamicOptionsParsed = dynamicOptionsDefinitionsSchema.safeParse(
+    (patch as Record<string, unknown>).dynamicOptions
+  )
+  const dynamicOptions = dynamicOptionsParsed.success
+    ? dynamicOptionsParsed.data
+    : base.dynamicOptions
+
   return {
     ...base,
     tabs,
@@ -278,5 +287,6 @@ export function applyTrackerPatch(
     calculations: normalizedCalculations,
     dependsOn: patch.dependsOn ?? base.dependsOn,
     styles,
+    dynamicOptions,
   }
 }

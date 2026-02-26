@@ -1,8 +1,8 @@
 'use client'
 
 import { BlockWrapper } from './BlockWrapper'
-import { useBlockControls, LabelWithBlockControls } from '../layout'
-import type { FieldRowEditProps } from './types'
+import { useBlockControls, LabelWithBlockControls } from '../../layout'
+import type { FieldRowEditProps } from '../types'
 
 /**
  * Edit wrapper for a div grid field row in edit mode.

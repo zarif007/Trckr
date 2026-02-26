@@ -11,7 +11,7 @@ import type { ExprNode } from '@/lib/functions/types'
 import { exprSchema, normalizeExprNode } from '@/lib/schemas/expr'
 import { ExprFlowBuilder } from './ExprFlowBuilder'
 import type { AvailableField } from './expr-types'
-import type { TrackerDisplayProps } from '../types'
+import type { TrackerDisplayProps } from '../../types'
 
 interface ExprRuleEditorProps {
   expr: ExprNode

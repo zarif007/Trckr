@@ -15,6 +15,10 @@ export interface TrackerLike {
     ui?: { label?: string; placeholder?: string }
     config?: Record<string, unknown> | null
   }>
+  dynamicOptions?: {
+    functions?: Record<string, unknown>
+    connectors?: Record<string, unknown>
+  }
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
   bindings?: Record<string, { optionsGrid: string; labelField: string; fieldMappings: Array<{ from: string; to: string }> }>
   dependsOn?: Array<Record<string, unknown>>

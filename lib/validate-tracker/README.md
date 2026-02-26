@@ -39,7 +39,7 @@ Validators are pure with respect to the context: they read only and do not mutat
 | **Layout** | `validators/layout.ts` | Errors | layoutNodes reference existing gridIds and fieldIds; sections reference existing tabIds; grids reference existing sectionIds. |
 | **Options fields** | `validators/options-fields.ts` | Warnings | Every `options` / `multiselect` field (that is placed in a grid) has a bindings entry. |
 | **DependsOn** | `validators/depends-on.ts` | Warnings | Each `dependsOn` rule has a valid `source` (grid + field) and each target path has valid grid + field. |
-| **Bindings** | `validators/bindings.ts` | Warnings | Binding keys are valid grid.field paths; optionsGrid exists and is an options grid; labelField and fieldMappings reference existing fields; value mapping (to = field path) exists; dynamic_select/dynamic_multiselect use known function ids; select/multiselect fields in layout have a bindings entry. |
+| **Bindings** | `validators/bindings.ts` | Warnings | Binding keys are valid grid.field paths; optionsGrid exists and is an options grid; labelField and fieldMappings reference existing fields; value mapping (to = field path) exists; dynamic_select/dynamic_multiselect function ids are valid (built-in or tracker-local); custom dynamic function and connector definitions are schema-valid; DSL `http_get` and graph `source.http_get` nodes reference existing connectors; select/multiselect fields in layout have a bindings entry. |
 | **Validations** | `validators/validations.ts` | Errors | Validation keys must be `"gridId.fieldId"` (like bindings, e.g. `main_grid.sku`). Every field is in a grid; there is no bare `fieldId` key. Expr rules must reference fields by `gridId.fieldId`. |
 | **Calculations** | `validators/calculations.ts` | Errors | Calculation keys must be `"gridId.fieldId"` target paths. Rules must have `{ expr }`; expression field references must be valid, in the same grid as target, and calculation dependencies must not form cycles. |
 
@@ -101,7 +101,7 @@ Adding a new check: implement a function `(ctx: ValidationContext) => ValidatorR
 ## Dependencies
 
 - **`@/lib/resolve-bindings`** — `parsePath()` for grid.field paths and legacy tab.grid.field.
-- **`@/lib/dynamic-options`** — `KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS` for validating dynamic select/multiselect config.
+- **`@/lib/dynamic-options`** — built-in ids + dynamic function/connector schemas (`dynamicOptionFunctionSchema`, `dynamicConnectorSchema`) used to validate Dynamic Select 2.0 config.
 
 ## When to use
 

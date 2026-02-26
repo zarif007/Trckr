@@ -51,7 +51,7 @@ const isDefaultTabConfig = (value: unknown): boolean => {
  */
 const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): boolean => {
   if (!tracker) return true
-  const trackerWithExtras = tracker as TrackerLike & { styles?: unknown }
+  const trackerWithExtras = tracker as TrackerLike & { styles?: unknown; dynamicOptions?: unknown }
 
   const sections = Array.isArray(tracker.sections) ? tracker.sections : []
   const grids = Array.isArray(tracker.grids) ? tracker.grids : []
@@ -67,7 +67,8 @@ const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): b
     !isEmptyObject(tracker.bindings) ||
     !isEmptyObject(tracker.validations) ||
     !isEmptyObject((tracker as TrackerLike & { calculations?: unknown }).calculations) ||
-    !isEmptyObject(trackerWithExtras.styles)
+    !isEmptyObject(trackerWithExtras.styles) ||
+    !isEmptyObject(trackerWithExtras.dynamicOptions)
   ) {
     return false
   }
