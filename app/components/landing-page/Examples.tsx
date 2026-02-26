@@ -50,7 +50,7 @@ export default function Examples() {
 
       <div className="text-center">
         <Button size="lg" className="rounded-md px-8" asChild>
-          <a href="/tracker">Try it yourself →</a>
+          <a href="/login?callbackUrl=/tracker">Try it yourself →</a>
         </Button>
       </div>
     </motion.section>

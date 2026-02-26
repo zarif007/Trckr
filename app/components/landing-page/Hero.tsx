@@ -70,7 +70,7 @@ export default function Hero() {
             className="group sm:h-12 px-6 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             asChild
           >
-            <a href="/tracker" className="inline-flex items-center">
+            <a href="/login?callbackUrl=/tracker" className="inline-flex items-center">
               Get started
               <span className="inline-block ml-2 transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
             </a>

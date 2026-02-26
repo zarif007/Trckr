@@ -21,7 +21,7 @@ export default function CTA() {
         </h3>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <Button size="lg" className="h-16 px-12 text-xl font-black rounded-md group transition-all hover:scale-105 active:scale-95 bg-foreground text-background" asChild>
-            <a href="/tracker">
+            <a href="/login?callbackUrl=/tracker">
               Start Building Now
               <span className="inline-block transition-transform group-hover:translate-x-2 ml-3" aria-hidden>→</span>
             </a>

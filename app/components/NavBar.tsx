@@ -1,12 +1,23 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { useSession, signOut } from 'next-auth/react'
+import { LayoutDashboard, LogOut } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
 import { Button } from '@/components/ui/button'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 
 export default function NavBar() {
   const [open, setOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { data: session, status } = useSession()
+  const isSignedIn = status === 'authenticated' && !!session
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-transparent backdrop-blur-xs">
@@ -58,6 +69,59 @@ export default function NavBar() {
             </div>
 
             <div className="flex items-center gap-2">
+              {isSignedIn && session?.user ? (
+                <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-2 py-1.5 pr-3 hover:bg-muted/80 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label="Open user menu"
+                    >
+                      {session.user.image ? (
+                        <Image
+                          src={session.user.image}
+                          alt=""
+                          width={28}
+                          height={28}
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                          {(session.user.name ?? session.user.email ?? '?').charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
+                        {session.user.name ?? session.user.email ?? 'User'}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-48 p-1">
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground border-b border-border mb-1">
+                      {session.user.email}
+                    </div>
+                    <Link
+                      href="/tracker"
+                      className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                      onClick={() => setUserMenuOpen(false)}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Go to tracker
+                    </Link>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 w-full rounded-md px-2 py-1.5 text-sm hover:bg-muted text-foreground"
+                      onClick={() => { setUserMenuOpen(false); signOut({ redirectTo: '/' }) }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </button>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <Button asChild size="sm">
+                  <Link href="/login?callbackUrl=/tracker">Sign in</Link>
+                </Button>
+              )}
               <ThemeToggle />
             </div>
           </div>
@@ -109,13 +173,51 @@ export default function NavBar() {
               </Link>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2">
               <Button asChild size="sm">
-                <Link href="#demo">Try demo</Link>
+                <Link href="#demo" onClick={() => setOpen(false)}>Try demo</Link>
               </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link href="#demo">Get Started</Link>
-              </Button>
+              {isSignedIn && session?.user ? (
+                <>
+                  <div className="flex items-center gap-2 px-2 py-1 border-b border-border">
+                    {session.user.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt=""
+                        width={32}
+                        height={32}
+                        className="rounded-full"
+                      />
+                    ) : (
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
+                        {(session.user.name ?? session.user.email ?? '?').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {session.user.name ?? session.user.email ?? 'User'}
+                      </p>
+                      {session.user.email && (
+                        <p className="text-xs text-muted-foreground truncate">{session.user.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/tracker" onClick={() => setOpen(false)}>Go to tracker</Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setOpen(false); signOut({ redirectTo: '/' }) }}
+                  >
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/login?callbackUrl=/tracker" onClick={() => setOpen(false)}>Sign in</Link>
+                </Button>
+              )}
             </div>
           </div>
         )}

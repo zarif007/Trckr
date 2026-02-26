@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Users } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { ArrowLeft, LogOut, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ThemeToggle from './ThemeToggle'
 import { TeamSwitcher, TeamMembersDialog } from './teams'
 
 export default function TrackerNavBar() {
   const [membersOpen, setMembersOpen] = useState(false)
+  const { data: session } = useSession()
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/80 bg-background shadow-[0_1px_0_0_hsl(var(--border)/0.5)]">
@@ -23,6 +25,11 @@ export default function TrackerNavBar() {
           </Link>
 
           <div className="flex items-center gap-2 justify-end">
+            {session?.user?.email && (
+              <span className="hidden sm:inline text-xs text-muted-foreground truncate max-w-[140px]" title={session.user.email}>
+                {session.user.email}
+              </span>
+            )}
             <TeamSwitcher />
             <Button
               variant="ghost"
@@ -34,6 +41,15 @@ export default function TrackerNavBar() {
               <Users className="h-4 w-4" />
             </Button>
             <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground hover:text-foreground"
+              onClick={() => signOut({ redirectTo: '/' })}
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </Button>
           </div>
         </div>
       </nav>
