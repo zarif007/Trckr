@@ -1,4 +1,5 @@
 import TrackerNavBar from '@/app/components/TrackerNavBar'
+import LogLoginEffect from '@/app/components/LogLoginEffect'
 
 export default function TrackerLayout({
   children,
@@ -7,6 +8,7 @@ export default function TrackerLayout({
 }) {
   return (
     <>
+      <LogLoginEffect />
       <TrackerNavBar />
       {children}
     </>
