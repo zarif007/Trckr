@@ -20,6 +20,14 @@ ID NAMING (follow exactly so agents and code stay consistent):
 - Grids: snake_case, MUST end with _grid (e.g. tasks_grid, meta_grid). Options grids MUST end with _options_grid (e.g. category_options_grid).
 - Fields: snake_case, no suffix (e.g. due_date, status, title).
 
+GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
+- IDs for tabs, sections, grids, and fields MUST be globally unique across the ENTIRE tracker – do not reuse the same id in different places.
+- If you need multiple items with the same semantic name, keep the first as the base id and append numeric suffixes for the rest:
+  - Example fields: "status", "status_1", "status_2".
+  - Example grids: "tasks_grid", "tasks_grid_1".
+- Never emit two different objects with the exact same id.
+- When generating patches, you MUST respect existing ids in the Current Tracker State (do not rename them). For any NEW tab/section/grid/field you add, if the desired base id is already used anywhere, choose the next available numeric suffix instead.
+
 === CRITICAL: OPTIONS/MULTISELECT FIELDS USE BINDINGS ONLY ===
 
 Every field with dataType "options" or "multiselect" MUST have a bindings entry. optionsGrid MUST point to an OPTIONS GRID (id ending with _options_grid), NEVER to a main data grid (e.g. do NOT use suppliers_grid as optionsGrid for a supplier select — use supplier_options_grid).
