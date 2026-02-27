@@ -562,48 +562,75 @@ export function FieldSettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden border-border/60 bg-background"
+        className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden"
       >
-        <div className="relative shrink-0 border-b border-border/50 px-6 pt-6 pb-5 bg-background">
-          <DialogHeader className="space-y-1.5">
-            <DialogTitle className="text-lg font-semibold tracking-tight">
-              Field settings
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
-              Edit label, placeholder, validation rules, calculations, and bindings for this field.
-              <span className="block mt-1 text-xs opacity-90">Field: {field.id}</span>
-            </DialogDescription>
+        {/* Compact Header */}
+        <div className="shrink-0 border-b border-border/50 px-4 py-3 bg-muted/20">
+          <DialogHeader className="space-y-0">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Settings2 className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-base font-semibold truncate">
+                  {field.ui.label || 'Untitled Field'}
+                </DialogTitle>
+                <code className="text-[10px] text-muted-foreground">{field.id}</code>
+              </div>
+            </div>
           </DialogHeader>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <div className="space-y-5 px-6 py-5">
-            <Tabs defaultValue="general" className="w-full">
-              <TabsList className="w-full">
-                <TabsTrigger value="general">
-                  <Settings2 className="h-4 w-4 shrink-0" />
-                  <span className="truncate">General</span>
+
+        {/* Tabs */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Tabs defaultValue="general" className="flex flex-col flex-1 overflow-hidden">
+            <div className="shrink-0 border-b border-border/50 px-4 py-2 bg-muted/10">
+              <TabsList className="w-full h-8">
+                <TabsTrigger value="general" className="gap-1.5 text-xs">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  <span>General</span>
                 </TabsTrigger>
-                <TabsTrigger value="validations">
-                  <ShieldCheck className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Validations</span>
+                <TabsTrigger value="validations" className="gap-1.5 text-xs">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>Validations</span>
+                  {rules.length > 0 && (
+                    <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
+                      {rules.length}
+                    </span>
+                  )}
                 </TabsTrigger>
-                <TabsTrigger value="calculations">
-                  <Sigma className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Calculations</span>
+                <TabsTrigger value="calculations" className="gap-1.5 text-xs">
+                  <Sigma className="h-3.5 w-3.5" />
+                  <span>Calculations</span>
+                  {calculationRule && (
+                    <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                      1
+                    </span>
+                  )}
                 </TabsTrigger>
                 {isBindable && (
-                  <TabsTrigger value="bindings">
-                    <ArrowRight className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Bindings</span>
+                  <TabsTrigger value="bindings" className="gap-1.5 text-xs">
+                    <ArrowRight className="h-3.5 w-3.5" />
+                    <span>Bindings</span>
+                    {bindingEnabled && (
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                        1
+                      </span>
+                    )}
                   </TabsTrigger>
                 )}
                 {isDynamicField && (
-                  <TabsTrigger value="dynamicOptions">
-                    <Wand2 className="h-4 w-4 shrink-0" />
-                    <span className="truncate">Dynamic options</span>
+                  <TabsTrigger value="dynamicOptions" className="gap-1.5 text-xs">
+                    <Wand2 className="h-3.5 w-3.5" />
+                    <span>Dynamic</span>
                   </TabsTrigger>
                 )}
               </TabsList>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="p-4 space-y-4">
               <TabsContent value="general" className="mt-5 space-y-5">
                 <div className="space-y-4">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
@@ -1296,20 +1323,21 @@ export function FieldSettingsDialog({
                   )}
                 </div>
               </TabsContent>
-            </Tabs>
-          </div>
+              </div>
+            </div>
+          </Tabs>
         </div>
-        <DialogFooter className="shrink-0 flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-white dark:bg-muted/20">
+        <DialogFooter className="shrink-0 flex-row justify-end gap-2 px-4 py-3 border-t border-border/50 bg-muted/20">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="min-w-[84px]"
+            className="h-8"
           >
             Cancel
           </Button>
-          <Button size="sm" onClick={handleSave} className="min-w-[104px]" disabled={disableSave ?? false}>
-            Save
+          <Button size="sm" onClick={handleSave} className="h-8" disabled={disableSave ?? false}>
+            Save Changes
           </Button>
         </DialogFooter>
       </DialogContent>

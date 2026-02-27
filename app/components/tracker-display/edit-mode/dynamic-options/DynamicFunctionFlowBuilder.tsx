@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -23,7 +23,26 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { 
+  ChevronDown, 
+  Plus, 
+  Trash2, 
+  Play, 
+  Database, 
+  LayoutGrid, 
+  Globe, 
+  Filter, 
+  Map as MapIcon, 
+  Fingerprint, 
+  ArrowUpDown, 
+  ListFilter, 
+  ChevronsUpDown, 
+  Sparkles,
+  CheckCircle2,
+  Settings,
+  FileJson,
+  Layers
+} from 'lucide-react'
 import {
   compileDynamicOptionFunctionGraph,
   type DynamicConnectorDef,
@@ -97,23 +116,112 @@ interface FlowNodeData {
 
 type FlowNode = Node<FlowNodeData>
 
+// Modern n8n-inspired node styling with color coding by category
+const NODE_CATEGORY_STYLES: Record<string, { border: string; bg: string; icon: ReactNode; color: string }> = {
+  'control.start': { 
+    border: 'border-green-500/60', 
+    bg: 'bg-green-500/10', 
+    icon: <Play className="h-4 w-4 text-green-600" />,
+    color: 'green'
+  },
+  'output.options': { 
+    border: 'border-amber-500/60', 
+    bg: 'bg-amber-500/10', 
+    icon: <CheckCircle2 className="h-4 w-4 text-amber-600" />,
+    color: 'amber'
+  },
+  'source.grid_rows': { 
+    border: 'border-blue-500/60', 
+    bg: 'bg-blue-500/10', 
+    icon: <Database className="h-4 w-4 text-blue-600" />,
+    color: 'blue'
+  },
+  'source.current_context': { 
+    border: 'border-blue-500/60', 
+    bg: 'bg-blue-500/10', 
+    icon: <LayoutGrid className="h-4 w-4 text-blue-600" />,
+    color: 'blue'
+  },
+  'source.layout_fields': { 
+    border: 'border-blue-500/60', 
+    bg: 'bg-blue-500/10', 
+    icon: <Layers className="h-4 w-4 text-blue-600" />,
+    color: 'blue'
+  },
+  'source.http_get': { 
+    border: 'border-blue-500/60', 
+    bg: 'bg-blue-500/10', 
+    icon: <Globe className="h-4 w-4 text-blue-600" />,
+    color: 'blue'
+  },
+  'transform.filter': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <Filter className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'transform.map_fields': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <MapIcon className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'transform.unique': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <Fingerprint className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'transform.sort': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <ArrowUpDown className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'transform.limit': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <ListFilter className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'transform.flatten_path': { 
+    border: 'border-violet-500/60', 
+    bg: 'bg-violet-500/10', 
+    icon: <ChevronsUpDown className="h-4 w-4 text-violet-600" />,
+    color: 'violet'
+  },
+  'ai.extract_options': { 
+    border: 'border-pink-500/60', 
+    bg: 'bg-pink-500/10', 
+    icon: <Sparkles className="h-4 w-4 text-pink-600" />,
+    color: 'pink'
+  },
+}
+
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-200 hover:shadow-md bg-background'
+const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2.5 text-xs font-semibold'
+const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
+const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
+
+// Enhanced edge styling with animated connections
 const EDGE_STYLE: CSSProperties = {
-  stroke: 'hsl(var(--foreground) / 0.35)',
-  strokeWidth: 2,
+  stroke: 'hsl(var(--primary) / 0.5)',
+  strokeWidth: 2.5,
   strokeLinecap: 'round',
 }
 
 const EDGE_MARKER = {
   type: MarkerType.ArrowClosed,
-  color: 'hsl(var(--foreground) / 0.45)',
-  width: 16,
-  height: 16,
+  color: 'hsl(var(--primary) / 0.6)',
+  width: 18,
+  height: 18,
 }
 
 const EDGE_DEFAULTS = {
   type: 'smoothstep' as const,
   style: EDGE_STYLE,
   markerEnd: EDGE_MARKER,
+  animated: true,
 }
 function getNodeSummary(
   kind: DynamicFunctionNodeKind,
@@ -437,14 +545,19 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
   const onToggle =
     ctx &&
     (() => ctx.setExpandedNodeId(expanded ? null : id))
+  
+  const style = NODE_CATEGORY_STYLES[data.kind] || {
+    border: 'border-gray-500/60',
+    bg: 'bg-gray-500/10',
+    icon: <Settings className="h-4 w-4 text-gray-600" />,
+    color: 'gray'
+  }
 
   return (
-    <div className="min-w-[170px] max-w-[280px] rounded-xl border border-border/70 border-l-4 border-l-primary/70 bg-muted/30 text-xs text-foreground/90 overflow-hidden">
-      <div
-        className="flex items-center gap-2 border-b border-border/60 bg-muted/50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/70"
-      >
-        <span className="h-2 w-2 shrink-0 rounded-full bg-primary/70" />
-        <span className="min-w-0 truncate">{nodeKindLabel(data.kind)}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'min-w-[190px] max-w-[300px]', style.border)}>
+      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
+        {style.icon}
+        <span className="min-w-0 truncate text-foreground/80">{nodeKindLabel(data.kind)}</span>
         {ctx && data.kind !== 'control.start' && data.kind !== 'output.options' && (
           <button
             type="button"
@@ -452,22 +565,22 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
               e.preventDefault()
               onToggle?.()
             }}
-            className="nodrag nopan ml-auto shrink-0 rounded p-0.5 hover:bg-muted"
+            className="nodrag nopan ml-auto shrink-0 rounded-md p-1 hover:bg-background/80 transition-colors"
             aria-label={expanded ? 'Collapse' : 'Expand'}
           >
             <ChevronDown
-              className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')}
+              className={cn('h-4 w-4 text-foreground/60 transition-transform duration-200', expanded && 'rotate-180')}
             />
           </button>
         )}
       </div>
       {summary ? (
-        <div className="px-3 py-1.5 text-[11px] text-muted-foreground truncate" title={id}>
+        <div className="px-3 py-2 text-[11px] text-muted-foreground truncate border-t border-border/30" title={id}>
           {summary}
         </div>
       ) : null}
       {expanded && ctx && (
-        <div className="border-t border-border/60 bg-muted/20 px-2 py-2 space-y-2 nodrag nopan">
+        <div className="border-t border-border/40 bg-muted/20 px-3 py-3 space-y-2 nodrag nopan">
           <DynamicNodeCardInlineConfig
             nodeId={id}
             kind={data.kind}
@@ -480,8 +593,8 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
           />
         </div>
       )}
-      <Handle type="target" position={Position.Left} className="!h-2.5 !w-2.5 !border-2 !bg-primary !border-foreground/30" />
-      <Handle type="source" position={Position.Right} className="!h-2.5 !w-2.5 !border-2 !bg-primary !border-foreground/30" />
+      <Handle type="target" position={Position.Left} className={cn(HANDLE_CLASSES, `!border-${style.color}-500`)} />
+      <Handle type="source" position={Position.Right} className={cn(HANDLE_CLASSES, `!border-${style.color}-500`)} />
     </div>
   )
 }
@@ -802,28 +915,58 @@ export function DynamicFunctionFlowBuilder({
     return labels.join(' -> ')
   }, [compiled, graphDraft.nodes])
 
+  const getGroupIcon = (group: string) => {
+    switch (group) {
+      case 'Control': return <Settings className="h-3 w-3" />
+      case 'Source': return <Database className="h-3 w-3" />
+      case 'Transform': return <Filter className="h-3 w-3" />
+      case 'AI': return <Sparkles className="h-3 w-3" />
+      default: return <FileJson className="h-3 w-3" />
+    }
+  }
+
+  const getGroupColor = (group: string) => {
+    switch (group) {
+      case 'Control': return 'border-green-200 bg-green-50/50 hover:bg-green-100/50 dark:border-green-500/30 dark:bg-green-500/10'
+      case 'Source': return 'border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/10'
+      case 'Transform': return 'border-violet-200 bg-violet-50/50 hover:bg-violet-100/50 dark:border-violet-500/30 dark:bg-violet-500/10'
+      case 'AI': return 'border-pink-200 bg-pink-50/50 hover:bg-pink-100/50 dark:border-pink-500/30 dark:bg-pink-500/10'
+      default: return 'border-border/60 bg-muted/30 hover:bg-muted/40'
+    }
+  }
+
   const paletteMinimal = (
-    <>
+    <div className="space-y-4">
       {paletteGroupOrder.filter((g) => paletteByGroup[g]?.length).map((group) => (
-        <div key={group} className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1">{group}</p>
-          {(paletteByGroup[group] ?? []).map((item) => (
-            <div
-              key={item.kind}
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData('application/reactflow', JSON.stringify({ kind: item.kind }))
-                event.dataTransfer.effectAllowed = 'move'
-              }}
-              className="cursor-grab rounded border border-border/60 bg-background px-1.5 py-1 text-[11px] text-foreground/90 hover:bg-muted/40 active:cursor-grabbing"
-              title={item.subtitle}
-            >
-              {item.title}
-            </div>
-          ))}
+        <div key={group} className="space-y-2">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+            {getGroupIcon(group)}
+            {group}
+          </p>
+          <div className="space-y-1.5">
+            {(paletteByGroup[group] ?? []).map((item) => (
+              <div
+                key={item.kind}
+                draggable
+                onDragStart={(event) => {
+                  event.dataTransfer.setData('application/reactflow', JSON.stringify({ kind: item.kind }))
+                  event.dataTransfer.effectAllowed = 'move'
+                }}
+                className={cn(
+                  "cursor-grab rounded-lg border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150",
+                  "active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2",
+                  getGroupColor(group)
+                )}
+                title={item.subtitle}
+              >
+                {NODE_CATEGORY_STYLES[item.kind]?.icon || <Settings className="h-3.5 w-3.5" />}
+                <span className="font-medium truncate">{item.title}</span>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
-    </>
+    </div>
   )
 
   return (
