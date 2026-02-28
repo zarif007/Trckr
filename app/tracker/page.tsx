@@ -43,7 +43,6 @@ const TrackerPanel = memo(function TrackerPanel({
   isChatOpen,
   setIsChatOpen,
   isStreamingTracker,
-  streamedTracker,
   trackerDataRef,
   handleSchemaChange,
   undo,
@@ -62,7 +61,6 @@ const TrackerPanel = memo(function TrackerPanel({
   isChatOpen: boolean
   setIsChatOpen: (v: boolean | ((prev: boolean) => boolean)) => void
   isStreamingTracker: boolean
-  streamedTracker: TrackerResponse | undefined
   trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
   handleSchemaChange?: (next: TrackerResponse) => void
   undo?: () => void
@@ -322,31 +320,31 @@ const TrackerPanel = memo(function TrackerPanel({
         className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
       >
         <TrackerDisplayErrorBoundary>
-          {isStreamingTracker && streamedTracker ? (
+          {isStreamingTracker ? (
             <TrackerDisplay
-              tabs={((streamedTracker.tabs || []) as unknown[]).filter(
+              tabs={((schema.tabs || []) as unknown[]).filter(
                 (t): t is TrackerResponse['tabs'][number] =>
                   !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name
               ) as TrackerResponse['tabs']}
-              sections={((streamedTracker.sections || []) as unknown[]).filter(
+              sections={((schema.sections || []) as unknown[]).filter(
                 (s): s is TrackerResponse['sections'][number] =>
                   !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name
               ) as TrackerResponse['sections']}
-              grids={((streamedTracker.grids || []) as unknown[]).filter(
+              grids={((schema.grids || []) as unknown[]).filter(
                 (g): g is TrackerResponse['grids'][number] =>
                   !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name
               ) as TrackerResponse['grids']}
-              fields={((streamedTracker.fields || []) as unknown[]).filter(
+              fields={((schema.fields || []) as unknown[]).filter(
                 (f): f is TrackerResponse['fields'][number] =>
                   !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)
               ) as TrackerResponse['fields']}
-              layoutNodes={(streamedTracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
-              bindings={(streamedTracker.bindings || {}) as TrackerResponse['bindings']}
-              validations={(streamedTracker.validations || {}) as TrackerResponse['validations']}
-              calculations={(streamedTracker.calculations || {}) as TrackerResponse['calculations']}
-              styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
-              dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
-              dynamicOptions={(streamedTracker.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
+              layoutNodes={(schema.layoutNodes || []) as TrackerResponse['layoutNodes']}
+              bindings={(schema.bindings || {}) as TrackerResponse['bindings']}
+              validations={(schema.validations || {}) as TrackerResponse['validations']}
+              calculations={(schema.calculations || {}) as TrackerResponse['calculations']}
+              styles={(schema.styles || {}) as TrackerResponse['styles']}
+              dependsOn={(schema.dependsOn || []) as TrackerResponse['dependsOn']}
+              dynamicOptions={(schema.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
               getDataRef={trackerDataRef}
             />
           ) : (
@@ -428,14 +426,45 @@ function TrackerAIView() {
     () => INITIAL_TRACKER_SCHEMA as TrackerResponse
   )
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
+  // Track the last activeTrackerData we synced to schema, to avoid flash on stream end
+  const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
   const trackerName = schema?.tabs?.[0]?.name ?? 'Tracker'
 
+  // Sync schema from activeTrackerData, but do it synchronously to avoid flash
+  // The key insight: when not viewing historical version and activeTrackerData changes,
+  // we want to use it immediately, not wait for effect
   useEffect(() => {
-    // Only update schema from activeTrackerData if we're not viewing a historical version
     if (activeTrackerData && viewingMessageIndex === null) {
-      setSchema(activeTrackerData)
+      // Only update if it's a new tracker (avoid redundant updates)
+      if (lastSyncedTrackerRef.current !== activeTrackerData) {
+        lastSyncedTrackerRef.current = activeTrackerData
+        setSchema(activeTrackerData)
+      }
     }
   }, [activeTrackerData, viewingMessageIndex])
+
+  // Compute the effective schema to display:
+  // - During streaming: use streamedDisplayTracker
+  // - After streaming: use activeTrackerData immediately (even before effect runs)
+  // - When viewing historical: use schema (which was set by handleViewHistoricalTracker)
+  // - During edit mode: use schema (which includes user edits)
+  const effectiveDisplaySchema = useMemo(() => {
+    // During streaming, use streamed data
+    if (isLoading && streamedDisplayTracker) {
+      return streamedDisplayTracker
+    }
+    // When viewing a historical version, use the schema (set by handleViewHistoricalTracker)
+    if (viewingMessageIndex !== null) {
+      return schema
+    }
+    // After streaming ends, use activeTrackerData immediately to avoid flash
+    // This catches the case where effect hasn't run yet
+    if (activeTrackerData && lastSyncedTrackerRef.current !== activeTrackerData) {
+      return activeTrackerData
+    }
+    // Default: use schema (includes user edits)
+    return schema
+  }, [isLoading, streamedDisplayTracker, viewingMessageIndex, activeTrackerData, schema])
 
   const handleSchemaChange = useCallback((next: TrackerResponse) => {
     setSchema(next)
@@ -600,13 +629,12 @@ function TrackerAIView() {
           </div>
           <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
             <TrackerPanel
-              schema={schema}
+              schema={effectiveDisplaySchema}
               editMode={editMode}
               setEditMode={setEditMode}
               isChatOpen={isChatOpen}
               setIsChatOpen={setIsChatOpen}
               isStreamingTracker={isStreamingTracker}
-              streamedTracker={streamedDisplayTracker ?? undefined}
               trackerDataRef={trackerDataRef}
               handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
               undo={editMode ? undoable.undo : undefined}
@@ -619,6 +647,7 @@ function TrackerAIView() {
               isViewingHistoricalVersion={isViewingHistoricalVersion}
               onReturnToLatest={() => {
                 setViewingMessageIndex(null)
+                lastSyncedTrackerRef.current = activeTrackerData
                 if (activeTrackerData) {
                   setSchema(activeTrackerData)
                 }
@@ -640,13 +669,12 @@ function TrackerAIView() {
     >
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
         <TrackerPanel
-          schema={schema}
+          schema={effectiveDisplaySchema}
           editMode={editMode}
           setEditMode={setEditMode}
           isChatOpen={isChatOpen}
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
-          streamedTracker={streamedDisplayTracker ?? undefined}
           trackerDataRef={trackerDataRef}
           handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
           undo={editMode ? undoable.undo : undefined}
@@ -657,6 +685,7 @@ function TrackerAIView() {
           isViewingHistoricalVersion={isViewingHistoricalVersion}
           onReturnToLatest={() => {
             setViewingMessageIndex(null)
+            lastSyncedTrackerRef.current = activeTrackerData
             if (activeTrackerData) {
               setSchema(activeTrackerData)
             }
