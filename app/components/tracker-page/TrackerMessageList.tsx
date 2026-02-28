@@ -113,11 +113,6 @@ export function TrackerMessageList({
                         <p className="text-sm font-medium leading-relaxed italic text-foreground/80 break-words">
                           "{message.managerData.thinking}"
                         </p>
-                        {message.managerData.prd && (
-                          <div className="mt-2 pt-2 border-t border-border/20 min-w-0">
-                            <p className="text-xs text-muted-foreground break-words">{message.managerData.prd.description}</p>
-                          </div>
-                        )}
                         {message.managerData.builderTodo && message.managerData.builderTodo.length > 0 && (
                           <div className="mt-3 space-y-2 min-w-0">
                             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Execution Plan</p>
@@ -218,19 +213,6 @@ export function TrackerMessageList({
                     <p className="text-sm text-foreground/70 font-medium leading-relaxed border-l-2 border-primary/30 pl-4 py-1 break-words min-w-0">
                       {object.manager.thinking}
                     </p>
-                  )}
-
-                  {object.manager.prd && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="mt-4 min-w-0"
-                    >
-                      <div className="p-3 rounded-md bg-background/50 border border-border/30 min-w-0">
-                        <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Summary</p>
-                        <p className="text-xs font-medium break-words min-w-0">{object.manager.prd.description || "Analyzing..."}</p>
-                      </div>
-                    </motion.div>
                   )}
 
                   {object.manager.builderTodo && object.manager.builderTodo.length > 0 && (

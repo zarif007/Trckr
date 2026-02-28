@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTrackerChat, type Message, type TrackerResponse } from './hooks/useTrackerChat'
 import { useIsDesktop } from './hooks/useMediaQuery'
 import { ShareTrackerDialog } from '@/app/components/teams'
+import { useTrackerNav } from './TrackerNavContext'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
@@ -428,7 +429,8 @@ function TrackerAIView() {
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
   // Track the last activeTrackerData we synced to schema, to avoid flash on stream end
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
-  const trackerName = schema?.tabs?.[0]?.name ?? 'Tracker'
+  const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
+  const setTrackerNav = useTrackerNav()?.setTrackerNav ?? null
 
   // Sync schema from activeTrackerData, but do it synchronously to avoid flash
   // The key insight: when not viewing historical version and activeTrackerData changes,
@@ -470,6 +472,29 @@ function TrackerAIView() {
     setSchema(next)
     setActiveTrackerData(next)
   }, [setActiveTrackerData])
+
+  // Stable ref so navbar registration effect doesn't depend on schema (avoids infinite loop)
+  const schemaRef = useRef(schema)
+  schemaRef.current = schema
+  const onNameChangeRef = useRef((name: string) => {
+    handleSchemaChange({ ...schemaRef.current, name })
+  })
+  onNameChangeRef.current = (name: string) => {
+    handleSchemaChange({ ...schemaRef.current, name })
+  }
+  const stableOnTrackerNameChange = useCallback((name: string) => {
+    onNameChangeRef.current(name)
+  }, [])
+
+  // Register tracker name with navbar for inline editing (Google Docs style)
+  useEffect(() => {
+    if (!setTrackerNav) return
+    setTrackerNav({
+      name: trackerName,
+      onNameChange: stableOnTrackerNameChange,
+    })
+    return () => setTrackerNav(null)
+  }, [setTrackerNav, trackerName, stableOnTrackerNameChange])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 

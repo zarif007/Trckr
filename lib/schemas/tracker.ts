@@ -200,6 +200,10 @@ export const calculationsSchema = z
 
 export const trackerSchema = z
   .object({
+    name: z
+      .string()
+      .optional()
+      .describe('Display name of the tracker (e.g. "Fitness Log", "Project Tasks").'),
     tabs: z
       .array(
         z

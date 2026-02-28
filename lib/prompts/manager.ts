@@ -16,8 +16,7 @@ Thinking Process Guidelines:
 - Ensure no requirements are omitted.
 
 PRD Guidelines:
-- Description: 2-3 sentence purpose.
-- Key Features: List of features.
+- Key Features: List of features (no summary or description field).
 
 Modifications & Construction Guidelines:
 - ALWAYS CREATE A TODO LIST in 'builderTodo'.

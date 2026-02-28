@@ -1,8 +1,28 @@
 /**
- * Binding resolution engine: path parsing, grid data access, option resolution,
- * and applying bindings when a select option is chosen.
- *
- * Import from @/lib/resolve-bindings.
+ * Binding Resolution Engine
+ * 
+ * Core library for resolving field bindings at runtime. Provides:
+ * - Path parsing and manipulation (grid.field format)
+ * - Grid data access with path-based lookups
+ * - Option resolution from bindings with O(1) indexed lookups
+ * - Binding application when select values change
+ * - Debug utilities for troubleshooting binding issues
+ * 
+ * @module resolve-bindings
+ * 
+ * Key concepts:
+ * - Field Path: "gridId.fieldId" format for addressing fields
+ * - Binding Entry: Configuration linking a select field to an options grid
+ * - Field Mapping: Rule for auto-populating target fields from option rows
+ * 
+ * @example
+ * ```ts
+ * import { parsePath, findOptionRow, applyBindings } from '@/lib/resolve-bindings';
+ * 
+ * const { gridId, fieldId } = parsePath('form.status');
+ * const optionRow = findOptionRow(gridData, binding, selectedValue, 'form.status');
+ * const updates = applyBindings(binding, optionRow, 'form.status');
+ * ```
  */
 
 export type { ParsedPath } from './types'

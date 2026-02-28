@@ -7,7 +7,6 @@ export const managerSchema = z
     prd: z
       .object({
         name: z.string().optional().describe('Short name for the tracker'),
-        description: z.string().optional().describe('Short description of the tracker'),
         keyFeatures: z.array(z.string()).optional().describe('List of key features or goals'),
       })
       .partial()
@@ -27,6 +26,8 @@ export const managerSchema = z
       .describe('Todo list for the Builder Agent to execute. Derived from comparing the User Request with the Previous Tracker.'),
   })
   .passthrough()
+
+export type ManagerSchema = z.infer<typeof managerSchema>
 
 const patchConfigSchema = z.record(z.string(), z.any()).optional()
 
@@ -93,6 +94,7 @@ const layoutNodePatchSchema = z
 
 export const trackerPatchSchema = z
   .object({
+    name: z.string().optional(),
     tabs: z.array(tabPatchSchema).optional(),
     sections: z.array(sectionPatchSchema).optional(),
     grids: z.array(gridPatchSchema).optional(),

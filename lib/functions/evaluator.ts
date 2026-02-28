@@ -1,6 +1,40 @@
+/**
+ * Expression Evaluator
+ * 
+ * Safe, efficient evaluation of expression ASTs. Supports:
+ * - Arithmetic: add, sub, mul, div
+ * - Comparison: eq, neq, gt, gte, lt, lte
+ * - Logic: and, or, not, if
+ * - Field references and constants
+ * - Regex pattern matching
+ * - Extensible via custom operator registry
+ * 
+ * @module functions/evaluator
+ * 
+ * Security:
+ * - No string evaluation or code execution
+ * - Unknown operators return undefined (fail-safe)
+ * - All operations are side-effect free
+ * 
+ * Performance:
+ * - Direct switch dispatch (no dynamic lookup overhead)
+ * - Lazy evaluation for and/or short-circuiting
+ * - Normalized operator handling for variant shapes
+ * 
+ * @example
+ * ```ts
+ * const expr = { op: 'add', args: [{ op: 'field', fieldId: 'price' }, { op: 'const', value: 10 }] };
+ * const result = evaluateExpr(expr, { rowValues: { price: 100 } });
+ * // result === 110
+ * ```
+ */
 import type { ExprNode, FunctionContext } from './types'
 import { normalizeExprOp } from './normalize'
 import { getExprOp } from './registry'
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
 
 const toNumber = (value: unknown): number => {
   if (value == null) return 0
@@ -46,6 +80,47 @@ function getBinaryOperands(
   return null
 }
 
+// ============================================================================
+// Main Evaluator
+// ============================================================================
+
+/**
+ * Evaluate an expression AST against a context.
+ * 
+ * The evaluator uses direct switch dispatch for performance and supports
+ * extensible operators via the registry. Unknown operators return undefined.
+ * 
+ * @param expr - Expression AST node to evaluate
+ * @param ctx - Evaluation context containing row values and field metadata
+ * @returns The computed value (type depends on expression)
+ * 
+ * Supported operators:
+ * - `const`: Return literal value
+ * - `field`: Look up field value from rowValues
+ * - `add`, `mul`: Variadic arithmetic (args array or left/right)
+ * - `sub`, `div`: Binary arithmetic
+ * - `eq`, `neq`, `gt`, `gte`, `lt`, `lte`: Comparisons
+ * - `and`, `or`, `not`: Boolean logic with short-circuit
+ * - `if`: Conditional (cond ? then : else)
+ * - `regex`: Pattern matching
+ * 
+ * @example
+ * ```ts
+ * // Simple field lookup
+ * evaluateExpr({ op: 'field', fieldId: 'price' }, { rowValues: { price: 50 } });
+ * // Returns: 50
+ * 
+ * // Arithmetic
+ * evaluateExpr(
+ *   { op: 'mul', args: [
+ *     { op: 'field', fieldId: 'qty' },
+ *     { op: 'field', fieldId: 'price' }
+ *   ]},
+ *   { rowValues: { qty: 2, price: 50 } }
+ * );
+ * // Returns: 100
+ * ```
+ */
 export function evaluateExpr(expr: ExprNode, ctx: FunctionContext): unknown {
   if (!isExprNodeLike(expr)) {
     return undefined

@@ -22,6 +22,7 @@ export function createEmptyTrackerSchema(options?: {
   const name = options?.firstTabName ?? DEFAULT_FIRST_TAB_NAME
   const placeId = options?.firstTabPlaceId ?? DEFAULT_FIRST_TAB_PLACE_ID
   return {
+    name: undefined,
     tabs: [{ id: 'overview_tab', name, placeId }],
     sections: [],
     grids: [],

@@ -156,6 +156,8 @@ import type { DependsOnRules } from '@/lib/depends-on'
 export type GridDataRecord = Record<string, Array<Record<string, unknown>>>
 
 export interface TrackerDisplayProps {
+  /** Optional display name for the tracker (shown in nav, share dialog, etc.). */
+  name?: string
   tabs: TrackerTab[]
   sections: TrackerSection[]
   grids: TrackerGrid[]

@@ -26,7 +26,7 @@ export function getCombinedSystemPrompt(): string {
   ${trackerBuilderPrompt}
   
   CRITICAL: You are a unified system. You MUST generate a response containing TWO parts:
-  1. "manager": The breakdown of requirements.
+  1. "manager": The breakdown of requirements (thinking, prd, builderTodo). Do NOT include a summary field.
   2. Either "tracker" (full schema) OR "trackerPatch" (incremental changes).
 
   NEVER stop after the manager object. The user will see an error if neither 'tracker' nor 'trackerPatch' is present.
@@ -44,7 +44,7 @@ export function getCombinedSystemPrompt(): string {
   - For calculations, set keys in "calculations"; set a key to null to delete it. Optionally list keys in "calculationsRemove".
   - For dependsOn, include the full updated dependsOn array if it changed.
 
-  OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences).
+  OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences). Do not output a summary in the manager.
   Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,
   output a complete but minimal tracker (fewer optional fields); the user can ask to add more.
 `
@@ -76,8 +76,8 @@ export function buildFallbackPrompts(inputs: PromptInputs): string[] {
   const { query, currentStateBlock, conversationContext } = inputs
   const stateHint = currentStateBlock ? ' Start from the Current Tracker State above.' : ''
   return [
-    `${currentStateBlock}${conversationContext}User: ${query}\n\nSimplify the request: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Always include both "manager" and "tracker" in valid JSON.${stateHint}`,
-    `${currentStateBlock}${conversationContext}User: ${query}\n\nOutput only a minimal valid tracker JSON: one tab, one section, one grid, and one text field. Include "manager" (brief) and "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
-    'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings. Include a brief "manager" object with thinking, prd, and builderTodo.',
+    `${currentStateBlock}${conversationContext}User: ${query}\n\nSimplify the request: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Always include both "manager" and "tracker" in valid JSON (manager: thinking, prd, builderTodo — no summary).${stateHint}`,
+    `${currentStateBlock}${conversationContext}User: ${query}\n\nOutput only a minimal valid tracker JSON: one tab, one section, one grid, and one text field. Include "manager" (thinking, prd, builderTodo — no summary) and "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
+    'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings. Include a brief "manager" object with thinking, prd, and builderTodo (no summary).',
   ]
 }

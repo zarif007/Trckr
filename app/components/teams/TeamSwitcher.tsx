@@ -38,7 +38,7 @@ export function TeamSwitcher() {
         <Button
           variant="outline"
           size="sm"
-          className="gap-2 min-w-[140px] justify-between font-medium"
+          className="h-8 gap-1.5 min-w-0 max-w-[140px] justify-between rounded-md border-border/60 px-2 font-medium text-muted-foreground hover:text-foreground"
           aria-label="Switch team or workspace"
           aria-haspopup="listbox"
           aria-expanded={undefined}
