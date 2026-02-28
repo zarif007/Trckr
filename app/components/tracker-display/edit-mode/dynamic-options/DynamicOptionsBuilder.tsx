@@ -389,8 +389,9 @@ export function DynamicOptionsBuilder({
             ))}
           </div>
         </div>
-
-        <div className="space-y-2">
+        
+        {/* Add it later */}
+        {/* <div className="space-y-2">
           <span className="text-xs font-medium text-foreground/80">My functions</span>
           {myFunctionsList.length === 0 ? (
             <p className="text-xs text-muted-foreground">No custom functions yet.</p>
@@ -427,9 +428,9 @@ export function DynamicOptionsBuilder({
           <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addFunction}>
             Add function
           </Button>
-        </div>
+        </div> */}
 
-        {(isBuiltIn || isMyFunction) && (
+        {/* {(isBuiltIn || isMyFunction) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-border/50">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-foreground/90">Args JSON</label>
@@ -448,10 +449,10 @@ export function DynamicOptionsBuilder({
               />
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
-      {currentFunction && (
+      {/* {currentFunction && (
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
           <TabsList className="w-full">
             <TabsTrigger value="visual">Visual graph</TabsTrigger>
@@ -563,7 +564,7 @@ export function DynamicOptionsBuilder({
             </div>
           </div>
         )}
-      </div>
+      </div> */}
 
       {!canSave && isMyFunction && (
         <p className="text-xs text-amber-600">

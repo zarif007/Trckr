@@ -564,20 +564,13 @@ export function FieldSettingsDialog({
       <DialogContent
         className="flex max-h-[90vh] flex-col sm:max-w-[720px] p-0 gap-0 overflow-hidden"
       >
-        {/* Compact Header */}
-        <div className="shrink-0 border-b border-border/50 px-4 py-3 bg-muted/20">
+        {/* Header */}
+        <div className="shrink-0 border-b border-border/40 px-4 py-3 pr-12">
           <DialogHeader className="space-y-0">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Settings2 className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <DialogTitle className="text-base font-semibold truncate">
-                  {field.ui.label || 'Untitled Field'}
-                </DialogTitle>
-                <code className="text-[10px] text-muted-foreground">{field.id}</code>
-              </div>
-            </div>
+            <DialogTitle className="text-sm font-medium text-foreground flex items-baseline gap-2 min-w-0">
+              <span className="truncate">{field.ui.label || 'Untitled Field'}</span>
+              <span className="text-[11px] text-muted-foreground font-mono shrink-0">{field.id}</span>
+            </DialogTitle>
           </DialogHeader>
         </div>
 

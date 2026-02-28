@@ -112,6 +112,7 @@ interface FlowNodeData {
   kind: DynamicFunctionNodeKind
   config: Record<string, unknown>
   locked?: boolean
+  onDelete?: (id: string) => void
 }
 
 type FlowNode = Node<FlowNodeData>
@@ -281,6 +282,7 @@ interface FlowBuilderContextValue {
   connectors: Record<string, DynamicConnectorDef>
   availableFields: AvailableField[]
   openFilterExprDialog: (nodeId: string, expr: ExprNode) => void
+  deleteNode: (id: string) => void
 }
 
 const FlowBuilderContext = createContext<FlowBuilderContextValue | null>(null)
@@ -536,6 +538,9 @@ function DynamicNodeCardInlineConfig({
   return null
 }
 
+const NODE_DELETE_BUTTON_CLASSES =
+  'nodrag nopan inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors'
+
 function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
   const ctx = useContext(FlowBuilderContext)
   const expanded = ctx?.expandedNodeId === id
@@ -553,24 +558,36 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
     color: 'gray'
   }
 
+  const isDeletable = data.kind !== 'control.start' && data.kind !== 'output.options'
+
   return (
     <div className={cn(NODE_BASE_CLASSES, 'min-w-[190px] max-w-[300px]', style.border)}>
       <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
         {style.icon}
         <span className="min-w-0 truncate text-foreground/80">{nodeKindLabel(data.kind)}</span>
-        {ctx && data.kind !== 'control.start' && data.kind !== 'output.options' && (
+        {ctx && isDeletable && (
           <button
             type="button"
             onClick={(e) => {
               e.preventDefault()
               onToggle?.()
             }}
-            className="nodrag nopan ml-auto shrink-0 rounded-md p-1 hover:bg-background/80 transition-colors"
+            className="nodrag nopan shrink-0 rounded-md p-1 hover:bg-background/80 transition-colors"
             aria-label={expanded ? 'Collapse' : 'Expand'}
           >
             <ChevronDown
               className={cn('h-4 w-4 text-foreground/60 transition-transform duration-200', expanded && 'rotate-180')}
             />
+          </button>
+        )}
+        {isDeletable && data.onDelete && (
+          <button
+            type="button"
+            onClick={() => data.onDelete?.(id)}
+            className={NODE_DELETE_BUTTON_CLASSES}
+            aria-label="Delete node"
+          >
+            <Trash2 className="h-3 w-3" />
           </button>
         )}
       </div>
@@ -603,7 +620,8 @@ const nodeTypes = {
   dynamicNode: DynamicNodeCard,
 } as const
 
-function toFlowNode(node: DynamicFunctionGraphNode): FlowNode {
+function toFlowNode(node: DynamicFunctionGraphNode, onDelete?: (id: string) => void): FlowNode {
+  const isLocked = node.kind === 'control.start' || node.kind === 'output.options'
   return {
     id: node.id,
     type: 'dynamicNode',
@@ -611,9 +629,10 @@ function toFlowNode(node: DynamicFunctionGraphNode): FlowNode {
     data: {
       kind: node.kind,
       config: (node.config as Record<string, unknown>) ?? {},
-      locked: node.kind === 'control.start' || node.kind === 'output.options',
+      locked: isLocked,
+      onDelete: isLocked ? undefined : onDelete,
     },
-    deletable: node.kind !== 'control.start' && node.kind !== 'output.options',
+    deletable: !isLocked,
   }
 }
 
@@ -673,7 +692,7 @@ export function DynamicFunctionFlowBuilder({
   const [filterExprDraft, setFilterExprDraft] = useState<ExprNode>(DEFAULT_FILTER_EXPR)
 
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>(
-    value.graph.nodes.map(toFlowNode)
+    value.graph.nodes.map((n) => toFlowNode(n, undefined))
   )
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     value.graph.edges.map((edge) => ({
@@ -689,10 +708,11 @@ export function DynamicFunctionFlowBuilder({
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null)
   const [isDraggingNode, setIsDraggingNode] = useState(false)
   const lastCompiledRef = useRef<ReturnType<typeof compileDynamicOptionFunctionGraph> | null>(null)
+  const hasPatchedOnDelete = useRef(false)
 
   const propGraphSignature = useMemo(() => JSON.stringify(value.graph), [value.graph])
   useEffect(() => {
-    setNodes(value.graph.nodes.map(toFlowNode))
+    setNodes(value.graph.nodes.map((n) => toFlowNode(n, undefined)))
     setEdges(
       value.graph.edges.map((edge) => ({
         ...EDGE_DEFAULTS,
@@ -704,6 +724,8 @@ export function DynamicFunctionFlowBuilder({
     setSelectedNodeId(null)
     setSelectedEdgeIds([])
     setExpandedNodeId(null)
+    // Reset the patch flag so nodes get patched with onDelete on next render
+    hasPatchedOnDelete.current = false
   }, [propGraphSignature, setEdges, setNodes])
 
   const graphDraft = useMemo<DynamicFunctionGraphDef>(
@@ -786,9 +808,10 @@ export function DynamicFunctionFlowBuilder({
     onChange(graphDraft)
   }, [compiled, graphDraft, onChange])
 
+  const deleteNodeRef = useRef<((id: string) => void) | undefined>(undefined)
   const deleteNode = useCallback(
     (nodeId: string) => {
-      const targetNode = nodes.find((n) => n.id === nodeId)
+      const targetNode = nodes.find((n: FlowNode) => n.id === nodeId)
       if (!targetNode || targetNode.data.locked) return
       setNodes((prev) => prev.filter((node) => node.id !== nodeId))
       setEdges((prev) => prev.filter((edge) => edge.source !== nodeId && edge.target !== nodeId))
@@ -796,6 +819,27 @@ export function DynamicFunctionFlowBuilder({
     },
     [nodes, selectedNodeId, setEdges, setNodes]
   )
+  deleteNodeRef.current = deleteNode
+
+  // Stable delete callback that doesn't change reference
+  const stableDeleteNode = useCallback((id: string) => {
+    deleteNodeRef.current?.(id)
+  }, [])
+
+  // Patch onDelete callback into nodes after initialization (runs once on mount)
+  useEffect(() => {
+    if (hasPatchedOnDelete.current) return
+    hasPatchedOnDelete.current = true
+    setNodes((prev) =>
+      prev.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          onDelete: n.data.locked ? undefined : stableDeleteNode,
+        },
+      }))
+    )
+  }, [setNodes, stableDeleteNode])
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((prev) => addEdge({ ...params, ...EDGE_DEFAULTS }, prev)),
@@ -831,6 +875,7 @@ export function DynamicFunctionFlowBuilder({
           y: event.clientY,
         })
         const id = `dyn_node_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        const isLocked = kind === 'control.start' || kind === 'output.options'
         const node: FlowNode = {
           id,
           type: 'dynamicNode',
@@ -838,12 +883,15 @@ export function DynamicFunctionFlowBuilder({
           data: {
             kind,
             config: defaultConfigForKind(kind, grids, connectors),
+            locked: isLocked,
+            onDelete: isLocked ? undefined : stableDeleteNode,
           },
+          deletable: !isLocked,
         }
         return [...prev, node]
       })
     },
-    [connectors, grids, rfInstance, setNodes]
+    [connectors, grids, rfInstance, setNodes, stableDeleteNode]
   )
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -873,13 +921,30 @@ export function DynamicFunctionFlowBuilder({
   const deleteSelection = useCallback(() => {
     if (selectedNodeId) {
       deleteNode(selectedNodeId)
-      return
     }
     if (selectedEdgeIds.length > 0) {
       setEdges((prev) => prev.filter((edge) => !selectedEdgeIds.includes(edge.id)))
       setSelectedEdgeIds([])
     }
   }, [deleteNode, selectedEdgeIds, selectedNodeId, setEdges])
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault()
+        deleteSelection()
+      }
+    },
+    [deleteSelection]
+  )
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault()
+      setEdges((prev) => prev.filter((e) => e.id !== edge.id))
+    },
+    [setEdges]
+  )
 
   const paletteByGroup = useMemo(() => groupPalette(DYNAMIC_NODE_PALETTE), [])
   const paletteGroupOrder = ['Control', 'Source', 'Transform', 'AI'] as const
@@ -899,8 +964,9 @@ export function DynamicFunctionFlowBuilder({
       connectors,
       availableFields,
       openFilterExprDialog,
+      deleteNode,
     }),
-    [expandedNodeId, updateNodeConfig, grids, connectors, availableFields, openFilterExprDialog]
+    [expandedNodeId, updateNodeConfig, grids, connectors, availableFields, openFilterExprDialog, deleteNode]
   )
 
   const explainText = useMemo(() => {
@@ -996,6 +1062,7 @@ export function DynamicFunctionFlowBuilder({
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onEdgeContextMenu={onEdgeContextMenu}
             nodeTypes={nodeTypes}
             defaultEdgeOptions={EDGE_DEFAULTS}
             connectionLineType={ConnectionLineType.SmoothStep}
@@ -1006,8 +1073,8 @@ export function DynamicFunctionFlowBuilder({
             onDragOver={onDragOver}
             onNodeDragStart={() => setIsDraggingNode(true)}
             onNodeDragStop={() => setIsDraggingNode(false)}
-            deleteKeyCode={['Backspace', 'Delete']}
             onSelectionChange={onSelectionChange}
+            onKeyDown={onKeyDown}
             className="!bg-transparent h-full"
           >
             <Background

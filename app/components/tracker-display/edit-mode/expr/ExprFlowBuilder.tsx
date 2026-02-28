@@ -343,6 +343,24 @@ export function ExprFlowBuilder({
     setSelectedEdgeIds([])
   }, [nodes, selectedEdgeIds, selectedNodeIds, setEdges, setNodes])
 
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault()
+        deleteSelection()
+      }
+    },
+    [deleteSelection]
+  )
+
+  const onEdgeContextMenu = useCallback(
+    (event: React.MouseEvent, edge: Edge) => {
+      event.preventDefault()
+      setEdges((prev) => prev.filter((e) => e.id !== edge.id))
+    },
+    [setEdges]
+  )
+
   const enrichNode = useCallback(
     (node: FlowNode): FlowNode => ({
       ...node,
@@ -553,6 +571,7 @@ export function ExprFlowBuilder({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onEdgeContextMenu={onEdgeContextMenu}
           nodeTypes={nodeTypes}
           defaultEdgeOptions={EDGE_DEFAULTS}
           connectionLineType={ConnectionLineType.SmoothStep}
@@ -561,8 +580,8 @@ export function ExprFlowBuilder({
           onInit={setRfInstance}
           onDrop={onDrop}
           onDragOver={onDragOver}
-          deleteKeyCode={['Backspace', 'Delete']}
           onSelectionChange={onSelectionChange}
+          onKeyDown={onKeyDown}
           className="!bg-transparent h-full"
         >
           <Background
