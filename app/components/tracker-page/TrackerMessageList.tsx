@@ -1,7 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { Message, TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerMessageListProps {
@@ -11,6 +12,10 @@ interface TrackerMessageListProps {
   object: unknown
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
+  /** Callback when user wants to view a specific message's tracker version */
+  onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
+  /** Index of the message whose tracker is currently being viewed (for highlighting) */
+  activeTrackerMessageIndex?: number | null
 }
 
 function renderStreamingPreview() {
@@ -39,6 +44,8 @@ export function TrackerMessageList({
   object: streamedObject,
   setMessageThinkingOpen,
   messagesEndRef,
+  onViewTracker,
+  activeTrackerMessageIndex,
 }: TrackerMessageListProps) {
   const object = streamedObject as {
     manager?: { thinking?: string; prd?: { name?: string; description?: string }; builderTodo?: Array<{ action?: string; target?: string; task?: string }> }
@@ -138,8 +145,29 @@ export function TrackerMessageList({
               </div>
             )}
             {message.trackerData && (
-              <div className="rounded-md border border-border/40 bg-secondary/20 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tracker updated in the left panel.
+              <div className={`rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+                activeTrackerMessageIndex === idx
+                  ? 'border-primary/50 bg-primary/10 text-primary'
+                  : 'border-border/40 bg-secondary/20 text-muted-foreground'
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <span>
+                    {activeTrackerMessageIndex === idx
+                      ? 'Currently viewing this version'
+                      : 'Tracker updated in the left panel.'}
+                  </span>
+                  {onViewTracker && activeTrackerMessageIndex !== idx && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-[10px] font-semibold uppercase tracking-wider hover:bg-primary/10 hover:text-primary"
+                      onClick={() => onViewTracker(message.trackerData!, idx)}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </div>

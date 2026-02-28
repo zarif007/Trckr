@@ -2,7 +2,7 @@
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -53,6 +53,8 @@ const TrackerPanel = memo(function TrackerPanel({
   hideChatToggle,
   onShareClick,
   trackerName: _trackerName,
+  isViewingHistoricalVersion,
+  onReturnToLatest,
 }: {
   schema: TrackerResponse
   editMode: boolean
@@ -70,6 +72,8 @@ const TrackerPanel = memo(function TrackerPanel({
   hideChatToggle?: boolean
   onShareClick?: () => void
   trackerName?: string
+  isViewingHistoricalVersion?: boolean
+  onReturnToLatest?: () => void
 }) {
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
@@ -104,6 +108,26 @@ const TrackerPanel = memo(function TrackerPanel({
       {isStreamingTracker && (
         <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden rounded-t-lg bg-muted/40">
           <div className="h-full w-1/3 min-w-[120px] rounded-full bg-primary animate-progress-bar" />
+        </div>
+      )}
+      {isViewingHistoricalVersion && (
+        <div className="absolute top-0 left-0 right-0 z-30 px-4 py-2 bg-primary/10 border-b border-primary/30 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-medium text-primary">
+              <History className="h-3.5 w-3.5" />
+              <span>Viewing historical version</span>
+            </div>
+            {onReturnToLatest && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs font-medium text-primary hover:bg-primary/10"
+                onClick={onReturnToLatest}
+              >
+                Return to latest
+              </Button>
+            )}
+          </div>
         </div>
       )}
       <div
@@ -298,53 +322,53 @@ const TrackerPanel = memo(function TrackerPanel({
         className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
       >
         <TrackerDisplayErrorBoundary>
-        {isStreamingTracker && streamedTracker ? (
-          <TrackerDisplay
-            tabs={((streamedTracker.tabs || []) as unknown[]).filter(
-              (t): t is TrackerResponse['tabs'][number] =>
-                !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name
-            ) as TrackerResponse['tabs']}
-            sections={((streamedTracker.sections || []) as unknown[]).filter(
-              (s): s is TrackerResponse['sections'][number] =>
-                !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name
-            ) as TrackerResponse['sections']}
-            grids={((streamedTracker.grids || []) as unknown[]).filter(
-              (g): g is TrackerResponse['grids'][number] =>
-                !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name
-            ) as TrackerResponse['grids']}
-            fields={((streamedTracker.fields || []) as unknown[]).filter(
-              (f): f is TrackerResponse['fields'][number] =>
-                !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)
-            ) as TrackerResponse['fields']}
-            layoutNodes={(streamedTracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
-            bindings={(streamedTracker.bindings || {}) as TrackerResponse['bindings']}
-            validations={(streamedTracker.validations || {}) as TrackerResponse['validations']}
-            calculations={(streamedTracker.calculations || {}) as TrackerResponse['calculations']}
-            styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
-            dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
-            dynamicOptions={(streamedTracker.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
-            getDataRef={trackerDataRef}
-          />
-        ) : (
-          <TrackerDisplay
-            tabs={schema.tabs}
-            sections={schema.sections}
-            grids={schema.grids}
-            fields={schema.fields}
-            layoutNodes={schema.layoutNodes}
-            bindings={schema.bindings}
-            validations={schema.validations}
-            calculations={schema.calculations}
-            styles={schema.styles}
-            dependsOn={schema.dependsOn}
-            dynamicOptions={schema.dynamicOptions}
-            getDataRef={trackerDataRef}
-            editMode={editMode}
-            onSchemaChange={editMode ? handleSchemaChange : undefined}
-            undo={undo}
-            canUndo={canUndo}
-          />
-        )}
+          {isStreamingTracker && streamedTracker ? (
+            <TrackerDisplay
+              tabs={((streamedTracker.tabs || []) as unknown[]).filter(
+                (t): t is TrackerResponse['tabs'][number] =>
+                  !!t && typeof t === 'object' && 'name' in t && !!(t as { name?: string }).name
+              ) as TrackerResponse['tabs']}
+              sections={((streamedTracker.sections || []) as unknown[]).filter(
+                (s): s is TrackerResponse['sections'][number] =>
+                  !!s && typeof s === 'object' && 'name' in s && !!(s as { name?: string }).name
+              ) as TrackerResponse['sections']}
+              grids={((streamedTracker.grids || []) as unknown[]).filter(
+                (g): g is TrackerResponse['grids'][number] =>
+                  !!g && typeof g === 'object' && 'name' in g && !!(g as { name?: string }).name
+              ) as TrackerResponse['grids']}
+              fields={((streamedTracker.fields || []) as unknown[]).filter(
+                (f): f is TrackerResponse['fields'][number] =>
+                  !!f && typeof f === 'object' && 'ui' in f && !!((f as { ui?: { label?: string } }).ui?.label)
+              ) as TrackerResponse['fields']}
+              layoutNodes={(streamedTracker.layoutNodes || []) as TrackerResponse['layoutNodes']}
+              bindings={(streamedTracker.bindings || {}) as TrackerResponse['bindings']}
+              validations={(streamedTracker.validations || {}) as TrackerResponse['validations']}
+              calculations={(streamedTracker.calculations || {}) as TrackerResponse['calculations']}
+              styles={(streamedTracker.styles || {}) as TrackerResponse['styles']}
+              dependsOn={(streamedTracker.dependsOn || []) as TrackerResponse['dependsOn']}
+              dynamicOptions={(streamedTracker.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
+              getDataRef={trackerDataRef}
+            />
+          ) : (
+            <TrackerDisplay
+              tabs={schema.tabs}
+              sections={schema.sections}
+              grids={schema.grids}
+              fields={schema.fields}
+              layoutNodes={schema.layoutNodes}
+              bindings={schema.bindings}
+              validations={schema.validations}
+              calculations={schema.calculations}
+              styles={schema.styles}
+              dependsOn={schema.dependsOn}
+              dynamicOptions={schema.dynamicOptions}
+              getDataRef={trackerDataRef}
+              editMode={editMode}
+              onSchemaChange={editMode ? handleSchemaChange : undefined}
+              undo={undo}
+              canUndo={canUndo}
+            />
+          )}
         </TrackerDisplayErrorBoundary>
       </div>
     </section>
@@ -403,13 +427,15 @@ function TrackerAIView() {
   const [schema, setSchema] = useState<TrackerResponse>(
     () => INITIAL_TRACKER_SCHEMA as TrackerResponse
   )
+  const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
   const trackerName = schema?.tabs?.[0]?.name ?? 'Tracker'
 
   useEffect(() => {
-    if (activeTrackerData) {
+    // Only update schema from activeTrackerData if we're not viewing a historical version
+    if (activeTrackerData && viewingMessageIndex === null) {
       setSchema(activeTrackerData)
     }
-  }, [activeTrackerData])
+  }, [activeTrackerData, viewingMessageIndex])
 
   const handleSchemaChange = useCallback((next: TrackerResponse) => {
     setSchema(next)
@@ -417,6 +443,22 @@ function TrackerAIView() {
   }, [setActiveTrackerData])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
+
+  // Handle viewing a historical tracker version from a specific message
+  const handleViewHistoricalTracker = useCallback((trackerData: TrackerResponse, messageIndex: number) => {
+    setSchema(trackerData)
+    setViewingMessageIndex(messageIndex)
+    // Switch to preview mode when viewing a historical version
+    setEditMode(false)
+    // On mobile, switch to preview tab
+    setMobileTab('preview')
+  }, [])
+
+  // Reset to latest tracker when user sends a new message
+  const handleSubmitWithReset = useCallback(() => {
+    setViewingMessageIndex(null)
+    handleSubmit()
+  }, [handleSubmit])
 
   // When resizing from small to desktop, sync chat visibility with mobile tab
   useEffect(() => {
@@ -474,6 +516,24 @@ function TrackerAIView() {
     [messages]
   )
 
+  // Find the index of the last message with tracker data (the latest version)
+  const lastTrackerMessageIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].trackerData) {
+        return i
+      }
+    }
+    return null
+  }, [messages])
+
+  // We're viewing a historical version only if viewingMessageIndex is not null
+  // AND it's not the last tracker message (which is the latest)
+  const isViewingHistoricalVersion = useMemo(() => {
+    if (viewingMessageIndex === null) return false
+    if (lastTrackerMessageIndex === null) return false
+    return viewingMessageIndex !== lastTrackerMessageIndex
+  }, [viewingMessageIndex, lastTrackerMessageIndex])
+
   const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
 
   const showStatusPanel =
@@ -507,7 +567,7 @@ function TrackerAIView() {
     setInput,
     isFocused,
     setIsFocused,
-    handleSubmit,
+    handleSubmit: handleSubmitWithReset,
     applySuggestion,
     isLoading,
     isChatEmpty,
@@ -516,6 +576,8 @@ function TrackerAIView() {
     setMessageThinkingOpen,
     messagesEndRef,
     object,
+    onViewTracker: handleViewHistoricalTracker,
+    activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
   }
 
   // Render both layouts and show/hide with CSS so the correct one appears on first paint (no blink).
@@ -554,6 +616,13 @@ function TrackerAIView() {
               hideChatToggle
               onShareClick={() => setShareDialogOpen(true)}
               trackerName={trackerName}
+              isViewingHistoricalVersion={isViewingHistoricalVersion}
+              onReturnToLatest={() => {
+                setViewingMessageIndex(null)
+                if (activeTrackerData) {
+                  setSchema(activeTrackerData)
+                }
+              }}
             />
           </TabsContent>
           <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
@@ -585,6 +654,13 @@ function TrackerAIView() {
           leftWidth={leftWidth}
           onShareClick={() => setShareDialogOpen(true)}
           trackerName={trackerName}
+          isViewingHistoricalVersion={isViewingHistoricalVersion}
+          onReturnToLatest={() => {
+            setViewingMessageIndex(null)
+            if (activeTrackerData) {
+              setSchema(activeTrackerData)
+            }
+          }}
         />
 
         {isChatOpen && (
@@ -712,6 +788,8 @@ function TrackerChatPanel({
   setMessageThinkingOpen,
   messagesEndRef,
   object,
+  onViewTracker,
+  activeTrackerMessageIndex,
 }: {
   showStatusPanel: boolean
   statusPanelProps: {
@@ -737,6 +815,8 @@ function TrackerChatPanel({
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   object: unknown
+  onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
+  activeTrackerMessageIndex?: number | null
 }) {
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-background">
@@ -771,6 +851,8 @@ function TrackerChatPanel({
               object={object}
               setMessageThinkingOpen={setMessageThinkingOpen}
               messagesEndRef={messagesEndRef}
+              onViewTracker={onViewTracker}
+              activeTrackerMessageIndex={activeTrackerMessageIndex}
             />
           )}
         </AnimatePresence>
