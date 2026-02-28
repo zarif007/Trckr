@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
 import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2, History } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -430,7 +431,9 @@ function TrackerAIView() {
   // Track the last activeTrackerData we synced to schema, to avoid flash on stream end
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
-  const setTrackerNav = useTrackerNav()?.setTrackerNav ?? null
+  const trackerNavCtx = useTrackerNav()
+  const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
+  const setSaveState = trackerNavCtx?.setSaveState ?? null
 
   // Sync schema from activeTrackerData, but do it synchronously to avoid flash
   // The key insight: when not viewing historical version and activeTrackerData changes,
@@ -495,6 +498,36 @@ function TrackerAIView() {
     })
     return () => setTrackerNav(null)
   }, [setTrackerNav, trackerName, stableOnTrackerNameChange])
+
+  const router = useRouter()
+
+  // Save tracker to database and redirect to /tracker/[id]
+  const handleSaveTracker = useCallback(async () => {
+    const res = await fetch('/api/trackers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: trackerName,
+        schema,
+      }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error ?? 'Failed to save tracker')
+    }
+    const data = (await res.json()) as { id: string }
+    router.push(`/tracker/${data.id}`)
+  }, [schema, trackerName, router])
+
+  // Register save action and agent building state with navbar
+  useEffect(() => {
+    if (!setSaveState) return
+    setSaveState({
+      onSaveTracker: handleSaveTracker,
+      isAgentBuilding: isLoading,
+    })
+    return () => setSaveState({ onSaveTracker: null, isAgentBuilding: false })
+  }, [setSaveState, handleSaveTracker, isLoading])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 

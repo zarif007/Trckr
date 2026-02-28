@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { ArrowLeft, LogOut, Moon, MoreHorizontal, Sun, Users } from 'lucide-react'
+import { ArrowLeft, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TeamSwitcher, TeamMembersDialog } from './teams'
@@ -90,7 +90,10 @@ export default function TrackerNavBar() {
   const [themeMounted, setThemeMounted] = useState(false)
   const { data: session } = useSession()
   const { theme, setTheme } = useTheme()
-  const trackerNav = useTrackerNav()?.trackerNav ?? null
+  const ctx = useTrackerNav()
+  const trackerNav = ctx?.trackerNav ?? null
+  const { onSaveTracker, isAgentBuilding } = ctx?.saveState ?? { onSaveTracker: null, isAgentBuilding: false }
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => setThemeMounted(true), [])
   useEffect(() => {
@@ -125,6 +128,26 @@ export default function TrackerNavBar() {
           </div>
 
           <div className="flex items-center gap-2">
+            {onSaveTracker && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isAgentBuilding || saving}
+                onClick={async () => {
+                  setSaving(true)
+                  try {
+                    await onSaveTracker()
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+                aria-label="Save tracker to database"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {saving ? 'Saving…' : 'Save'}
+              </Button>
+            )}
             <TeamSwitcher />
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
               <PopoverTrigger asChild>

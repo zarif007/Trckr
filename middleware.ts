@@ -23,14 +23,15 @@ export default function middleware(req: NextRequest) {
   const sessionToken = getSessionToken(req)
   const isLoggedIn = isValidSession(sessionToken)
   const isTracker = pathname.startsWith('/tracker')
+  const isDashboard = pathname.startsWith('/dashboard')
   const isLogin = pathname === '/login'
 
   if (isLogin && isLoggedIn) {
-    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl') || '/tracker'
+    const callbackUrl = req.nextUrl.searchParams.get('callbackUrl') || '/dashboard'
     return NextResponse.redirect(new URL(callbackUrl, req.url))
   }
 
-  if (!isLoggedIn && isTracker) {
+  if (!isLoggedIn && (isTracker || isDashboard)) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)
