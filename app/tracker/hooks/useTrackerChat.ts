@@ -145,13 +145,19 @@ export const quickSuggestions = [
   { text: 'Change color theme', icon: '🎨' }
 ]
 
-export function useTrackerChat() {
+export interface UseTrackerChatOptions {
+  /** When provided, the chat starts with this tracker as the base (e.g. when editing an existing tracker by id). */
+  initialTracker?: TrackerResponse | null
+}
+
+export function useTrackerChat(options: UseTrackerChatOptions = {}) {
+  const { initialTracker = null } = options
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(null)
+  const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
@@ -163,7 +169,7 @@ export function useTrackerChat() {
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
-  const firstRunUserDraftRef = useRef<TrackerResponse | null>(null)
+  const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
 
   useEffect(() => {
     messagesRef.current = messages

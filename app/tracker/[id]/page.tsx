@@ -1,13 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { TrackerDisplay, TrackerDisplayErrorBoundary } from '@/app/components/tracker-display'
-import type { TrackerDisplayProps } from '@/app/components/tracker-display'
-import { useTrackerNav } from '../TrackerNavContext'
+import { TrackerAIView } from '../page'
+import type { TrackerResponse } from '../hooks/useTrackerChat'
+
+const STORAGE_KEY_PREFIX = 'trckr:tracker:'
 
 type TrackerRecord = {
   id: string
@@ -17,13 +18,40 @@ type TrackerRecord = {
 
 export default function TrackerByIdPage() {
   const params = useParams()
+  const searchParams = useSearchParams()
   const id = typeof params.id === 'string' ? params.id : null
-  const [tracker, setTracker] = useState<TrackerRecord | null>(null)
+  const isNew = searchParams.get('new') === 'true'
+  const [state, setState] = useState<{
+    tracker: TrackerRecord | null
+    schema: TrackerResponse | null
+  }>(() => {
+    if (typeof id !== 'string' || typeof sessionStorage === 'undefined') return { tracker: null, schema: null }
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY_PREFIX + id)
+      if (!stored) return { tracker: null, schema: null }
+      const data = JSON.parse(stored) as TrackerRecord
+      sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
+      return { tracker: data, schema: (data.schema ?? {}) as TrackerResponse }
+    } catch {
+      return { tracker: null, schema: null }
+    }
+  })
   const [error, setError] = useState<string | null>(null)
-  const setTrackerNav = useTrackerNav()?.setTrackerNav ?? null
 
   useEffect(() => {
     if (!id) return
+    if (state.tracker !== null && state.schema !== null) return
+    const stored = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(STORAGE_KEY_PREFIX + id) : null
+    if (stored) {
+      try {
+        const data = JSON.parse(stored) as TrackerRecord
+        sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
+        setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+        return
+      } catch {
+        // fall through to fetch
+      }
+    }
 
     let cancelled = false
     async function fetchTracker() {
@@ -35,7 +63,9 @@ export default function TrackerByIdPage() {
           return
         }
         const data = await res.json()
-        if (!cancelled) setTracker(data)
+        if (!cancelled) {
+          setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+        }
       } catch {
         if (!cancelled) setError('Failed to load tracker')
       }
@@ -45,15 +75,28 @@ export default function TrackerByIdPage() {
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, state.tracker, state.schema])
 
-  // Register tracker name in navbar
-  useEffect(() => {
-    if (!setTrackerNav || !tracker) return
-    const name = tracker.name || 'Untitled tracker'
-    setTrackerNav({ name, onNameChange: () => {} })
-    return () => setTrackerNav(null)
-  }, [setTrackerNav, tracker])
+  const handleSaveTracker = useCallback(
+    async (schema: TrackerResponse) => {
+      if (!id) return
+      const res = await fetch(`/api/trackers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: schema.name ?? state.tracker?.name ?? 'Untitled tracker',
+          schema,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error ?? 'Failed to save tracker')
+      }
+      const data = await res.json()
+      setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+    },
+    [id, state.tracker?.name]
+  )
 
   if (!id) {
     return (
@@ -77,7 +120,7 @@ export default function TrackerByIdPage() {
     )
   }
 
-  if (!tracker) {
+  if (!state.schema || !state.tracker) {
     return (
       <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center gap-4 pt-24">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -86,7 +129,7 @@ export default function TrackerByIdPage() {
     )
   }
 
-  const schema = tracker.schema as TrackerDisplayProps
+  const schema = state.schema
   const hasValidSchema =
     schema &&
     Array.isArray(schema.tabs) &&
@@ -107,32 +150,11 @@ export default function TrackerByIdPage() {
   }
 
   return (
-    <div className="min-h-screen font-sans bg-background text-foreground flex flex-col pt-16 md:pt-20">
-      <div className="flex-1 px-4 py-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard">Dashboard</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/tracker">New tracker</Link>
-          </Button>
-        </div>
-        <TrackerDisplayErrorBoundary>
-          <TrackerDisplay
-            tabs={schema.tabs}
-            sections={schema.sections}
-            grids={schema.grids}
-            fields={schema.fields}
-            layoutNodes={schema.layoutNodes}
-            bindings={schema.bindings}
-            validations={schema.validations}
-            calculations={schema.calculations}
-            styles={schema.styles}
-            dependsOn={schema.dependsOn}
-            dynamicOptions={schema.dynamicOptions}
-          />
-        </TrackerDisplayErrorBoundary>
-      </div>
-    </div>
+    <TrackerAIView
+      initialSchema={schema}
+      onSaveTracker={handleSaveTracker}
+      initialEditMode={isNew}
+      initialChatOpen={isNew}
+    />
   )
 }

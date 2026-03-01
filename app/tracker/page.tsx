@@ -375,8 +375,27 @@ const TrackerPanel = memo(function TrackerPanel({
   )
 })
 
+export interface TrackerEditorViewProps {
+  /** Initial schema (e.g. from an existing tracker). When omitted, uses blank schema. */
+  initialSchema?: TrackerResponse
+  /** When provided, Save button calls this instead of POST + redirect (e.g. PATCH for existing tracker). */
+  onSaveTracker?: (schema: TrackerResponse) => Promise<void>
+  /** Initial edit mode (default true). When false, starts in view mode. */
+  initialEditMode?: boolean
+  /** Initial agent chat open state (default true). When false, chat panel is hidden. */
+  initialChatOpen?: boolean
+}
+
 function TrackerPageContent() {
-  return <TrackerAIView />
+  const router = useRouter()
+  useEffect(() => {
+    router.replace('/dashboard')
+  }, [router])
+  return (
+    <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center pt-24">
+      <p className="text-sm text-muted-foreground">Redirecting…</p>
+    </div>
+  )
 }
 
 export default function TrackerPage() {
@@ -391,7 +410,8 @@ export default function TrackerPage() {
   )
 }
 
-function TrackerAIView() {
+export function TrackerAIView(props: TrackerEditorViewProps = {}) {
+  const { initialSchema, onSaveTracker, initialEditMode = true, initialChatOpen = true } = props
   const {
     input,
     setInput,
@@ -415,17 +435,17 @@ function TrackerAIView() {
     messagesEndRef,
     textareaRef,
     isChatEmpty,
-  } = useTrackerChat()
+  } = useTrackerChat({ initialTracker: initialSchema ?? undefined })
 
   const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [leftWidth, setLeftWidth] = useState<number | null>(null)
-  const [editMode, setEditMode] = useState(true)
-  const [isChatOpen, setIsChatOpen] = useState(true)
+  const [editMode, setEditMode] = useState(initialEditMode)
+  const [isChatOpen, setIsChatOpen] = useState(initialChatOpen)
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [schema, setSchema] = useState<TrackerResponse>(
-    () => INITIAL_TRACKER_SCHEMA as TrackerResponse
+    () => (initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse
   )
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
   // Track the last activeTrackerData we synced to schema, to avoid flash on stream end
@@ -501,12 +521,16 @@ function TrackerAIView() {
 
   const router = useRouter()
 
-  // Save tracker to database and redirect to /tracker/[id]
   const handleSaveTracker = useCallback(async () => {
+    if (onSaveTracker) {
+      await onSaveTracker(schema)
+      return
+    }
     const res = await fetch('/api/trackers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        new: true,
         name: trackerName,
         schema,
       }),
@@ -516,8 +540,8 @@ function TrackerAIView() {
       throw new Error(data.error ?? 'Failed to save tracker')
     }
     const data = (await res.json()) as { id: string }
-    router.push(`/tracker/${data.id}`)
-  }, [schema, trackerName, router])
+    router.push(`/tracker/${data.id}?new=true`)
+  }, [schema, trackerName, router, onSaveTracker])
 
   // Register save action and agent building state with navbar
   useEffect(() => {
