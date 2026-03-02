@@ -139,26 +139,25 @@ export function FieldSettingsDialog({
     previewError: null,
   })
 
+  /** All grids' fields for expression builder (current grid + others, e.g. for accumulate over table columns). */
   const availableFields = useMemo(() => {
-    if (!gridId || !schema) return []
+    if (!schema) return []
     const fieldsById = new Map(schema.fields.map((f) => [f.id, f]))
-    const nodes = (schema.layoutNodes ?? [])
-      .filter((n) => n.gridId === gridId)
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    const seen = new Set<string>()
-    const out = []
-    for (const node of nodes) {
-      if (!node.fieldId || seen.has(node.fieldId)) continue
-      seen.add(node.fieldId)
-      const fieldRef = fieldsById.get(node.fieldId)
-      out.push({
-        fieldId: `${gridId}.${node.fieldId}`,
-        label: fieldRef?.ui?.label ?? node.fieldId,
+    const pathOptions = buildFieldPathOptions(
+      schema.layoutNodes ?? [],
+      schema.grids ?? [],
+      schema.fields ?? [],
+    )
+    return pathOptions.map((opt) => {
+      const { fieldId: rawFieldId } = parsePath(opt.value)
+      const fieldRef = rawFieldId ? fieldsById.get(rawFieldId) : undefined
+      return {
+        fieldId: opt.value,
+        label: opt.label,
         dataType: fieldRef?.dataType,
-      })
-    }
-    return out
-  }, [gridId, schema?.fields, schema?.layoutNodes])
+      }
+    })
+  }, [schema?.fields, schema?.layoutNodes, schema?.grids])
 
   const bindingKey = useMemo(() => {
     if (!gridId || !field) return ''

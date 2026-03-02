@@ -88,3 +88,120 @@ describe('expression operator aliases', () => {
     )
   })
 })
+
+describe('accumulate expression', () => {
+  const baseCtx = {
+    rowValues: {} as Record<string, unknown>,
+    fieldId: 'main_grid.total',
+  }
+
+  it('returns initial value when getColumnValues is missing', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'add' as const,
+    }
+    expect(evaluateExpr(expr, baseCtx)).toBe(0)
+    expect(
+      evaluateExpr({ ...expr, action: 'mul' }, baseCtx),
+    ).toBe(1)
+  })
+
+  it('returns initial value for empty column', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'add' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: (path: string) => (path === 'amounts_grid.amount' ? [] : []),
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(0)
+  })
+
+  it('sums column values (add)', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'add' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [10, 20, 30],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(60)
+  })
+
+  it('multiplies column values (mul)', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'mul' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [2, 3, 4],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(24)
+  })
+
+  it('subtracts column values (sub): initialValue - v0 - v1 - ...', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'sub' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [1, 2, 3],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(0 - 1 - 2 - 3)
+  })
+
+  it('respects startIndex and endIndex', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      startIndex: 1,
+      endIndex: 3,
+      action: 'add' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [100, 10, 20, 30, 40],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(10 + 20 + 30)
+  })
+
+  it('respects increment step', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      startIndex: 0,
+      endIndex: 4,
+      increment: 2,
+      action: 'add' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [1, 2, 3, 4, 5],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(1 + 3 + 5)
+  })
+
+  it('returns initial value when start > end after clamping', () => {
+    const expr = {
+      op: 'accumulate' as const,
+      sourceFieldId: 'amounts_grid.amount',
+      startIndex: 2,
+      endIndex: 1,
+      action: 'add' as const,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [1, 2, 3],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(0)
+  })
+})

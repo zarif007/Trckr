@@ -1,13 +1,24 @@
 import type { Edge, Node, XYPosition } from 'reactflow'
 import type { ExprNode } from '@/lib/functions/types'
 import { normalizeExprNode } from '@/lib/schemas/expr'
-import type { ExprFlowOperator } from './expr-types'
+import type { AccumulateAction, ExprFlowOperator } from './expr-types'
 
 export interface ExprFlowNodeData {
   op?: ExprFlowOperator
   fieldId?: string
   value?: string
+  /** Accumulator: start index (inclusive). */
+  startIndex?: number
+  /** Accumulator: end index (inclusive); use "to end" when undefined. */
+  endIndex?: number
+  /** Accumulator: step. */
+  increment?: number
+  /** Accumulator: reduction action. */
+  action?: AccumulateAction
 }
+
+/** Single input handle for accumulator node (source field/column). */
+export const ACCUMULATOR_SOURCE_HANDLE = 'source'
 
 export type ExprFlowNode = Node<ExprFlowNodeData>
 
@@ -62,6 +73,16 @@ export function compileExprFromGraph(
   const rootSource = getSingleSource(incoming, RESULT_HANDLE_ID)
   if (!rootSource) return { error: 'Connect one node to the Result input.' }
 
+  const rootNode = nodeMap.get(rootSource) as ExprFlowNode | undefined
+  if (rootNode?.type === 'accumulator') {
+    const accIncoming = getIncomingByHandle(edges, rootSource)
+    const accSource = getSingleSource(accIncoming, ACCUMULATOR_SOURCE_HANDLE)
+    const accSourceNode = accSource ? (nodeMap.get(accSource) as ExprFlowNode | undefined) : undefined
+    if (!accSource || !accSourceNode || accSourceNode.type !== 'field' || !accSourceNode.data?.fieldId) {
+      return { error: 'Accumulator must receive a single Field node.' }
+    }
+  }
+
   const visiting = new Set<string>()
   const visited = new Set<string>()
 
@@ -91,6 +112,47 @@ export function compileExprFromGraph(
       visited.add(nodeId)
       if (!parsed.ok) return null
       return { op: 'const', value: parsed.value }
+    }
+
+    if (node.type === 'accumulator') {
+      const sourceSource = getSingleSource(nodeIncoming, ACCUMULATOR_SOURCE_HANDLE)
+      if (!sourceSource) {
+        visiting.delete(nodeId)
+        visited.add(nodeId)
+        return null
+      }
+      const sourceNode = nodeMap.get(sourceSource) as ExprFlowNode | undefined
+      if (!sourceNode || sourceNode.type !== 'field') {
+        visiting.delete(nodeId)
+        visited.add(nodeId)
+        return null
+      }
+      const sourceFieldId = sourceNode.data?.fieldId
+      if (!sourceFieldId) {
+        visiting.delete(nodeId)
+        visited.add(nodeId)
+        return null
+      }
+      const action = node.data?.action ?? 'add'
+      const inc = node.data?.increment
+      const increment =
+        inc != null && Number.isInteger(inc) && inc >= 1 ? inc : undefined
+      const start = node.data?.startIndex
+      const end = node.data?.endIndex
+      const startIndex =
+        start != null && Number.isInteger(start) ? start : undefined
+      const endIndex =
+        end != null && Number.isInteger(end) ? end : undefined
+      visiting.delete(nodeId)
+      visited.add(nodeId)
+      return {
+        op: 'accumulate',
+        sourceFieldId,
+        startIndex,
+        endIndex,
+        increment,
+        action,
+      } as ExprNode
     }
 
     if (node.type === 'op') {
@@ -193,6 +255,38 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
       return id
     }
 
+    if (node.op === 'accumulate') {
+      const acc = node as Extract<ExprNode, { op: 'accumulate' }>
+      const fieldId = nextId()
+      const fieldPosition = placeNode(depth + 1, row)
+      row += 1
+      depthById.set(fieldId, depth + 1)
+      nodes.push({
+        id: fieldId,
+        type: 'field',
+        position: fieldPosition,
+        data: { fieldId: acc.sourceFieldId },
+      })
+      nodes.push({
+        id,
+        type: 'accumulator',
+        position,
+        data: {
+          startIndex: acc.startIndex,
+          endIndex: acc.endIndex,
+          increment: acc.increment,
+          action: acc.action,
+        },
+      })
+      edges.push({
+        id: `${fieldId}-${id}-source`,
+        source: fieldId,
+        target: id,
+        targetHandle: ACCUMULATOR_SOURCE_HANDLE,
+      })
+      return id
+    }
+
     if (node.op === 'add' || node.op === 'mul') {
       const pair = splitBinary(node.op, node)
       const left = pair?.left ?? { op: 'const', value: 0 }
@@ -267,4 +361,5 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
 export const FLOW_CONSTANTS = {
   RESULT_HANDLE_ID,
   INPUT_HANDLES,
+  ACCUMULATOR_SOURCE_HANDLE,
 }

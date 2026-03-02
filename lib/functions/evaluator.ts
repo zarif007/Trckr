@@ -103,7 +103,9 @@ function getBinaryOperands(
  * - `and`, `or`, `not`: Boolean logic with short-circuit
  * - `if`: Conditional (cond ? then : else)
  * - `regex`: Pattern matching
- * 
+ * - `accumulate`: Reduce a table column (requires ctx.getColumnValues). startIndex/endIndex clamped;
+ *   increment defaults to 1; action add/mul/sub (sub: initialValue - v0 - v1 - ...).
+ *
  * @example
  * ```ts
  * // Simple field lookup
@@ -137,6 +139,45 @@ export function evaluateExpr(expr: ExprNode, ctx: FunctionContext): unknown {
       return normalizedExpr.value
     case 'field':
       return ctx.rowValues?.[normalizedExpr.fieldId]
+    case 'accumulate': {
+      const acc = normalizedExpr as Extract<ExprNode, { op: 'accumulate' }>
+      const getCol = ctx.getColumnValues
+      if (typeof getCol !== 'function') {
+        return acc.initialValue ?? (acc.action === 'mul' ? 1 : 0)
+      }
+      const arr = getCol(acc.sourceFieldId)
+      if (!Array.isArray(arr)) {
+        return acc.initialValue ?? (acc.action === 'mul' ? 1 : 0)
+      }
+      const len = arr.length
+      if (len === 0) {
+        return acc.initialValue ?? (acc.action === 'mul' ? 1 : 0)
+      }
+      const start = Math.max(0, Math.min(acc.startIndex ?? 0, len - 1))
+      const end = Math.max(0, Math.min(acc.endIndex ?? len - 1, len - 1))
+      const step = (acc.increment ?? 1) <= 0 ? 1 : Math.floor(acc.increment ?? 1)
+      if (start > end) {
+        return acc.initialValue ?? (acc.action === 'mul' ? 1 : 0)
+      }
+      let result: number
+      if (acc.action === 'add') {
+        result = acc.initialValue ?? 0
+        for (let i = start; i <= end; i += step) {
+          result += toNumber(arr[i])
+        }
+      } else if (acc.action === 'mul') {
+        result = acc.initialValue ?? 1
+        for (let i = start; i <= end; i += step) {
+          result *= toNumber(arr[i])
+        }
+      } else {
+        result = acc.initialValue ?? 0
+        for (let i = start; i <= end; i += step) {
+          result -= toNumber(arr[i])
+        }
+      }
+      return result
+    }
     case 'add': {
       const args = getVariadicOperands(normalizedExpr as Record<string, unknown>)
       if (!args || args.length === 0) return Number.NaN

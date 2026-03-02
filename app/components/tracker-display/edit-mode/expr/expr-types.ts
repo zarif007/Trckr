@@ -10,10 +10,12 @@ export type ExprFlowOperator =
   | 'lt'
   | 'lte'
 
+export type AccumulateAction = 'add' | 'sub' | 'mul'
+
 export interface AvailableField {
   fieldId: string
   label: string
   dataType?: string
 }
 
-export type ExprFlowNodeType = 'field' | 'const' | 'op' | 'result'
+export type ExprFlowNodeType = 'field' | 'const' | 'op' | 'result' | 'accumulator'

@@ -21,7 +21,11 @@ import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
 import { createNewTabId, getNextTabPlaceId } from './edit-mode'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
-import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
+import {
+  applyCompiledCalculationsForRow,
+  buildAccumulateDepsBySourceGrid,
+  compileCalculationsForGrid,
+} from '@/lib/field-calculation'
 import {
   ensureDependsOnOptionGrids,
   SHARED_TAB_ID,
@@ -263,6 +267,12 @@ export function TrackerDisplayInline({
     return plans
   }, [calculations, effectiveGrids])
 
+  /** Memo: source grid id -> target grid ids that have accumulate over it. Single-pass over calculations. */
+  const accumulateDepsBySourceGrid = useMemo(
+    () => buildAccumulateDepsBySourceGrid(calculations ?? undefined),
+    [calculations]
+  )
+
   const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
 
   const effectiveDependsOn = useMemo(() => {
@@ -283,52 +293,124 @@ export function TrackerDisplayInline({
   const handleUpdate = useCallback(
     (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
       setLocalGridData((prev) => {
+        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
         const next = [...current]
         while (next.length <= rowIndex) next.push({})
         const row = { ...next[rowIndex], [columnId]: value }
         const plan = compiledCalculationsByGrid.get(gridId)
+        next[rowIndex] = row
+        result[gridId] = next
+        const gridDataForCalc = result
         const calculated = plan
           ? applyCompiledCalculationsForRow({
               plan,
               row,
               changedFieldIds: [columnId],
+              gridData: gridDataForCalc,
             }).row
           : row
         next[rowIndex] = calculated
-        return { ...(prev ?? {}), [gridId]: next }
+        result[gridId] = next
+
+        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
+        if (dependentGridIds?.length) {
+          for (const depGridId of dependentGridIds) {
+            if (depGridId === gridId) continue
+            const depPlan = compiledCalculationsByGrid.get(depGridId)
+            if (!depPlan) continue
+            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
+            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
+            const updatedDepRows = rowsToRecalc.map((r) =>
+              applyCompiledCalculationsForRow({
+                plan: depPlan,
+                row: r,
+                gridData: gridDataForCalc,
+              }).row
+            )
+            result[depGridId] = updatedDepRows
+          }
+        }
+        return result
       })
     },
-    [baseGridData, compiledCalculationsByGrid]
+    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
   )
 
   const handleAddEntry = useCallback(
     (gridId: string, newRow: Record<string, unknown>) => {
       setLocalGridData((prev) => {
+        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
+        const newRows = [...current, newRow]
+        result[gridId] = newRows
+        const gridDataForCalc = result
         const plan = compiledCalculationsByGrid.get(gridId)
         const calculated = plan
           ? applyCompiledCalculationsForRow({
               plan,
               row: newRow,
               changedFieldIds: Object.keys(newRow),
+              gridData: gridDataForCalc,
             }).row
           : newRow
-        return { ...(prev ?? {}), [gridId]: [...current, calculated] }
+        result[gridId] = [...current, calculated]
+
+        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
+        if (dependentGridIds?.length) {
+          for (const depGridId of dependentGridIds) {
+            if (depGridId === gridId) continue
+            const depPlan = compiledCalculationsByGrid.get(depGridId)
+            if (!depPlan) continue
+            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
+            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
+            const updatedDepRows = rowsToRecalc.map((r) =>
+              applyCompiledCalculationsForRow({
+                plan: depPlan,
+                row: r,
+                gridData: gridDataForCalc,
+              }).row
+            )
+            result[depGridId] = updatedDepRows
+          }
+        }
+        return result
       })
     },
-    [baseGridData, compiledCalculationsByGrid]
+    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
   )
 
   const handleDeleteEntries = useCallback(
     (gridId: string, rowIndices: number[]) => {
       setLocalGridData((prev) => {
+        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
         const filtered = current.filter((_, index) => !rowIndices.includes(index))
-        return { ...(prev ?? {}), [gridId]: filtered }
+        result[gridId] = filtered
+        const gridDataForCalc = result
+
+        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
+        if (dependentGridIds?.length) {
+          for (const depGridId of dependentGridIds) {
+            if (depGridId === gridId) continue
+            const depPlan = compiledCalculationsByGrid.get(depGridId)
+            if (!depPlan) continue
+            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
+            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
+            const updatedDepRows = rowsToRecalc.map((r) =>
+              applyCompiledCalculationsForRow({
+                plan: depPlan,
+                row: r,
+                gridData: gridDataForCalc,
+              }).row
+            )
+            result[depGridId] = updatedDepRows
+          }
+        }
+        return result
       })
     },
-    [baseGridData]
+    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
   )
 
   const editModeSchema = useMemo(

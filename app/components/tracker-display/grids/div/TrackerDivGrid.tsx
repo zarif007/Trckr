@@ -479,6 +479,7 @@ function TrackerDivGridInner({
             plan: compiledCalculationPlan,
             row: base,
             changedFieldIds: [fieldId],
+            gridData: fullGridData,
           })
         : { row: base, updatedFieldIds: [], skippedCyclicTargets: [] }
 
@@ -489,7 +490,7 @@ function TrackerDivGridInner({
         onUpdate?.(0, id, calc.row[id])
       }
     },
-    [compiledCalculationPlan, data, draftRow, onUpdate]
+    [compiledCalculationPlan, data, draftRow, fullGridData, onUpdate]
   )
   const handleFieldUpdateWithTouched = useCallback(
     (fieldId: string, value: unknown) => {

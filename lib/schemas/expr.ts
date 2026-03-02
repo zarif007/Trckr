@@ -15,6 +15,18 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
     fieldId: z.string(),
   })
 
+  const accumulateNode = z
+    .object({
+      op: z.literal('accumulate'),
+      sourceFieldId: z.string(),
+      startIndex: z.number().optional(),
+      endIndex: z.number().optional(),
+      increment: z.number().optional(),
+      action: z.enum(['add', 'sub', 'mul']),
+      initialValue: z.number().optional(),
+    })
+    .passthrough()
+
   const variadic = (op: 'add' | 'mul') =>
     z.union([
       z
@@ -53,6 +65,7 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
     .union([
       constNode,
       fieldNode,
+      accumulateNode,
       variadic('add'),
       variadic('mul'),
       binary('sub'),
@@ -119,7 +132,8 @@ export function normalizeExprNode(node: ExprNode): ExprNode {
   const normalizedOp = normalizeExprOp(node.op)
   const normalized = (normalizedOp === node.op ? node : { ...node, op: normalizedOp }) as ExprNode
 
-  if (normalized.op === 'const' || normalized.op === 'field') return normalized
+  if (normalized.op === 'const' || normalized.op === 'field' || normalized.op === 'accumulate')
+    return normalized
 
   if (normalized.op === 'add' || normalized.op === 'mul') {
     const existingArgs = (normalized as { args?: ExprNode[] }).args

@@ -1,6 +1,7 @@
 /**
  * Validates tracker.calculations. Keys must be "gridId.fieldId" (target path).
- * Calculation expressions must reference fields in the same grid as the target.
+ * Calculation expressions must reference fields in the same grid as the target,
+ * except `accumulate`: its sourceFieldId may reference another grid (e.g. sum of Amounts.amount).
  */
 import type { ValidationContext, ValidatorResult } from '../types'
 import type { ExprNode, FieldCalculationRule } from '@/lib/functions/types'
@@ -70,6 +71,9 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
     case 'regex':
       if (isExprNode(normalizedNode.value)) collectExprFieldRefs(normalizedNode.value, out)
       return out
+    case 'accumulate':
+      out.add((normalizedNode as { sourceFieldId: string }).sourceFieldId)
+      return out
     default:
       return out
   }
@@ -109,6 +113,50 @@ function validateExprNode(
       }
       if (parsed.gridId !== targetGridId) {
         errors.push(`${path}.fieldId "${ref}" must stay within target grid "${targetGridId}"`)
+      }
+      return errors
+    }
+    case 'accumulate': {
+      // Cross-grid sourceFieldId is allowed for accumulate (e.g. Total amount = sum(Amounts.amount)).
+      const acc = normalizedNode as {
+        sourceFieldId: string
+        startIndex?: number
+        endIndex?: number
+        increment?: number
+        action: string
+      }
+      const ref = acc.sourceFieldId
+      if (typeof ref !== 'string' || ref.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!ref.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+        return errors
+      }
+      const parsed = parsePath(ref)
+      if (!parsed.gridId || !parsed.fieldId) {
+        errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(ref)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
+        return errors
+      }
+      if (acc.startIndex != null && !Number.isInteger(acc.startIndex)) {
+        errors.push(`${path}.startIndex must be an integer when provided`)
+      }
+      if (acc.endIndex != null && !Number.isInteger(acc.endIndex)) {
+        errors.push(`${path}.endIndex must be an integer when provided`)
+      }
+      if (acc.increment != null) {
+        if (typeof acc.increment !== 'number' || !Number.isInteger(acc.increment) || acc.increment < 1) {
+          errors.push(`${path}.increment must be a positive integer`)
+        }
+      }
+      const validActions = ['add', 'sub', 'mul']
+      if (!validActions.includes(acc.action)) {
+        errors.push(`${path}.action must be one of: ${validActions.join(', ')}`)
       }
       return errors
     }
@@ -202,7 +250,7 @@ function validateExprNode(
       return errors
     }
     default:
-      errors.push(`${path}.op is not a supported operator`)
+      errors.push(`${path}.op "${String((normalizedNode as { op?: string }).op)}" is not a supported operator`)
       return errors
   }
 }

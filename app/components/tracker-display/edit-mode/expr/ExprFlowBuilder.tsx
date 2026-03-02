@@ -19,27 +19,25 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { 
-  Trash2, 
-  Database, 
-  Type, 
-  Plus, 
-  Minus, 
-  X, 
+import {
+  Trash2,
+  Database,
+  Type,
+  Plus,
+  Minus,
+  X,
   Divide,
   Calculator,
-  GitBranch,
   CheckCircle2,
   Equal,
-  ChevronRight,
-  ChevronLeft
+  Sigma,
 } from 'lucide-react'
 import { compileExprFromGraph, exprToGraph, FLOW_CONSTANTS, type ExprFlowNodeData } from './expr-graph'
 import type { ExprNode } from '@/lib/functions/types'
 import { normalizeExprNode } from '@/lib/schemas/expr'
 import { FlowBuilderLayout } from '@/lib/flow-builder'
 import { cn } from '@/lib/utils'
-import type { AvailableField, ExprFlowOperator, ExprFlowNodeType } from './expr-types'
+import type { AccumulateAction, AvailableField, ExprFlowOperator, ExprFlowNodeType } from './expr-types'
 
 const OPERATOR_LABELS: Record<ExprFlowOperator, string> = {
   add: 'Add',
@@ -111,7 +109,19 @@ const NODE_STYLES = {
     icon: <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" />,
     label: 'Result',
   },
+  accumulator: {
+    border: 'border-cyan-500/60',
+    bg: 'bg-cyan-500/10',
+    icon: <Sigma className="h-3.5 w-3.5 text-cyan-600" />,
+    label: 'Accumulator',
+  },
 } as const
+
+const ACCUMULATOR_ACTION_OPTIONS: { value: AccumulateAction; label: string }[] = [
+  { value: 'add', label: 'Sum (+)' },
+  { value: 'sub', label: 'Subtract (−)' },
+  { value: 'mul', label: 'Multiply (×)' },
+]
 
 const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-200 hover:shadow-md'
 const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2 text-xs font-semibold'
@@ -273,11 +283,109 @@ function ResultNode() {
   )
 }
 
+function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
+  const style = NODE_STYLES.accumulator
+  const action = data.action ?? 'add'
+  const startIndex = data.startIndex
+  const endIndex = data.endIndex
+  const increment = data.increment ?? 1
+  return (
+    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-cyan-500/40 bg-background', style.border)}>
+      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
+        {style.icon}
+        <span className="text-foreground/80">{style.label}</span>
+        <button
+          type="button"
+          onClick={() => data.onDelete?.(id)}
+          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
+          aria-label="Delete node"
+        >
+          <Trash2 className="h-3 w-3" />
+        </button>
+      </div>
+      <div className={cn(NODE_BODY_CLASSES, 'space-y-2')}>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Action</label>
+          <select
+            className="flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+            value={action}
+            onChange={(e) => data.onChange?.(id, { action: e.target.value as AccumulateAction })}
+          >
+            {ACCUMULATOR_ACTION_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Start</label>
+          <Input
+            type="number"
+            min={0}
+            className="h-8 text-xs"
+            placeholder="0"
+            value={startIndex === undefined ? '' : startIndex}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === '') {
+                data.onChange?.(id, { startIndex: undefined })
+                return
+              }
+              const n = parseInt(v, 10)
+              data.onChange?.(id, { startIndex: Number.isNaN(n) ? undefined : n })
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground w-14 shrink-0">End</label>
+          <Input
+            type="number"
+            min={0}
+            className="h-8 text-xs"
+            placeholder="To end"
+            value={endIndex === undefined ? '' : endIndex}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === '') {
+                data.onChange?.(id, { endIndex: undefined })
+                return
+              }
+              const n = parseInt(v, 10)
+              data.onChange?.(id, { endIndex: Number.isNaN(n) ? undefined : n })
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Step</label>
+          <select
+            className="flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+            value={increment}
+            onChange={(e) => data.onChange?.(id, { increment: parseInt(e.target.value, 10) })}
+          >
+            {[1, 2, 3, 4, 5].map((n) => (
+              <option key={n} value={n}>+{n}</option>
+            ))}
+          </select>
+        </div>
+        <p className="text-[10px] text-muted-foreground">Connect a Field node (table column) to the left.</p>
+      </div>
+      <Handle
+        type="target"
+        position={Position.Left}
+        id={FLOW_CONSTANTS.ACCUMULATOR_SOURCE_HANDLE}
+        style={{ top: 48 }}
+        className={cn(HANDLE_CLASSES, '!border-cyan-500')}
+      />
+      <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-cyan-500')} />
+    </div>
+  )
+}
+
 const nodeTypes = {
   field: FieldNode,
   const: ConstNode,
   op: OpNode,
   result: ResultNode,
+  accumulator: AccumulatorNode,
 } as const
 
 export function ExprFlowBuilder({
@@ -418,6 +526,10 @@ export function ExprFlowBuilder({
       const data: FlowNodeData = { op, onChange: undefined, availableFields }
       if (type === 'field') data.fieldId = ''
       if (type === 'const') data.value = ''
+      if (type === 'accumulator') {
+        data.action = 'add'
+        data.increment = 1
+      }
       setNodes((nds) => [...nds, enrichNode({ id, type, position, data })])
     },
     [availableFields, enrichNode, setNodes]
@@ -463,6 +575,13 @@ export function ExprFlowBuilder({
     () => [
       { label: 'Field', type: 'field' as const, icon: <Database className="h-3.5 w-3.5 text-blue-500" />, color: 'blue' },
       { label: 'Value', type: 'const' as const, icon: <Type className="h-3.5 w-3.5 text-emerald-500" />, color: 'emerald' },
+      {
+        label: 'Accumulator (Σ)',
+        type: 'accumulator' as const,
+        icon: <Sigma className="h-3.5 w-3.5 text-cyan-500" />,
+        color: 'cyan',
+        title: 'Sum or reduce a table column with start/end/increment and action',
+      },
       { label: 'Add', type: 'op' as const, op: 'add' as const, icon: <Plus className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
       { label: 'Subtract', type: 'op' as const, op: 'sub' as const, icon: <Minus className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
       { label: 'Multiply', type: 'op' as const, op: 'mul' as const, icon: <X className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
@@ -486,23 +605,26 @@ export function ExprFlowBuilder({
           Data
         </p>
         <div className="space-y-1.5">
-          {paletteItems.filter(i => i.type === 'field' || i.type === 'const').map((item) => (
+          {paletteItems.filter((i) => i.type === 'field' || i.type === 'const' || i.type === 'accumulator').map((item) => (
             <div
-              key={`${item.type}-${item.op ?? item.label}`}
+              key={`${item.type}-${(item as { op?: string }).op ?? item.label}`}
               draggable
               onDragStart={(event) => {
                 event.dataTransfer.setData(
                   'application/reactflow',
-                  JSON.stringify({ type: item.type, op: item.op })
+                  JSON.stringify({ type: item.type, op: (item as { op?: ExprFlowOperator }).op })
                 )
                 event.dataTransfer.effectAllowed = 'move'
               }}
               className={cn(
-                "cursor-grab rounded-lg border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150",
-                "active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2",
-                item.color === 'blue' && "border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/10",
-                item.color === 'emerald' && "border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 dark:border-emerald-500/30 dark:bg-emerald-500/10"
+                'cursor-grab rounded-lg border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150',
+                'active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2',
+                item.color === 'blue' && 'border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/10',
+                item.color === 'emerald' && 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 dark:border-emerald-500/30 dark:bg-emerald-500/10',
+                item.color === 'cyan' && 'border-cyan-200 bg-cyan-50/50 hover:bg-cyan-100/50 dark:border-cyan-500/30 dark:bg-cyan-500/10'
               )}
+              title={(item as { title?: string }).title}
+              aria-label={(item as { title?: string }).title ?? item.label}
             >
               {item.icon}
               <span className="font-medium">{item.label}</span>

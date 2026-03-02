@@ -7,7 +7,8 @@
  * - Incremental evaluation (only affected targets are recalculated)
  * - Cycle detection to prevent infinite loops
  * - Expression result caching for repeated evaluations
- * 
+ * - Cross-grid references via `accumulate` (sum/reduce table columns); pass `gridData` when such rules exist.
+ *
  * @module field-calculation
  * 
  * Performance characteristics:
@@ -48,6 +49,11 @@ export interface ApplyCalculationsForRowInput {
   calculations?: Record<string, FieldCalculationRule>
   /** Optional: only recalculate fields dependent on these changed fields */
   changedFieldIds?: string[]
+  /**
+   * Optional. When present, used to resolve table columns for `accumulate` expressions.
+   * Required for correct evaluation of rules that reference other grids (e.g. sum of Amounts.amount).
+   */
+  gridData?: Record<string, Array<Record<string, unknown>>>
 }
 
 /** Result of applying calculations */
@@ -87,6 +93,10 @@ export interface ApplyCompiledCalculationsForRowInput {
   row: Record<string, unknown>
   /** Optional: only recalculate impacted fields */
   changedFieldIds?: string[]
+  /**
+   * Optional. Pass when any rule uses `accumulate` over another grid; enables getColumnValues in context.
+   */
+  gridData?: Record<string, Array<Record<string, unknown>>>
 }
 
 // ============================================================================
@@ -180,9 +190,110 @@ export function extractExprFieldRefs(expr: ExprNode, out = new Set<string>()): S
     case 'regex':
       if (isExprNode(expr.value)) extractExprFieldRefs(expr.value, out)
       return out
+    case 'accumulate':
+      out.add((expr as { sourceFieldId: string }).sourceFieldId)
+      return out
     default:
       return out
   }
+}
+
+/**
+ * Collects grid IDs that are referenced by any `accumulate` node in the expression.
+ * Used to know which grids, when updated, should trigger recalculation of the target.
+ */
+function getAccumulateSourceGridIds(expr: ExprNode, out = new Set<string>()): Set<string> {
+  if (!isExprNode(expr)) return out
+  if (expr.op === 'accumulate') {
+    const { gridId } = parsePath((expr as { sourceFieldId: string }).sourceFieldId)
+    if (gridId) out.add(gridId)
+    return out
+  }
+  if (expr.op === 'add' || expr.op === 'mul' || expr.op === 'and' || expr.op === 'or') {
+    for (const arg of (expr as { args?: ExprNode[] }).args ?? []) {
+      if (isExprNode(arg)) getAccumulateSourceGridIds(arg, out)
+    }
+    return out
+  }
+  if (
+    expr.op === 'sub' ||
+    expr.op === 'div' ||
+    expr.op === 'eq' ||
+    expr.op === 'neq' ||
+    expr.op === 'gt' ||
+    expr.op === 'gte' ||
+    expr.op === 'lt' ||
+    expr.op === 'lte'
+  ) {
+    const binary = expr as { left?: ExprNode; right?: ExprNode; args?: ExprNode[] }
+    if (binary.left && isExprNode(binary.left)) getAccumulateSourceGridIds(binary.left, out)
+    if (binary.right && isExprNode(binary.right)) getAccumulateSourceGridIds(binary.right, out)
+    if (Array.isArray(binary.args)) {
+      if (binary.args[0] && isExprNode(binary.args[0])) getAccumulateSourceGridIds(binary.args[0], out)
+      if (binary.args[1] && isExprNode(binary.args[1])) getAccumulateSourceGridIds(binary.args[1], out)
+    }
+    return out
+  }
+  if (expr.op === 'not' && isExprNode(expr.arg)) getAccumulateSourceGridIds(expr.arg, out)
+  if (expr.op === 'if') {
+    if (isExprNode(expr.cond)) getAccumulateSourceGridIds(expr.cond, out)
+    if (isExprNode(expr.then)) getAccumulateSourceGridIds(expr.then, out)
+    if (isExprNode(expr.else)) getAccumulateSourceGridIds(expr.else, out)
+  }
+  if (expr.op === 'regex' && isExprNode(expr.value)) getAccumulateSourceGridIds(expr.value, out)
+  return out
+}
+
+/**
+ * Returns target grid IDs that have at least one calculation rule using `accumulate` over the given source grid.
+ * When `sourceGridId`'s data changes, callers should re-run calculations for these grids so fields like "Total amount" update.
+ */
+export function getGridIdsThatDependOnGridViaAccumulate(
+  calculations: Record<string, FieldCalculationRule> | undefined,
+  sourceGridId: string,
+): string[] {
+  if (!calculations || sourceGridId === '') return []
+  const targetIds = new Set<string>()
+  for (const path of Object.keys(calculations)) {
+    const { gridId: targetGridId } = parsePath(path)
+    if (!targetGridId) continue
+    const rule = calculations[path]
+    if (!rule || !isExprNode(rule.expr)) continue
+    const sourceIds = getAccumulateSourceGridIds(rule.expr)
+    if (sourceIds.has(sourceGridId)) targetIds.add(targetGridId)
+  }
+  return Array.from(targetIds)
+}
+
+/**
+ * Builds a map from source grid ID to target grid IDs that have accumulate over it, in a single pass over calculations.
+ * More efficient than calling getGridIdsThatDependOnGridViaAccumulate per grid when you need the full dependency map.
+ */
+export function buildAccumulateDepsBySourceGrid(
+  calculations: Record<string, FieldCalculationRule> | undefined,
+): Map<string, string[]> {
+  const map = new Map<string, Set<string>>()
+  if (!calculations) return new Map()
+  for (const path of Object.keys(calculations)) {
+    const { gridId: targetGridId } = parsePath(path)
+    if (!targetGridId) continue
+    const rule = calculations[path]
+    if (!rule || !isExprNode(rule.expr)) continue
+    const sourceIds = getAccumulateSourceGridIds(rule.expr)
+    for (const sourceId of sourceIds) {
+      let set = map.get(sourceId)
+      if (!set) {
+        set = new Set<string>()
+        map.set(sourceId, set)
+      }
+      set.add(targetGridId)
+    }
+  }
+  const out = new Map<string, string[]>()
+  for (const [sourceId, set] of map) {
+    out.set(sourceId, Array.from(set))
+  }
+  return out
 }
 
 function toGridTargetRules(
@@ -334,16 +445,33 @@ function resolveEvaluationOrder(
   return { order, cyclicTargets }
 }
 
+/**
+ * Build a getColumnValues function from gridData. Returns a new array per call; does not mutate gridData.
+ */
+function buildGetColumnValues(
+  gridData: Record<string, Array<Record<string, unknown>>>,
+): (path: string) => unknown[] {
+  return (path: string) => {
+    const { gridId, fieldId } = parsePath(path)
+    if (!gridId || !fieldId) return []
+    const rows = gridData[gridId]
+    if (!Array.isArray(rows)) return []
+    return rows.map((row) => row[fieldId])
+  }
+}
+
 function evaluateTarget(
   plan: CompiledCalculationPlan,
   rowValues: Record<string, unknown>,
   targetFieldId: string,
+  getColumnValues?: (path: string) => unknown[],
 ): unknown {
   const rule = plan.rulesByTargetFieldId.get(targetFieldId)
   if (!rule) return undefined
   const ctx: FunctionContext = {
     rowValues,
     fieldId: `${plan.gridId}.${targetFieldId}`,
+    ...(getColumnValues && { getColumnValues }),
   }
   return evaluateExpr(rule.expr, ctx)
 }
@@ -472,6 +600,7 @@ export function applyCompiledCalculationsForRow({
   plan,
   row,
   changedFieldIds,
+  gridData,
 }: ApplyCompiledCalculationsForRowInput): ApplyCalculationsForRowResult {
   if (plan.rulesByTargetFieldId.size === 0) {
     return { row, updatedFieldIds: [], skippedCyclicTargets: [] }
@@ -487,13 +616,16 @@ export function applyCompiledCalculationsForRow({
     return { row, updatedFieldIds: [], skippedCyclicTargets: [] }
   }
 
+  const getColumnValues =
+    gridData && Object.keys(gridData).length > 0 ? buildGetColumnValues(gridData) : undefined
+
   const { order, cyclicTargets } = resolveEvaluationOrder(plan.dependsOnTargets, impactedTargets)
   const nextRow = { ...row }
   const rowValues = buildRowValuesForEval(nextRow, plan.gridId)
   const updatedFieldIds: string[] = []
 
   for (const targetFieldId of order) {
-    const nextValue = evaluateTarget(plan, rowValues, targetFieldId)
+    const nextValue = evaluateTarget(plan, rowValues, targetFieldId, getColumnValues)
     if (!Object.is(nextRow[targetFieldId], nextValue)) {
       nextRow[targetFieldId] = nextValue
       rowValues[targetFieldId] = nextValue
@@ -537,11 +669,13 @@ export function applyCalculationsForRow({
   row,
   calculations,
   changedFieldIds,
+  gridData,
 }: ApplyCalculationsForRowInput): ApplyCalculationsForRowResult {
   const plan = getCachedCompiledPlan(gridId, calculations)
   return applyCompiledCalculationsForRow({
     plan,
     row,
     changedFieldIds,
+    gridData,
   })
 }

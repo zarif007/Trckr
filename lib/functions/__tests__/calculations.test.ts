@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCalculationsForRow,
   applyCompiledCalculationsForRow,
+  buildAccumulateDepsBySourceGrid,
   compileCalculationsForGrid,
+  extractExprFieldRefs,
+  getGridIdsThatDependOnGridViaAccumulate,
 } from '@/lib/field-calculation'
 import { buildValidationContext } from '@/lib/validate-tracker/context'
 import { validateCalculations } from '@/lib/validate-tracker/validators/calculations'
@@ -12,6 +15,16 @@ import type { ExprNode } from '@/lib/functions/types'
 import type { TrackerLike } from '@/lib/validate-tracker/types'
 
 describe('field calculations', () => {
+  it('extractExprFieldRefs includes sourceFieldId for accumulate', () => {
+    const expr: ExprNode = {
+      op: 'accumulate',
+      sourceFieldId: 'amounts_grid.amount',
+      action: 'add',
+    }
+    const refs = extractExprFieldRefs(expr)
+    expect(refs.has('amounts_grid.amount')).toBe(true)
+  })
+
   it('computes amount = rate * quantity with numeric strings and numbers', () => {
     const result = applyCalculationsForRow({
       gridId: 'sales_grid',
@@ -116,6 +129,73 @@ describe('field calculations', () => {
     expect(result.skippedCyclicTargets).toEqual(expect.arrayContaining(['a', 'b']))
   })
 
+  it('getGridIdsThatDependOnGridViaAccumulate returns target grids that accumulate over source', () => {
+    const calcs = {
+      'main_grid.total_amount': {
+        expr: {
+          op: 'accumulate',
+          sourceFieldId: 'amounts_grid.amount',
+          action: 'add',
+        },
+      },
+      'other_grid.x': {
+        expr: { op: 'field', fieldId: 'other_grid.y' },
+      },
+    }
+    expect(getGridIdsThatDependOnGridViaAccumulate(calcs, 'amounts_grid')).toEqual(['main_grid'])
+    expect(getGridIdsThatDependOnGridViaAccumulate(calcs, 'other_grid')).toEqual([])
+    expect(getGridIdsThatDependOnGridViaAccumulate(undefined, 'amounts_grid')).toEqual([])
+  })
+
+  it('buildAccumulateDepsBySourceGrid builds map in one pass', () => {
+    const calcs = {
+      'main_grid.total_amount': {
+        expr: {
+          op: 'accumulate',
+          sourceFieldId: 'amounts_grid.amount',
+          action: 'add',
+        },
+      },
+      'main_grid.other': {
+        expr: {
+          op: 'accumulate',
+          sourceFieldId: 'amounts_grid.qty',
+          action: 'add',
+        },
+      },
+    }
+    const map = buildAccumulateDepsBySourceGrid(calcs)
+    expect(map.get('amounts_grid')).toEqual(['main_grid'])
+    expect(map.size).toBe(1)
+    expect(buildAccumulateDepsBySourceGrid(undefined).size).toBe(0)
+  })
+
+  it('evaluates accumulate (sum table column) when gridData is provided', () => {
+    const gridData = {
+      amounts_grid: [
+        { amount: 10 },
+        { amount: 20 },
+        { amount: 30 },
+      ],
+      main_grid: [{}],
+    }
+    const result = applyCompiledCalculationsForRow({
+      plan: compileCalculationsForGrid('main_grid', {
+        'main_grid.total_amount': {
+          expr: {
+            op: 'accumulate',
+            sourceFieldId: 'amounts_grid.amount',
+            action: 'add',
+          },
+        },
+      }),
+      row: {},
+      gridData,
+    })
+    expect(result.row.total_amount).toBe(60)
+    expect(result.updatedFieldIds).toContain('total_amount')
+  })
+
   it('compiled plan produces same output as wrapper API', () => {
     const calculations = {
       'sales_grid.amount': {
@@ -185,6 +265,69 @@ describe('calculation validation', () => {
     const ctx = buildValidationContext(tracker as unknown as TrackerLike)
     const result = validateCalculations(ctx)
     expect((result.errors ?? []).some((e) => e.includes('must stay within target grid'))).toBe(true)
+  })
+
+  it('allows cross-grid sourceFieldId for accumulate', () => {
+    const tracker = {
+      tabs: [{ id: 'main_tab' }],
+      sections: [{ id: 'main_section', tabId: 'main_tab' }],
+      grids: [
+        { id: 'main_grid', sectionId: 'main_section' },
+        { id: 'amounts_grid', sectionId: 'main_section' },
+      ],
+      fields: [
+        { id: 'total_amount', dataType: 'number' },
+        { id: 'amount', dataType: 'number' },
+      ],
+      layoutNodes: [
+        { gridId: 'main_grid', fieldId: 'total_amount', order: 0 },
+        { gridId: 'amounts_grid', fieldId: 'amount', order: 0 },
+      ],
+      calculations: {
+        'main_grid.total_amount': {
+          expr: {
+            op: 'accumulate',
+            sourceFieldId: 'amounts_grid.amount',
+            action: 'add',
+          },
+        },
+      },
+    }
+    const ctx = buildValidationContext(tracker as unknown as TrackerLike)
+    const result = validateCalculations(ctx)
+    expect(result.errors ?? []).toHaveLength(0)
+  })
+
+  it('rejects invalid accumulate params (increment)', () => {
+    const tracker = {
+      tabs: [{ id: 'main_tab' }],
+      sections: [{ id: 'main_section', tabId: 'main_tab' }],
+      grids: [
+        { id: 'main_grid', sectionId: 'main_section' },
+        { id: 'amounts_grid', sectionId: 'main_section' },
+      ],
+      fields: [
+        { id: 'total_amount', dataType: 'number' },
+        { id: 'amount', dataType: 'number' },
+      ],
+      layoutNodes: [
+        { gridId: 'main_grid', fieldId: 'total_amount', order: 0 },
+        { gridId: 'amounts_grid', fieldId: 'amount', order: 0 },
+      ],
+      calculations: {
+        'main_grid.total_amount': {
+          expr: {
+            op: 'accumulate',
+            sourceFieldId: 'amounts_grid.amount',
+            action: 'add',
+            increment: 0,
+          } as ExprNode,
+        },
+      },
+    }
+    const ctx = buildValidationContext(tracker as unknown as TrackerLike)
+    const result = validateCalculations(ctx)
+    expect((result.errors ?? []).some((e) => e.includes('increment'))).toBe(true)
   })
 
   it('rejects invalid keys, missing targets, malformed expr, and dependency cycles', () => {

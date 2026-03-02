@@ -51,10 +51,32 @@ type ComparisonOp =
  * { op: 'if', cond: {...}, then: {...}, else: {...} }
  * ```
  */
+/**
+ * Accumulator (reduce) over a table column.
+ * sourceFieldId must be "gridId.fieldId". startIndex/endIndex are clamped; increment must be > 0.
+ * action 'sub' semantics: initialValue - v0 - v1 - ... (default initial 0).
+ */
+export type AccumulateAction = 'add' | 'sub' | 'mul'
+
 export type ExprNode =
   | { op: 'const'; value: unknown }
   /** fieldId must be "gridId.fieldId" (e.g. main_grid.sku), like bindings. */
   | { op: 'field'; fieldId: string }
+  | {
+      op: 'accumulate'
+      /** Grid and field path (e.g. Amounts_grid.amount) for the column to reduce. */
+      sourceFieldId: string
+      /** Start index (inclusive). Default 0. Clamped to [0, length-1]. */
+      startIndex?: number
+      /** End index (inclusive). Default length-1. Clamped to [0, length-1]. */
+      endIndex?: number
+      /** Step. Default 1. Treated as 1 if <= 0. */
+      increment?: number
+      /** Reduction operation. */
+      action: AccumulateAction
+      /** Initial value for reduction. add default 0, mul default 1, sub default 0. */
+      initialValue?: number
+    }
   | { op: 'add'; args: ExprNode[] }
   | { op: 'mul'; args: ExprNode[] }
   | { op: 'sub'; left: ExprNode; right: ExprNode }
@@ -114,9 +136,9 @@ export interface FieldCalculationRule {
 
 /**
  * Evaluation Context
- * 
+ *
  * Provides runtime data for expression evaluation.
- * Contains row values and field metadata.
+ * Contains row values, field metadata, and optional column resolution for accumulate.
  */
 export interface FunctionContext {
   /** Current row values keyed by fieldId (and optionally gridId.fieldId) */
@@ -127,4 +149,10 @@ export interface FunctionContext {
   fieldConfig?: Record<string, unknown> | null
   /** Field data type (for type-specific validation) */
   fieldDataType?: string
+  /**
+   * Optional. When set, used by `accumulate` to get all values for a table column.
+   * Path format: "gridId.fieldId". Returns a new array; not mutated.
+   * If missing or parsing fails, accumulate returns initialValue.
+   */
+  getColumnValues?: (path: string) => unknown[]
 }

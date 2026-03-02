@@ -30,6 +30,8 @@ export interface EntryFormDialogProps {
   gridId?: string
   /** Calculations keyed by "gridId.fieldId" (target paths). */
   calculations?: Record<string, FieldCalculationRule>
+  /** Optional full grid data for accumulate (sum/reduce) rules that reference other grids. */
+  gridData?: Record<string, Array<Record<string, unknown>>>
 }
 
 export function EntryFormDialog({
@@ -47,6 +49,7 @@ export function EntryFormDialog({
   mode = 'add',
   gridId,
   calculations,
+  gridData,
 }: EntryFormDialogProps) {
   const orderedIds = useMemo(
     () => fieldOrder ?? Object.keys(fieldMetadata),
@@ -66,9 +69,10 @@ export function EntryFormDialog({
         plan: compiledCalculationPlan,
         row: values,
         changedFieldIds,
+        gridData,
       }).row
     },
-    [compiledCalculationPlan]
+    [compiledCalculationPlan, gridData]
   )
 
   const recordsEqual = (a: Record<string, unknown>, b: Record<string, unknown>) => {
