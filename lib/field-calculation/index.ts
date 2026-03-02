@@ -202,7 +202,7 @@ export function extractExprFieldRefs(expr: ExprNode, out = new Set<string>()): S
  * Collects grid IDs that are referenced by any `accumulate` node in the expression.
  * Used to know which grids, when updated, should trigger recalculation of the target.
  */
-function getAccumulateSourceGridIds(expr: ExprNode, out = new Set<string>()): Set<string> {
+export function getAccumulateSourceGridIds(expr: ExprNode, out = new Set<string>()): Set<string> {
   if (!isExprNode(expr)) return out
   if (expr.op === 'accumulate') {
     const { gridId } = parsePath((expr as { sourceFieldId: string }).sourceFieldId)

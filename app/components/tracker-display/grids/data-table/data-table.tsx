@@ -85,6 +85,8 @@ interface DataTableProps<TData, TValue> {
   gridId?: string
   /** Calculations keyed by "gridId.fieldId" (target paths). */
   calculations?: Record<string, FieldCalculationRule>
+  /** Full grid data for accumulate (sum/reduce) rules in Add/Edit entry forms. */
+  gridData?: Record<string, Array<Record<string, unknown>>>
   /** Default page size. Default 10. */
   pageSize?: number
   /** Optional page size options for selector (e.g. [10, 25, 50]). */
@@ -113,6 +115,7 @@ export function DataTable<TData, TValue>({
   editLayoutAble = true,
   gridId,
   calculations,
+  gridData: gridDataProp,
   pageSize: pageSizeProp,
   pageSizeOptions: _pageSizeOptions,
   defaultSort: defaultSortProp,
@@ -463,6 +466,7 @@ export function DataTable<TData, TValue>({
                 getFieldOverrides={getFieldOverridesForAdd}
                 gridId={gridId}
                 calculations={calculations}
+                gridData={gridDataProp}
               />
             </>
           )}
@@ -485,6 +489,7 @@ export function DataTable<TData, TValue>({
         getFieldOverrides={getFieldOverridesForAdd}
         gridId={gridId}
         calculations={calculations}
+        gridData={gridDataProp}
         mode="edit"
       />
       <div className={cn('rounded-lg overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>

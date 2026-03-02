@@ -258,6 +258,30 @@ export function TrackerDisplayInline({
   const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
   gridDataRef.current = gridData
 
+  /** User overrides for calculated fields: gridId -> rowIndex -> fieldId -> value. Merged into grid data so manual edits are kept. */
+  const userCalculationOverridesRef = useRef<
+    Record<string, Record<number, Record<string, unknown>>>
+  >({})
+
+  function mergeCalculationOverrides(
+    result: Record<string, Array<Record<string, unknown>>>
+  ): void {
+    const overrides = userCalculationOverridesRef.current
+    for (const gridId of Object.keys(overrides)) {
+      const rowOverrides = overrides[gridId]
+      const rows = result[gridId]
+      if (!Array.isArray(rows)) continue
+      for (const rowIndex of Object.keys(rowOverrides)) {
+        const idx = Number(rowIndex)
+        if (idx < 0 || idx >= rows.length) continue
+        const fieldOverrides = rowOverrides[idx]
+        if (fieldOverrides && Object.keys(fieldOverrides).length > 0) {
+          result[gridId][idx] = { ...rows[idx], ...fieldOverrides }
+        }
+      }
+    }
+  }
+
   const compiledCalculationsByGrid = useMemo(() => {
     const plans = new Map<string, ReturnType<typeof compileCalculationsForGrid>>()
     if (!calculations || Object.keys(calculations).length === 0) return plans
@@ -292,6 +316,9 @@ export function TrackerDisplayInline({
 
   const handleUpdate = useCallback(
     (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
+      const calculationKey = `${gridId}.${columnId}`
+      const isCalculatedField = !!calculations?.[calculationKey]
+
       setLocalGridData((prev) => {
         const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
@@ -313,6 +340,29 @@ export function TrackerDisplayInline({
         next[rowIndex] = calculated
         result[gridId] = next
 
+        if (isCalculatedField) {
+          const overrides = userCalculationOverridesRef.current
+          const gridOverrides = { ...(overrides[gridId] ?? {}) }
+          const rowOverrides = { ...(gridOverrides[rowIndex] ?? {}) }
+          if (value !== calculated[columnId]) {
+            rowOverrides[columnId] = value
+          } else {
+            delete rowOverrides[columnId]
+          }
+          if (Object.keys(rowOverrides).length > 0) {
+            gridOverrides[rowIndex] = rowOverrides
+          } else {
+            delete gridOverrides[rowIndex]
+          }
+          const nextOverrides = { ...overrides }
+          if (Object.keys(gridOverrides).length > 0) {
+            nextOverrides[gridId] = gridOverrides
+          } else {
+            delete nextOverrides[gridId]
+          }
+          userCalculationOverridesRef.current = nextOverrides
+        }
+
         const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
         if (dependentGridIds?.length) {
           for (const depGridId of dependentGridIds) {
@@ -331,10 +381,11 @@ export function TrackerDisplayInline({
             result[depGridId] = updatedDepRows
           }
         }
+        mergeCalculationOverrides(result)
         return result
       })
     },
-    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
+    [baseGridData, calculations, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
   )
 
   const handleAddEntry = useCallback(
@@ -374,6 +425,7 @@ export function TrackerDisplayInline({
             result[depGridId] = updatedDepRows
           }
         }
+        mergeCalculationOverrides(result)
         return result
       })
     },
@@ -407,6 +459,26 @@ export function TrackerDisplayInline({
             result[depGridId] = updatedDepRows
           }
         }
+        const overrides = userCalculationOverridesRef.current
+        const gridOverrides = overrides[gridId]
+        if (gridOverrides) {
+          const deletedSet = new Set(rowIndices)
+          const reindexed: Record<number, Record<string, unknown>> = {}
+          for (const rowIndexStr of Object.keys(gridOverrides)) {
+            const rowIndex = Number(rowIndexStr)
+            if (deletedSet.has(rowIndex)) continue
+            let newIndex = rowIndex
+            for (const d of rowIndices) {
+              if (d < rowIndex) newIndex--
+            }
+            reindexed[newIndex] = gridOverrides[rowIndex]
+          }
+          userCalculationOverridesRef.current = {
+            ...overrides,
+            [gridId]: reindexed,
+          }
+        }
+        mergeCalculationOverrides(result)
         return result
       })
     },

@@ -534,6 +534,7 @@ function TrackerTableGridInner({
         styleOverrides={styleOverrides}
         gridId={grid.id}
         calculations={calculations}
+        gridData={fullGridData}
         addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
         editable={grid.config?.isRowEditAble !== false}
         deletable={onDeleteEntries != null && (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false}
