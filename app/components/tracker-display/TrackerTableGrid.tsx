@@ -389,7 +389,7 @@ function TrackerTableGridInner({
               if (targetGridId && targetFieldId) {
                 if (onCrossGridUpdate) {
                   onCrossGridUpdate(targetGridId, rowIndex, targetFieldId, update.value)
-                } else if (targetGridId === grid.id) {
+                } else if (targetGridId === grid.id && onUpdate) {
                   onUpdate(rowIndex, targetFieldId, update.value)
                 }
               }

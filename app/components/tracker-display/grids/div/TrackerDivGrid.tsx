@@ -588,7 +588,11 @@ function TrackerDivGridInner({
           if (onCrossGridUpdate) {
             onCrossGridUpdate(targetGridId, 0, targetFieldId, update.value)
           } else if (targetGridId === grid.id) {
-            handleFieldUpdateWithTouched(targetFieldId, update.value)
+            if (onUpdate) {
+              onUpdate(0, targetFieldId, update.value)
+            } else {
+              handleFieldUpdateWithTouched(targetFieldId, update.value)
+            }
           }
         }
       }

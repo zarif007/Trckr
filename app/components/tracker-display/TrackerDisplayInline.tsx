@@ -331,12 +331,13 @@ export function TrackerDisplayInline({
         const gridDataForCalc = result
         const calculated = plan
           ? applyCompiledCalculationsForRow({
-              plan,
-              row,
-              changedFieldIds: [columnId],
-              gridData: gridDataForCalc,
-            }).row
+            plan,
+            row,
+            changedFieldIds: [columnId],
+            gridData: gridDataForCalc,
+          }).row
           : row
+
         next[rowIndex] = calculated
         result[gridId] = next
 

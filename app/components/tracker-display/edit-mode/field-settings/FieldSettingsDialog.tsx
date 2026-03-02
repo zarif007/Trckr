@@ -85,6 +85,20 @@ const ensureRuleDefaults = (rule: FieldValidationRule): FieldValidationRule => {
   return rule
 }
 
+type FieldDataSource = { type: 'manual' } | { type: 'calculation' } | { type: 'auto_populate'; fromPath: string }
+
+function sourceEntryId(entry: FieldDataSource): string {
+  if (entry.type === 'manual') return 'manual'
+  if (entry.type === 'calculation') return 'calculation'
+  return `auto_populate:${entry.fromPath}`
+}
+
+function sourceEntryLabel(entry: FieldDataSource, pathLabelFn: (path: string) => string): string {
+  if (entry.type === 'manual') return 'Manual'
+  if (entry.type === 'calculation') return 'Calculation'
+  return `Auto-populate from ${pathLabelFn(entry.fromPath)}`
+}
+
 interface FieldSettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -302,6 +316,17 @@ export function FieldSettingsDialog({
       compileErrors: ['Run preview to validate the dynamic function'],
       previewError: null,
     })
+    const hasCalc = Boolean(validationKey && schema?.calculations?.[validationKey]?.expr)
+    const targetPath = validationKey
+    const autoSources: string[] = []
+    for (const entry of Object.values(schema?.bindings ?? {})) {
+      if (!entry || typeof entry !== 'object') continue
+      const mappings = (entry as TrackerBindingEntry).fieldMappings ?? []
+      for (const mapping of mappings) {
+        if (mapping?.to === targetPath && typeof mapping.from === 'string') autoSources.push(mapping.from)
+      }
+    }
+    // Priority UI removed; we only show the list of sources.
   }, [open, field, schema, gridId, bindingKey, defaultBindingDraft])
 
   const bindingValidation = useMemo(() => {
@@ -332,6 +357,17 @@ export function FieldSettingsDialog({
     }
     return Array.from(sources)
   }, [schema?.bindings, gridId, field?.id])
+
+  const validationKey = useMemo(() => (gridId && field ? `${gridId}.${field.id}` : ''), [gridId, field])
+  const hasCalculation = Boolean(validationKey && schema?.calculations?.[validationKey]?.expr)
+  const dataSourcesList = useMemo((): FieldDataSource[] => {
+    const list: FieldDataSource[] = [{ type: 'manual' }]
+    if (hasCalculation) list.push({ type: 'calculation' })
+    for (const fromPath of autoPopulateSources) {
+      list.push({ type: 'auto_populate', fromPath })
+    }
+    return list
+  }, [hasCalculation, autoPopulateSources])
 
   const typeOptions = useMemo(() => {
     const options = getCreatableFieldTypesWithLabels()
@@ -445,7 +481,6 @@ export function FieldSettingsDialog({
       minLength: toNumberOrUndefined(minLength),
       maxLength: toNumberOrUndefined(maxLength),
     }
-
     if (isDynamicField) {
       if (!dynamicBuilderState.canSave) {
         setDynamicConfigError(
@@ -673,24 +708,27 @@ export function FieldSettingsDialog({
                   </p>
                   {!gridId ? (
                     <p className="text-xs text-muted-foreground">
-                      Place this field in a grid to see auto-population sources.
-                    </p>
-                  ) : autoPopulateSources.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      No auto-population sources. Add mappings in bindings to populate this field.
+                      Place this field in a grid to see data sources and priority.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {autoPopulateSources.map((path) => (
-                        <div
-                          key={path}
-                          className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
-                          title={path}
-                        >
-                          {resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? [])}
-                        </div>
-                      ))}
-                    </div>
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {dataSourcesList.map((entry) => (
+                          <div
+                            key={sourceEntryId(entry)}
+                            className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
+                            title={sourceEntryId(entry)}
+                          >
+                            {sourceEntryLabel(entry, (path) => resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? []))}
+                          </div>
+                        ))}
+                      </div>
+                      {dataSourcesList.length > 1 && (
+                        <p className="text-xs text-muted-foreground">
+                          Note: If multiple sources update this field, the last write wins.
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="space-y-4">
