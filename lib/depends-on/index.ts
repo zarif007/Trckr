@@ -9,6 +9,7 @@ export type {
   DependsOnOperator,
   DependsOnAction,
   DependsOnRule,
+  DependsOnRuleForTarget,
   DependsOnRules,
   ParsedPath,
   EnrichedDependsOnRule,
@@ -16,6 +17,8 @@ export type {
   DependsOnIndex,
   ResolveDependsOnOptions,
 } from './types'
+export { getEffectiveDependsOn } from './effective'
+export type { SchemaWithDependsOn } from './effective'
 
 export { buildDependsOnIndex } from './index-build'
 export {

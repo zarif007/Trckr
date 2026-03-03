@@ -26,13 +26,8 @@ import {
   buildAccumulateDepsBySourceGrid,
   compileCalculationsForGrid,
 } from '@/lib/field-calculation'
-import {
-  ensureDependsOnOptionGrids,
-  SHARED_TAB_ID,
-  DEPENDS_ON_RULES_GRID,
-  DEPENDS_ON_OPTIONS_SECTION_ID,
-  rulesGridRowsToDependsOn,
-} from '@/lib/depends-on-options'
+import { SHARED_TAB_ID } from '@/lib/depends-on-options'
+import { getEffectiveDependsOn } from '@/lib/depends-on'
 // Bindings grid (Shared tab) intentionally unused; bindings are configured per field settings now.
 
 const DEFAULT_SHARED_TAB: TrackerTab = {
@@ -140,6 +135,7 @@ export function TrackerDisplayInline({
   initialGridData,
   getDataRef,
   dependsOn,
+  dependsOnByTarget,
   editMode,
   onSchemaChange,
   undo,
@@ -154,7 +150,7 @@ export function TrackerDisplayInline({
     return list.sort((a, b) => a.placeId - b.placeId)
   }, [tabs])
 
-  /** True when the Shared tab is in the displayed tab list (so we show Bindings + Rules sections there). */
+  /** True when the Shared tab is in the displayed tab list. */
   const hasSharedTabInView = useMemo(
     () => normalizedTabs.some((t) => t.id === SHARED_TAB_ID),
     [normalizedTabs]
@@ -203,49 +199,12 @@ export function TrackerDisplayInline({
     Record<string, Array<Record<string, unknown>>>
   >(() => ({}))
 
-  const sharedTabAug = useMemo(() => {
-    if (!hasSharedTabInView) return null
-    const dependsOnAug = ensureDependsOnOptionGrids({
-      sections: sections ?? [],
-      grids: grids ?? [],
-      fields: fields ?? [],
-      layoutNodes: layoutNodes ?? [],
-      bindings: bindings ?? {},
-      dependsOn: dependsOn ?? [],
-    })
-    const mergedSeedGridData = {
-      ...dependsOnAug.seedGridData,
-    }
-    const sectionsWithOrder = dependsOnAug.sections.map((s) => {
-      if (s.tabId !== SHARED_TAB_ID) return s
-      if (s.id === DEPENDS_ON_OPTIONS_SECTION_ID) return { ...s, placeId: 0 }
-      return { ...s, placeId: Math.max(1, (s.placeId ?? 0)) }
-    })
-    return {
-      sections: sectionsWithOrder,
-      grids: dependsOnAug.grids,
-      fields: dependsOnAug.fields,
-      layoutNodes: dependsOnAug.layoutNodes,
-      bindings: dependsOnAug.bindings,
-      seedGridData: mergedSeedGridData,
-      hasBindingsGrid: false,
-    }
-  }, [hasSharedTabInView, sections, grids, fields, layoutNodes, bindings, dependsOn])
+  const effectiveSections = sections ?? []
+  const effectiveGrids = grids ?? []
+  const effectiveFields = fields ?? []
+  const effectiveLayoutNodes = layoutNodes ?? []
 
-  const effectiveSections = sharedTabAug ? sharedTabAug.sections : (sections ?? [])
-  const effectiveGrids = sharedTabAug ? sharedTabAug.grids : (grids ?? [])
-  const effectiveFields = sharedTabAug ? sharedTabAug.fields : (fields ?? [])
-  const effectiveLayoutNodes = sharedTabAug ? sharedTabAug.layoutNodes : (layoutNodes ?? [])
-
-  const baseGridData = useMemo(() => {
-    const merged = { ...seedGridData }
-    if (sharedTabAug) {
-      for (const [gridId, rows] of Object.entries(sharedTabAug.seedGridData)) {
-        merged[gridId] = rows
-      }
-    }
-    return merged
-  }, [seedGridData, sharedTabAug])
+  const baseGridData = seedGridData
 
   const gridData = useMemo(() => {
     const merged = { ...baseGridData }
@@ -275,11 +234,10 @@ export function TrackerDisplayInline({
 
   const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
 
-  const effectiveDependsOn = useMemo(() => {
-    if (!sharedTabAug) return dependsOn ?? []
-    const rulesRows = gridData[DEPENDS_ON_RULES_GRID]
-    return rulesGridRowsToDependsOn(rulesRows)
-  }, [sharedTabAug, gridData, dependsOn])
+  const effectiveDependsOn = useMemo(
+    () => getEffectiveDependsOn({ dependsOn, dependsOnByTarget }),
+    [dependsOn, dependsOnByTarget]
+  )
 
   useEffect(() => {
     if (getDataRef) {

@@ -43,6 +43,9 @@ export type DependsOnRule = {
 
 export type DependsOnRules = DependsOnRule[]
 
+/** Rule shape when stored per target (target is the key; no targets array). */
+export type DependsOnRuleForTarget = Omit<DependsOnRule, 'targets'>
+
 /** Pre-parsed path for hot-path use (no parsePath in loops). Must match resolve-bindings.ParsedPath shape for type predicates. */
 export type ParsedPath = { tabId: null; gridId: string; fieldId: string }
 

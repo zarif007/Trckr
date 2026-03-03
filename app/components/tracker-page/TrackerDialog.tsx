@@ -43,6 +43,7 @@ function toDisplayProps(data: TrackerResponse): TrackerDisplayProps {
     calculations: data.calculations ?? {},
     styles: data.styles,
     dependsOn: data.dependsOn ?? [],
+    dependsOnByTarget: data.dependsOnByTarget,
   }
 }
 
@@ -63,7 +64,7 @@ export function TrackerDialog({
   onSchemaChange,
 }: TrackerDialogProps) {
   const object = streamedObject as {
-    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; dependsOn?: unknown[] }
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; dependsOn?: unknown[]; dependsOnByTarget?: Record<string, unknown[]> }
     trackerPatch?: unknown
   } | undefined
   const handleOpenChange = (next: boolean) => {
@@ -101,6 +102,7 @@ export function TrackerDialog({
       calculations: schema.calculations ?? {},
       styles: schema.styles,
       dependsOn: schema.dependsOn ?? [],
+      dependsOnByTarget: schema.dependsOnByTarget,
     }
     onSchemaChange?.(next)
   }
@@ -161,6 +163,7 @@ export function TrackerDialog({
               calculations={(tracker.calculations || {}) as TrackerResponse['calculations']}
               styles={(tracker.styles || {}) as TrackerResponse['styles']}
               dependsOn={(tracker.dependsOn || []) as TrackerResponse['dependsOn']}
+              dependsOnByTarget={(tracker as TrackerResponse).dependsOnByTarget}
               getDataRef={trackerDataRef}
             />
           ) : activeTrackerData ? (
@@ -195,6 +198,7 @@ export function TrackerDialog({
                   calculations={activeTrackerData.calculations}
                   styles={activeTrackerData.styles}
                   dependsOn={activeTrackerData.dependsOn}
+                  dependsOnByTarget={activeTrackerData.dependsOnByTarget}
                   getDataRef={trackerDataRef}
                 />
               )}

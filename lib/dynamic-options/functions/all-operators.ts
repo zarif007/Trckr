@@ -6,11 +6,13 @@ import type { DynamicOptionsContext, DynamicOption } from '../types'
 
 export const ID = 'all_operators'
 
-const OPERATORS = [
+export const DEPENDS_ON_OPERATORS = [
   'eq', 'neq', 'gt', 'gte', 'lt', 'lte',
   'in', 'not_in', 'contains', 'not_contains',
   'is_empty', 'not_empty', 'starts_with', 'ends_with',
-]
+] as const
+
+const OPERATORS = DEPENDS_ON_OPERATORS
 
 export function allOperators(_context: DynamicOptionsContext): DynamicOption[] {
   return OPERATORS.map((op) => ({

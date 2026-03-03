@@ -6,7 +6,9 @@ import type { DynamicOptionsContext, DynamicOption } from '../types'
 
 export const ID = 'all_actions'
 
-const ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as const
+export const DEPENDS_ON_ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as const
+
+const ACTIONS = DEPENDS_ON_ACTIONS
 
 export function allActions(_context: DynamicOptionsContext): DynamicOption[] {
   return ACTIONS.map((a) => ({

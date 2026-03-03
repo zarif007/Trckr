@@ -156,10 +156,18 @@ export const dependsOnRuleSchema = z
   })
   .passthrough()
 
+/** Per-target rule (target implied by key); used when editing Depends on in field settings. */
+export const dependsOnRuleForTargetSchema = dependsOnRuleSchema.omit({ targets: true })
+
 export const dependsOnSchema = z
   .array(dependsOnRuleSchema)
   .default([])
   .describe('Conditional field actions: evaluate source field, apply action to targets.')
+
+export const dependsOnByTargetSchema = z
+  .record(z.string(), z.array(dependsOnRuleForTargetSchema))
+  .optional()
+  .describe('Depends-on rules keyed by target field path (grid_id.field_id). When set, used instead of dependsOn array.')
 
 // BINDINGS - select/multiselect auto-population
 
@@ -291,6 +299,8 @@ export const trackerSchema = z
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
     dependsOn: dependsOnSchema,
+
+    dependsOnByTarget: dependsOnByTargetSchema,
 
     bindings: bindingsSchema,
 

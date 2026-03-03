@@ -346,6 +346,7 @@ const TrackerPanel = memo(function TrackerPanel({
               calculations={(schema.calculations || {}) as TrackerResponse['calculations']}
               styles={(schema.styles || {}) as TrackerResponse['styles']}
               dependsOn={(schema.dependsOn || []) as TrackerResponse['dependsOn']}
+              dependsOnByTarget={schema.dependsOnByTarget}
               dynamicOptions={(schema.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
               getDataRef={trackerDataRef}
             />
@@ -361,6 +362,7 @@ const TrackerPanel = memo(function TrackerPanel({
               calculations={schema.calculations}
               styles={schema.styles}
               dependsOn={schema.dependsOn}
+              dependsOnByTarget={schema.dependsOnByTarget}
               dynamicOptions={schema.dynamicOptions}
               getDataRef={trackerDataRef}
               editMode={editMode}
