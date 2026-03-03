@@ -15,21 +15,21 @@ export default function Examples() {
     >
       <div className="space-y-4 text-center">
         <h3 className="text-2xl font-bold tracking-tight text-foreground">
-          Just describe what you want to track
+          Describe your workflow—AI builds the tracker
         </h3>
         <p className="text-muted-foreground text-base max-w-2xl font-medium mx-auto">
-          Type naturally and let AI build your tracker. Here are some examples to get you started.
+          From project pipelines to equipment logs, type in plain language and get a ready-to-use tracker for your team.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
         {[
-          "I want to track my daily water intake with a goal of 8 glasses per day",
-          "Create a workout log with exercises, sets, reps, and weight",
-          "Track my reading progress with book titles, pages read, and ratings",
-          "Monitor my spending by category with monthly summaries",
-          "Log my meditation sessions with duration and notes",
-          "Track job applications with company name, position, status, and follow-up dates"
+          'Track our project pipeline with status, owner, due date, and priority',
+          'Create an internal requests board for IT and facilities with assignee and SLA',
+          'Track hiring pipeline with role, stage, recruiter, interviewer, and feedback',
+          'Log all company equipment with who has it, where it lives, and current status',
+          'Track vendor contracts with renewal dates, owners, and cost per month',
+          'Monitor inventory levels with location, reorder thresholds, and supplier',
         ].map((prompt, idx) => (
           <motion.div
             key={idx}

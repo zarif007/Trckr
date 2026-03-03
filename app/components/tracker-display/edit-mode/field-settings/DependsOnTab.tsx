@@ -10,8 +10,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SearchableSelect } from '@/components/ui/select'
-import { Plus, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Trash2, Eye, Filter, ArrowRight, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import { FieldWrapper } from '../../shared/FieldWrapper'
 import { FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
 import type { DependsOnRuleForTarget } from '@/lib/depends-on'
@@ -58,17 +60,22 @@ export function DependsOnTab({
     return (
       <div
         className={cn(
-          'rounded-md border-2 border-dashed border-border/70 bg-muted/20 py-10 px-6 text-center',
-          'hover:border-primary/30 hover:bg-muted/30 transition-colors'
+          theme.radius.lg,
+          theme.border.subtle,
+          'border-2 border-dashed bg-muted/20 py-12 px-6 text-center',
+          'hover:border-primary/40 hover:bg-muted/30 transition-colors duration-200'
         )}
       >
-        <p className="text-sm font-medium text-foreground/90 mb-1">No conditions yet</p>
-        <p className="text-xs text-muted-foreground mb-5">
-          Add a condition: when another field matches a value, an action will apply to “{thisFieldLabel}”.
+        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Sparkles className="h-5 w-5" />
+        </div>
+        <p className="text-sm font-semibold text-foreground mb-1.5">No visibility conditions</p>
+        <p className="text-xs text-muted-foreground max-w-[280px] mx-auto mb-6 leading-relaxed">
+          When another field matches a value, show, hide, require, or disable “{thisFieldLabel}”.
         </p>
         <Button
           size="sm"
-          className="gap-2 shadow-sm"
+          className="gap-2"
           onClick={() => setDependsOnRules((prev) => [...prev, { ...DEFAULT_RULE }])}
         >
           <Plus className="h-4 w-4" />
@@ -79,7 +86,7 @@ export function DependsOnTab({
   }
 
   return (
-    <>
+    <div className="space-y-5">
       <div className="space-y-4">
         {dependsOnRules.map((rule, index) => {
           const sourceOptions = allFieldPathOptions.filter((o) => o.value !== currentFieldPath)
@@ -89,32 +96,41 @@ export function DependsOnTab({
           const needsValue =
             rule.operator !== 'is_empty' && rule.operator !== 'not_empty'
           return (
-            <div
+            <article
               key={index}
-              className="rounded-md border border-border/60 bg-card overflow-hidden"
+              className={cn(
+                theme.surface.card,
+                theme.border.subtle,
+                theme.radius.lg,
+                'border overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
+              )}
             >
-              <div className="bg-muted/50 px-4 py-2 flex items-center justify-between border-b border-border/60">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <header className={cn('flex items-center justify-between gap-3 px-4 py-3', theme.surface.mutedSubtle, theme.border.subtle, 'border-b')}>
+                <Badge variant="secondary" className="text-[11px] font-medium uppercase tracking-wide px-2.5 py-0.5">
                   Condition {index + 1}
-                </span>
+                </Badge>
                 <button
                   type="button"
-                  className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  className={cn(
+                    'shrink-0 rounded-md p-2 -m-1 text-muted-foreground',
+                    'hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 transition-colors outline-none'
+                  )}
                   onClick={() => setDependsOnRules((prev) => prev.filter((_, i) => i !== index))}
                   aria-label="Remove condition"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
-              </div>
+              </header>
 
-              <div className="p-4 space-y-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Field to watch
-                  </p>
+              <div className="p-4 space-y-5">
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Eye className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <span className="text-xs font-semibold text-foreground">Field to watch</span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {rule.source ? (
-                      <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 border border-border/60">
+                      <div className={cn('flex items-center gap-2 rounded-lg border px-3 py-2 min-h-9', theme.border.subtle, theme.surface.mutedSubtle)}>
                         <span
                           className="text-sm font-medium truncate max-w-[200px]"
                           title={sourceLabel}
@@ -123,7 +139,7 @@ export function DependsOnTab({
                         </span>
                         <button
                           type="button"
-                          className="shrink-0 text-xs font-medium text-primary/80 hover:text-primary hover:underline"
+                          className="shrink-0 text-xs font-medium text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 -mx-1"
                           onClick={() =>
                             setDependsOnRules((prev) =>
                               prev.map((r, i) => (i === index ? { ...r, source: '' } : r))
@@ -144,21 +160,22 @@ export function DependsOnTab({
                             )
                           )
                         }
-                        placeholder="Choose a field to watch"
-                        searchPlaceholder="Search fields"
+                        placeholder="Choose a field…"
+                        searchPlaceholder="Search fields…"
                         className="h-9 min-w-[200px] max-w-[280px] text-sm"
                       />
                     )}
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    The other field whose value we check (e.g. Status, Type).
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    The field whose value is checked (e.g. Status, Type).
                   </p>
-                </div>
+                </section>
 
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Matches
-                  </p>
+                <section className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <span className="text-xs font-semibold text-foreground">When value</span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <FieldWrapper className="w-[130px]">
                       <Select
@@ -173,13 +190,13 @@ export function DependsOnTab({
                           <SelectValue placeholder="Operator" />
                         </SelectTrigger>
                         <SelectContent>
-                        {DEPENDS_ON_OPERATORS.map((op) => (
-                          <SelectItem key={op} value={op}>
-                            {DEPENDS_ON_OPERATOR_LABELS[op] ?? op}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          {DEPENDS_ON_OPERATORS.map((op) => (
+                            <SelectItem key={op} value={op}>
+                              {DEPENDS_ON_OPERATOR_LABELS[op] ?? op}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FieldWrapper>
                     {needsValue && (
                       <FieldWrapper className="w-[160px]">
@@ -196,12 +213,21 @@ export function DependsOnTab({
                       </FieldWrapper>
                     )}
                   </div>
-                </div>
+                </section>
 
-                <div className="space-y-2 rounded-md border-l-4 border-amber-400/60 pl-4 bg-amber-50/50 dark:bg-amber-950/20 py-2">
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Then apply to “{thisFieldLabel}”
-                  </p>
+                <section
+                  className={cn(
+                    'space-y-2 rounded-lg border-l-4 pl-4 py-3',
+                    theme.status.info.bg,
+                    'border-l-info/60'
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                    <span className="text-xs font-semibold text-foreground">
+                      Then for “{thisFieldLabel}”
+                    </span>
+                  </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <FieldWrapper className="w-[140px]">
                       <Select
@@ -215,14 +241,14 @@ export function DependsOnTab({
                         <SelectTrigger className={cn(FIELD_INNER_INPUT_BASE_CLASS, 'h-9 w-full text-sm px-3')}>
                           <SelectValue placeholder="Action" />
                         </SelectTrigger>
-                      <SelectContent>
-                        {DEPENDS_ON_ACTIONS.map((a) => (
-                          <SelectItem key={a} value={a}>
-                            {DEPENDS_ON_ACTION_LABELS[a]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectContent>
+                          {DEPENDS_ON_ACTIONS.map((a) => (
+                            <SelectItem key={a} value={a}>
+                              {DEPENDS_ON_ACTION_LABELS[a]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FieldWrapper>
                     <FieldWrapper className="w-[100px]">
                       <Select
@@ -252,21 +278,22 @@ export function DependsOnTab({
                       </Select>
                     </FieldWrapper>
                   </div>
-                </div>
+                </section>
               </div>
-            </div>
+            </article>
           )
         })}
       </div>
+
       <Button
         size="sm"
         variant="outline"
-        className="gap-2 border-dashed"
+        className="gap-2 border-dashed w-full sm:w-auto"
         onClick={() => setDependsOnRules((prev) => [...prev, { ...DEFAULT_RULE }])}
       >
         <Plus className="h-4 w-4" />
-        Add condition
+        Add another condition
       </Button>
-    </>
+    </div>
   )
 }

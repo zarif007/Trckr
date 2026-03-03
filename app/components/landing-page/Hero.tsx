@@ -5,85 +5,88 @@ import { Button } from '@/components/ui/button'
 
 export default function Hero() {
   return (
-    <section className="relative px-4 pt-32 pb-24 md:py-32 overflow-hidden">
-      {/* Ambient background */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        aria-hidden
-      >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-foreground/[0.06] dark:from-foreground/[0.1] via-transparent to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-1/4 w-[400px] h-[400px] bg-chart-2/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-32 right-1/4 w-[300px] h-[300px] bg-chart-1/10 rounded-full blur-3xl" />
-        <div className="absolute inset-0 bg-grid-small opacity-[0.4]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/50 to-background mask-radial" />
+    <section className="relative px-4 pt-28 pb-20 md:pt-36 md:pb-28 overflow-hidden">
+      {/* Minimal background: fine grid only, no gradients */}
+      <div className="absolute inset-0 pointer-events-none" aria-hidden>
+        <div className="absolute inset-0 bg-grid-small opacity-[0.35] dark:opacity-[0.2]" />
       </div>
 
-      <div className="relative z-10 text-center max-w-4xl mx-auto">
-        {/* Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="inline-flex items-center gap-2.5 rounded-md px-4 py-2 border border-border/60 bg-background/70 dark:bg-background/50 backdrop-blur-xl"
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-success ring-2 ring-success/30" />
-          </span>
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            AI-native data tracking
-          </span>
-        </motion.div>
-
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-          className="font-space mt-10 text-[3.5rem] sm:text-[4.5rem] md:text-[5.5rem] lg:text-[6.25rem] font-bold leading-[1.08] tracking-[-0.03em]"
-        >
-          <span className="block">Track</span>
-          <span className="relative inline-block mt-1">
-            <span className="absolute inset-0 bg-foreground -rotate-1.5 rounded-md scale-105 origin-center" />
-            <span className="relative px-5 py-1.5 text-background font-bold tracking-tight">Anything.</span>
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-6 text-base sm:text-lg md:text-xl text-muted-foreground/90 font-inter font-normal leading-relaxed tracking-[-0.01em] max-w-2xl mx-auto"
-        >
-          From a single prompt. No templates, no complexity—just the tracker you need, generated instantly.
-        </motion.p>
-
-        {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.28 }}
-          className="mt-12 flex flex-row items-center justify-center gap-4"
-        >
-          <Button
-            size="lg"
-            className="group sm:h-12 px-6 text-base font-semibold rounded-md bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            asChild
+      <div className="relative z-10 max-w-4xl mx-auto">
+        <div className="text-center">
+          {/* Badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5"
           >
-            <a href="/login?callbackUrl=/tracker" className="inline-flex items-center">
-              Get started
-              <span className="inline-block ml-2 transition-transform group-hover:translate-x-0.5" aria-hidden>→</span>
-            </a>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="sm:h-12 px-6 text-base font-medium rounded-md border-border/70 bg-background/50 hover:bg-muted/50 backdrop-blur-sm transition-all duration-200"
-            asChild
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-40" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+            </span>
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              AI-native internal tracking
+            </span>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.h1
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.06, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-12 font-semibold leading-[1.1] tracking-[-0.04em] text-foreground"
           >
-            <a href="#demo">Watch demo</a>
-          </Button>
-        </motion.div>
+            <span className="block text-[2.75rem] sm:text-[3.5rem] md:text-[4.25rem] lg:text-[5rem]">
+              Track
+            </span>
+            <span className="mt-2 block text-[2.75rem] sm:text-[3.5rem] md:text-[4.25rem] lg:text-[5rem]">
+              <span className="relative inline-block px-1">
+                <span
+                  className="absolute inset-0 bottom-[0.12em] top-[0.12em] bg-foreground rounded-sm"
+                  aria-hidden
+                />
+                <span className="relative text-background font-medium">everything your team runs on.</span>
+              </span>
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-8 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed tracking-[-0.01em]"
+          >
+            Notion-easy, spreadsheet-powerful. Describe what you need—AI builds trackers for projects, inventory, and
+            requests.
+          </motion.p>
+
+          {/* CTAs */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-10 flex flex-wrap items-center justify-center gap-3"
+          >
+            <Button
+              size="lg"
+              className="h-11 px-6 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors"
+              asChild
+            >
+              <a href="/login?callbackUrl=/tracker" className="inline-flex items-center gap-2">
+                Get started
+                <span className="text-background/80" aria-hidden>→</span>
+              </a>
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11 px-6 text-sm font-medium rounded-full border-border bg-transparent hover:bg-muted/50 transition-colors"
+              asChild
+            >
+              <a href="#demo">Watch demo</a>
+            </Button>
+          </motion.div>
+        </div>
       </div>
     </section>
   )

@@ -15,33 +15,33 @@ export default function Features() {
     >
       <div className="space-y-4">
         <h3 className="text-2xl font-bold tracking-tight text-foreground">
-          Built in seconds. Used for life.
+          Built for how small teams actually work.
         </h3>
         <p className="text-muted-foreground text-base max-w-2xl font-medium">
-          Trckr handles personal habits, team rituals, and operational
-          checklists. From wellness to finance, describe it and track it.
+          Trckr handles internal projects, inventory, requests, hiring, and day-to-day operations—more powerful than
+          spreadsheets, easier than stitching together docs and Notion pages.
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
           {
-            category: 'Wellness',
-            title: 'Hydration coach',
-            body: 'Log each glass, set a daily target, and keep a streak without thinking.',
-            footer: 'Fields: date, cups, notes • Views: daily log, weekly streak',
+            category: 'Projects & Ops',
+            title: 'Project pipeline',
+            body: 'See every initiative in one place with owners, due dates, and status so nothing slips.',
+            footer: 'Fields: project, owner, status, due date • Views: table, kanban',
           },
           {
-            category: 'Fitness',
-            title: 'Strength tracker',
-            body: 'Capture exercises, sets, and weights with PRs highlighted automatically.',
-            footer: 'Fields: exercise, sets, weight • Views: today, PRs',
+            category: 'Inventory & Assets',
+            title: 'Equipment tracker',
+            body: 'Know what you own, where it is, and who is responsible—without wrestling a giant spreadsheet.',
+            footer: 'Fields: item, location, owner, status • Views: inventory table',
           },
           {
-            category: 'Money',
-            title: 'Lightweight budget',
-            body: 'Track expenses by category and get a monthly summary, no spreadsheet needed.',
-            footer: 'Fields: date, category, amount • Views: monthly summary',
+            category: 'Requests & HR',
+            title: 'Internal requests',
+            body: 'Centralize IT, facilities, and HR requests with clear assignees and SLAs for your team.',
+            footer: 'Fields: type, requester, assignee, status • Views: inbox, by owner',
           },
         ].map((sample, idx) => (
           <motion.div

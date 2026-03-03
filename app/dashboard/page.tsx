@@ -38,12 +38,12 @@ export default function DashboardPage() {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New Folder' }),
+        body: JSON.stringify({ name: 'New Project' }),
       })
       if (!res.ok) throw new Error('Failed to create project')
       await fetchProjects()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error creating folder')
+      setError(e instanceof Error ? e.message : 'Error creating project')
     } finally {
       setCreating(false)
     }
@@ -64,7 +64,7 @@ export default function DashboardPage() {
       const data = (await res.json()) as { id: string }
       router.push(`/tracker/${data.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error creating file')
+      setError(e instanceof Error ? e.message : 'Error creating tracker')
     } finally {
       setCreating(false)
     }
@@ -77,23 +77,23 @@ export default function DashboardPage() {
 
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background">
+        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
+              className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
               onClick={handleCreateProject}
               disabled={creating}
             >
               <FolderPlus className="h-3.5 w-3.5" />
-              New Folder
+              New Project
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
+              className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
               onClick={() => handleCreateTracker()}
               disabled={creating}
             >
@@ -102,7 +102,7 @@ export default function DashboardPage() {
               ) : (
                 <FilePlus className="h-3.5 w-3.5" />
               )}
-              New File
+              New Tracker
             </Button>
             <div className="w-px h-4 bg-border/60" />
             <div className="flex rounded-md border border-border/50 overflow-hidden">
@@ -154,10 +154,10 @@ export default function DashboardPage() {
                     <motion.div
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/20 hover:bg-primary/5 cursor-pointer transition-colors group"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
                     >
                       <div className="relative w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center border border-border/30 group-hover:border-primary/20 transition-colors">
-                        <FolderOpen className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <FolderOpen className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors group-hover:scale-105" />
                         {project.trackerSchemas.length > 0 && (
                           <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
                             {project.trackerSchemas.length}
@@ -173,7 +173,7 @@ export default function DashboardPage() {
                 <motion.div
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-colors"
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
                   onClick={handleCreateProject}
                 >
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center">
@@ -184,7 +184,7 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <span className="text-[11px] font-medium text-muted-foreground">
-                    New Folder
+                    New Project
                   </span>
                 </motion.div>
               </>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium truncate block">
-                        {project.name || 'Untitled folder'}
+                        {project.name || 'Untitled project'}
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {project.trackerSchemas.length} trackers
@@ -218,7 +218,7 @@ export default function DashboardPage() {
                 ))}
                 <button
                   onClick={handleCreateProject}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/20 transition-colors text-muted-foreground"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
                     {creating ? (
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                       <FolderPlus className="h-4 w-4" />
                     )}
                   </div>
-                  <span className="text-sm font-medium">New Folder</span>
+                  <span className="text-sm font-medium">New Project</span>
                 </button>
               </>
             )}
@@ -237,7 +237,7 @@ export default function DashboardPage() {
 
       <div className="h-6 flex-shrink-0 border-t border-border/50 flex items-center justify-between px-3 text-[10px] text-muted-foreground bg-muted/20">
         <span>
-          {projects.length} folders · {totalTrackers} trackers
+          {projects.length} projects · {totalTrackers} trackers
         </span>
         <span className="tabular-nums">
           {currentTime.toLocaleDateString(undefined, {

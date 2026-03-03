@@ -11,8 +11,8 @@ export default function Protocol() {
             The Trckr Protocol
           </h3>
           <p className="text-muted-foreground text-base max-w-xl font-medium">
-            A guided flow designed for speed and precision. 
-            From idea to interface in under 60 seconds.
+            A guided flow designed for speed and precision.
+            Describe your workflow—from idea to live tracker in under 60 seconds.
           </p>
         </div>
         <Button asChild variant="ghost" size="sm" className="w-fit text-muted-foreground hover:text-foreground">
@@ -24,11 +24,11 @@ export default function Protocol() {
         {[
           {
             title: 'Natural Input',
-            body: "Describe what you track, how often, and the goals you care about in plain English.",
+            body: 'Describe what your team tracks, how often, and the outcomes you care about in plain English.',
           },
           {
             title: 'Neural Synthesis',
-            body: 'Our AI engine proposes schema, views, and reminders tailored to your specific workflow.',
+            body: "Our AI engine proposes schema, views, and reminders tailored to your team's workflow.",
           },
           {
             title: 'Live Deployment',

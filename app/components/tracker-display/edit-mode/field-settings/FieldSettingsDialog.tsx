@@ -112,7 +112,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
 
             <div className="flex-1 overflow-y-auto min-h-0">
               <div className="p-4 space-y-4">
-                <TabsContent value="general" className="mt-5 space-y-5">
+                <TabsContent value="general" className="mt-0 space-y-5">
                   <GeneralTab
                     gridId={gridId}
                     label={state.label}
@@ -123,6 +123,12 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     resolvePathLabelFn={state.resolvePathLabelFn}
                     isRequired={state.isRequired}
                     setIsRequired={state.setIsRequired}
+                    isHidden={state.isHidden}
+                    setIsHidden={state.setIsHidden}
+                    isDisabled={state.isDisabled}
+                    setIsDisabled={state.setIsDisabled}
+                    defaultValue={state.defaultValue}
+                    setDefaultValue={state.setDefaultValue}
                     dataType={state.dataType}
                     setDataType={state.setDataType}
                     groupedTypes={state.groupedTypes}

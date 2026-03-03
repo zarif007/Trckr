@@ -46,6 +46,9 @@ export function useFieldSettingsState({
   const [placeholder, setPlaceholder] = useState('')
   const [dataType, setDataType] = useState<TrackerFieldType>('string')
   const [isRequired, setIsRequired] = useState(false)
+  const [isHidden, setIsHidden] = useState(false)
+  const [isDisabled, setIsDisabled] = useState(false)
+  const [defaultValue, setDefaultValue] = useState('')
   const [min, setMin] = useState('')
   const [max, setMax] = useState('')
   const [minLength, setMinLength] = useState('')
@@ -182,6 +185,20 @@ export function useFieldSettingsState({
     setPlaceholder(field.ui.placeholder ?? '')
     setDataType(field.dataType)
     setIsRequired(Boolean(field.config?.isRequired))
+    setIsHidden(Boolean(field.config?.isHidden))
+    setIsDisabled(Boolean(field.config?.isDisabled))
+    const rawDefault = field.config?.defaultValue
+    if (rawDefault === undefined || rawDefault === null) {
+      setDefaultValue('')
+    } else if (typeof rawDefault === 'object') {
+      try {
+        setDefaultValue(JSON.stringify(rawDefault))
+      } catch {
+        setDefaultValue(String(rawDefault))
+      }
+    } else {
+      setDefaultValue(String(rawDefault))
+    }
     setMin(field.config?.min != null ? String(field.config.min) : '')
     setMax(field.config?.max != null ? String(field.config.max) : '')
     setMinLength(field.config?.minLength != null ? String(field.config.minLength) : '')
@@ -360,10 +377,30 @@ export function useFieldSettingsState({
     const nextConfig: TrackerFieldConfig = {
       ...(field.config ?? {}),
       isRequired,
+      isHidden,
+      isDisabled,
       min: toNumberOrUndefined(min),
       max: toNumberOrUndefined(max),
       minLength: toNumberOrUndefined(minLength),
       maxLength: toNumberOrUndefined(maxLength),
+    }
+
+    const trimmedDefault = defaultValue.trim()
+    if (trimmedDefault === '') {
+      nextConfig.defaultValue = undefined
+    } else {
+      if (dataType === 'boolean') {
+        if (trimmedDefault === 'true' || trimmedDefault === 'false') {
+          nextConfig.defaultValue = trimmedDefault === 'true'
+        } else {
+          nextConfig.defaultValue = undefined
+        }
+      } else if (['number', 'currency', 'percentage'].includes(dataType)) {
+        const n = Number(trimmedDefault)
+        nextConfig.defaultValue = Number.isFinite(n) ? n : undefined
+      } else {
+        nextConfig.defaultValue = trimmedDefault
+      }
     }
     if (isDynamicField) {
       if (!dynamicBuilderState.canSave) {
@@ -490,6 +527,9 @@ export function useFieldSettingsState({
     label,
     placeholder,
     isRequired,
+    isHidden,
+    isDisabled,
+    defaultValue,
     min,
     max,
     minLength,
@@ -539,6 +579,12 @@ export function useFieldSettingsState({
     setDataType,
     isRequired,
     setIsRequired,
+    isHidden,
+    setIsHidden,
+    isDisabled,
+    setIsDisabled,
+    defaultValue,
+    setDefaultValue,
     min,
     setMin,
     max,

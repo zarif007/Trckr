@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TrackerAIView } from '../page'
+import { TrackerPageSkeleton } from './TrackerPageSkeleton'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
 
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
@@ -121,12 +121,7 @@ export default function TrackerByIdPage() {
   }
 
   if (!state.schema || !state.tracker) {
-    return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center gap-4 pt-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">Loading tracker…</p>
-      </div>
-    )
+    return <TrackerPageSkeleton />
   }
 
   const schema = state.schema

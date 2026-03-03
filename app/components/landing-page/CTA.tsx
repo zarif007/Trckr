@@ -16,8 +16,8 @@ export default function CTA() {
 
       <div className="space-y-12 relative z-10">
         <h3 className="text-4xl md:text-7xl font-black tracking-tighter text-foreground max-w-3xl mx-auto leading-[0.9]">
-          The future of tracking <br />
-          <span className="text-muted-foreground/40">is here today.</span>
+          Internal tracking, reimagined <br />
+          <span className="text-muted-foreground/40">for teams of 1–50.</span>
         </h3>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
           <Button size="lg" className="h-16 px-12 text-xl font-black rounded-md group transition-all hover:scale-105 active:scale-95 bg-foreground text-background" asChild>
@@ -28,7 +28,7 @@ export default function CTA() {
           </Button>
         </div>
         <p className="text-muted-foreground text-base font-bold tracking-tight uppercase opacity-60">
-          Trusted by 50,000+ developers worldwide
+          Built for startups and small teams who have outgrown spreadsheets
         </p>
       </div>
     </motion.section>
