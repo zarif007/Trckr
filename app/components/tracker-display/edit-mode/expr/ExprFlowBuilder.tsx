@@ -71,6 +71,9 @@ interface FlowNodeData extends ExprFlowNodeData {
   onChange?: NodeUpdater
   onDelete?: (id: string) => void
   availableFields?: AvailableField[]
+  /** Shown on Result node: "Value of [resultFieldLabel]" */
+  resultFieldLabel?: string
+  resultFieldId?: string
 }
 
 type FlowNode = Node<FlowNodeData>
@@ -79,6 +82,9 @@ interface ExprFlowBuilderProps {
   expr: ExprNode
   availableFields: AvailableField[]
   onChange: (expr: ExprNode) => void
+  /** Optional: show "Value of [label]" on the Result node for this field */
+  resultFieldId?: string
+  resultFieldLabel?: string
   headerAction?: ReactNode
   flowHeightClassName?: string
 }
@@ -262,8 +268,18 @@ function OpNode({ id, data }: { id: string; data: FlowNodeData }) {
   )
 }
 
-function ResultNode() {
+function ResultNode({ data }: { data: FlowNodeData }) {
   const style = NODE_STYLES.result
+  const name = data.resultFieldLabel
+  const id = data.resultFieldId
+  const bodyText =
+    name && id
+      ? `Value of ${name} (${id})`
+      : name
+        ? `Value of ${name}`
+        : id
+          ? `Value of ${id}`
+          : 'Final expression output'
   return (
     <div className={cn(NODE_BASE_CLASSES, 'w-[160px] border-amber-500/40 bg-background', style.border)}>
       <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
@@ -271,7 +287,7 @@ function ResultNode() {
         <span className="text-foreground/80">{style.label}</span>
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'text-[11px] text-muted-foreground')}>
-        Final expression output
+        {bodyText}
       </div>
       <Handle
         type="target"
@@ -392,6 +408,8 @@ export function ExprFlowBuilder({
   expr,
   availableFields,
   onChange,
+  resultFieldId,
+  resultFieldLabel,
   headerAction,
   flowHeightClassName,
 }: ExprFlowBuilderProps) {
@@ -477,9 +495,12 @@ export function ExprFlowBuilder({
         onChange: updateNodeData,
         onDelete: deleteNode,
         availableFields,
+        ...(node.type === 'result'
+          ? { resultFieldId, resultFieldLabel }
+          : {}),
       },
     }),
-    [availableFields, deleteNode, updateNodeData]
+    [availableFields, deleteNode, updateNodeData, resultFieldId, resultFieldLabel]
   )
 
   useEffect(() => {

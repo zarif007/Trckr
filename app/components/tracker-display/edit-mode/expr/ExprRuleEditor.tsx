@@ -162,6 +162,8 @@ export function ExprRuleEditor({
             expr={expr}
             availableFields={availableFields}
             onChange={applyExpr}
+            resultFieldId={fieldId}
+            resultFieldLabel={availableFields.find((f) => f.fieldId === fieldId)?.label}
             headerAction={
               <Button
                 type="button"
@@ -184,6 +186,8 @@ export function ExprRuleEditor({
                 expr={expr}
                 availableFields={availableFields}
                 onChange={applyExpr}
+                resultFieldId={fieldId}
+                resultFieldLabel={availableFields.find((f) => f.fieldId === fieldId)?.label}
                 flowHeightClassName="h-[calc(100vh-16rem)] min-h-[420px]"
               />
             </DialogContent>

@@ -27,7 +27,7 @@ import type { FieldMetadata } from '../data-table/utils'
 import { getValidationError } from '../data-table/utils'
 import { EntryFormDialog } from '../data-table/entry-form-dialog'
 import { resolveDivStyles } from '@/lib/style-utils'
-import { applyCompiledCalculationsForRow, compileCalculationsForGrid, getAccumulateSourceGridIds } from '@/lib/field-calculation'
+import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
 import type { TrackerLayoutNode, TrackerField } from '../../types'
 import { EMPTY_ROW, GRID_COLS_CLASS } from './constants'
 import type { TrackerDivGridProps, DropIndicator, DropPlacement } from './types'
@@ -445,7 +445,7 @@ function TrackerDivGridInner({
   const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(() => new Set())
   const [dirtyFieldIds, setDirtyFieldIds] = useState<Set<string>>(() => new Set())
   const touchedFieldIdsRef = useRef(touchedFieldIds)
-  /** Field IDs that have any calculation (so user can manually override and we preserve it). */
+  /** Field IDs that have any calculation. */
   const calculatedFieldIds = useMemo(() => {
     const set = new Set<string>()
     if (!calculations) return set
@@ -455,45 +455,13 @@ function TrackerDivGridInner({
     }
     return set
   }, [calculations, grid.id])
-  /** Field IDs whose calculation uses accumulate; we take data for these when syncing unless user overrode. */
-  const accumulateTargetFieldIds = useMemo(() => {
-    const set = new Set<string>()
-    if (!calculations) return set
-    for (const path of Object.keys(calculations)) {
-      const { gridId: ruleGridId, fieldId } = parsePath(path)
-      if (ruleGridId !== grid.id || !fieldId) continue
-      const rule = calculations[path]
-      if (!rule?.expr || typeof rule.expr !== 'object' || !('op' in rule.expr)) continue
-      const sourceGridIds = getAccumulateSourceGridIds(rule.expr as import('@/lib/functions/types').ExprNode)
-      if (sourceGridIds.size > 0) set.add(fieldId)
-    }
-    return set
-  }, [calculations, grid.id])
-  /** When user manually edits a calculated field, we keep their value and don't overwrite with calculation. */
-  const [userOverriddenFieldIds, setUserOverriddenFieldIds] = useState<Set<string>>(() => new Set())
-  const userOverriddenFieldIdsRef = useRef(userOverriddenFieldIds)
-  useEffect(() => {
-    userOverriddenFieldIdsRef.current = userOverriddenFieldIds
-  }, [userOverriddenFieldIds])
+
   useEffect(() => {
     touchedFieldIdsRef.current = touchedFieldIds
   }, [touchedFieldIds])
   useEffect(() => {
-    setDraftRow((prev) => {
-      const next = { ...data }
-      const overridden = userOverriddenFieldIdsRef.current
-      touchedFieldIdsRef.current.forEach((fieldId) => {
-        if (overridden.has(fieldId)) {
-          next[fieldId] = prev[fieldId]
-        } else if (accumulateTargetFieldIds.has(fieldId)) {
-          next[fieldId] = data[fieldId]
-        } else {
-          next[fieldId] = prev[fieldId]
-        }
-      })
-      return next
-    })
-  }, [data, grid.id, accumulateTargetFieldIds])
+    setDraftRow(data)
+  }, [data, grid.id])
 
   const rowValuesForValidation = useMemo(() => {
     const base = { ...draftRow }
@@ -520,17 +488,9 @@ function TrackerDivGridInner({
           })
         : { row: base, updatedFieldIds: [], skippedCyclicTargets: [] }
 
-      let finalRow = calc.row
-      if (calculatedFieldIds.has(fieldId)) {
-        finalRow = { ...calc.row, [fieldId]: value }
-        const isEmpty = value === '' || value === null || value === undefined
-        setUserOverriddenFieldIds((prev) => {
-          const next = new Set(prev)
-          if (isEmpty) next.delete(fieldId)
-          else next.add(fieldId)
-          return next
-        })
-      }
+      const finalRow = calculatedFieldIds.has(fieldId)
+        ? { ...calc.row, [fieldId]: value }
+        : calc.row
 
       setDirtyFieldIds((prev) => new Set(prev).add(fieldId))
       setDraftRow(finalRow)
