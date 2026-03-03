@@ -26,7 +26,7 @@ export function CalculationsTab({
 }: CalculationsTabProps) {
   if (!gridId) {
     return (
-      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
+      <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
         <p className="text-sm text-muted-foreground">
           Place this field in a grid to configure calculations.
         </p>
@@ -35,7 +35,7 @@ export function CalculationsTab({
   }
   if (!calculationRule) {
     return (
-      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+      <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           No calculation configured. Add one expression to compute this field value.
         </p>

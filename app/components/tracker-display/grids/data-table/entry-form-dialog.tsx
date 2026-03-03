@@ -3,6 +3,7 @@
 import { getValidationError, sanitizeValue, getFieldIcon, type FieldMetadata } from './utils'
 import { DataTableInput } from './data-table-input'
 import { FormDialog } from './form-dialog'
+import { FieldWrapper } from '../../shared/FieldWrapper'
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { applyFieldOverrides } from '@/lib/depends-on'
 import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
@@ -199,15 +200,7 @@ export function EntryFormDialog({
                   <span className="text-destructive/80">*</span>
                 )}
               </label>
-              <div
-                className={
-                  'rounded-lg border bg-muted/30 focus-within:bg-background transition-[color,box-shadow] ' +
-                  (showError
-                    ? 'border-destructive/60'
-                    : 'border-input hover:border-ring focus-within:border-ring')
-                }
-                title={error ?? undefined}
-              >
+              <FieldWrapper error={showError} errorTitle={error ?? undefined}>
                 <DataTableInput
                   formField
                   value={value}
@@ -249,10 +242,10 @@ export function EntryFormDialog({
                   onAddOption={fieldInfo.onAddOption}
                   optionsGridFields={fieldInfo.optionsGridFields}
                   getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
-                  className="h-10 w-full min-w-0 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-lg"
+                  className="h-10 w-full min-w-0 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-md"
                   autoFocus={index === 0}
                 />
-              </div>
+              </FieldWrapper>
               {showError && error && (
                 <p className="text-destructive text-xs flex items-center gap-1">
                   {error}

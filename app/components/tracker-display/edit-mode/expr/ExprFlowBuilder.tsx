@@ -129,7 +129,7 @@ const ACCUMULATOR_ACTION_OPTIONS: { value: AccumulateAction; label: string }[] =
   { value: 'mul', label: 'Multiply (×)' },
 ]
 
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-200 hover:shadow-md'
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md'
 const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2 text-xs font-semibold'
 const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
 const NODE_DELETE_BUTTON_CLASSES =
@@ -175,7 +175,7 @@ function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
       </div>
       <div className={NODE_BODY_CLASSES}>
         <select
-          className="w-full rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          className="w-full rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
           value={value}
           onChange={(e) => data.onChange?.(id, { fieldId: e.target.value })}
         >
@@ -212,7 +212,7 @@ function ConstNode({ id, data }: { id: string; data: FlowNodeData }) {
         <Input
           value={data.value ?? ''}
           onChange={(e) => data.onChange?.(id, { value: e.target.value })}
-          className="h-9 border-border/60 bg-muted/30 text-xs text-foreground/90 focus:ring-2 focus:ring-emerald-500/30 rounded-lg"
+          className="h-9 border-border/60 bg-muted/30 text-xs text-foreground/90 focus:ring-2 focus:ring-emerald-500/30 rounded-md"
           placeholder="Enter value (e.g., 10, true, text)"
         />
       </div>
@@ -323,7 +323,7 @@ function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
         <div className="flex items-center gap-2">
           <label className="text-[10px] text-muted-foreground w-14 shrink-0">Action</label>
           <select
-            className="flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+            className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
             value={action}
             onChange={(e) => data.onChange?.(id, { action: e.target.value as AccumulateAction })}
           >
@@ -373,7 +373,7 @@ function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
         <div className="flex items-center gap-2">
           <label className="text-[10px] text-muted-foreground w-14 shrink-0">Step</label>
           <select
-            className="flex-1 rounded border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+            className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
             value={increment}
             onChange={(e) => data.onChange?.(id, { increment: parseInt(e.target.value, 10) })}
           >
@@ -638,7 +638,7 @@ export function ExprFlowBuilder({
                 event.dataTransfer.effectAllowed = 'move'
               }}
               className={cn(
-                'cursor-grab rounded-lg border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150',
+                'cursor-grab rounded-md border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150',
                 'active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2',
                 item.color === 'blue' && 'border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/10',
                 item.color === 'emerald' && 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 dark:border-emerald-500/30 dark:bg-emerald-500/10',
@@ -673,7 +673,7 @@ export function ExprFlowBuilder({
                 event.dataTransfer.effectAllowed = 'move'
               }}
               className={cn(
-                "cursor-grab rounded-lg border border-violet-200 bg-violet-50/50 px-2 py-1.5 text-[11px] text-foreground/80 transition-all duration-150",
+                "cursor-grab rounded-md border border-violet-200 bg-violet-50/50 px-2 py-1.5 text-[11px] text-foreground/80 transition-all duration-150",
                 "active:cursor-grabbing active:scale-[0.98] hover:bg-violet-100/50 hover:shadow-sm flex items-center justify-center gap-1",
                 "dark:border-violet-500/30 dark:bg-violet-500/10 dark:hover:bg-violet-500/20"
               )}

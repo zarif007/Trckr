@@ -198,7 +198,7 @@ export function ExprRuleEditor({
             value={jsonDraft}
             onChange={(e) => setJsonDraft(e.target.value)}
             onBlur={handleJsonBlur}
-            className="font-mono text-xs min-h-[140px] rounded-lg border-border/60 bg-muted/20"
+            className="font-mono text-xs min-h-[140px] rounded-md border-border/60 bg-muted/20"
             aria-invalid={Boolean(jsonError)}
           />
           {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}

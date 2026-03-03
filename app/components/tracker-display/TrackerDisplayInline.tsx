@@ -78,7 +78,7 @@ function SortableTabRow({
     >
       {editMode && onSchemaChange && (
         <span
-          className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded text-muted-foreground/50 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6 hover:bg-muted/80"
+          className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded-md text-muted-foreground/50 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6 hover:bg-muted/80"
           aria-hidden
           {...attributes}
           {...listeners}
@@ -105,7 +105,7 @@ function SortableTabRow({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-6 w-6 shrink-0 rounded text-muted-foreground/50 hover:text-destructive"
+            className="h-6 w-6 shrink-0 rounded-md text-muted-foreground/50 hover:text-destructive"
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
@@ -585,7 +585,7 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-lg">
+    <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-md">
       <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}

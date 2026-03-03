@@ -24,7 +24,7 @@ export function ColumnHeaderEdit({
       <button
         type="button"
         className={cn(
-          'flex items-center justify-center shrink-0 rounded hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors',
+          'flex items-center justify-center shrink-0 rounded-md hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors',
           inline ? 'h-6 w-6 p-0' : 'h-6 w-6'
         )}
         aria-label={`Drag to reorder ${label}`}
@@ -37,7 +37,7 @@ export function ColumnHeaderEdit({
         <button
           type="button"
           className={cn(
-            'flex items-center justify-center shrink-0 rounded hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors',
+            'flex items-center justify-center shrink-0 rounded-md hover:bg-muted text-muted-foreground/50 hover:text-foreground transition-colors',
             inline ? 'h-6 w-6 p-0' : 'h-6 w-6'
           )}
           onClick={(e) => {
@@ -52,7 +52,7 @@ export function ColumnHeaderEdit({
       <button
         type="button"
         className={cn(
-          'flex items-center justify-center shrink-0 rounded hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors',
+          'flex items-center justify-center shrink-0 rounded-md hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive transition-colors',
           inline ? 'h-6 w-6 p-0' : 'h-6 w-6'
         )}
         onClick={(e) => {

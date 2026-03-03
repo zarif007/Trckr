@@ -34,4 +34,4 @@ export const TAB_CONTENT_INNER = 'space-y-6 w-full min-w-0'
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
 export const SECTION_BAR_CLASS =
-  'w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-muted/50 border border-border/40 text-foreground text-sm font-medium'
+  'w-full flex items-center gap-2 px-3 py-2.5 rounded-md bg-muted/50 border border-border/40 text-foreground text-sm font-medium'

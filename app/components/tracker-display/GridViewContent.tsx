@@ -159,13 +159,13 @@ export function GridViewContent({
       )
     case 'calendar':
       return (
-        <div className="p-4 border border-dashed rounded text-muted-foreground">
+        <div className="p-4 border border-dashed rounded-md text-muted-foreground">
           Calendar Grid: {grid.name} (Not implemented)
         </div>
       )
     case 'timeline':
       return (
-        <div className="p-4 border border-dashed rounded text-muted-foreground">
+        <div className="p-4 border border-dashed rounded-md text-muted-foreground">
           Timeline Grid: {grid.name} (Not implemented)
         </div>
       )

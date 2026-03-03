@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { SearchableSelect } from '@/components/ui/select'
 import { Plus, Trash2, Wand2, X } from 'lucide-react'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_FORM_INPUT_CLASS } from '@/lib/style-utils'
 import { FieldMappingsEditor } from '../../bindings/FieldMappingsEditor'
 import { normalizeMappings, resolvePathLabel } from '../../bindings/bindings-utils'
 import type { TrackerDisplayProps } from '../../types'
@@ -22,23 +24,27 @@ function BindingSelect({
 }) {
   if (options.length === 0) {
     return (
-      <Input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-      />
+      <FieldWrapper>
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className={FIELD_FORM_INPUT_CLASS}
+        />
+      </FieldWrapper>
     )
   }
   return (
-    <SearchableSelect
-      options={options}
-      value={value || '__empty__'}
-      onValueChange={(val) => onChange(val === '__empty__' ? '' : val)}
-      placeholder={placeholder}
-      searchPlaceholder={placeholder}
-      className="w-full h-10"
-    />
+    <FieldWrapper>
+      <SearchableSelect
+        options={options}
+        value={value || '__empty__'}
+        onValueChange={(val) => onChange(val === '__empty__' ? '' : val)}
+        placeholder={placeholder}
+        searchPlaceholder={placeholder}
+        className={FIELD_FORM_INPUT_CLASS}
+      />
+    </FieldWrapper>
   )
 }
 
@@ -79,7 +85,7 @@ export function BindingsTab({
 }: BindingsTabProps) {
   if (!gridId) {
     return (
-      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
+      <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
         <p className="text-sm text-muted-foreground">
           Bindings require this field to be placed in a grid.
         </p>
@@ -88,7 +94,7 @@ export function BindingsTab({
   }
   if (!bindingEnabled) {
     return (
-      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+      <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
         <p className="text-sm text-muted-foreground">
           No binding yet. Bindings connect this select field to an options grid.
         </p>
@@ -108,7 +114,7 @@ export function BindingsTab({
   }
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+      <div className="rounded-md border border-border/60 bg-muted/30 px-4 py-3">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
           Select field
         </p>

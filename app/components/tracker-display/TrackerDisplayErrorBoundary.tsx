@@ -37,7 +37,7 @@ export class TrackerDisplayErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) return this.props.fallback
       return (
         <div
-          className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-destructive"
+          className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-destructive"
           role="alert"
         >
           <p className="font-medium flex items-center gap-2">

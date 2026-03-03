@@ -81,22 +81,22 @@ export function FormDialog({
     return (
       <DialogDescription className="text-xs text-muted-foreground">
         {fieldCount} field{fieldCount !== 1 ? 's' : ''} · Press{' '}
-        <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+        <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">
           Enter
         </kbd>{' '}
         to save,{' '}
-        <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+        <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">
           Esc
         </kbd>{' '}
         to cancel
         {onSubmitAndContinue && (
           <>
             ,{' '}
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">
               Shift
             </kbd>{' '}
             +{' '}
-            <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+            <kbd className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px]">
               Enter
             </kbd>{' '}
             to save &amp; add another
@@ -126,7 +126,7 @@ export function FormDialog({
         >
           <div
             className={cn(
-              'absolute top-0 left-0 right-0 h-[3px] rounded-t-lg',
+              'absolute top-0 left-0 right-0 h-[3px] rounded-t-md',
               mode === 'add' ? 'bg-primary' : 'bg-muted-foreground/40'
             )}
           />

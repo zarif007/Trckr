@@ -393,7 +393,7 @@ export function DataTable<TData, TValue>({
                     <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-52 rounded-lg border-border/50 p-1.5 shadow-lg">
+                <PopoverContent align="end" className="w-52 rounded-md border-border/50 p-1.5 shadow-lg">
                   <div className="flex flex-col gap-0.5">
                     <Button
                       variant="ghost"
@@ -492,7 +492,7 @@ export function DataTable<TData, TValue>({
         gridData={gridDataProp}
         mode="edit"
       />
-      <div className={cn('rounded-lg overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
+      <div className={cn('rounded-md overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
         <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
           <TableHeader className={ts.headerBg}>
             {table.getHeaderGroups().map((headerGroup) => (

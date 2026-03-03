@@ -199,7 +199,7 @@ const NODE_CATEGORY_STYLES: Record<string, { border: string; bg: string; icon: R
   },
 }
 
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border-2 shadow-sm transition-all duration-200 hover:shadow-md bg-background'
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md bg-background'
 const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2.5 text-xs font-semibold'
 const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
 const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
@@ -417,7 +417,7 @@ function DynamicNodeCardInlineConfig({
         {Object.entries(mappings).map(([key, sel]) => {
           const { type, value } = getSelectorTypeAndValue(sel)
           return (
-            <div key={key} className="flex flex-wrap items-center gap-1 rounded border border-border/60 bg-muted/20 p-1.5">
+            <div key={key} className="flex flex-wrap items-center gap-1 rounded-md border border-border/60 bg-muted/20 p-1.5">
               <Input
                 value={key}
                 onChange={(e) => {
@@ -1019,7 +1019,7 @@ export function DynamicFunctionFlowBuilder({
                   event.dataTransfer.effectAllowed = 'move'
                 }}
                 className={cn(
-                  "cursor-grab rounded-lg border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150",
+                  "cursor-grab rounded-md border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150",
                   "active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2",
                   getGroupColor(group)
                 )}

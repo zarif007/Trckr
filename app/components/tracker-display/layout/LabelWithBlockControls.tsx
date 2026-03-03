@@ -52,7 +52,7 @@ export function LabelWithBlockControls({
           <button
             type="button"
             className={cn(
-              'flex items-center justify-center h-6 w-6 rounded shrink-0 transition-[color,opacity,transform] duration-200 ease-out',
+              'flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,opacity,transform] duration-200 ease-out',
               'hover:bg-muted hover:scale-110 text-muted-foreground/50 hover:text-foreground',
               'cursor-grab active:cursor-grabbing active:scale-95',
               showControls ? 'opacity-100' : 'opacity-50'
@@ -73,7 +73,7 @@ export function LabelWithBlockControls({
           {onAddBlockClick && (
             <button
               type="button"
-              className="flex items-center justify-center h-6 w-6 rounded shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
+              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
               onClick={(e) => {
                 e.stopPropagation()
                 onAddBlockClick()
@@ -86,7 +86,7 @@ export function LabelWithBlockControls({
           {onSettings && (
             <button
               type="button"
-              className="flex items-center justify-center h-6 w-6 rounded shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
+              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
               onClick={(e) => {
                 e.stopPropagation()
                 onSettings()
@@ -98,7 +98,7 @@ export function LabelWithBlockControls({
           )}
           <button
             type="button"
-            className="flex items-center justify-center h-6 w-6 rounded shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive active:scale-95"
+            className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive active:scale-95"
             onClick={(e) => {
               e.stopPropagation()
               onRemove()

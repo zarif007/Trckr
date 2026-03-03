@@ -183,7 +183,7 @@ export function BlockCommandInput({
                       onSelect={() => handleSelect(item)}
                       className="gap-2.5 px-2 py-1.5 cursor-pointer"
                     >
-                      <div className="flex h-7 w-7 items-center justify-center rounded bg-muted/70 shrink-0">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-muted/70 shrink-0">
                         <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       </div>
                       <div className="flex flex-col gap-0 min-w-0">

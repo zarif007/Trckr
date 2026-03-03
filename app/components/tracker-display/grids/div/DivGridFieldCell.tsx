@@ -13,6 +13,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
 import type { DivGridFieldCellProps } from './types'
 import { ADD_OPTION_VALUE } from './constants'
 
@@ -61,12 +63,14 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
   }))
   const multiOpts = opts.map((o) => ({ label: o.label, id: String(o.value ?? o.id ?? o.label) }))
 
+  const innerClass = `${FIELD_INNER_INPUT_BASE_CLASS} ${inputTextClass}`
+
   const renderInput = () => {
     switch (field.dataType) {
       case 'text':
         return (
           <Textarea
-            className={`min-h-[100px] leading-7 text-foreground/90 border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={`min-h-[100px] leading-7 text-foreground/90 ${innerClass}`}
             value={valueString}
             placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
             disabled={isDisabled}
@@ -98,7 +102,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
               onSelectChange(fieldId, val === '__empty__' ? '' : val)
             }}
             searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
-            className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={`w-full ${innerClass}`}
             onAddOptionClick={() => openAddOption(fieldId, value)}
             addOptionLabel="Add option..."
           />
@@ -110,7 +114,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             value={Array.isArray(value) ? value.map(String) : []}
             onChange={(val) => onSelectChange(fieldId, val)}
             disabled={isDisabled}
-            className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={`w-full ${innerClass}`}
             onAddOptionClick={() => openAddOption(fieldId, value)}
           />
         )
@@ -123,7 +127,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             disabled={isDisabled}
             onValueChange={(val) => onSelectChange(fieldId, val === '__empty__' ? '' : val)}
             searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
-            className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={`w-full ${innerClass}`}
           />
         )
       }
@@ -134,7 +138,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             value={Array.isArray(value) ? value.map(String) : []}
             onChange={(val) => onSelectChange(fieldId, val)}
             disabled={isDisabled}
-            className={`w-full border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={`w-full ${innerClass}`}
           />
         )
       case 'date':
@@ -143,7 +147,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`w-full text-left flex items-center border-0 bg-transparent focus-visible:ring-0 rounded-md py-2 px-3 min-h-9 ${inputTextClass} ${!value ? 'text-muted-foreground' : ''}`}
+                className={`w-full text-left flex items-center py-2 px-3 min-h-9 ${innerClass} ${!value ? 'text-muted-foreground' : ''}`}
                 disabled={isDisabled}
               >
                 {value ? format(new Date(String(value)), 'PPP') : <span>Pick a date</span>}
@@ -173,7 +177,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
         return (
           <Input
             type="number"
-            className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={innerClass}
             value={numValue === '' ? '' : numValue}
             placeholder="0"
             disabled={isDisabled}
@@ -190,7 +194,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
       default:
         return (
           <Input
-            className={`border-0 bg-transparent focus-visible:ring-0 rounded-md ${inputTextClass}`}
+            className={innerClass}
             value={valueString}
             placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
             disabled={isDisabled}
@@ -203,14 +207,15 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
 
   return (
     <div className="space-y-1 min-w-0">
-      <div
-        className={`min-w-0 rounded-lg border bg-muted/30 focus-within:bg-background transition-colors hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30 ${wrapperClassName} ${showError ? 'border-destructive/60 ring-1 ring-destructive/40' : 'border-input'}`}
-        title={showError ? validationError ?? undefined : undefined}
+      <FieldWrapper
+        className={wrapperClassName}
+        error={showError}
+        errorTitle={validationError ?? undefined}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => focusInputInContainer(e.currentTarget)}
       >
         {renderInput()}
-      </div>
+      </FieldWrapper>
       {showError && validationError ? (
         <p className="text-xs text-destructive" role="alert">
           {validationError}

@@ -22,6 +22,8 @@ import {
 } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_FORM_INPUT_CLASS } from '@/lib/style-utils'
 import type { TrackerFieldType } from '../../types'
 import type { AddColumnOrFieldDialogProps } from '../types'
 import { getCreatableFieldTypesWithLabels } from '../utils'
@@ -124,35 +126,37 @@ export function AddColumnOrFieldDialog({
               >
                 Existing {labelName.toLowerCase()} (optional)
               </label>
-              <Select
-                value={existingFieldId}
-                onValueChange={(value) => {
-                  setExistingFieldId(value)
-                  if (value) {
-                    setLabelTouched(false)
-                  }
-                }}
-              >
-                <SelectTrigger
-                  id="existing-field"
-                  className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+              <FieldWrapper>
+                <Select
+                  value={existingFieldId}
+                  onValueChange={(value) => {
+                    setExistingFieldId(value)
+                    if (value) {
+                      setLabelTouched(false)
+                    }
+                  }}
                 >
-                  <SelectValue placeholder={`Select a ${labelName.toLowerCase()}...`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableFields.length === 0 ? (
-                    <div className="mx-1 my-2 rounded-md border border-dashed border-border/60 bg-muted/30 py-6 text-center text-sm text-muted-foreground">
-                      No other {labelName.toLowerCase()}s to add
-                    </div>
-                  ) : (
-                    availableFields.map((f) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.ui.label} ({f.dataType})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger
+                    id="existing-field"
+                    className={FIELD_FORM_INPUT_CLASS}
+                  >
+                    <SelectValue placeholder={`Select a ${labelName.toLowerCase()}...`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableFields.length === 0 ? (
+                      <div className="mx-1 my-2 rounded-md border border-dashed border-border/60 bg-muted/30 py-6 text-center text-sm text-muted-foreground">
+                        No other {labelName.toLowerCase()}s to add
+                      </div>
+                    ) : (
+                      availableFields.map((f) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.ui.label} ({f.dataType})
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </FieldWrapper>
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -170,6 +174,7 @@ export function AddColumnOrFieldDialog({
                 >
                   Label
                 </label>
+              <FieldWrapper error={labelInvalid} errorTitle={labelError ?? undefined}>
                 <Input
                   id="new-label"
                   value={newLabel}
@@ -181,13 +186,11 @@ export function AddColumnOrFieldDialog({
                   }}
                   onBlur={() => setLabelTouched(true)}
                   placeholder={variant === 'column' ? 'e.g. Status' : 'e.g. Description'}
-                  className={cn(
-                    'h-10 w-full rounded-lg border-border/60 bg-background/90',
-                    labelInvalid && 'border-destructive focus-visible:ring-destructive/20'
-                  )}
+                  className={FIELD_FORM_INPUT_CLASS}
                   aria-invalid={labelInvalid}
                   aria-describedby={labelError ? 'new-label-error' : undefined}
                 />
+              </FieldWrapper>
                 {labelError && (
                   <p id="new-label-error" className="text-xs text-destructive mt-1">
                     {labelError}
@@ -201,6 +204,7 @@ export function AddColumnOrFieldDialog({
                 >
                   Type
                 </label>
+              <FieldWrapper>
                 <Select
                   value={newDataType}
                   onValueChange={(v) => setNewDataType(v as TrackerFieldType)}
@@ -208,7 +212,7 @@ export function AddColumnOrFieldDialog({
                 >
                   <SelectTrigger
                     id="new-type"
-                    className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                    className={FIELD_FORM_INPUT_CLASS}
                   >
                     <SelectValue />
                   </SelectTrigger>
@@ -230,6 +234,7 @@ export function AddColumnOrFieldDialog({
                     )}
                   </SelectContent>
                 </Select>
+              </FieldWrapper>
               </div>
             </div>
           </div>

@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, Trash2, ChevronDown, ChevronRight, ArrowRight, Copy } from 'lucide-react'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_FORM_INPUT_CLASS } from '@/lib/style-utils'
 import type { FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerDisplayProps, TrackerField } from '../../types'
 import { ExprRuleEditor } from '../expr'
@@ -81,7 +83,7 @@ export function ValidationsTab({
   return (
     <div className="space-y-5">
       {rules.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+        <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
           <p className="text-sm text-muted-foreground">
             No validation rules. Add rules to validate this field on submit.
           </p>
@@ -96,7 +98,7 @@ export function ValidationsTab({
           <div
             key={index}
             id={`rule-card-${index}`}
-            className="rounded-lg border border-border/60 p-4 space-y-3 scroll-mt-4"
+            className="rounded-md border border-border/60 p-4 space-y-3 scroll-mt-4"
           >
             <div className="flex items-center gap-3">
               <div className="flex-1">
@@ -106,18 +108,19 @@ export function ValidationsTab({
                 >
                   Type
                 </label>
-                <Select
-                  value={rule.type}
-                  onValueChange={(value) =>
-                    handleRuleTypeChange(index, value as FieldValidationRule['type'])
-                  }
-                >
-                  <SelectTrigger
-                    id={`rule-type-${index}`}
-                    className="mt-2 h-10 w-full rounded-lg border-border/60 bg-background/90"
+                <FieldWrapper className="mt-2">
+                  <Select
+                    value={rule.type}
+                    onValueChange={(value) =>
+                      handleRuleTypeChange(index, value as FieldValidationRule['type'])
+                    }
                   >
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
+                    <SelectTrigger
+                      id={`rule-type-${index}`}
+                      className={FIELD_FORM_INPUT_CLASS}
+                    >
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
                       <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
@@ -137,6 +140,7 @@ export function ValidationsTab({
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                </FieldWrapper>
               </div>
               <button
                 type="button"
@@ -159,18 +163,20 @@ export function ValidationsTab({
                 >
                   Value
                 </label>
-                <Input
-                  id={`rule-value-${index}`}
-                  type="number"
-                  value={String(rule.value ?? '')}
-                  onChange={(e) =>
-                    updateRule(index, {
-                      ...rule,
-                      value: toNumberOrUndefined(e.target.value) ?? 0,
-                    })
-                  }
-                  className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                />
+                <FieldWrapper>
+                  <Input
+                    id={`rule-value-${index}`}
+                    type="number"
+                    value={String(rule.value ?? '')}
+                    onChange={(e) =>
+                      updateRule(index, {
+                        ...rule,
+                        value: toNumberOrUndefined(e.target.value) ?? 0,
+                      })
+                    }
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
               </div>
             )}
 
@@ -194,13 +200,15 @@ export function ValidationsTab({
               >
                 Message
               </label>
-              <Input
-                id={`rule-message-${index}`}
-                value={rule.message ?? ''}
-                onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
-                placeholder="Optional custom error message. Leave blank to use default message."
-                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-              />
+              <FieldWrapper>
+                <Input
+                  id={`rule-message-${index}`}
+                  value={rule.message ?? ''}
+                  onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
+                  placeholder="Optional custom error message. Leave blank to use default message."
+                  className={FIELD_FORM_INPUT_CLASS}
+                />
+              </FieldWrapper>
             </div>
           </div>
         ))}
@@ -236,7 +244,7 @@ export function ValidationsTab({
                   <li key={index}>
                     <button
                       type="button"
-                      className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 hover:border-border transition-colors"
+                      className="w-full flex items-center gap-3 rounded-md border border-border/60 bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 hover:border-border transition-colors"
                       onClick={() => {
                         document.getElementById(`rule-card-${index}`)?.scrollIntoView({
                           behavior: 'smooth',
@@ -282,7 +290,7 @@ export function ValidationsTab({
               </button>
               {showJsonInStructure && (
                 <div className="relative mt-2">
-                  <pre className="rounded-lg border border-border/60 bg-muted/30 p-4 font-mono text-xs overflow-x-auto min-h-[100px] max-h-[180px] overflow-y-auto">
+                  <pre className="rounded-md border border-border/60 bg-muted/30 p-4 font-mono text-xs overflow-x-auto min-h-[100px] max-h-[180px] overflow-y-auto">
                     {JSON.stringify(rules, null, 2)}
                   </pre>
                   <Button

@@ -12,6 +12,8 @@ import {
 import { SearchableSelect } from '@/components/ui/select'
 import { Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
 import type { DependsOnRuleForTarget } from '@/lib/depends-on'
 import { DEPENDS_ON_OPERATORS } from '@/lib/dynamic-options/functions/all-operators'
 import { DEPENDS_ON_ACTIONS } from '@/lib/dynamic-options/functions/all-actions'
@@ -56,7 +58,7 @@ export function DependsOnTab({
     return (
       <div
         className={cn(
-          'rounded-xl border-2 border-dashed border-border/70 bg-muted/20 py-10 px-6 text-center',
+          'rounded-md border-2 border-dashed border-border/70 bg-muted/20 py-10 px-6 text-center',
           'hover:border-primary/30 hover:bg-muted/30 transition-colors'
         )}
       >
@@ -89,7 +91,7 @@ export function DependsOnTab({
           return (
             <div
               key={index}
-              className="rounded-xl border border-border/60 bg-card overflow-hidden"
+              className="rounded-md border border-border/60 bg-card overflow-hidden"
             >
               <div className="bg-muted/50 px-4 py-2 flex items-center justify-between border-b border-border/60">
                 <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -112,7 +114,7 @@ export function DependsOnTab({
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     {rule.source ? (
-                      <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2 border border-border/60">
+                      <div className="flex items-center gap-2 rounded-md bg-muted px-3 py-2 border border-border/60">
                         <span
                           className="text-sm font-medium truncate max-w-[200px]"
                           title={sourceLabel}
@@ -158,18 +160,19 @@ export function DependsOnTab({
                     Matches
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                      value={rule.operator ?? 'eq'}
-                      onValueChange={(val) =>
-                        setDependsOnRules((prev) =>
-                          prev.map((r, i) => (i === index ? { ...r, operator: val as typeof r.operator } : r))
-                        )
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-[130px] text-sm rounded-lg border-border/60 bg-background/90">
-                        <SelectValue placeholder="Operator" />
-                      </SelectTrigger>
-                      <SelectContent>
+                    <FieldWrapper className="w-[130px]">
+                      <Select
+                        value={rule.operator ?? 'eq'}
+                        onValueChange={(val) =>
+                          setDependsOnRules((prev) =>
+                            prev.map((r, i) => (i === index ? { ...r, operator: val as typeof r.operator } : r))
+                          )
+                        }
+                      >
+                        <SelectTrigger className={cn(FIELD_INNER_INPUT_BASE_CLASS, 'h-9 w-full text-sm px-3')}>
+                          <SelectValue placeholder="Operator" />
+                        </SelectTrigger>
+                        <SelectContent>
                         {DEPENDS_ON_OPERATORS.map((op) => (
                           <SelectItem key={op} value={op}>
                             {DEPENDS_ON_OPERATOR_LABELS[op] ?? op}
@@ -177,37 +180,41 @@ export function DependsOnTab({
                         ))}
                       </SelectContent>
                     </Select>
+                    </FieldWrapper>
                     {needsValue && (
-                      <Input
-                        value={rule.value != null ? String(rule.value) : ''}
-                        onChange={(e) =>
-                          setDependsOnRules((prev) =>
-                            prev.map((r, i) => (i === index ? { ...r, value: e.target.value || undefined } : r))
-                          )
-                        }
-                        placeholder="Value"
-                        className="h-9 w-[160px] text-sm rounded-lg border-border/60 bg-background/90"
-                      />
+                      <FieldWrapper className="w-[160px]">
+                        <Input
+                          value={rule.value != null ? String(rule.value) : ''}
+                          onChange={(e) =>
+                            setDependsOnRules((prev) =>
+                              prev.map((r, i) => (i === index ? { ...r, value: e.target.value || undefined } : r))
+                            )
+                          }
+                          placeholder="Value"
+                          className={cn(FIELD_INNER_INPUT_BASE_CLASS, 'h-9 w-full text-sm px-3')}
+                        />
+                      </FieldWrapper>
                     )}
                   </div>
                 </div>
 
-                <div className="space-y-2 rounded-lg border-l-4 border-amber-400/60 pl-4 bg-amber-50/50 dark:bg-amber-950/20 py-2">
+                <div className="space-y-2 rounded-md border-l-4 border-amber-400/60 pl-4 bg-amber-50/50 dark:bg-amber-950/20 py-2">
                   <p className="text-xs font-semibold text-muted-foreground">
                     Then apply to “{thisFieldLabel}”
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                      value={rule.action ?? 'isHidden'}
-                      onValueChange={(val) =>
-                        setDependsOnRules((prev) =>
-                          prev.map((r, i) => (i === index ? { ...r, action: val as typeof r.action } : r))
-                        )
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-[140px] text-sm rounded-lg border-border/60 bg-background/90">
-                        <SelectValue placeholder="Action" />
-                      </SelectTrigger>
+                    <FieldWrapper className="w-[140px]">
+                      <Select
+                        value={rule.action ?? 'isHidden'}
+                        onValueChange={(val) =>
+                          setDependsOnRules((prev) =>
+                            prev.map((r, i) => (i === index ? { ...r, action: val as typeof r.action } : r))
+                          )
+                        }
+                      >
+                        <SelectTrigger className={cn(FIELD_INNER_INPUT_BASE_CLASS, 'h-9 w-full text-sm px-3')}>
+                          <SelectValue placeholder="Action" />
+                        </SelectTrigger>
                       <SelectContent>
                         {DEPENDS_ON_ACTIONS.map((a) => (
                           <SelectItem key={a} value={a}>
@@ -216,31 +223,34 @@ export function DependsOnTab({
                         ))}
                       </SelectContent>
                     </Select>
-                    <Select
-                      value={
-                        rule.set === true || rule.set === 'true'
-                          ? 'true'
-                          : rule.set === false || rule.set === 'false'
-                            ? 'false'
-                            : 'true'
-                      }
-                      onValueChange={(val) =>
-                        setDependsOnRules((prev) =>
-                          prev.map((r, i) => (i === index ? { ...r, set: val === 'true' } : r))
-                        )
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-[100px] text-sm rounded-lg border-border/60 bg-background/90">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DEPENDS_ON_SET_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>
-                            {o.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    </FieldWrapper>
+                    <FieldWrapper className="w-[100px]">
+                      <Select
+                        value={
+                          rule.set === true || rule.set === 'true'
+                            ? 'true'
+                            : rule.set === false || rule.set === 'false'
+                              ? 'false'
+                              : 'true'
+                        }
+                        onValueChange={(val) =>
+                          setDependsOnRules((prev) =>
+                            prev.map((r, i) => (i === index ? { ...r, set: val === 'true' } : r))
+                          )
+                        }
+                      >
+                        <SelectTrigger className={cn(FIELD_INNER_INPUT_BASE_CLASS, 'h-9 w-full text-sm px-3')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DEPENDS_ON_SET_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>
+                              {o.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FieldWrapper>
                   </div>
                 </div>
               </div>

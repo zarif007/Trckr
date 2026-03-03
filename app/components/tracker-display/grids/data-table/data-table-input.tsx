@@ -13,7 +13,7 @@ import {
 import { format } from 'date-fns'
 import { FieldType, FieldConfig, type FieldMetadata, type OptionsGridFieldDef } from './utils'
 import { cn } from '@/lib/utils'
-import { DEFAULT_INPUT_FONT_CLASS } from '@/lib/style-utils'
+import { DEFAULT_INPUT_FONT_CLASS, FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
 import { MultiSelect } from '@/components/ui/multi-select'
 import { Button } from '@/components/ui/button'
 import { Plus, Trash2 } from 'lucide-react'
@@ -61,7 +61,7 @@ export function DataTableInput({
   getBindingUpdatesFromRow,
   formField = false,
 }: DataTableInputProps) {
-  const inlineInputClass = `border-0 bg-transparent dark:bg-transparent shadow-none focus-visible:ring-0 focus-visible:border-0 h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
+  const inlineInputClass = `${FIELD_INNER_INPUT_BASE_CLASS} h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [addOptionOpen, setAddOptionOpen] = useState(false)
@@ -423,7 +423,7 @@ export function DataTableInput({
               type="button"
               className={cn(
                 inlineInputClass,
-                'w-full text-left px-2 py-1.5 rounded border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
+                'w-full text-left px-2 py-1.5 rounded-md border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
                 className
               )}
               disabled={isDisabled}

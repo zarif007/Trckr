@@ -66,7 +66,7 @@ export function SectionBar({
       {onCollapseToggle && !collapsed && (
         <button
           type="button"
-          className="shrink-0 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 p-0.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={(e) => {
             e.stopPropagation()
             onCollapseToggle()

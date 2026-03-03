@@ -92,7 +92,7 @@ export function FieldMappingsEditor({
         <button
           type="button"
           className={cn(
-            'w-full text-left px-2 py-1.5 rounded border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
+            'w-full text-left px-2 py-1.5 rounded-md border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
             className
           )}
           disabled={disabled}

@@ -15,7 +15,7 @@ export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
   const info = map[type] ?? map.table
   const Icon = info.icon
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded px-1.5 py-0.5">
+    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
       <Icon className="h-3 w-3" />
       {info.label}
     </span>

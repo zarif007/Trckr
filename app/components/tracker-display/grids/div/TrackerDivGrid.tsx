@@ -718,7 +718,7 @@ function TrackerDivGridInner({
         return (
           <div
             key={rowKey}
-            className={`grid ${gridCols} gap-2.5 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-lg p-1 -m-1' : ''}`}
+            className={`grid ${gridCols} gap-2.5 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-md p-1 -m-1' : ''}`}
           >
             {nodesInRow.map((node, nodeIndex) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
@@ -779,7 +779,7 @@ function TrackerDivGridInner({
                   {activeDragField.ui.label}
                 </span>
                 <div
-                  className={`rounded-lg border border-dashed bg-muted/30 ${ds.fontSize} min-h-9`}
+                  className={`rounded-md border border-dashed bg-muted/30 ${ds.fontSize} min-h-9`}
                   aria-hidden
                 />
               </div>

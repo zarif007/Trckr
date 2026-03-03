@@ -349,7 +349,7 @@ export function DynamicOptionsBuilder({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-border/60 bg-muted/20 p-4 space-y-3">
+      <div className="rounded-md border border-border/60 bg-muted/20 p-4 space-y-3">
         <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
           Option source
         </p>
@@ -527,7 +527,7 @@ export function DynamicOptionsBuilder({
         </Tabs>
       )}
 
-      <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2">
+      <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Live preview</p>
           <div className="flex gap-2">
@@ -557,7 +557,7 @@ export function DynamicOptionsBuilder({
                 ))}
               </div>
             )}
-            <div className="rounded border border-border/50 bg-background/70 p-2 max-h-[180px] overflow-auto">
+            <div className="rounded-md border border-border/50 bg-background/70 p-2 max-h-[180px] overflow-auto">
               <pre className="text-xs font-mono whitespace-pre-wrap">
                 {JSON.stringify(preview.options.slice(0, 20), null, 2)}
               </pre>

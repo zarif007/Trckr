@@ -11,7 +11,7 @@ export function DroppableEmptyColumn({ id }: DroppableEmptyColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`h-24 rounded-lg border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
+      className={`h-24 rounded-md border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
         }`}
     >
       <p className="text-xs text-muted-foreground text-center px-4">Drop here</p>
@@ -28,7 +28,7 @@ export function ColumnDropZone({ id }: ColumnDropZoneProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[80px] rounded-lg border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${isOver ? 'border-primary bg-primary/10' : 'border-muted/50 bg-muted/10'
+      className={`min-h-[80px] rounded-md border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${isOver ? 'border-primary bg-primary/10' : 'border-muted/50 bg-muted/10'
         }`}
     >
       <p className="text-xs text-muted-foreground">{isOver ? 'Drop here' : ''}</p>

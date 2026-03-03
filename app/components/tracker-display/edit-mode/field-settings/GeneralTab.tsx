@@ -11,6 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { FieldWrapper } from '../../shared/FieldWrapper'
+import { FIELD_FORM_INPUT_CLASS } from '@/lib/style-utils'
 import type { TrackerFieldType } from '../../types'
 import { GROUP_ORDER, sourceEntryId, sourceEntryLabel } from './constants'
 
@@ -77,12 +79,14 @@ export function GeneralTab({
             >
               Label
             </label>
-            <Input
-              id="field-settings-label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-            />
+            <FieldWrapper>
+              <Input
+                id="field-settings-label"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                className={FIELD_FORM_INPUT_CLASS}
+              />
+            </FieldWrapper>
           </div>
           <div className="space-y-2">
             <label
@@ -91,12 +95,14 @@ export function GeneralTab({
             >
               Placeholder
             </label>
-            <Input
-              id="field-settings-placeholder"
-              value={placeholder}
-              onChange={(e) => setPlaceholder(e.target.value)}
-              className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-            />
+            <FieldWrapper>
+              <Input
+                id="field-settings-placeholder"
+                value={placeholder}
+                onChange={(e) => setPlaceholder(e.target.value)}
+                className={FIELD_FORM_INPUT_CLASS}
+              />
+            </FieldWrapper>
           </div>
         </div>
       </div>
@@ -158,13 +164,14 @@ export function GeneralTab({
           >
             Data type
           </label>
-          <Select value={dataType} onValueChange={(v) => setDataType(v as TrackerFieldType)}>
-            <SelectTrigger
-              id="field-settings-data-type"
-              className="h-10 w-full rounded-lg border-border/60 bg-background/90 max-w-xs"
-            >
-              <SelectValue />
-            </SelectTrigger>
+          <FieldWrapper className="max-w-xs">
+            <Select value={dataType} onValueChange={(v) => setDataType(v as TrackerFieldType)}>
+              <SelectTrigger
+                id="field-settings-data-type"
+                className={FIELD_FORM_INPUT_CLASS}
+              >
+                <SelectValue />
+              </SelectTrigger>
             <SelectContent>
               {GROUP_ORDER.map(
                 (groupKey) =>
@@ -183,6 +190,7 @@ export function GeneralTab({
               )}
             </SelectContent>
           </Select>
+          </FieldWrapper>
         </div>
         {isNumeric && (
           <div className="grid grid-cols-2 gap-4">
@@ -193,13 +201,15 @@ export function GeneralTab({
               >
                 Min
               </label>
-              <Input
-                id="field-settings-min"
-                type="number"
-                value={min}
-                onChange={(e) => setMin(e.target.value)}
-                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-              />
+              <FieldWrapper>
+                <Input
+                  id="field-settings-min"
+                  type="number"
+                  value={min}
+                  onChange={(e) => setMin(e.target.value)}
+                  className={FIELD_FORM_INPUT_CLASS}
+                />
+              </FieldWrapper>
             </div>
             <div className="space-y-2">
               <label
@@ -208,13 +218,15 @@ export function GeneralTab({
               >
                 Max
               </label>
-              <Input
-                id="field-settings-max"
-                type="number"
-                value={max}
-                onChange={(e) => setMax(e.target.value)}
-                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-              />
+              <FieldWrapper>
+                <Input
+                  id="field-settings-max"
+                  type="number"
+                  value={max}
+                  onChange={(e) => setMax(e.target.value)}
+                  className={FIELD_FORM_INPUT_CLASS}
+                />
+              </FieldWrapper>
             </div>
           </div>
         )}
@@ -227,13 +239,15 @@ export function GeneralTab({
               >
                 Min length
               </label>
-              <Input
-                id="field-settings-min-length"
-                type="number"
-                value={minLength}
-                onChange={(e) => setMinLength(e.target.value)}
-                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-              />
+              <FieldWrapper>
+                <Input
+                  id="field-settings-min-length"
+                  type="number"
+                  value={minLength}
+                  onChange={(e) => setMinLength(e.target.value)}
+                  className={FIELD_FORM_INPUT_CLASS}
+                />
+              </FieldWrapper>
             </div>
             <div className="space-y-2">
               <label
@@ -242,13 +256,15 @@ export function GeneralTab({
               >
                 Max length
               </label>
-              <Input
-                id="field-settings-max-length"
-                type="number"
-                value={maxLength}
-                onChange={(e) => setMaxLength(e.target.value)}
-                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-              />
+              <FieldWrapper>
+                <Input
+                  id="field-settings-max-length"
+                  type="number"
+                  value={maxLength}
+                  onChange={(e) => setMaxLength(e.target.value)}
+                  className={FIELD_FORM_INPUT_CLASS}
+                />
+              </FieldWrapper>
             </div>
           </div>
         )}
