@@ -170,7 +170,7 @@ function TrackerDivGridInner({
       return
     }
 
-    ;(async () => {
+    ; (async () => {
       const entries = await Promise.all(
         dynamicFieldIds.map(async (fieldId) => {
           const field = fieldsById.get(fieldId)
@@ -481,11 +481,11 @@ function TrackerDivGridInner({
       const base = { ...data, ...draftRow, [fieldId]: value }
       const calc = compiledCalculationPlan
         ? applyCompiledCalculationsForRow({
-            plan: compiledCalculationPlan,
-            row: base,
-            changedFieldIds: [fieldId],
-            gridData: fullGridData,
-          })
+          plan: compiledCalculationPlan,
+          row: base,
+          changedFieldIds: [fieldId],
+          gridData: fullGridData,
+        })
         : { row: base, updatedFieldIds: [], skippedCyclicTargets: [] }
 
       const finalRow = calculatedFieldIds.has(fieldId)
@@ -638,13 +638,13 @@ function TrackerDivGridInner({
     const validationError =
       fieldRulesResolved.length > 0
         ? getValidationError({
-            value,
-            fieldId: field.id,
-            fieldType: field.dataType,
-            config: effectiveConfig,
-            rules: fieldRulesResolved,
-            rowValues: rowValuesForValidation,
-          })
+          value,
+          fieldId: field.id,
+          fieldType: field.dataType,
+          config: effectiveConfig,
+          rules: fieldRulesResolved,
+          rowValues: rowValuesForValidation,
+        })
         : null
     const showError =
       (dirtyFieldIds.has(field.id) || touchedFieldIds.has(field.id)) && !!validationError

@@ -26,6 +26,7 @@ const CONTINUE_PROMPT =
   'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
 
 const MAX_AUTO_CONTINUES = 3
+const MAX_VALIDATION_FIX_RETRIES = 2
 const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
 const DEFAULT_SHARED_TAB_ID = 'shared_tab'
 
@@ -165,6 +166,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const continueCountRef = useRef(0)
+  const validationFixRetryCountRef = useRef(0)
   const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
   const messagesRef = useRef<Message[]>([])
@@ -307,8 +309,37 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       if (finishedObject) {
         const tracker = buildTrackerFromResponse(finishedObject)
         const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
+
+        // Auto-retry: send validation errors back to the AI to fix (e.g. unsupported expr.op like "count")
+        if (
+          !validation.valid &&
+          validation.errors.length > 0 &&
+          tracker &&
+          validationFixRetryCountRef.current < MAX_VALIDATION_FIX_RETRIES
+        ) {
+          validationFixRetryCountRef.current += 1
+          const fixPrompt = `Fix these schema validation errors:\n${validation.errors.map((e) => `- ${e}`).join('\n')}`
+          const assistantMessage: Message = {
+            role: 'assistant',
+            trackerData: tracker as TrackerResponse,
+            managerData: finishedObject.manager,
+          }
+          const fixUserMessage: Message = { role: 'user', content: fixPrompt }
+          const nextMessages = [...messagesRef.current, assistantMessage, fixUserMessage]
+          setMessages(nextMessages)
+          setPendingQuery(fixPrompt)
+          submit({
+            query: fixPrompt,
+            messages: nextMessages,
+            currentTracker: tracker as TrackerResponse,
+          })
+          return
+        }
+
         if (!validation.valid) {
           setValidationErrors(validation.errors)
+        } else {
+          validationFixRetryCountRef.current = 0
         }
         const hasValidTracker =
           tracker &&
@@ -429,6 +460,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     if (!input.trim() || isLoading) return
 
     continueCountRef.current = 0
+    validationFixRetryCountRef.current = 0
     const userMessage = input.trim()
     setInput('')
     setPendingQuery(userMessage)

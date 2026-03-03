@@ -658,701 +658,701 @@ export function FieldSettingsDialog({
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto min-h-0">
               <div className="p-4 space-y-4">
-              <TabsContent value="general" className="mt-5 space-y-5">
-                <div className="space-y-4">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                    Display
-                  </p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="field-settings-label"
-                        className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                      >
-                        Label
-                      </label>
-                      <Input
-                        id="field-settings-label"
-                        value={label}
-                        onChange={(e) => setLabel(e.target.value)}
-                        className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="field-settings-placeholder"
-                        className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                      >
-                        Placeholder
-                      </label>
-                      <Input
-                        id="field-settings-placeholder"
-                        value={placeholder}
-                        onChange={(e) => setPlaceholder(e.target.value)}
-                        className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border/50" />
-                  </div>
-                  <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
-                    <span className="bg-white dark:bg-background px-2 text-muted-foreground">Constraints</span>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                    Getting Data from
-                  </p>
-                  {!gridId ? (
-                    <p className="text-xs text-muted-foreground">
-                      Place this field in a grid to see data sources and priority.
+                <TabsContent value="general" className="mt-5 space-y-5">
+                  <div className="space-y-4">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                      Display
                     </p>
-                  ) : (
-                    <>
-                      <div className="flex flex-wrap gap-2">
-                        {dataSourcesList.map((entry) => (
-                          <div
-                            key={sourceEntryId(entry)}
-                            className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
-                            title={sourceEntryId(entry)}
-                          >
-                            {sourceEntryLabel(entry, (path) => resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? []))}
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-label"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Label
+                        </label>
+                        <Input
+                          id="field-settings-label"
+                          value={label}
+                          onChange={(e) => setLabel(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
                       </div>
-                      {dataSourcesList.length > 1 && (
-                        <p className="text-xs text-muted-foreground">
-                          Note: If multiple sources update this field, the last write wins.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <Checkbox
-                      id="field-settings-required"
-                      checked={isRequired}
-                      onCheckedChange={(v) => setIsRequired(Boolean(v))}
-                    />
-                    <label
-                      htmlFor="field-settings-required"
-                      className="text-sm font-medium cursor-pointer"
-                    >
-                      Required
-                    </label>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="field-settings-placeholder"
+                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                        >
+                          Placeholder
+                        </label>
+                        <Input
+                          id="field-settings-placeholder"
+                          value={placeholder}
+                          onChange={(e) => setPlaceholder(e.target.value)}
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="field-settings-data-type"
-                      className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold block"
-                    >
-                      Data type
-                    </label>
-                    <Select value={dataType} onValueChange={(v) => setDataType(v as TrackerFieldType)}>
-                      <SelectTrigger
-                        id="field-settings-data-type"
-                        className="h-10 w-full rounded-lg border-border/60 bg-background/90 max-w-xs"
-                      >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {groupOrder.map(
-                          (groupKey) =>
-                            groupedTypes[groupKey]?.length > 0 && (
-                              <SelectGroup key={groupKey}>
-                                <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                  {groupKey}
-                                </SelectLabel>
-                                {groupedTypes[groupKey].map((opt) => (
-                                  <SelectItem key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectGroup>
-                            )
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border/50" />
+                    </div>
+                    <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
+                      <span className="bg-white dark:bg-background px-2 text-muted-foreground">Constraints</span>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                      Getting Data from
+                    </p>
+                    {!gridId ? (
+                      <p className="text-xs text-muted-foreground">
+                        Place this field in a grid to see data sources and priority.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          {dataSourcesList.map((entry) => (
+                            <div
+                              key={sourceEntryId(entry)}
+                              className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
+                              title={sourceEntryId(entry)}
+                            >
+                              {sourceEntryLabel(entry, (path) => resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? []))}
+                            </div>
+                          ))}
+                        </div>
+                        {dataSourcesList.length > 1 && (
+                          <p className="text-xs text-muted-foreground">
+                            Note: If multiple sources update this field, the last write wins.
+                          </p>
                         )}
-                      </SelectContent>
-                    </Select>
+                      </>
+                    )}
                   </div>
-                  {isNumeric && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="field-settings-min"
-                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                        >
-                          Min
-                        </label>
-                        <Input
-                          id="field-settings-min"
-                          type="number"
-                          value={min}
-                          onChange={(e) => setMin(e.target.value)}
-                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="field-settings-max"
-                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                        >
-                          Max
-                        </label>
-                        <Input
-                          id="field-settings-max"
-                          type="number"
-                          value={max}
-                          onChange={(e) => setMax(e.target.value)}
-                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                        />
-                      </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="field-settings-required"
+                        checked={isRequired}
+                        onCheckedChange={(v) => setIsRequired(Boolean(v))}
+                      />
+                      <label
+                        htmlFor="field-settings-required"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        Required
+                      </label>
                     </div>
-                  )}
-                  {isText && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="field-settings-min-length"
-                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="field-settings-data-type"
+                        className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold block"
+                      >
+                        Data type
+                      </label>
+                      <Select value={dataType} onValueChange={(v) => setDataType(v as TrackerFieldType)}>
+                        <SelectTrigger
+                          id="field-settings-data-type"
+                          className="h-10 w-full rounded-lg border-border/60 bg-background/90 max-w-xs"
                         >
-                          Min length
-                        </label>
-                        <Input
-                          id="field-settings-min-length"
-                          type="number"
-                          value={minLength}
-                          onChange={(e) => setMinLength(e.target.value)}
-                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="field-settings-max-length"
-                          className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                        >
-                          Max length
-                        </label>
-                        <Input
-                          id="field-settings-max-length"
-                          type="number"
-                          value={maxLength}
-                          onChange={(e) => setMaxLength(e.target.value)}
-                          className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                        />
-                      </div>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {groupOrder.map(
+                            (groupKey) =>
+                              groupedTypes[groupKey]?.length > 0 && (
+                                <SelectGroup key={groupKey}>
+                                  <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                    {groupKey}
+                                  </SelectLabel>
+                                  {groupedTypes[groupKey].map((opt) => (
+                                    <SelectItem key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectGroup>
+                              )
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
-                </div>
-              </TabsContent>
-              {isBindable && (
-                <TabsContent value="bindings" className="mt-5 space-y-5">
+                    {isNumeric && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="field-settings-min"
+                            className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                          >
+                            Min
+                          </label>
+                          <Input
+                            id="field-settings-min"
+                            type="number"
+                            value={min}
+                            onChange={(e) => setMin(e.target.value)}
+                            className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="field-settings-max"
+                            className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                          >
+                            Max
+                          </label>
+                          <Input
+                            id="field-settings-max"
+                            type="number"
+                            value={max}
+                            onChange={(e) => setMax(e.target.value)}
+                            className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {isText && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="field-settings-min-length"
+                            className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                          >
+                            Min length
+                          </label>
+                          <Input
+                            id="field-settings-min-length"
+                            type="number"
+                            value={minLength}
+                            onChange={(e) => setMinLength(e.target.value)}
+                            className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="field-settings-max-length"
+                            className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                          >
+                            Max length
+                          </label>
+                          <Input
+                            id="field-settings-max-length"
+                            type="number"
+                            value={maxLength}
+                            onChange={(e) => setMaxLength(e.target.value)}
+                            className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+                {isBindable && (
+                  <TabsContent value="bindings" className="mt-5 space-y-5">
+                    {!gridId ? (
+                      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Bindings require this field to be placed in a grid.
+                        </p>
+                      </div>
+                    ) : !bindingEnabled ? (
+                      <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          No binding yet. Bindings connect this select field to an options grid.
+                        </p>
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            setBindingEnabled(true)
+                            setBindingDraft(defaultBindingDraft())
+                            setBindingDirty(true)
+                          }}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Create binding
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
+                          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+                            Select field
+                          </p>
+                          <div className="text-sm font-medium mt-1">
+                            {resolvePathLabel(bindingKey, schema?.grids ?? [], schema?.fields ?? [])}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{bindingKey}</div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                              Options grid
+                            </label>
+                            {bindingDraft &&
+                              renderBindingSelect(
+                                bindingDraft.optionsGrid,
+                                (val) => {
+                                  if (!bindingDraft) return
+                                  setBindingDraftValue({
+                                    ...bindingDraft,
+                                    optionsGrid: val,
+                                  })
+                                },
+                                allGridOptions.length > 0 ? allGridOptions : optionsGridOptions,
+                                'Options grid'
+                              )}
+                            {bindingValidation.errors.optionsGrid && (
+                              <div className="text-xs text-destructive">{bindingValidation.errors.optionsGrid}</div>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                              Label field
+                            </label>
+                            {bindingDraft &&
+                              renderBindingSelect(
+                                bindingDraft.labelField,
+                                (val) => {
+                                  if (!bindingDraft) return
+                                  setBindingDraftValue({ ...bindingDraft, labelField: val })
+                                },
+                                bindingDraft.optionsGrid
+                                  ? getGridFieldOptions(bindingDraft.optionsGrid)
+                                  : allFieldPathOptions,
+                                'Label field'
+                              )}
+                            {bindingValidation.errors.labelField && (
+                              <div className="text-xs text-destructive">{bindingValidation.errors.labelField}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+                              Field mappings
+                            </label>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1.5"
+                              onClick={applyAutoMappings}
+                            >
+                              <Wand2 className="h-3.5 w-3.5" />
+                              Auto-map
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Mappings control auto‑population. When a user selects an option, values from the
+                            options grid fields (left) are copied into target fields on this grid (right).
+                          </p>
+                          {bindingDraft && (
+                            <FieldMappingsEditor
+                              value={bindingDraft.fieldMappings}
+                              onChange={(next) =>
+                                setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
+                              }
+                              fromOptions={
+                                bindingDraft.optionsGrid
+                                  ? getGridFieldOptions(bindingDraft.optionsGrid)
+                                  : allFieldPathOptions
+                              }
+                              toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
+                              className="w-full"
+                            />
+                          )}
+                          {bindingValidation.errors.fieldMappings && (
+                            <div className="text-xs text-destructive">{bindingValidation.errors.fieldMappings}</div>
+                          )}
+                          {bindingDraft && (
+                            <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+                              <div className="font-medium text-foreground/80">Preview</div>
+                              {normalizeMappings(bindingDraft.fieldMappings).length === 0 ? (
+                                <div>No mappings yet. Auto-map or add rows.</div>
+                              ) : (
+                                normalizeMappings(bindingDraft.fieldMappings).map((m, idx) => (
+                                  <div key={idx}>
+                                    {resolvePathLabel(m.from, schema?.grids ?? [], schema?.fields ?? [])} →{' '}
+                                    {resolvePathLabel(m.to, schema?.grids ?? [], schema?.fields ?? [])}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          {!bindingValidation.isValid && bindingDirty && (
+                            <div className="text-xs text-destructive flex items-center gap-1">
+                              <X className="h-3.5 w-3.5" />
+                              Fix binding errors before saving.
+                            </div>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setBindingEnabled(false)
+                              setBindingDirty(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Remove binding
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                )}
+                {isDynamicField && (
+                  <TabsContent value="dynamicOptions" className="mt-5 space-y-5">
+                    <DynamicOptionsBuilder
+                      schema={schema}
+                      fieldId={field.id}
+                      functionId={dynamicFunctionId}
+                      onFunctionIdChange={setDynamicFunctionId}
+                      argsText={dynamicOptionsArgsText}
+                      onArgsTextChange={setDynamicOptionsArgsText}
+                      cacheTtlText={dynamicCacheTtlText}
+                      onCacheTtlTextChange={setDynamicCacheTtlText}
+                      dynamicOptionsDraft={dynamicOptionsDraft}
+                      onDynamicOptionsDraftChange={setDynamicOptionsDraft}
+                      onValidationStateChange={setDynamicBuilderState}
+                    />
+                    {dynamicConfigError && (
+                      <p className="text-xs text-destructive">{dynamicConfigError}</p>
+                    )}
+                  </TabsContent>
+                )}
+                <TabsContent value="calculations" className="mt-5 space-y-5">
                   {!gridId ? (
                     <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
                       <p className="text-sm text-muted-foreground">
-                        Bindings require this field to be placed in a grid.
+                        Place this field in a grid to configure calculations.
                       </p>
                     </div>
-                  ) : !bindingEnabled ? (
+                  ) : !calculationRule ? (
                     <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
                       <p className="text-sm text-muted-foreground">
-                        No binding yet. Bindings connect this select field to an options grid.
+                        No calculation configured. Add one expression to compute this field value.
                       </p>
                       <Button
                         size="sm"
                         className="gap-1.5"
-                        onClick={() => {
-                          setBindingEnabled(true)
-                          setBindingDraft(defaultBindingDraft())
-                          setBindingDirty(true)
-                        }}
+                        onClick={() => setCalculationRule({ expr: defaultCalculationExpr })}
                       >
                         <Plus className="h-4 w-4" />
-                        Create binding
+                        Add calculation
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-5">
-                      <div className="rounded-lg border border-border/60 bg-muted/30 px-4 py-3">
-                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
-                          Select field
-                        </p>
-                        <div className="text-sm font-medium mt-1">
-                          {resolvePathLabel(bindingKey, schema?.grids ?? [], schema?.fields ?? [])}
-                        </div>
-                        <div className="text-xs text-muted-foreground">{bindingKey}</div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-                            Options grid
-                          </label>
-                          {bindingDraft &&
-                            renderBindingSelect(
-                              bindingDraft.optionsGrid,
-                              (val) => {
-                                if (!bindingDraft) return
-                                setBindingDraftValue({
-                                  ...bindingDraft,
-                                  optionsGrid: val,
-                                })
-                              },
-                              allGridOptions.length > 0 ? allGridOptions : optionsGridOptions,
-                              'Options grid'
-                            )}
-                          {bindingValidation.errors.optionsGrid && (
-                            <div className="text-xs text-destructive">{bindingValidation.errors.optionsGrid}</div>
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-                            Label field
-                          </label>
-                          {bindingDraft &&
-                            renderBindingSelect(
-                              bindingDraft.labelField,
-                              (val) => {
-                                if (!bindingDraft) return
-                                setBindingDraftValue({ ...bindingDraft, labelField: val })
-                              },
-                              bindingDraft.optionsGrid
-                                ? getGridFieldOptions(bindingDraft.optionsGrid)
-                                : allFieldPathOptions,
-                              'Label field'
-                            )}
-                          {bindingValidation.errors.labelField && (
-                            <div className="text-xs text-destructive">{bindingValidation.errors.labelField}</div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-                            Field mappings
-                          </label>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1.5"
-                            onClick={applyAutoMappings}
-                          >
-                            <Wand2 className="h-3.5 w-3.5" />
-                            Auto-map
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Mappings control auto‑population. When a user selects an option, values from the
-                          options grid fields (left) are copied into target fields on this grid (right).
-                        </p>
-                        {bindingDraft && (
-                          <FieldMappingsEditor
-                            value={bindingDraft.fieldMappings}
-                            onChange={(next) =>
-                              setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
-                            }
-                            fromOptions={
-                              bindingDraft.optionsGrid
-                                ? getGridFieldOptions(bindingDraft.optionsGrid)
-                                : allFieldPathOptions
-                            }
-                            toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
-                            className="w-full"
-                          />
-                        )}
-                        {bindingValidation.errors.fieldMappings && (
-                          <div className="text-xs text-destructive">{bindingValidation.errors.fieldMappings}</div>
-                        )}
-                        {bindingDraft && (
-                          <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
-                            <div className="font-medium text-foreground/80">Preview</div>
-                            {normalizeMappings(bindingDraft.fieldMappings).length === 0 ? (
-                              <div>No mappings yet. Auto-map or add rows.</div>
-                            ) : (
-                              normalizeMappings(bindingDraft.fieldMappings).map((m, idx) => (
-                                <div key={idx}>
-                                  {resolvePathLabel(m.from, schema?.grids ?? [], schema?.fields ?? [])} →{' '}
-                                  {resolvePathLabel(m.to, schema?.grids ?? [], schema?.fields ?? [])}
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2">
-                        {!bindingValidation.isValid && bindingDirty && (
-                          <div className="text-xs text-destructive flex items-center gap-1">
-                            <X className="h-3.5 w-3.5" />
-                            Fix binding errors before saving.
-                          </div>
-                        )}
+                    <div className="space-y-4">
+                      <ExprRuleEditor
+                        mode="calculation"
+                        expr={calculationRule.expr}
+                        gridId={gridId ?? ''}
+                        fieldId={field.id}
+                        availableFields={availableFields}
+                        currentTracker={schema}
+                        onChange={(nextExpr) => setCalculationRule({ expr: nextExpr })}
+                      />
+                      <div className="flex justify-end">
                         <Button
                           size="sm"
                           variant="ghost"
                           className="text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setBindingEnabled(false)
-                            setBindingDirty(true)
-                          }}
+                          onClick={() => setCalculationRule(null)}
                         >
                           <Trash2 className="h-4 w-4 mr-1" />
-                          Remove binding
+                          Remove calculation
                         </Button>
                       </div>
                     </div>
                   )}
                 </TabsContent>
-              )}
-              {isDynamicField && (
-                <TabsContent value="dynamicOptions" className="mt-5 space-y-5">
-                  <DynamicOptionsBuilder
-                    schema={schema}
-                    fieldId={field.id}
-                    functionId={dynamicFunctionId}
-                    onFunctionIdChange={setDynamicFunctionId}
-                    argsText={dynamicOptionsArgsText}
-                    onArgsTextChange={setDynamicOptionsArgsText}
-                    cacheTtlText={dynamicCacheTtlText}
-                    onCacheTtlTextChange={setDynamicCacheTtlText}
-                    dynamicOptionsDraft={dynamicOptionsDraft}
-                    onDynamicOptionsDraftChange={setDynamicOptionsDraft}
-                    onValidationStateChange={setDynamicBuilderState}
-                  />
-                  {dynamicConfigError && (
-                    <p className="text-xs text-destructive">{dynamicConfigError}</p>
-                  )}
-                </TabsContent>
-              )}
-              <TabsContent value="calculations" className="mt-5 space-y-5">
-                {!gridId ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      Place this field in a grid to configure calculations.
-                    </p>
-                  </div>
-                ) : !calculationRule ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      No calculation configured. Add one expression to compute this field value.
-                    </p>
-                    <Button
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => setCalculationRule({ expr: defaultCalculationExpr })}
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add calculation
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <ExprRuleEditor
-                      mode="calculation"
-                      expr={calculationRule.expr}
-                      gridId={gridId ?? ''}
-                      fieldId={field.id}
-                      availableFields={availableFields}
-                      currentTracker={schema}
-                      onChange={(nextExpr) => setCalculationRule({ expr: nextExpr })}
-                    />
-                    <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => setCalculationRule(null)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Remove calculation
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-              <TabsContent value="validations" className="mt-5 space-y-5">
-                {rules.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      No validation rules. Add rules to validate this field on submit.
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      <Button
-                        size="sm"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add required
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add min/max
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add rule
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-4">
-                      {rules.map((rule, index) => (
-                        <div
-                          key={index}
-                          id={`rule-card-${index}`}
-                          className="rounded-lg border border-border/60 p-4 space-y-3 scroll-mt-4"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex-1">
-                              <label
-                                htmlFor={`rule-type-${index}`}
-                                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                              >
-                                Type
-                              </label>
-                              <Select
-                                value={rule.type}
-                                onValueChange={(value) =>
-                                  handleRuleTypeChange(index, value as FieldValidationRule['type'])
-                                }
-                              >
-                                <SelectTrigger
-                                  id={`rule-type-${index}`}
-                                  className="mt-2 h-10 w-full rounded-lg border-border/60 bg-background/90"
-                                >
-                                  <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectGroup>
-                                    <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                      Value rules
-                                    </SelectLabel>
-                                    <SelectItem value="required">{RULE_TYPE_LABELS.required}</SelectItem>
-                                    <SelectItem value="min">{RULE_TYPE_LABELS.min}</SelectItem>
-                                    <SelectItem value="max">{RULE_TYPE_LABELS.max}</SelectItem>
-                                    <SelectItem value="minLength">{RULE_TYPE_LABELS.minLength}</SelectItem>
-                                    <SelectItem value="maxLength">{RULE_TYPE_LABELS.maxLength}</SelectItem>
-                                  </SelectGroup>
-                                  <SelectGroup>
-                                    <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                                      Custom
-                                    </SelectLabel>
-                                    <SelectItem value="expr">{RULE_TYPE_LABELS.expr}</SelectItem>
-                                  </SelectGroup>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <button
-                              type="button"
-                              className="mt-6 h-9 w-9 rounded-md border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/40"
-                              onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
-                              aria-label="Remove rule"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-
-                          {(rule.type === 'min' ||
-                            rule.type === 'max' ||
-                            rule.type === 'minLength' ||
-                            rule.type === 'maxLength') && (
-                              <div className="space-y-2">
-                                <label
-                                  htmlFor={`rule-value-${index}`}
-                                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                                >
-                                  Value
-                                </label>
-                                <Input
-                                  id={`rule-value-${index}`}
-                                  type="number"
-                                  value={String(rule.value ?? '')}
-                                  onChange={(e) =>
-                                    updateRule(index, {
-                                      ...rule,
-                                      value: toNumberOrUndefined(e.target.value) ?? 0,
-                                    })
-                                  }
-                                  className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                                />
-                              </div>
-                            )}
-
-                          {rule.type === 'expr' && (
-                            <ExprRuleEditor
-                              expr={rule.expr}
-                              gridId={gridId ?? ''}
-                              fieldId={field.id}
-                              availableFields={availableFields}
-                              currentTracker={schema}
-                              onChange={(nextExpr) =>
-                                updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr: nextExpr })
-                              }
-                            />
-                          )}
-
-                          <div className="space-y-2">
-                            <label
-                              htmlFor={`rule-message-${index}`}
-                              className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                            >
-                              Message
-                            </label>
-                            <Input
-                              id={`rule-message-${index}`}
-                              value={rule.message ?? ''}
-                              onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
-                              placeholder="Optional custom error message. Leave blank to use default message."
-                              className="h-10 w-full rounded-lg border-border/60 bg-background/90"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add required
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add min/max
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="gap-1.5"
-                        onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add rule
-                      </Button>
-                    </div>
-                  </>
-                )}
-
-                <div className="pt-4 border-t border-border/60 space-y-2">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                    onClick={() => setStructureOpen((prev) => !prev)}
-                    aria-expanded={structureOpen}
-                  >
-                    {structureOpen ? (
-                      <ChevronDown className="h-4 w-4 shrink-0" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 shrink-0" />
-                    )}
-                    {structureOpen ? 'Hide rule summary' : 'View rule summary'}
-                  </button>
-                  {structureOpen && (
-                    <div className="space-y-4">
-                      <p className="text-xs text-muted-foreground">
-                        Click a rule to jump to it in the form above. Changes in the form update this summary.
+                <TabsContent value="validations" className="mt-5 space-y-5">
+                  {rules.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
+                      <p className="text-sm text-muted-foreground">
+                        No validation rules. Add rules to validate this field on submit.
                       </p>
-                      {rules.length === 0 ? (
-                        <p className="text-sm text-muted-foreground italic py-2">No rules yet.</p>
-                      ) : (
-                        <ul className="space-y-2">
-                          {rules.map((rule, index) => (
-                            <li key={index}>
-                              <button
-                                type="button"
-                                className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 hover:border-border transition-colors"
-                                onClick={() => {
-                                  document.getElementById(`rule-card-${index}`)?.scrollIntoView({
-                                    behavior: 'smooth',
-                                    block: 'center',
-                                  })
-                                }}
-                              >
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                                  {index + 1}
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <span className="font-medium text-sm">{RULE_TYPE_LABELS[rule.type]}</span>
-                                  <span className="text-muted-foreground text-sm ml-2">
-                                    {rule.type !== 'required' && rule.type !== 'expr' && (
-                                      <>→ {String(rule.value ?? 0)}</>
-                                    )}
-                                  </span>
-                                  {rule.message && (
-                                    <p className="text-xs text-muted-foreground mt-0.5 truncate" title={rule.message}>
-                                      “{rule.message}”
-                                    </p>
-                                  )}
-                                </div>
-                                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="pt-2 border-t border-border/40">
-                        <button
-                          type="button"
-                          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
-                          onClick={() => setShowJsonInStructure((prev) => !prev)}
-                          aria-expanded={showJsonInStructure}
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
                         >
-                          {showJsonInStructure ? (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          )}
-                          {showJsonInStructure ? 'Hide raw JSON' : 'See raw JSON'}
-                        </button>
-                        {showJsonInStructure && (
-                          <div className="relative mt-2">
-                            <pre className="rounded-lg border border-border/60 bg-muted/30 p-4 font-mono text-xs overflow-x-auto min-h-[100px] max-h-[180px] overflow-y-auto">
-                              {JSON.stringify(rules, null, 2)}
-                            </pre>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute top-2 right-2 h-7 gap-1 text-muted-foreground hover:text-foreground text-xs"
-                              onClick={() => {
-                                void navigator.clipboard.writeText(JSON.stringify(rules, null, 2))
-                              }}
-                            >
-                              <Copy className="h-3 w-3" />
-                              Copy
-                            </Button>
-                          </div>
-                        )}
+                          <Plus className="h-4 w-4" />
+                          Add required
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add min/max
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add rule
+                        </Button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="space-y-4">
+                        {rules.map((rule, index) => (
+                          <div
+                            key={index}
+                            id={`rule-card-${index}`}
+                            className="rounded-lg border border-border/60 p-4 space-y-3 scroll-mt-4"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex-1">
+                                <label
+                                  htmlFor={`rule-type-${index}`}
+                                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                                >
+                                  Type
+                                </label>
+                                <Select
+                                  value={rule.type}
+                                  onValueChange={(value) =>
+                                    handleRuleTypeChange(index, value as FieldValidationRule['type'])
+                                  }
+                                >
+                                  <SelectTrigger
+                                    id={`rule-type-${index}`}
+                                    className="mt-2 h-10 w-full rounded-lg border-border/60 bg-background/90"
+                                  >
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectGroup>
+                                      <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                        Value rules
+                                      </SelectLabel>
+                                      <SelectItem value="required">{RULE_TYPE_LABELS.required}</SelectItem>
+                                      <SelectItem value="min">{RULE_TYPE_LABELS.min}</SelectItem>
+                                      <SelectItem value="max">{RULE_TYPE_LABELS.max}</SelectItem>
+                                      <SelectItem value="minLength">{RULE_TYPE_LABELS.minLength}</SelectItem>
+                                      <SelectItem value="maxLength">{RULE_TYPE_LABELS.maxLength}</SelectItem>
+                                    </SelectGroup>
+                                    <SelectGroup>
+                                      <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+                                        Custom
+                                      </SelectLabel>
+                                      <SelectItem value="expr">{RULE_TYPE_LABELS.expr}</SelectItem>
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <button
+                                type="button"
+                                className="mt-6 h-9 w-9 rounded-md border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/40"
+                                onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
+                                aria-label="Remove rule"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+
+                            {(rule.type === 'min' ||
+                              rule.type === 'max' ||
+                              rule.type === 'minLength' ||
+                              rule.type === 'maxLength') && (
+                                <div className="space-y-2">
+                                  <label
+                                    htmlFor={`rule-value-${index}`}
+                                    className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                                  >
+                                    Value
+                                  </label>
+                                  <Input
+                                    id={`rule-value-${index}`}
+                                    type="number"
+                                    value={String(rule.value ?? '')}
+                                    onChange={(e) =>
+                                      updateRule(index, {
+                                        ...rule,
+                                        value: toNumberOrUndefined(e.target.value) ?? 0,
+                                      })
+                                    }
+                                    className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                                  />
+                                </div>
+                              )}
+
+                            {rule.type === 'expr' && (
+                              <ExprRuleEditor
+                                expr={rule.expr}
+                                gridId={gridId ?? ''}
+                                fieldId={field.id}
+                                availableFields={availableFields}
+                                currentTracker={schema}
+                                onChange={(nextExpr) =>
+                                  updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr: nextExpr })
+                                }
+                              />
+                            )}
+
+                            <div className="space-y-2">
+                              <label
+                                htmlFor={`rule-message-${index}`}
+                                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                              >
+                                Message
+                              </label>
+                              <Input
+                                id={`rule-message-${index}`}
+                                value={rule.message ?? ''}
+                                onChange={(e) => updateRule(index, { ...rule, message: e.target.value })}
+                                placeholder="Optional custom error message. Leave blank to use default message."
+                                className="h-10 w-full rounded-lg border-border/60 bg-background/90"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add required
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'min', value: 0 }])}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add min/max
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-1.5"
+                          onClick={() => setRules((prev) => [...prev, { type: 'required' }])}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add rule
+                        </Button>
+                      </div>
+                    </>
                   )}
-                </div>
-              </TabsContent>
+
+                  <div className="pt-4 border-t border-border/60 space-y-2">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                      onClick={() => setStructureOpen((prev) => !prev)}
+                      aria-expanded={structureOpen}
+                    >
+                      {structureOpen ? (
+                        <ChevronDown className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0" />
+                      )}
+                      {structureOpen ? 'Hide rule summary' : 'View rule summary'}
+                    </button>
+                    {structureOpen && (
+                      <div className="space-y-4">
+                        <p className="text-xs text-muted-foreground">
+                          Click a rule to jump to it in the form above. Changes in the form update this summary.
+                        </p>
+                        {rules.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic py-2">No rules yet.</p>
+                        ) : (
+                          <ul className="space-y-2">
+                            {rules.map((rule, index) => (
+                              <li key={index}>
+                                <button
+                                  type="button"
+                                  className="w-full flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 text-left hover:bg-muted/40 hover:border-border transition-colors"
+                                  onClick={() => {
+                                    document.getElementById(`rule-card-${index}`)?.scrollIntoView({
+                                      behavior: 'smooth',
+                                      block: 'center',
+                                    })
+                                  }}
+                                >
+                                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                                    {index + 1}
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <span className="font-medium text-sm">{RULE_TYPE_LABELS[rule.type]}</span>
+                                    <span className="text-muted-foreground text-sm ml-2">
+                                      {rule.type !== 'required' && rule.type !== 'expr' && (
+                                        <>→ {String(rule.value ?? 0)}</>
+                                      )}
+                                    </span>
+                                    {rule.message && (
+                                      <p className="text-xs text-muted-foreground mt-0.5 truncate" title={rule.message}>
+                                        “{rule.message}”
+                                      </p>
+                                    )}
+                                  </div>
+                                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className="pt-2 border-t border-border/40">
+                          <button
+                            type="button"
+                            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowJsonInStructure((prev) => !prev)}
+                            aria-expanded={showJsonInStructure}
+                          >
+                            {showJsonInStructure ? (
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRight className="h-3.5 w-3.5" />
+                            )}
+                            {showJsonInStructure ? 'Hide raw JSON' : 'See raw JSON'}
+                          </button>
+                          {showJsonInStructure && (
+                            <div className="relative mt-2">
+                              <pre className="rounded-lg border border-border/60 bg-muted/30 p-4 font-mono text-xs overflow-x-auto min-h-[100px] max-h-[180px] overflow-y-auto">
+                                {JSON.stringify(rules, null, 2)}
+                              </pre>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="absolute top-2 right-2 h-7 gap-1 text-muted-foreground hover:text-foreground text-xs"
+                                onClick={() => {
+                                  void navigator.clipboard.writeText(JSON.stringify(rules, null, 2))
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                                Copy
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
               </div>
             </div>
           </Tabs>
