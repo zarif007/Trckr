@@ -386,6 +386,11 @@ export interface TrackerEditorViewProps {
   initialEditMode?: boolean
   /** Initial agent chat open state (default true). When false, chat panel is hidden. */
   initialChatOpen?: boolean
+  /** Tracker id (for existing tracker page); enables loading and persisting conversation to DB. */
+  trackerId?: string | null
+  /** Conversation id and messages from DB (when opening a tracker that has a conversation). */
+  initialConversationId?: string | null
+  initialMessages?: Message[]
 }
 
 function TrackerPageContent() {
@@ -413,7 +418,15 @@ export default function TrackerPage() {
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
-  const { initialSchema, onSaveTracker, initialEditMode = true, initialChatOpen = true } = props
+  const {
+    initialSchema,
+    onSaveTracker,
+    initialEditMode = true,
+    initialChatOpen = true,
+    trackerId,
+    initialConversationId,
+    initialMessages,
+  } = props
   const {
     input,
     setInput,
@@ -437,7 +450,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     messagesEndRef,
     textareaRef,
     isChatEmpty,
-  } = useTrackerChat({ initialTracker: initialSchema ?? undefined })
+  } = useTrackerChat({
+    initialTracker: initialSchema ?? undefined,
+    trackerId: trackerId ?? undefined,
+    conversationId: initialConversationId ?? undefined,
+    initialMessages,
+  })
 
   const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -648,12 +666,13 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [viewingMessageIndex, lastTrackerMessageIndex])
 
   const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
+  const hasAnyAssistantResponse = messages.some((m) => m.role === 'assistant')
 
   const showStatusPanel =
     Boolean(error) ||
     Boolean(generationErrorMessage) ||
     validationErrors.length > 0 ||
-    (!isLoading && messages.length > 0 && !hasGeneratedTracker)
+    (!isLoading && messages.length > 0 && !hasGeneratedTracker && hasAnyAssistantResponse)
 
   // Switch to preview as soon as the agent starts (streaming begins)
   useEffect(() => {
@@ -671,6 +690,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     onContinue: handleContinue,
     messagesLength: messages.length,
     hasGeneratedTracker,
+    hasAnyAssistantResponse,
   }
 
   const chatPanelProps = {
@@ -821,6 +841,7 @@ function TrackerStatusPanel({
   onContinue,
   messagesLength,
   hasGeneratedTracker,
+  hasAnyAssistantResponse,
 }: {
   isLoading: boolean
   validationErrors: string[]
@@ -830,9 +851,11 @@ function TrackerStatusPanel({
   onContinue: () => void
   messagesLength: number
   hasGeneratedTracker: boolean
+  hasAnyAssistantResponse: boolean
 }) {
   const isStreaming = isLoading
-  const showNoTracker = messagesLength > 0 && !isStreaming && !hasGeneratedTracker
+  const showNoTracker =
+    messagesLength > 0 && !isStreaming && !hasGeneratedTracker && hasAnyAssistantResponse
 
   return (
     <div className="space-y-3">
@@ -918,6 +941,7 @@ function TrackerChatPanel({
     onContinue: () => void
     messagesLength: number
     hasGeneratedTracker: boolean
+    hasAnyAssistantResponse: boolean
   }
   input: string
   setInput: (v: string) => void

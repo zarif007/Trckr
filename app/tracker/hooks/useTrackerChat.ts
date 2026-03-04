@@ -149,13 +149,50 @@ export const quickSuggestions = [
 export interface UseTrackerChatOptions {
   /** When provided, the chat starts with this tracker as the base (e.g. when editing an existing tracker by id). */
   initialTracker?: TrackerResponse | null
+  /** Tracker (schema) id when viewing an existing tracker; enables persisting conversation to DB. */
+  trackerId?: string | null
+  /** Existing conversation id (from DB) for this tracker; when set, messages are persisted. */
+  conversationId?: string | null
+  /** Messages loaded from DB for this tracker; used to hydrate chat on open. */
+  initialMessages?: Message[]
+}
+
+async function ensureConversation(trackerId: string): Promise<string> {
+  const res = await fetch(`/api/trackers/${trackerId}/conversation`, { method: 'POST' })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to create conversation')
+  }
+  const data = (await res.json()) as { id: string }
+  return data.id
+}
+
+async function persistMessage(
+  conversationId: string,
+  payload: {
+    role: 'USER' | 'ASSISTANT'
+    content: string
+    trackerSchemaSnapshot?: object
+    managerData?: object
+  }
+): Promise<void> {
+  const res = await fetch(`/api/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to save message')
+  }
 }
 
 export function useTrackerChat(options: UseTrackerChatOptions = {}) {
-  const { initialTracker = null } = options
+  const { initialTracker = null, trackerId, conversationId: initialConversationId, initialMessages } = options
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>(() => initialMessages ?? [])
+  const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null)
   const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
@@ -172,7 +209,21 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
   const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
+  const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
 
+  useEffect(() => {
+    conversationIdRef.current = conversationId
+  }, [conversationId])
+  useEffect(() => {
+    if (initialConversationId) setConversationId(initialConversationId)
+  }, [initialConversationId])
+  // Hydrate messages once when conversation loads from DB (e.g. after opening a tracker)
+  const hasHydratedRef = useRef(false)
+  useEffect(() => {
+    if (hasHydratedRef.current || !initialMessages?.length) return
+    hasHydratedRef.current = true
+    setMessages(initialMessages)
+  }, [initialMessages])
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
@@ -327,6 +378,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           const fixUserMessage: Message = { role: 'user', content: fixPrompt }
           const nextMessages = [...messagesRef.current, assistantMessage, fixUserMessage]
           setMessages(nextMessages)
+          const cidFix = conversationIdRef.current
+          if (cidFix) {
+            persistMessage(cidFix, { role: 'USER', content: fixPrompt }).catch((e) =>
+              console.error('Failed to persist user message:', e)
+            )
+          }
           setPendingQuery(fixPrompt)
           submit({
             query: fixPrompt,
@@ -352,6 +409,15 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         }
         console.log('assistantMessage', assistantMessage)
         setMessages((prev) => [...prev, assistantMessage])
+        const cid = conversationIdRef.current
+        if (cid) {
+          persistMessage(cid, {
+            role: 'ASSISTANT',
+            content: '',
+            trackerSchemaSnapshot: (tracker as TrackerResponse) ?? undefined,
+            managerData: finishedObject.manager ?? undefined,
+          }).catch((err) => console.error('Failed to persist assistant message:', err))
+        }
         setPendingQuery(null)
         if (hasValidTracker) {
           continueCountRef.current = 0
@@ -381,6 +447,15 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             managerData: partial.manager,
           }
           setMessages((prev) => [...prev, assistantMessage])
+          const cid = conversationIdRef.current
+          if (cid) {
+            persistMessage(cid, {
+              role: 'ASSISTANT',
+              content: '',
+              trackerSchemaSnapshot: partialTracker ?? undefined,
+              managerData: partial.manager ?? undefined,
+            }).catch((err) => console.error('Failed to persist assistant message:', err))
+          }
           if (partialTracker) setResolvedTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
             setPendingContinue(true)
@@ -402,6 +477,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             content: noResponseMessage,
           }
           setMessages((prev) => [...prev, errorMessageObj])
+          const cid = conversationIdRef.current
+          if (cid) {
+            persistMessage(cid, { role: 'ASSISTANT', content: noResponseMessage }).catch((err) =>
+              console.error('Failed to persist assistant message:', err)
+            )
+          }
         }
       }
     },
@@ -423,16 +504,32 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           managerData: partial.manager,
         }
         setMessages((prev) => [...prev, assistantMessage])
+        const cid = conversationIdRef.current
+        if (cid) {
+          persistMessage(cid, {
+            role: 'ASSISTANT',
+            content: '',
+            trackerSchemaSnapshot: partialTracker ?? undefined,
+            managerData: partial.manager ?? undefined,
+          }).catch((e) => console.error('Failed to persist assistant message:', e))
+        }
         setPendingQuery(null)
         setPendingContinue(true)
         continueCountRef.current = 0
       } else {
         setGenerationErrorMessage(err.message || 'An unknown error occurred')
+        const errorContent = `Sorry, I encountered an error: ${err.message || 'An unknown error occurred'}. Please try again.`
         const errorMessageObj: Message = {
           role: 'assistant',
-          content: `Sorry, I encountered an error: ${err.message || 'An unknown error occurred'}. Please try again.`,
+          content: errorContent,
         }
         setMessages((prev) => [...prev, errorMessageObj])
+        const cid = conversationIdRef.current
+        if (cid) {
+          persistMessage(cid, { role: 'ASSISTANT', content: errorContent }).catch((e) =>
+            console.error('Failed to persist assistant message:', e)
+          )
+        }
         setPendingQuery(null)
       }
       console.error('Error generating tracker:', err)
@@ -472,6 +569,24 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
 
     setMessages((prev) => [...prev, newUserMessage])
 
+    let cid = conversationIdRef.current
+    if (trackerId && !cid) {
+      try {
+        cid = await ensureConversation(trackerId)
+        setConversationId(cid)
+        conversationIdRef.current = cid
+      } catch (err) {
+        console.error('Failed to create conversation:', err)
+      }
+    }
+    if (cid) {
+      try {
+        await persistMessage(cid, { role: 'USER', content: userMessage })
+      } catch (err) {
+        console.error('Failed to persist user message:', err)
+      }
+    }
+
     submit({
       query: userMessage,
       messages: messages,
@@ -484,6 +599,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
     const nextMessages = [...messages, continueMessage]
     setMessages(nextMessages)
+    const cid = conversationIdRef.current
+    if (cid) {
+      persistMessage(cid, { role: 'USER', content: CONTINUE_PROMPT }).catch((e) =>
+        console.error('Failed to persist user message:', e)
+      )
+    }
     submit({
       query: CONTINUE_PROMPT,
       messages: nextMessages,
@@ -499,6 +620,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
     const nextMessages = [...messages, continueMessage]
     setMessages(nextMessages)
+    const cid = conversationIdRef.current
+    if (cid) {
+      persistMessage(cid, { role: 'USER', content: CONTINUE_PROMPT }).catch((e) =>
+        console.error('Failed to persist user message:', e)
+      )
+    }
     submit({
       query: CONTINUE_PROMPT,
       messages: nextMessages,

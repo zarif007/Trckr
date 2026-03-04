@@ -100,7 +100,7 @@ CREATE TABLE "TrackerData" (
 -- CreateTable
 CREATE TABLE "Conversation" (
     "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
+    "trackerSchemaId" TEXT NOT NULL,
     "title" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -146,7 +146,7 @@ CREATE INDEX "TrackerSchema_projectId_idx" ON "TrackerSchema"("projectId");
 CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
 
 -- CreateIndex
-CREATE INDEX "Conversation_projectId_idx" ON "Conversation"("projectId");
+CREATE INDEX "Conversation_trackerSchemaId_idx" ON "Conversation"("trackerSchemaId");
 
 -- CreateIndex
 CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
@@ -170,7 +170,7 @@ ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIG
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { TrackerAIView } from '../page'
 import { TrackerPageSkeleton } from './TrackerPageSkeleton'
-import type { TrackerResponse } from '../hooks/useTrackerChat'
+import type { TrackerResponse, Message } from '../hooks/useTrackerChat'
 
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
 
@@ -14,6 +14,11 @@ type TrackerRecord = {
   id: string
   name: string | null
   schema: unknown
+}
+
+type ConversationState = {
+  conversationId: string | null
+  messages: Message[]
 }
 
 export default function TrackerByIdPage() {
@@ -37,6 +42,10 @@ export default function TrackerByIdPage() {
     }
   })
   const [error, setError] = useState<string | null>(null)
+  const [conversation, setConversation] = useState<ConversationState>({
+    conversationId: null,
+    messages: [],
+  })
 
   useEffect(() => {
     if (!id) return
@@ -76,6 +85,38 @@ export default function TrackerByIdPage() {
       cancelled = true
     }
   }, [id, state.tracker, state.schema])
+
+  // Load conversation for this tracker once we have the tracker
+  useEffect(() => {
+    if (!id || !state.tracker) return
+    let cancelled = false
+    async function fetchConversation() {
+      try {
+        const res = await fetch(`/api/trackers/${id}/conversation`)
+        if (res.status === 404) {
+          if (!cancelled) setConversation({ conversationId: null, messages: [] })
+          return
+        }
+        if (!res.ok) {
+          if (!cancelled) setConversation({ conversationId: null, messages: [] })
+          return
+        }
+        const data = await res.json()
+        if (!cancelled) {
+          setConversation({
+            conversationId: data.conversation?.id ?? null,
+            messages: Array.isArray(data.messages) ? data.messages : [],
+          })
+        }
+      } catch {
+        if (!cancelled) setConversation({ conversationId: null, messages: [] })
+      }
+    }
+    fetchConversation()
+    return () => {
+      cancelled = true
+    }
+  }, [id, state.tracker])
 
   const handleSaveTracker = useCallback(
     async (schema: TrackerResponse) => {
@@ -150,6 +191,9 @@ export default function TrackerByIdPage() {
       onSaveTracker={handleSaveTracker}
       initialEditMode={isNew}
       initialChatOpen={isNew}
+      trackerId={id}
+      initialConversationId={conversation.conversationId}
+      initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
     />
   )
 }
