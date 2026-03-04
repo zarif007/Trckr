@@ -212,7 +212,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
         error={showError}
         errorTitle={validationError ?? undefined}
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={(e) => focusInputInContainer(e.currentTarget)}
+        onClick={(e) => focusInputInContainer(e.currentTarget as HTMLElement)}
       >
         {renderInput()}
       </FieldWrapper>

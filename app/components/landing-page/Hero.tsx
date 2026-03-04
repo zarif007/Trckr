@@ -69,7 +69,7 @@ export default function Hero() {
           >
             <Button
               size="lg"
-              className="h-11 px-6 text-sm font-medium rounded-full bg-foreground text-background hover:bg-foreground/90 transition-colors"
+              className="h-11 px-6 text-sm font-medium rounded-md bg-foreground text-background hover:bg-foreground/90 transition-colors"
               asChild
             >
               <a href="/login?callbackUrl=/tracker" className="inline-flex items-center gap-2">
@@ -80,7 +80,7 @@ export default function Hero() {
             <Button
               size="lg"
               variant="outline"
-              className="h-11 px-6 text-sm font-medium rounded-full border-border bg-transparent hover:bg-muted/50 transition-colors"
+              className="h-11 px-6 text-sm font-medium rounded-md border-border bg-transparent hover:bg-muted/50 transition-colors"
               asChild
             >
               <a href="#demo">Watch demo</a>
