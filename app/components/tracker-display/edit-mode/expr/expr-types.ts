@@ -12,6 +12,9 @@ export type ExprFlowOperator =
 
 export type AccumulateAction = 'add' | 'sub' | 'mul'
 
+/** Accumulator node variant: full reduce (accumulate), sum-only, or count. */
+export type AccumulatorKind = 'accumulate' | 'sum' | 'count'
+
 export interface AvailableField {
   fieldId: string
   label: string

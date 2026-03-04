@@ -68,9 +68,9 @@ export default function DashboardProjectPage() {
       })
       if (!res.ok) throw new Error('Failed to create tracker')
       const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}`)
+      router.push(`/tracker/${data.id}?new=true`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error creating file')
+      setError(e instanceof Error ? e.message : 'Error creating tracker')
     } finally {
       setCreating(false)
     }
@@ -108,7 +108,7 @@ export default function DashboardProjectPage() {
               ) : (
                 <FilePlus className="h-3.5 w-3.5" />
               )}
-              New File
+              New Tracker
             </Button>
           </div>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -138,7 +138,7 @@ export default function DashboardProjectPage() {
                   disabled={creating}
                 >
                   <FilePlus className="h-3.5 w-3.5" />
-                  New File
+                  New Tracker
                 </Button>
               </div>
             ) : (
@@ -211,7 +211,7 @@ export default function DashboardProjectPage() {
                     ) : (
                       <FilePlus className="h-3.5 w-3.5" />
                     )}
-                    New File
+                    New Tracker
                   </button>
                 </div>
               </div>

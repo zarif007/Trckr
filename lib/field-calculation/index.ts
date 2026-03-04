@@ -191,6 +191,8 @@ export function extractExprFieldRefs(expr: ExprNode, out = new Set<string>()): S
       if (isExprNode(expr.value)) extractExprFieldRefs(expr.value, out)
       return out
     case 'accumulate':
+    case 'sum':
+    case 'count':
       out.add((expr as { sourceFieldId: string }).sourceFieldId)
       return out
     default:
@@ -204,7 +206,7 @@ export function extractExprFieldRefs(expr: ExprNode, out = new Set<string>()): S
  */
 export function getAccumulateSourceGridIds(expr: ExprNode, out = new Set<string>()): Set<string> {
   if (!isExprNode(expr)) return out
-  if (expr.op === 'accumulate') {
+  if (expr.op === 'accumulate' || expr.op === 'sum' || expr.op === 'count') {
     const { gridId } = parsePath((expr as { sourceFieldId: string }).sourceFieldId)
     if (gridId) out.add(gridId)
     return out

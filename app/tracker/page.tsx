@@ -779,14 +779,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         {isChatOpen && (
           <>
             <div
-              className="w-2 shrink-0 cursor-col-resize bg-border/40 hover:bg-border/70 transition-colors"
+              className="w-px shrink-0 cursor-col-resize bg-border/50 hover:bg-border transition-colors"
               onPointerDown={handlePointerDown}
               role="separator"
               aria-orientation="vertical"
               aria-label="Resize panels"
             />
 
-            <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden bg-background">
+            <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden">
               <TrackerChatPanel {...chatPanelProps} />
             </section>
           </>
@@ -835,52 +835,56 @@ function TrackerStatusPanel({
   const showNoTracker = messagesLength > 0 && !isStreaming && !hasGeneratedTracker
 
   return (
-    <div
-      className={[
-        'rounded-md border bg-background/70 backdrop-blur overflow-hidden',
-        isStreaming ? 'border-primary/40 animate-border-blink' : 'border-border/60',
-      ].join(' ')}
-    >
-      <div className="p-4 space-y-4">
-        {validationErrors.length > 0 && (
-          <div className="rounded-md border border-warning/50 bg-warning/10 p-4 text-warning-foreground" role="alert">
-            <p className="font-medium mb-2 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              Schema validation issues
-            </p>
-            <ul className="text-sm list-disc list-inside space-y-1">
+    <div className="space-y-3">
+      {validationErrors.length > 0 && (
+        <div
+          className="flex items-start gap-3 rounded-lg border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3"
+          role="alert"
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">Validation issues</p>
+            <ul className="mt-1 text-xs text-muted-foreground space-y-0.5">
               {validationErrors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
             </ul>
-            <p className="text-xs mt-2 text-muted-foreground">You can ask the AI to fix these.</p>
+            <p className="text-[11px] text-muted-foreground/80 mt-2">Ask the AI to fix these.</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {error && !isLoading && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-destructive">
-            <p className="font-semibold">{resumingAfterError ? 'Connection failed' : 'Generation failed'}</p>
-            <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words">
-              {generationErrorMessage || error.message || 'An error occurred while generating the tracker.'}
+      {error && !isLoading && (
+        <div className="flex items-start gap-3 rounded-lg border-l-2 border-red-500/80 bg-red-500/5 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              {resumingAfterError ? 'Connection failed' : 'Generation failed'}
             </p>
-            <Button variant="outline" onClick={onContinue} className="mt-3">
-              Continue from where it left off
+            <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap break-words">
+              {generationErrorMessage || error.message || 'An error occurred.'}
+            </p>
+            <Button variant="ghost" size="sm" onClick={onContinue} className="mt-2 h-8 text-xs font-semibold">
+              Continue
             </Button>
           </div>
-        )}
+        </div>
+      )}
 
-        {showNoTracker && !error && (
-          <div className="rounded-md border border-warning/50 bg-warning/10 p-4 text-warning-foreground">
-            <p className="font-semibold">No tracker generated</p>
-            <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap break-words">
-              {generationErrorMessage || 'The AI responded but did not generate a valid tracker configuration.'}
+      {showNoTracker && !error && (
+        <div className="flex items-start gap-3 rounded-lg border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-foreground">No tracker generated</p>
+            <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap break-words">
+              {generationErrorMessage || 'The AI responded but did not produce a valid tracker.'}
             </p>
-            <Button variant="outline" onClick={onContinue} className="mt-3">
-              Continue from where it left off
+            <Button variant="ghost" size="sm" onClick={onContinue} className="mt-2 h-8 text-xs font-semibold">
+              Continue
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -932,58 +936,62 @@ function TrackerChatPanel({
   activeTrackerMessageIndex?: number | null
 }) {
   return (
-    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-background">
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6">
-        {showStatusPanel && <TrackerStatusPanel {...statusPanelProps} />}
+    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/30 border-l border-border/60">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-8">
+        <div className="mx-auto max-w-2xl space-y-8">
+          {showStatusPanel && <TrackerStatusPanel {...statusPanelProps} />}
 
-        <AnimatePresence mode="wait">
-          {isChatEmpty ? (
-            <TrackerEmptyState
-              key="empty-state"
-              onApplySuggestion={applySuggestion}
-              inputSlot={
-                <TrackerInputArea
-                  input={input}
-                  setInput={setInput}
-                  isFocused={isFocused}
-                  setIsFocused={setIsFocused}
-                  handleSubmit={handleSubmit}
-                  applySuggestion={applySuggestion}
-                  isLoading={isLoading}
-                  isChatEmpty={isChatEmpty}
-                  textareaRef={textareaRef}
-                  variant="hero"
-                />
-              }
-            />
-          ) : (
-            <TrackerMessageList
-              key="chat-messages"
-              messages={messages}
-              isLoading={isLoading}
-              object={object}
-              setMessageThinkingOpen={setMessageThinkingOpen}
-              messagesEndRef={messagesEndRef}
-              onViewTracker={onViewTracker}
-              activeTrackerMessageIndex={activeTrackerMessageIndex}
-            />
-          )}
-        </AnimatePresence>
+          <AnimatePresence mode="wait">
+            {isChatEmpty ? (
+              <TrackerEmptyState
+                key="empty-state"
+                onApplySuggestion={applySuggestion}
+                inputSlot={
+                  <TrackerInputArea
+                    input={input}
+                    setInput={setInput}
+                    isFocused={isFocused}
+                    setIsFocused={setIsFocused}
+                    handleSubmit={handleSubmit}
+                    applySuggestion={applySuggestion}
+                    isLoading={isLoading}
+                    isChatEmpty={isChatEmpty}
+                    textareaRef={textareaRef}
+                    variant="hero"
+                  />
+                }
+              />
+            ) : (
+              <TrackerMessageList
+                key="chat-messages"
+                messages={messages}
+                isLoading={isLoading}
+                object={object}
+                setMessageThinkingOpen={setMessageThinkingOpen}
+                messagesEndRef={messagesEndRef}
+                onViewTracker={onViewTracker}
+                activeTrackerMessageIndex={activeTrackerMessageIndex}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {!isChatEmpty && (
-        <div className="border-t border-border/60 bg-background/90 backdrop-blur px-4 py-4">
-          <TrackerInputArea
-            input={input}
-            setInput={setInput}
-            isFocused={isFocused}
-            setIsFocused={setIsFocused}
-            handleSubmit={handleSubmit}
-            applySuggestion={applySuggestion}
-            isLoading={isLoading}
-            isChatEmpty={isChatEmpty}
-            textareaRef={textareaRef}
-          />
+        <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-sm px-6 py-4">
+          <div className="mx-auto max-w-2xl">
+            <TrackerInputArea
+              input={input}
+              setInput={setInput}
+              isFocused={isFocused}
+              setIsFocused={setIsFocused}
+              handleSubmit={handleSubmit}
+              applySuggestion={applySuggestion}
+              isLoading={isLoading}
+              isChatEmpty={isChatEmpty}
+              textareaRef={textareaRef}
+            />
+          </div>
         </div>
       )}
     </section>

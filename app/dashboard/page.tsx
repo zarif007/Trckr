@@ -62,7 +62,7 @@ export default function DashboardPage() {
       })
       if (!res.ok) throw new Error('Failed to create tracker')
       const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}`)
+      router.push(`/tracker/${data.id}?new=true`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error creating tracker')
     } finally {

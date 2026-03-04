@@ -244,17 +244,36 @@ validations: {
   ]
 }
 
-ExprNode examples:
-- regex: { op: "regex", value: { op: "field", fieldId: "main_grid.sku" }, pattern: "^[A-Z]{2}\\\\d{4}$" }
-- math: { op: "add", args: [ { op: "mul", args: [ { op: "field", fieldId: "main_grid.b" }, { op: "const", value: 10 } ] }, ... ] }
-Comparison ops: prefer eq/neq/gt/gte/lt/lte. Symbol aliases (=, !=, >, >=, <, <=) are accepted but avoid mixing styles in the same expression.
+For validations expr use only the operators defined in "ExprNode — supported operators" below.
 
 If no validations are needed, omit "validations" or use an empty object.
+
+=== EXPRNODE — SUPPORTED OPERATORS (USE ONLY THESE TO BUILD expr) ===
+
+When building validations[].expr or calculations[].expr, use ONLY these operators and shapes. Any other op will fail validation.
+
+- const: { op: "const", value: <any> }
+- field: { op: "field", fieldId: "<grid_id>.<field_id>" }   // always use grid_id.field_id
+- add: { op: "add", args: [ <ExprNode>, <ExprNode>, ... ] }
+- mul: { op: "mul", args: [ <ExprNode>, <ExprNode>, ... ] }
+- sub: { op: "sub", left: <ExprNode>, right: <ExprNode> }
+- div: { op: "div", left: <ExprNode>, right: <ExprNode> }
+- eq, neq, gt, gte, lt, lte: { op: "eq"|"neq"|"gt"|"gte"|"lt"|"lte", left: <ExprNode>, right: <ExprNode> }
+- and: { op: "and", args: [ <ExprNode>, ... ] }
+- or: { op: "or", args: [ <ExprNode>, ... ] }
+- not: { op: "not", arg: <ExprNode> }
+- if: { op: "if", cond: <ExprNode>, then: <ExprNode>, else: <ExprNode> }
+- regex: { op: "regex", value: <ExprNode>, pattern: "<string>", flags?: "<string>" }
+- accumulate: { op: "accumulate", sourceFieldId: "<grid_id>.<field_id>", action: "add"|"sub"|"mul", startIndex?: number, endIndex?: number, increment?: number, initialValue?: number }
+- sum: { op: "sum", sourceFieldId: "<grid_id>.<field_id>", startIndex?: number, endIndex?: number, increment?: number, initialValue?: number }   // sum of column
+- count: { op: "count", sourceFieldId: "<grid_id>.<field_id>" }   // number of rows in that grid
+
+Nested expr: any slot above that says <ExprNode> can be another operator from this list (e.g. field, const, add, …).
 
 === CALCULATIONS (TOP-LEVEL) ===
 
 Use a top-level "calculations" object keyed by target "<grid_id>.<field_id>".
-Each target has exactly one expression rule:
+Each target has exactly one expression rule. Build expr using ONLY the operators from "ExprNode — supported operators" above.
 
 calculations: {
   "<grid_id>.<field_id>": {
@@ -268,6 +287,11 @@ Rules:
 3. Field references inside expr must use "grid_id.field_id".
 4. Keep references in the same grid as the target field unless the user explicitly asks otherwise.
 5. If no calculations are needed, omit "calculations" or use an empty object.
+
+Common patterns:
+- Total count of rows in another grid: { op: "count", sourceFieldId: "<grid_id>.<field_id>" }
+- Sum of a column: { op: "sum", sourceFieldId: "<grid_id>.<field_id>" }
+- Reduce with other operations: { op: "accumulate", sourceFieldId: "<grid_id>.<field_id>", action: "add"|"sub"|"mul" }
 
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `

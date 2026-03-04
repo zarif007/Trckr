@@ -25,6 +25,19 @@ describe('field calculations', () => {
     expect(refs.has('amounts_grid.amount')).toBe(true)
   })
 
+  it('extractExprFieldRefs includes sourceFieldId for sum and count', () => {
+    const sumRefs = extractExprFieldRefs({
+      op: 'sum',
+      sourceFieldId: 'items_grid.amount',
+    } as ExprNode)
+    expect(sumRefs.has('items_grid.amount')).toBe(true)
+    const countRefs = extractExprFieldRefs({
+      op: 'count',
+      sourceFieldId: 'items_grid.id',
+    } as ExprNode)
+    expect(countRefs.has('items_grid.id')).toBe(true)
+  })
+
   it('computes amount = rate * quantity with numeric strings and numbers', () => {
     const result = applyCalculationsForRow({
       gridId: 'sales_grid',
@@ -196,6 +209,33 @@ describe('field calculations', () => {
     expect(result.updatedFieldIds).toContain('total_amount')
   })
 
+  it('evaluates count and sum when gridData is provided', () => {
+    const gridData = {
+      items_grid: [
+        { id: 'a', amount: 10 },
+        { id: 'b', amount: 20 },
+        { id: 'c', amount: 30 },
+      ],
+      overview_grid: [{}],
+    }
+    const result = applyCompiledCalculationsForRow({
+      plan: compileCalculationsForGrid('overview_grid', {
+        'overview_grid.total_items': {
+          expr: { op: 'count', sourceFieldId: 'items_grid.id' },
+        },
+        'overview_grid.total_amount': {
+          expr: { op: 'sum', sourceFieldId: 'items_grid.amount' },
+        },
+      }),
+      row: {},
+      gridData,
+    })
+    expect(result.row.total_items).toBe(3)
+    expect(result.row.total_amount).toBe(60)
+    expect(result.updatedFieldIds).toContain('total_items')
+    expect(result.updatedFieldIds).toContain('total_amount')
+  })
+
   it('compiled plan produces same output as wrapper API', () => {
     const calculations = {
       'sales_grid.amount': {
@@ -290,6 +330,45 @@ describe('calculation validation', () => {
             sourceFieldId: 'amounts_grid.amount',
             action: 'add',
           },
+        },
+      },
+    }
+    const ctx = buildValidationContext(tracker as unknown as TrackerLike)
+    const result = validateCalculations(ctx)
+    expect(result.errors ?? []).toHaveLength(0)
+  })
+
+  it('allows count and sum in calculations', () => {
+    const tracker = {
+      tabs: [{ id: 'main_tab' }],
+      sections: [{ id: 'main_section', tabId: 'main_tab' }],
+      grids: [
+        { id: 'overview_grid', sectionId: 'main_section' },
+        { id: 'items_grid', sectionId: 'main_section' },
+      ],
+      fields: [
+        { id: 'total_items', dataType: 'number' },
+        { id: 'low_stock_items', dataType: 'number' },
+        { id: 'id', dataType: 'text' },
+        { id: 'amount', dataType: 'number' },
+        { id: 'total_amount', dataType: 'number' },
+      ],
+      layoutNodes: [
+        { gridId: 'overview_grid', fieldId: 'total_items', order: 0 },
+        { gridId: 'overview_grid', fieldId: 'low_stock_items', order: 1 },
+        { gridId: 'items_grid', fieldId: 'id', order: 0 },
+        { gridId: 'items_grid', fieldId: 'amount', order: 1 },
+        { gridId: 'items_grid', fieldId: 'total_amount', order: 2 },
+      ],
+      calculations: {
+        'overview_grid.total_items': {
+          expr: { op: 'count', sourceFieldId: 'items_grid.id' },
+        },
+        'overview_grid.low_stock_items': {
+          expr: { op: 'count', sourceFieldId: 'items_grid.id' },
+        },
+        'items_grid.total_amount': {
+          expr: { op: 'sum', sourceFieldId: 'items_grid.amount' },
         },
       },
     }

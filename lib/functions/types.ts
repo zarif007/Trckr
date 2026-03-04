@@ -77,6 +77,16 @@ export type ExprNode =
       /** Initial value for reduction. add default 0, mul default 1, sub default 0. */
       initialValue?: number
     }
+  | {
+      op: 'sum'
+      /** Grid and field path for the column to sum (e.g. items_grid.amount). */
+      sourceFieldId: string
+      startIndex?: number
+      endIndex?: number
+      increment?: number
+      initialValue?: number
+    }
+  | { op: 'count'; /** Grid and field path to count rows (e.g. items_grid.id). */ sourceFieldId: string }
   | { op: 'add'; args: ExprNode[] }
   | { op: 'mul'; args: ExprNode[] }
   | { op: 'sub'; left: ExprNode; right: ExprNode }

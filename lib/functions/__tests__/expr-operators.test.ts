@@ -205,3 +205,131 @@ describe('accumulate expression', () => {
     expect(evaluateExpr(expr, ctx)).toBe(0)
   })
 })
+
+describe('sum expression', () => {
+  const baseCtx = {
+    rowValues: {} as Record<string, unknown>,
+    fieldId: 'main_grid.total',
+  }
+
+  it('returns initialValue when getColumnValues is missing', () => {
+    const expr = { op: 'sum' as const, sourceFieldId: 'items_grid.amount' }
+    expect(evaluateExpr(expr, baseCtx)).toBe(0)
+    expect(evaluateExpr({ ...expr, initialValue: 100 }, baseCtx)).toBe(100)
+  })
+
+  it('sums column values', () => {
+    const expr = { op: 'sum' as const, sourceFieldId: 'items_grid.amount' }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [10, 20, 30],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(60)
+  })
+
+  it('respects startIndex and endIndex', () => {
+    const expr = {
+      op: 'sum' as const,
+      sourceFieldId: 'items_grid.amount',
+      startIndex: 1,
+      endIndex: 3,
+    }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [100, 10, 20, 30, 40],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(10 + 20 + 30)
+  })
+})
+
+describe('count expression', () => {
+  const baseCtx = {
+    rowValues: {} as Record<string, unknown>,
+    fieldId: 'overview_grid.total_items',
+  }
+
+  it('returns 0 when getColumnValues is missing', () => {
+    const expr = { op: 'count' as const, sourceFieldId: 'items_grid.id' }
+    expect(evaluateExpr(expr, baseCtx)).toBe(0)
+  })
+
+  it('returns length of column array', () => {
+    const expr = { op: 'count' as const, sourceFieldId: 'items_grid.id' }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [1, 2, 3, 4, 5],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(5)
+  })
+
+  it('returns 0 for empty array', () => {
+    const expr = { op: 'count' as const, sourceFieldId: 'items_grid.id' }
+    const ctx = {
+      ...baseCtx,
+      getColumnValues: () => [],
+    }
+    expect(evaluateExpr(expr, ctx)).toBe(0)
+  })
+})
+
+describe('validations accept count and sum', () => {
+  it('accepts validation expr with op count', () => {
+    const tracker = {
+      tabs: [{ id: 'main_tab' }],
+      sections: [{ id: 'main_section', tabId: 'main_tab' }],
+      grids: [
+        { id: 'main_grid', sectionId: 'main_section' },
+        { id: 'items_grid', sectionId: 'main_section' },
+      ],
+      fields: [
+        { id: 'total_items', dataType: 'number', config: {} },
+        { id: 'id', dataType: 'text', config: {} },
+      ],
+      layoutNodes: [
+        { gridId: 'main_grid', fieldId: 'total_items', order: 1 },
+        { gridId: 'items_grid', fieldId: 'id', order: 1 },
+      ],
+      validations: {
+        'main_grid.total_items': [
+          {
+            type: 'expr' as const,
+            expr: { op: 'count' as const, sourceFieldId: 'items_grid.id' },
+          },
+        ],
+      },
+    }
+    const ctx = buildValidationContext(tracker as unknown as TrackerLike)
+    const result = validateValidations(ctx)
+    expect(result.errors ?? []).toHaveLength(0)
+  })
+
+  it('accepts validation expr with op sum', () => {
+    const tracker = {
+      tabs: [{ id: 'main_tab' }],
+      sections: [{ id: 'main_section', tabId: 'main_tab' }],
+      grids: [
+        { id: 'main_grid', sectionId: 'main_section' },
+        { id: 'items_grid', sectionId: 'main_section' },
+      ],
+      fields: [
+        { id: 'total', dataType: 'number', config: {} },
+        { id: 'amount', dataType: 'number', config: {} },
+      ],
+      layoutNodes: [
+        { gridId: 'main_grid', fieldId: 'total', order: 1 },
+        { gridId: 'items_grid', fieldId: 'amount', order: 1 },
+      ],
+      validations: {
+        'main_grid.total': [
+          {
+            type: 'expr' as const,
+            expr: { op: 'sum' as const, sourceFieldId: 'items_grid.amount' },
+          },
+        ],
+      },
+    }
+    const ctx = buildValidationContext(tracker as unknown as TrackerLike)
+    const result = validateValidations(ctx)
+    expect(result.errors ?? []).toHaveLength(0)
+  })
+})

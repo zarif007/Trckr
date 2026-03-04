@@ -1,7 +1,7 @@
 import type { Edge, Node, XYPosition } from 'reactflow'
 import type { ExprNode } from '@/lib/functions/types'
 import { normalizeExprNode } from '@/lib/schemas/expr'
-import type { AccumulateAction, ExprFlowOperator } from './expr-types'
+import type { AccumulateAction, AccumulatorKind, ExprFlowOperator } from './expr-types'
 
 export interface ExprFlowNodeData {
   op?: ExprFlowOperator
@@ -13,8 +13,12 @@ export interface ExprFlowNodeData {
   endIndex?: number
   /** Accumulator: step. */
   increment?: number
-  /** Accumulator: reduction action. */
+  /** Accumulator: reduction action (for kind 'accumulate'). */
   action?: AccumulateAction
+  /** Accumulator variant: accumulate (full reduce), sum, or count. */
+  accumulatorKind?: AccumulatorKind
+  /** Sum: initial value before adding. */
+  initialValue?: number
 }
 
 /** Single input handle for accumulator node (source field/column). */
@@ -133,7 +137,7 @@ export function compileExprFromGraph(
         visited.add(nodeId)
         return null
       }
-      const action = node.data?.action ?? 'add'
+      const kind = node.data?.accumulatorKind ?? 'accumulate'
       const inc = node.data?.increment
       const increment =
         inc != null && Number.isInteger(inc) && inc >= 1 ? inc : undefined
@@ -143,8 +147,24 @@ export function compileExprFromGraph(
         start != null && Number.isInteger(start) ? start : undefined
       const endIndex =
         end != null && Number.isInteger(end) ? end : undefined
+      const initialValue = node.data?.initialValue
       visiting.delete(nodeId)
       visited.add(nodeId)
+
+      if (kind === 'count') {
+        return { op: 'count', sourceFieldId } as ExprNode
+      }
+      if (kind === 'sum') {
+        return {
+          op: 'sum',
+          sourceFieldId,
+          startIndex,
+          endIndex,
+          increment,
+          initialValue,
+        } as ExprNode
+      }
+      const action = node.data?.action ?? 'add'
       return {
         op: 'accumulate',
         sourceFieldId,
@@ -272,11 +292,72 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
         type: 'accumulator',
         position,
         data: {
+          accumulatorKind: 'accumulate',
           startIndex: acc.startIndex,
           endIndex: acc.endIndex,
           increment: acc.increment,
           action: acc.action,
         },
+      })
+      edges.push({
+        id: `${fieldId}-${id}-source`,
+        source: fieldId,
+        target: id,
+        targetHandle: ACCUMULATOR_SOURCE_HANDLE,
+      })
+      return id
+    }
+
+    if (node.op === 'sum') {
+      const sumNode = node as Extract<ExprNode, { op: 'sum' }>
+      const fieldId = nextId()
+      const fieldPosition = placeNode(depth + 1, row)
+      row += 1
+      depthById.set(fieldId, depth + 1)
+      nodes.push({
+        id: fieldId,
+        type: 'field',
+        position: fieldPosition,
+        data: { fieldId: sumNode.sourceFieldId },
+      })
+      nodes.push({
+        id,
+        type: 'accumulator',
+        position,
+        data: {
+          accumulatorKind: 'sum',
+          startIndex: sumNode.startIndex,
+          endIndex: sumNode.endIndex,
+          increment: sumNode.increment,
+          initialValue: sumNode.initialValue,
+        },
+      })
+      edges.push({
+        id: `${fieldId}-${id}-source`,
+        source: fieldId,
+        target: id,
+        targetHandle: ACCUMULATOR_SOURCE_HANDLE,
+      })
+      return id
+    }
+
+    if (node.op === 'count') {
+      const countNode = node as Extract<ExprNode, { op: 'count' }>
+      const fieldId = nextId()
+      const fieldPosition = placeNode(depth + 1, row)
+      row += 1
+      depthById.set(fieldId, depth + 1)
+      nodes.push({
+        id: fieldId,
+        type: 'field',
+        position: fieldPosition,
+        data: { fieldId: countNode.sourceFieldId },
+      })
+      nodes.push({
+        id,
+        type: 'accumulator',
+        position,
+        data: { accumulatorKind: 'count' },
       })
       edges.push({
         id: `${fieldId}-${id}-source`,

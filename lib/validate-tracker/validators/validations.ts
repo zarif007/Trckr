@@ -141,6 +141,110 @@ function validateExprNode(
       }
       return errors
     }
+    case 'accumulate': {
+      const acc = normalizedNode as {
+        sourceFieldId: string
+        startIndex?: number
+        endIndex?: number
+        increment?: number
+        action: string
+      }
+      const ref = acc.sourceFieldId
+      if (typeof ref !== 'string' || ref.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!ref.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+        return errors
+      }
+      const parsedAcc = parsePath(ref)
+      if (!parsedAcc.gridId || !parsedAcc.fieldId) {
+        errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(ref)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
+        return errors
+      }
+      if (acc.startIndex != null && !Number.isInteger(acc.startIndex)) {
+        errors.push(`${path}.startIndex must be an integer when provided`)
+      }
+      if (acc.endIndex != null && !Number.isInteger(acc.endIndex)) {
+        errors.push(`${path}.endIndex must be an integer when provided`)
+      }
+      if (acc.increment != null) {
+        if (typeof acc.increment !== 'number' || !Number.isInteger(acc.increment) || acc.increment < 1) {
+          errors.push(`${path}.increment must be a positive integer`)
+        }
+      }
+      const validActions = ['add', 'sub', 'mul']
+      if (!validActions.includes(acc.action)) {
+        errors.push(`${path}.action must be one of: ${validActions.join(', ')}`)
+      }
+      return errors
+    }
+    case 'sum': {
+      const sumNode = normalizedNode as {
+        sourceFieldId: string
+        startIndex?: number
+        endIndex?: number
+        increment?: number
+        initialValue?: number
+      }
+      const refSum = sumNode.sourceFieldId
+      if (typeof refSum !== 'string' || refSum.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!refSum.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+        return errors
+      }
+      const parsedSum = parsePath(refSum)
+      if (!parsedSum.gridId || !parsedSum.fieldId) {
+        errors.push(`${path}.sourceFieldId "${refSum}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(refSum)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${refSum}"`)
+        return errors
+      }
+      if (sumNode.startIndex != null && !Number.isInteger(sumNode.startIndex)) {
+        errors.push(`${path}.startIndex must be an integer when provided`)
+      }
+      if (sumNode.endIndex != null && !Number.isInteger(sumNode.endIndex)) {
+        errors.push(`${path}.endIndex must be an integer when provided`)
+      }
+      if (sumNode.increment != null) {
+        if (typeof sumNode.increment !== 'number' || !Number.isInteger(sumNode.increment) || sumNode.increment < 1) {
+          errors.push(`${path}.increment must be a positive integer`)
+        }
+      }
+      return errors
+    }
+    case 'count': {
+      const countNode = normalizedNode as { sourceFieldId: string }
+      const refCount = countNode.sourceFieldId
+      if (typeof refCount !== 'string' || refCount.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!refCount.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. items_grid.id), not bare fieldId`)
+        return errors
+      }
+      const parsedCount = parsePath(refCount)
+      if (!parsedCount.gridId || !parsedCount.fieldId) {
+        errors.push(`${path}.sourceFieldId "${refCount}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(refCount)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${refCount}"`)
+        return errors
+      }
+      return errors
+    }
     default:
       errors.push(`${path}.op is not a supported operator`)
       return errors

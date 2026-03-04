@@ -72,6 +72,8 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
       if (isExprNode(normalizedNode.value)) collectExprFieldRefs(normalizedNode.value, out)
       return out
     case 'accumulate':
+    case 'sum':
+    case 'count':
       out.add((normalizedNode as { sourceFieldId: string }).sourceFieldId)
       return out
     default:
@@ -157,6 +159,67 @@ function validateExprNode(
       const validActions = ['add', 'sub', 'mul']
       if (!validActions.includes(acc.action)) {
         errors.push(`${path}.action must be one of: ${validActions.join(', ')}`)
+      }
+      return errors
+    }
+    case 'sum': {
+      const sumNode = normalizedNode as {
+        sourceFieldId: string
+        startIndex?: number
+        endIndex?: number
+        increment?: number
+        initialValue?: number
+      }
+      const ref = sumNode.sourceFieldId
+      if (typeof ref !== 'string' || ref.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!ref.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+        return errors
+      }
+      const parsedSum = parsePath(ref)
+      if (!parsedSum.gridId || !parsedSum.fieldId) {
+        errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(ref)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
+        return errors
+      }
+      if (sumNode.startIndex != null && !Number.isInteger(sumNode.startIndex)) {
+        errors.push(`${path}.startIndex must be an integer when provided`)
+      }
+      if (sumNode.endIndex != null && !Number.isInteger(sumNode.endIndex)) {
+        errors.push(`${path}.endIndex must be an integer when provided`)
+      }
+      if (sumNode.increment != null) {
+        if (typeof sumNode.increment !== 'number' || !Number.isInteger(sumNode.increment) || sumNode.increment < 1) {
+          errors.push(`${path}.increment must be a positive integer`)
+        }
+      }
+      return errors
+    }
+    case 'count': {
+      const countNode = normalizedNode as { sourceFieldId: string }
+      const ref = countNode.sourceFieldId
+      if (typeof ref !== 'string' || ref.trim().length === 0) {
+        errors.push(`${path}.sourceFieldId must be a non-empty string`)
+        return errors
+      }
+      if (!ref.includes('.')) {
+        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. items_grid.id), not bare fieldId`)
+        return errors
+      }
+      const parsedCount = parsePath(ref)
+      if (!parsedCount.gridId || !parsedCount.fieldId) {
+        errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
+        return errors
+      }
+      if (!ctx.fieldPaths.has(ref)) {
+        errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
+        return errors
       }
       return errors
     }

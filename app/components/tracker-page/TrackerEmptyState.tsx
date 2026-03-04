@@ -14,54 +14,45 @@ export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmpty
   return (
     <motion.div
       key="empty-state"
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5 }}
-      className="flex flex-col items-center justify-center min-h-[60vh] space-y-8 md:space-y-10"
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+      className="flex flex-col items-center justify-center min-h-[60vh] space-y-10 md:space-y-12"
     >
       <div className="relative">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -inset-4 rounded-full"
-        />
-        <div className="relative w-16 h-16 rounded-md flex items-center justify-center bg-foreground">
-          <Sparkles className="w-8 h-8 text-background" />
+        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-foreground shadow-lg">
+          <Sparkles className="w-7 h-7 text-background" />
         </div>
       </div>
 
-      <div className="text-center space-y-3">
-        <h3 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
-          Build your <span className="relative inline-block">
-            <span className="absolute inset-0 bg-primary -rotate-2 rounded-md" />
-            <span className="relative px-2 text-primary-foreground">tracker.</span>
-          </span>
-        </h3>
-        <p className="text-sm md:text-base text-muted-foreground/90 max-w-md mx-auto font-medium">
-          What would you like to build today? <br />
-          Describe your data needs in plain english.
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+          Build your <span className="text-foreground/90">tracker</span>
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          Describe what you need in plain English.
         </p>
       </div>
 
-      <div className="w-full max-w-3xl">
+      <div className="w-full">
         {inputSlot}
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 w-full max-w-3xl">
+      <div className="flex flex-wrap items-center justify-center gap-2 w-full">
         {suggestions.map((suggestion) => (
           <button
             key={suggestion.title}
             onClick={() => onApplySuggestion(suggestion.query)}
-            className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/60 bg-card/70 hover:bg-card hover:border-primary/40 transition-all text-left"
+            className="group flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-background/80 hover:bg-muted/50 hover:border-foreground/15 transition-all text-left"
           >
             <span className={`text-xs ${suggestion.iconColor}`}>
               <suggestion.icon className="w-3.5 h-3.5" />
             </span>
-            <span className="text-[11px] font-semibold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
+            <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
               {suggestion.summary ?? suggestion.title}
             </span>
-            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/0 group-hover:text-primary group-hover:translate-x-0.5 transition-all duration-300" />
+            <ArrowRight className="w-3.5 h-3.5 text-muted-foreground/0 group-hover:text-foreground/70 group-hover:translate-x-0.5 transition-all duration-200" />
           </button>
         ))}
       </div>

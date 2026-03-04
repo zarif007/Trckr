@@ -301,15 +301,23 @@ function ResultNode({ data }: { data: FlowNodeData }) {
 
 function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
   const style = NODE_STYLES.accumulator
+  const kind = data.accumulatorKind ?? 'accumulate'
+  const isCount = kind === 'count'
+  const isSum = kind === 'sum'
   const action = data.action ?? 'add'
   const startIndex = data.startIndex
   const endIndex = data.endIndex
   const increment = data.increment ?? 1
+  const initialValue = data.initialValue
+
+  const headerLabel =
+    kind === 'count' ? 'Count' : kind === 'sum' ? 'Sum' : style.label
+
   return (
     <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-cyan-500/40 bg-background', style.border)}>
       <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
         {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
+        <span className="text-foreground/80">{headerLabel}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -320,69 +328,101 @@ function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
         </button>
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'space-y-2')}>
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Action</label>
-          <select
-            className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
-            value={action}
-            onChange={(e) => data.onChange?.(id, { action: e.target.value as AccumulateAction })}
-          >
-            {ACCUMULATOR_ACTION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Start</label>
-          <Input
-            type="number"
-            min={0}
-            className="h-8 text-xs"
-            placeholder="0"
-            value={startIndex === undefined ? '' : startIndex}
-            onChange={(e) => {
-              const v = e.target.value
-              if (v === '') {
-                data.onChange?.(id, { startIndex: undefined })
-                return
-              }
-              const n = parseInt(v, 10)
-              data.onChange?.(id, { startIndex: Number.isNaN(n) ? undefined : n })
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground w-14 shrink-0">End</label>
-          <Input
-            type="number"
-            min={0}
-            className="h-8 text-xs"
-            placeholder="To end"
-            value={endIndex === undefined ? '' : endIndex}
-            onChange={(e) => {
-              const v = e.target.value
-              if (v === '') {
-                data.onChange?.(id, { endIndex: undefined })
-                return
-              }
-              const n = parseInt(v, 10)
-              data.onChange?.(id, { endIndex: Number.isNaN(n) ? undefined : n })
-            }}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground w-14 shrink-0">Step</label>
-          <select
-            className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
-            value={increment}
-            onChange={(e) => data.onChange?.(id, { increment: parseInt(e.target.value, 10) })}
-          >
-            {[1, 2, 3, 4, 5].map((n) => (
-              <option key={n} value={n}>+{n}</option>
-            ))}
-          </select>
-        </div>
-        <p className="text-[10px] text-muted-foreground">Connect a Field node (table column) to the left.</p>
+        {!isCount && (
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] text-muted-foreground w-14 shrink-0">Action</label>
+            {isSum ? (
+              <span className="flex-1 text-xs text-muted-foreground">Sum (+)</span>
+            ) : (
+              <select
+                className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+                value={action}
+                onChange={(e) => data.onChange?.(id, { action: e.target.value as AccumulateAction })}
+              >
+                {ACCUMULATOR_ACTION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
+        {!isCount && (
+          <>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] text-muted-foreground w-14 shrink-0">Start</label>
+              <Input
+                type="number"
+                min={0}
+                className="h-8 text-xs"
+                placeholder="0"
+                value={startIndex === undefined ? '' : startIndex}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === '') {
+                    data.onChange?.(id, { startIndex: undefined })
+                    return
+                  }
+                  const n = parseInt(v, 10)
+                  data.onChange?.(id, { startIndex: Number.isNaN(n) ? undefined : n })
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] text-muted-foreground w-14 shrink-0">End</label>
+              <Input
+                type="number"
+                min={0}
+                className="h-8 text-xs"
+                placeholder="To end"
+                value={endIndex === undefined ? '' : endIndex}
+                onChange={(e) => {
+                  const v = e.target.value
+                  if (v === '') {
+                    data.onChange?.(id, { endIndex: undefined })
+                    return
+                  }
+                  const n = parseInt(v, 10)
+                  data.onChange?.(id, { endIndex: Number.isNaN(n) ? undefined : n })
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-[10px] text-muted-foreground w-14 shrink-0">Step</label>
+              <select
+                className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
+                value={increment}
+                onChange={(e) => data.onChange?.(id, { increment: parseInt(e.target.value, 10) })}
+              >
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={n}>+{n}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
+        {isSum && (
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] text-muted-foreground w-14 shrink-0">Initial</label>
+            <Input
+              type="number"
+              className="h-8 text-xs"
+              placeholder="0"
+              value={initialValue === undefined ? '' : initialValue}
+              onChange={(e) => {
+                const v = e.target.value
+                if (v === '') {
+                  data.onChange?.(id, { initialValue: undefined })
+                  return
+                }
+                const n = Number(v)
+                data.onChange?.(id, { initialValue: Number.isNaN(n) ? undefined : n })
+              }}
+            />
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground">
+          {isCount ? 'Connect a Field (any column) to count rows.' : 'Connect a Field node (table column) to the left.'}
+        </p>
       </div>
       <Handle
         type="target"

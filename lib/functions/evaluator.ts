@@ -178,6 +178,39 @@ export function evaluateExpr(expr: ExprNode, ctx: FunctionContext): unknown {
       }
       return result
     }
+    case 'sum': {
+      const sumNode = normalizedExpr as Extract<ExprNode, { op: 'sum' }>
+      const getCol = ctx.getColumnValues
+      if (typeof getCol !== 'function') {
+        return sumNode.initialValue ?? 0
+      }
+      const arr = getCol(sumNode.sourceFieldId)
+      if (!Array.isArray(arr)) {
+        return sumNode.initialValue ?? 0
+      }
+      const len = arr.length
+      if (len === 0) {
+        return sumNode.initialValue ?? 0
+      }
+      const start = Math.max(0, Math.min(sumNode.startIndex ?? 0, len - 1))
+      const end = Math.max(0, Math.min(sumNode.endIndex ?? len - 1, len - 1))
+      const step = (sumNode.increment ?? 1) <= 0 ? 1 : Math.floor(sumNode.increment ?? 1)
+      if (start > end) {
+        return sumNode.initialValue ?? 0
+      }
+      let sumResult = sumNode.initialValue ?? 0
+      for (let i = start; i <= end; i += step) {
+        sumResult += toNumber(arr[i])
+      }
+      return sumResult
+    }
+    case 'count': {
+      const countNode = normalizedExpr as Extract<ExprNode, { op: 'count' }>
+      const getCol = ctx.getColumnValues
+      if (typeof getCol !== 'function') return 0
+      const arr = getCol(countNode.sourceFieldId)
+      return Array.isArray(arr) ? arr.length : 0
+    }
     case 'add': {
       const args = getVariadicOperands(normalizedExpr as Record<string, unknown>)
       if (!args || args.length === 0) return Number.NaN
