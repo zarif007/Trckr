@@ -39,14 +39,13 @@ export async function POST(
       ? (body.managerData as object)
       : undefined
 
-  const conversation = await prisma.conversation.findFirst({
-    where: {
-      id: conversationId,
-      trackerSchema: { project: { userId: session.user.id } },
-    },
-  })
-
-  if (!conversation) {
+  const rows = await prisma.$queryRaw<
+    [{ userId: string }]
+  >`SELECT p."userId" FROM "Conversation" c
+    INNER JOIN "TrackerSchema" t ON t.id = c."trackerSchemaId"
+    INNER JOIN "Project" p ON p.id = t."projectId"
+    WHERE c.id = ${conversationId} LIMIT 1`
+  if (!rows.length || rows[0].userId !== session.user.id) {
     return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
   }
 
