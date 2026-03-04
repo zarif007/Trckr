@@ -239,12 +239,11 @@ export function TrackerDisplayInline({
     [dependsOn, dependsOnByTarget]
   )
 
+  // Keep getDataRef.current set to the latest gridData getter. Do not clear on cleanup
+  // so that Save Data can read it even when effect deps change (avoids ref being null on click).
   useEffect(() => {
     if (getDataRef) {
       getDataRef.current = () => gridData
-      return () => {
-        getDataRef.current = null
-      }
     }
   }, [gridData, getDataRef])
 

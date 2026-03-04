@@ -18,7 +18,7 @@ export type FieldMapping = {
 export type TrackerBindingEntry = {
   /** Grid id containing options (e.g. "product_options_grid") */
   optionsGrid: string
-  /** Path to the option field in options grid (e.g. "exercise_options_grid.exercise"). This field provides both display and stored value. */
+  /** Path to the option field in options grid (e.g. "exercise_options_grid.exercise_option"). This field provides both display and stored value. The option field must have a different id than the select field. */
   labelField: FieldPath
   /**
    * Field mappings: from option row field -> to main grid field.

@@ -150,6 +150,19 @@ export default function Demo() {
         ui: { label: 'Status' },
         config: {},
       },
+      // Dedicated option fields for option grids (distinct from select fields)
+      {
+        id: 'project_priority_option',
+        dataType: 'string' as const,
+        ui: { label: 'Priority' },
+        config: {},
+      },
+      {
+        id: 'project_status_option',
+        dataType: 'string' as const,
+        ui: { label: 'Status' },
+        config: {},
+      },
     ],
     layoutNodes: [
       // Table layout
@@ -164,38 +177,27 @@ export default function Demo() {
       { gridId: 'projects_by_status', fieldId: 'kb_project_owner', order: 2 },
       { gridId: 'projects_by_status', fieldId: 'kb_project_due_date', order: 3 },
       { gridId: 'projects_by_status', fieldId: 'kb_status', order: 4 },
-      // Option grids
-      { gridId: 'priority_options_grid', fieldId: 'project_priority', order: 1 },
-      { gridId: 'status_options_grid', fieldId: 'project_status', order: 1 },
+      // Option grids (use dedicated option fields, not the select field ids)
+      { gridId: 'priority_options_grid', fieldId: 'project_priority_option', order: 1 },
+      { gridId: 'status_options_grid', fieldId: 'project_status_option', order: 1 },
     ],
     bindings: {
       'project_list.project_priority': {
         optionsGrid: 'priority_options_grid',
-        labelField: 'priority_options_grid.project_priority',
-        fieldMappings: [{ from: 'priority_options_grid.project_priority', to: 'project_list.project_priority' }],
+        labelField: 'priority_options_grid.project_priority_option',
+        fieldMappings: [{ from: 'priority_options_grid.project_priority_option', to: 'project_list.project_priority' }],
       },
       'project_list.project_status': {
         optionsGrid: 'status_options_grid',
-        labelField: 'status_options_grid.project_status',
-        fieldMappings: [{ from: 'status_options_grid.project_status', to: 'project_list.project_status' }],
+        labelField: 'status_options_grid.project_status_option',
+        fieldMappings: [{ from: 'status_options_grid.project_status_option', to: 'project_list.project_status' }],
       },
       'projects_by_status.kb_status': {
         optionsGrid: 'status_options_grid',
-        labelField: 'status_options_grid.project_status',
-        fieldMappings: [{ from: 'status_options_grid.project_status', to: 'projects_by_status.kb_status' }],
+        labelField: 'status_options_grid.project_status_option',
+        fieldMappings: [{ from: 'status_options_grid.project_status_option', to: 'projects_by_status.kb_status' }],
       },
     },
-  }
-
-  // Option grid fields for option lists tab (one field per option set; display = value)
-  const optionFields = [
-    { id: 'project_priority', dataType: 'string' as const, ui: { label: 'Priority' }, config: {} },
-    { id: 'project_status', dataType: 'string' as const, ui: { label: 'Status' }, config: {} },
-  ]
-
-  const demoDataWithFields = {
-    ...demoData,
-    fields: [...demoData.fields, ...optionFields],
   }
 
   const initialGridData = useMemo(() => {
@@ -219,15 +221,15 @@ export default function Demo() {
       project_list: projectListRows,
       projects_by_status: kanbanRows,
       priority_options_grid: [
-        { project_priority: 'High' },
-        { project_priority: 'Medium' },
-        { project_priority: 'Low' },
+        { project_priority_option: 'High' },
+        { project_priority_option: 'Medium' },
+        { project_priority_option: 'Low' },
       ],
       status_options_grid: [
-        { project_status: 'Not Started' },
-        { project_status: 'In Progress' },
-        { project_status: 'Blocked' },
-        { project_status: 'Completed' },
+        { project_status_option: 'Not Started' },
+        { project_status_option: 'In Progress' },
+        { project_status_option: 'Blocked' },
+        { project_status_option: 'Completed' },
       ],
     }
   }, [])
@@ -247,7 +249,7 @@ export default function Demo() {
           </p>
         </div>
 
-        <TrackerDisplay {...demoDataWithFields} initialGridData={initialGridData} />
+        <TrackerDisplay {...demoData} initialGridData={initialGridData} />
       </div>
     </div>
   )

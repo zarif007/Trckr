@@ -32,30 +32,30 @@ GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
 
 Every field with dataType "options" or "multiselect" MUST have a bindings entry. optionsGrid MUST point to an OPTIONS GRID (id ending with _options_grid), NEVER to a main data grid (e.g. do NOT use suppliers_grid as optionsGrid for a supplier select — use supplier_options_grid).
 
-OPTIONS GRID: ONE FIELD PER OPTION SET — no separate "label" and "value". The option field holds whatever the user enters; that value is both what is displayed and what is stored (e.g. "Exercise" or "High"). Use the field name as the field id: e.g. for exercise_options_grid use field id "exercise".
+OPTIONS GRID: ONE FIELD PER OPTION SET — no separate "label" and "value". The option field holds whatever the user enters; that value is both what is displayed and what is stored (e.g. "Exercise" or "High"). CRITICAL: The options grid MUST use a DIFFERENT field id than the select field. Use a dedicated option field id (e.g. exercise_option for exercise_options_grid), NEVER the same id as the select field (e.g. do NOT use "exercise" in both workouts_grid and exercise_options_grid — use "exercise" in the main grid and "exercise_option" in the options grid).
 
 Create for EACH distinct option set:
 1. SHARED TAB (once): { id: "shared_tab", name: "Shared", placeId: 999, config: {} }
 2. SHARED SECTION (once): { id: "option_lists_section", name: "Option Lists", tabId: "shared_tab", placeId: 1, config: {} }
 3. OPTIONS GRID: { id: "{option_name}_options_grid", name: "{Option Name} Options", sectionId: "option_lists_section", placeId: N, config: {}, views: [{ id: "{option_name}_table_view", name: "Table", type: "table", config: {} }] }
-4. ONE OPTION FIELD: { id: "{option_name}", dataType: "string", ui: { label: "{Option Name}" }, config: {} } — e.g. id "exercise" for exercise_options_grid, id "status" for status_options_grid. This single field is both display and stored value.
-5. LAYOUT NODES: place that one field in the options grid
-6. BINDINGS ENTRY: labelField = path to that same field (e.g. "exercise_options_grid.exercise"); fieldMappings "from" = same path
+4. ONE OPTION FIELD (distinct id): { id: "{option_name}_option", dataType: "string", ui: { label: "{Option Name}" }, config: {} } — e.g. id "exercise_option" for exercise_options_grid (select field stays "exercise" in main grid). This single field is both display and stored value.
+5. LAYOUT NODES: place that option field in the options grid (and the select field only in the main grid)
+6. BINDINGS ENTRY: labelField = path to the OPTION field (e.g. "exercise_options_grid.exercise_option"); fieldMappings "from" = same path
 
 === BINDINGS (MANDATORY FOR ALL SELECT/MULTISELECT FIELDS) ===
 
 The "bindings" object is a TOP-LEVEL property in the schema (alongside tabs, grids, fields).
 Every select/multiselect field MUST have a corresponding entry in bindings.
 
-labelField is the path to the option field that provides BOTH display and stored value (e.g. "exercise_options_grid.exercise"). There is no separate "value" field — the option field name is the field id (exercise, status, product, etc.).
+labelField is the path to the option field that provides BOTH display and stored value. The option field MUST have a different id than the select field (e.g. "exercise_options_grid.exercise_option" for select field "exercise"; never "exercise_options_grid.exercise" when the select field is also "exercise").
 
 BINDINGS STRUCTURE (paths are grid.field - NO TAB):
 bindings: {
   "<grid_id>.<field_id>": {
     optionsGrid: "<grid_id>",              // Grid id containing options (e.g. product_options_grid)
-    labelField: "<options_grid_id>.<field_id>",   // Path to the option field (same field = display and value), e.g. exercise_options_grid.exercise
+    labelField: "<options_grid_id>.<option_field_id>",   // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
     fieldMappings: [
-      { from: "<options_grid_id>.<field_id>", to: "<this_select_grid>.<this_field>" },  // required: "from" must equal labelField
+      { from: "<options_grid_id>.<option_field_id>", to: "<this_select_grid>.<this_field>" },  // required: "from" must equal labelField
       { from: "<options_grid_id>.<other_field>", to: "<main_grid>.<other_field>" }       // auto-populate (optional)
     ]
   }
@@ -65,27 +65,27 @@ PATH FORMAT (no tab - grid and grid.field only):
 - optionsGrid: just the grid id (e.g. "product_options_grid")
 - labelField and field path: "grid_id.field_id" (e.g. "exercise_options_grid.exercise", "orders_grid.product")
 
-EXAMPLE 1 - Product select with price auto-fill:
+EXAMPLE 1 - Product select with price auto-fill (options grid uses product_option, not product):
 
 bindings: {
   "orders_grid.product": {
     optionsGrid: "product_options_grid",
-    labelField: "product_options_grid.product",
+    labelField: "product_options_grid.product_option",
     fieldMappings: [
-      { from: "product_options_grid.product", to: "orders_grid.product" },
+      { from: "product_options_grid.product_option", to: "orders_grid.product" },
       { from: "product_options_grid.price", to: "orders_grid.price" }
     ]
   }
 }
 
-EXAMPLE 2 - Simple status dropdown:
+EXAMPLE 2 - Simple status dropdown (options grid uses status_option):
 
 bindings: {
   "tasks_grid.status": {
     optionsGrid: "status_options_grid",
-    labelField: "status_options_grid.status",
+    labelField: "status_options_grid.status_option",
     fieldMappings: [
-      { from: "status_options_grid.status", to: "tasks_grid.status" }
+      { from: "status_options_grid.status_option", to: "tasks_grid.status" }
     ]
   }
 }
@@ -95,9 +95,9 @@ EXAMPLE 3 - Multiple auto-populate (options grid must be _options_grid):
 bindings: {
   "items_grid.product": {
     optionsGrid: "product_options_grid",
-    labelField: "product_options_grid.product",
+    labelField: "product_options_grid.product_option",
     fieldMappings: [
-      { from: "product_options_grid.product", to: "items_grid.product" },
+      { from: "product_options_grid.product_option", to: "items_grid.product" },
       { from: "product_options_grid.price", to: "items_grid.unit_price" }
     ]
   }
@@ -107,7 +107,7 @@ BINDINGS RULES:
 1. EVERY select/multiselect field MUST have a bindings entry - NO EXCEPTIONS
 2. Key is ALWAYS: "<grid_id>.<field_id>" (NO tab in any path)
 3. optionsGrid MUST be an options grid (id ending with _options_grid), NEVER a main data grid (e.g. use supplier_options_grid not suppliers_grid)
-4. labelField = "options_grid_id.field_id" — the single option field (e.g. "exercise_options_grid.exercise"). This field provides both display and stored value.
+4. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise").
 5. fieldMappings MUST have at least one entry where "to" is this select field path and "from" equals labelField (same path)
 6. Other fieldMappings entries auto-populate other main grid fields when an option is selected
 
@@ -117,7 +117,7 @@ Before completing output, verify:
 [ ] Every bindings key is "grid_id.field_id" (no tab)
 [ ] Every fieldMappings includes one entry where "to" equals the bindings key (the value mapping)
 [ ] Every optionsGrid, labelField (option field path), and fieldMappings from/to reference existing grids and fields
-[ ] labelField and the value mapping "from" point to the same option field (e.g. exercise_options_grid.exercise)
+[ ] labelField and the value mapping "from" point to the same option field; option field id must be DIFFERENT from the select field id (e.g. exercise_options_grid.exercise_option, not exercise_options_grid.exercise)
 [ ] Every optionsGrid id ends with _options_grid (options grids only; never main data grids)
 [ ] Shared tab infrastructure exists for all options grids referenced in bindings
 
@@ -162,7 +162,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - Create a tab with id "shared_tab" and name "Shared".
 - Add a section with id "option_lists_section" (e.g. name "Option Lists").
 - Create one table grid per distinct option set; grid id MUST end with _options_grid (e.g. category_options_grid).
-- Each options grid has ONE option field per select (e.g. field id "exercise" for exercise_options_grid). That field is both display and stored value. You can add additional fields for auto-populate (e.g., price, category).
+- Each options grid has ONE dedicated option field per select, with a different id than the select field (e.g. field id "exercise_option" for exercise_options_grid when the select field is "exercise"). That field is both display and stored value. You can add additional fields for auto-populate (e.g., price, category).
 - For EACH select/multiselect field, add an entry to the bindings object with optionsGrid pointing to the options grid (never to a main data grid).
 
 11. Views (REQUIRED)

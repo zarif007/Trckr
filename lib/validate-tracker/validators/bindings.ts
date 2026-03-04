@@ -25,6 +25,7 @@ function getFieldGridInfo(
 }
 
 export function validateBindings(ctx: ValidationContext): ValidatorResult {
+  const errors: string[] = []
   const warnings: string[] = []
   const builtInFunctionIds = new Set<string>(KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS as readonly string[])
   const customFunctions = ctx.dynamicOptions.functions ?? {}
@@ -99,6 +100,10 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
     const labelParsed = parsePath(entry.labelField)
     if (!labelParsed.fieldId || !ctx.fieldIds.has(labelParsed.fieldId)) {
       warnings.push(`Binding "${fieldPath}": labelField "${entry.labelField}" not found`)
+    } else if (fieldId && fieldId === labelParsed.fieldId) {
+      errors.push(
+        `Binding "${fieldPath}": the options grid must use a different field for option values than the select field. Use a dedicated field in the options grid (e.g. exercise_option) and set labelField to that grid.field path.`
+      )
     }
 
     const valueMapping = (entry.fieldMappings ?? []).find((m) => m.to === fieldPath)
@@ -144,5 +149,5 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
     }
   }
 
-  return { warnings }
+  return { errors, warnings }
 }

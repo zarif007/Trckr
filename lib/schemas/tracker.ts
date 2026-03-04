@@ -183,7 +183,7 @@ const fieldMappingSchema = z
 const bindingEntrySchema = z
   .object({
     optionsGrid: z.string().describe('Grid id containing options (e.g. product_options_grid)'),
-    labelField: z.string().describe('Path to the option field in options grid (grid_id.field_id). This field provides both display and stored value, e.g. exercise_options_grid.exercise'),
+    labelField: z.string().describe('Path to the option field in options grid (grid_id.field_id). Must be a different field id than the select field—use a dedicated option field in the options grid (e.g. exercise_options_grid.exercise_option), not the same id as the bound select.'),
     fieldMappings: z.array(fieldMappingSchema).default([]).describe('Must include one mapping where "to" is this select field and "from" is the same path as labelField; other mappings auto-populate'),
   })
   .passthrough()

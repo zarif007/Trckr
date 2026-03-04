@@ -15,6 +15,7 @@ export type TrackerNavState = {
 
 export type TrackerSaveState = {
   onSaveTracker: (() => void) | null
+  onSaveData: (() => void) | null
   isAgentBuilding: boolean
 }
 
@@ -27,6 +28,7 @@ const TrackerNavContext = createContext<{
 
 const initialSaveState: TrackerSaveState = {
   onSaveTracker: null,
+  onSaveData: null,
   isAgentBuilding: false,
 }
 

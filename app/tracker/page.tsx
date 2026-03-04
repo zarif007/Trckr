@@ -3,7 +3,7 @@
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence } from 'framer-motion'
-import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2, History } from 'lucide-react'
+import { AlertTriangle, Bot, Database, Eye, Layout, MoreHorizontal, Pencil, Share2, History, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/popover'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
+import { TrackerDataSave } from '@/app/components/tracker-page/TrackerDataSave'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
 import { TrackerDisplay, TrackerDisplayErrorBoundary } from '@/app/components/tracker-display'
 import {
@@ -38,6 +39,8 @@ const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
 const DEFAULT_LEFT_RATIO = 0.75
 
+type GridDataSnapshot = Record<string, Array<Record<string, unknown>>>
+
 const TrackerPanel = memo(function TrackerPanel({
   schema,
   editMode,
@@ -56,6 +59,17 @@ const TrackerPanel = memo(function TrackerPanel({
   trackerName: _trackerName,
   isViewingHistoricalVersion,
   onReturnToLatest,
+  trackerId,
+  initialGridData,
+  loadedSnapshotId,
+  loadedSnapshotLabel,
+  loadedSnapshotUpdatedAt,
+  latestSnapshotId,
+  onLoadSnapshot,
+  onSavedNewSnapshot,
+  onClearLoadedSnapshot,
+  onJumpToLatest,
+  onRegisterSaveData,
 }: {
   schema: TrackerResponse
   editMode: boolean
@@ -74,7 +88,21 @@ const TrackerPanel = memo(function TrackerPanel({
   trackerName?: string
   isViewingHistoricalVersion?: boolean
   onReturnToLatest?: () => void
+  trackerId?: string | null
+  initialGridData?: GridDataSnapshot | null
+  loadedSnapshotId?: string | null
+  loadedSnapshotLabel?: string | null
+  loadedSnapshotUpdatedAt?: string | null
+  latestSnapshotId?: string | null
+  onLoadSnapshot?: (snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => void
+  onSavedNewSnapshot?: (snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => void
+  onClearLoadedSnapshot?: () => void
+  onJumpToLatest?: () => void
+  onRegisterSaveData?: (fn: () => void) => void
 }) {
+  const isViewingLatestSnapshot = loadedSnapshotId != null && loadedSnapshotId === latestSnapshotId
+  const showSavedBar = loadedSnapshotId != null && !isViewingLatestSnapshot
+  const displayKey = `tracker-display-${loadedSnapshotId ?? 'default'}`
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -125,6 +153,30 @@ const TrackerPanel = memo(function TrackerPanel({
                 onClick={onReturnToLatest}
               >
                 Return to latest
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+      {showSavedBar && (
+        <div className="absolute top-0 left-0 right-0 z-30 px-4 py-2 bg-muted/80 border-b border-border backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground truncate min-w-0">
+              {loadedSnapshotLabel ?? 'Unnamed'}
+              {loadedSnapshotUpdatedAt && (
+                <span className="text-muted-foreground/80 ml-1">
+                  · {new Date(loadedSnapshotUpdatedAt).toLocaleDateString(undefined, { dateStyle: 'short' })}
+                </span>
+              )}
+            </span>
+            {onJumpToLatest && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs font-medium text-muted-foreground hover:bg-muted shrink-0"
+                onClick={onJumpToLatest}
+              >
+                Jump to latest
               </Button>
             )}
           </div>
@@ -296,6 +348,16 @@ const TrackerPanel = memo(function TrackerPanel({
                 Share
               </Button>
             )}
+            {trackerId && (onLoadSnapshot || onSavedNewSnapshot) && (
+              <TrackerDataSave
+                trackerId={trackerId}
+                trackerDataRef={trackerDataRef as React.RefObject<(() => GridDataSnapshot) | null>}
+                onLoadSnapshot={onLoadSnapshot}
+                onSavedNewSnapshot={onSavedNewSnapshot}
+                onRegisterSaveData={onRegisterSaveData}
+                disabled={isStreamingTracker}
+              />
+            )}
             <EditModeUndoButton
               undo={undo}
               canUndo={canUndo ?? false}
@@ -321,7 +383,7 @@ const TrackerPanel = memo(function TrackerPanel({
       <div
         className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
       >
-        <TrackerDisplayErrorBoundary>
+        <TrackerDisplayErrorBoundary key={displayKey}>
           {isStreamingTracker ? (
             <TrackerDisplay
               tabs={((schema.tabs || []) as unknown[]).filter(
@@ -349,6 +411,7 @@ const TrackerPanel = memo(function TrackerPanel({
               dependsOnByTarget={schema.dependsOnByTarget}
               dynamicOptions={(schema.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
               getDataRef={trackerDataRef}
+              initialGridData={initialGridData ?? undefined}
             />
           ) : (
             <TrackerDisplay
@@ -365,6 +428,7 @@ const TrackerPanel = memo(function TrackerPanel({
               dependsOnByTarget={schema.dependsOnByTarget}
               dynamicOptions={schema.dynamicOptions}
               getDataRef={trackerDataRef}
+              initialGridData={initialGridData ?? undefined}
               editMode={editMode}
               onSchemaChange={editMode ? handleSchemaChange : undefined}
               undo={undo}
@@ -391,6 +455,8 @@ export interface TrackerEditorViewProps {
   /** Conversation id and messages from DB (when opening a tracker that has a conversation). */
   initialConversationId?: string | null
   initialMessages?: Message[]
+  /** When opening a tracker, load this snapshot into the grid (e.g. latest saved snapshot). */
+  initialLoadedSnapshot?: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string } | null
 }
 
 function TrackerPageContent() {
@@ -426,6 +492,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     trackerId,
     initialConversationId,
     initialMessages,
+    initialLoadedSnapshot,
   } = props
   const {
     input,
@@ -468,12 +535,31 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     () => (initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse
   )
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
+  type LoadedSnapshot = {
+    id: string
+    label: string | null
+    data: GridDataSnapshot
+    updatedAt?: string
+  }
+  const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
+  const [latestSnapshot, setLatestSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
+  // When opening a tracker, initialLoadedSnapshot may be fetched async; sync it into state when it arrives
+  useEffect(() => {
+    if (initialLoadedSnapshot) {
+      setLoadedSnapshot(initialLoadedSnapshot)
+      setLatestSnapshot(initialLoadedSnapshot)
+    }
+  }, [initialLoadedSnapshot])
   // Track the last activeTrackerData we synced to schema, to avoid flash on stream end
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
   const setSaveState = trackerNavCtx?.setSaveState ?? null
+  const saveDataRef = useRef<() => void>(() => {})
+  const onRegisterSaveData = useCallback((fn: () => void) => {
+    saveDataRef.current = fn
+  }, [])
 
   // Sync schema from activeTrackerData, but do it synchronously to avoid flash
   // The key insight: when not viewing historical version and activeTrackerData changes,
@@ -563,14 +649,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     router.push(`/tracker/${data.id}?new=true`)
   }, [schema, trackerName, router, onSaveTracker])
 
-  // Register save action and agent building state with navbar
+  // Register save actions and agent building state with navbar
   useEffect(() => {
     if (!setSaveState) return
     setSaveState({
       onSaveTracker: handleSaveTracker,
+      onSaveData: () => saveDataRef.current?.(),
       isAgentBuilding: isLoading,
     })
-    return () => setSaveState({ onSaveTracker: null, isAgentBuilding: false })
+    return () => setSaveState({ onSaveTracker: null, onSaveData: null, isAgentBuilding: false })
   }, [setSaveState, handleSaveTracker, isLoading])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
@@ -584,6 +671,20 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     // On mobile, switch to preview tab
     setMobileTab('preview')
   }, [])
+
+  const handleLoadSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
+    setLoadedSnapshot(snapshot)
+  }, [])
+  const handleSavedNewSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
+    setLoadedSnapshot(snapshot)
+    setLatestSnapshot(snapshot)
+  }, [])
+  const handleClearLoadedSnapshot = useCallback(() => {
+    setLoadedSnapshot(null)
+  }, [])
+  const handleJumpToLatest = useCallback(() => {
+    if (latestSnapshot) setLoadedSnapshot(latestSnapshot)
+  }, [latestSnapshot])
 
   // Reset to latest tracker when user sends a new message
   const handleSubmitWithReset = useCallback(() => {
@@ -756,6 +857,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
                   setSchema(activeTrackerData)
                 }
               }}
+              trackerId={trackerId ?? undefined}
+              initialGridData={loadedSnapshot?.data ?? null}
+              loadedSnapshotId={loadedSnapshot?.id ?? null}
+              loadedSnapshotLabel={loadedSnapshot?.label ?? null}
+              loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
+              latestSnapshotId={latestSnapshot?.id ?? null}
+              onLoadSnapshot={handleLoadSnapshot}
+              onSavedNewSnapshot={handleSavedNewSnapshot}
+              onClearLoadedSnapshot={handleClearLoadedSnapshot}
+              onJumpToLatest={handleJumpToLatest}
+              onRegisterSaveData={onRegisterSaveData}
             />
           </TabsContent>
           <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
@@ -794,6 +906,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               setSchema(activeTrackerData)
             }
           }}
+          trackerId={trackerId ?? undefined}
+          initialGridData={loadedSnapshot?.data ?? null}
+          loadedSnapshotId={loadedSnapshot?.id ?? null}
+          loadedSnapshotLabel={loadedSnapshot?.label ?? null}
+          loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
+          latestSnapshotId={latestSnapshot?.id ?? null}
+          onLoadSnapshot={handleLoadSnapshot}
+          onSavedNewSnapshot={handleSavedNewSnapshot}
+          onClearLoadedSnapshot={handleClearLoadedSnapshot}
+          onJumpToLatest={handleJumpToLatest}
+          onRegisterSaveData={onRegisterSaveData}
         />
 
         {isChatOpen && (

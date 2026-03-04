@@ -1,8 +1,9 @@
 /**
- * Auto-fix missing bindings for select/multiselect fields.
- * Creates default bindings with Shared tab infrastructure; returns a new tracker (does not mutate).
+ * Auto-fix missing bindings and invalid bindings (select field id === options grid field id).
+ * Creates default bindings with Shared tab infrastructure and repairs same-id bindings; returns a new tracker (does not mutate).
  */
 
+import { parsePath, normalizeOptionsGridId } from '@/lib/resolve-bindings'
 import type { TrackerLike } from './types'
 import { titleCase } from './utils'
 
@@ -28,6 +29,52 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
   const sections = fixed.sections!
   const grids = fixed.grids!
   const layoutNodes = fixed.layoutNodes!
+
+  // --- Fix invalid bindings: select field id must not equal options grid label field id ---
+  for (const [fieldPath, entry] of Object.entries(fixed.bindings!)) {
+    const { fieldId: selectFieldId } = parsePath(fieldPath)
+    const optGridId = normalizeOptionsGridId(entry.optionsGrid)
+    const labelParsed = parsePath(entry.labelField)
+    const labelFieldId = labelParsed?.fieldId
+    if (!selectFieldId || !labelFieldId || selectFieldId !== labelFieldId || !optGridId) continue
+
+    const selectField = fixed.fields!.find((f) => f.id === selectFieldId)
+    const baseName = (selectField?.id ?? selectFieldId).replace(/_/g, ' ')
+    let optionFieldId = `${selectFieldId}_option`
+    let n = 1
+    while (fieldIds.has(optionFieldId)) {
+      optionFieldId = `${selectFieldId}_option_${++n}`
+    }
+
+    if (!fieldIds.has(optionFieldId)) {
+      fixed.fields!.push({
+        id: optionFieldId,
+        dataType: 'string',
+        ui: { label: titleCase(baseName), placeholder: 'Option name' },
+        config: { isRequired: true },
+      })
+      fieldIds.add(optionFieldId)
+    }
+
+    const existingInOptGrid = fixed.layoutNodes!.filter((n) => n.gridId === optGridId && n.fieldId === labelFieldId)
+    const hasNewNode = fixed.layoutNodes!.some((n) => n.gridId === optGridId && n.fieldId === optionFieldId)
+    if (existingInOptGrid.length > 0 && !hasNewNode) {
+      const maxOrder = Math.max(0, ...fixed.layoutNodes!.filter((n) => n.gridId === optGridId).map((n) => n.order ?? 0))
+      fixed.layoutNodes = fixed.layoutNodes!.filter((n) => !(n.gridId === optGridId && n.fieldId === labelFieldId))
+      fixed.layoutNodes!.push({ gridId: optGridId, fieldId: optionFieldId, order: maxOrder + 1 })
+    } else if (!hasNewNode) {
+      fixed.layoutNodes!.push({ gridId: optGridId, fieldId: optionFieldId, order: 1 })
+    }
+
+    const newLabelPath = `${optGridId}.${optionFieldId}`
+    fixed.bindings![fieldPath] = {
+      ...entry,
+      labelField: newLabelPath,
+      fieldMappings: (entry.fieldMappings ?? []).map((m) =>
+        m.from === entry.labelField ? { ...m, from: newLabelPath } : m
+      ),
+    }
+  }
 
   const getGridInfo = (fieldId: string): { tabId: string; gridId: string } | null => {
     const layoutNode = layoutNodes.find((n) => n.fieldId === fieldId)
@@ -80,7 +127,11 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
 
     const baseName = field.id.replace(/_/g, ' ')
     const optionsGridId = `${field.id}_options_grid`
-    const optionFieldId = field.id
+    let optionFieldId = `${field.id}_option`
+    let n = 1
+    while (fieldIds.has(optionFieldId)) {
+      optionFieldId = `${field.id}_option_${++n}`
+    }
 
     if (!gridIds.has(optionsGridId)) {
       gridPlaceId++

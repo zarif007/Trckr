@@ -21,6 +21,13 @@ type ConversationState = {
   messages: Message[]
 }
 
+type SavedSnapshot = {
+  id: string
+  label: string | null
+  data: Record<string, Array<Record<string, unknown>>>
+  updatedAt?: string
+}
+
 export default function TrackerByIdPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -46,6 +53,7 @@ export default function TrackerByIdPage() {
     conversationId: null,
     messages: [],
   })
+  const [latestSnapshot, setLatestSnapshot] = useState<SavedSnapshot | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -113,6 +121,38 @@ export default function TrackerByIdPage() {
       }
     }
     fetchConversation()
+    return () => {
+      cancelled = true
+    }
+  }, [id, state.tracker])
+
+  // Load latest saved snapshot so the tracker opens with the last saved data
+  useEffect(() => {
+    if (!id || !state.tracker) return
+    let cancelled = false
+    async function fetchLatestSnapshot() {
+      try {
+        const res = await fetch(`/api/trackers/${id}/data?limit=1`)
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        const items = data?.items
+        if (cancelled || !Array.isArray(items) || items.length === 0) return
+        const first = items[0]
+        if (first?.id && first?.data && typeof first.data === 'object' && !Array.isArray(first.data)) {
+          if (!cancelled) {
+            setLatestSnapshot({
+              id: first.id,
+              label: first.label ?? null,
+              data: first.data,
+              updatedAt: first.updatedAt,
+            })
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchLatestSnapshot()
     return () => {
       cancelled = true
     }
@@ -194,6 +234,7 @@ export default function TrackerByIdPage() {
       trackerId={id}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
+      initialLoadedSnapshot={latestSnapshot}
     />
   )
 }

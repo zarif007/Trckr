@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
-import { validateTracker, type TrackerLike } from '@/lib/validate-tracker'
+import { validateTracker, autoFixBindings, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -358,7 +358,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       setResumingAfterError(false)
       setValidationErrors([])
       if (finishedObject) {
-        const tracker = buildTrackerFromResponse(finishedObject)
+        let tracker = buildTrackerFromResponse(finishedObject)
+        if (tracker) {
+          tracker = autoFixBindings(tracker as TrackerLike) as TrackerResponse
+        }
         const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
 
         // Auto-retry: send validation errors back to the AI to fix (e.g. unsupported expr.op like "count")
@@ -436,7 +439,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         setPendingQuery(null)
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current
-        const partialTracker = buildTrackerFromResponse(partial)
+        let partialTracker = buildTrackerFromResponse(partial)
+        if (partialTracker) {
+          partialTracker = autoFixBindings(partialTracker as TrackerLike) as TrackerResponse
+        }
         const hasPartial =
           partial &&
           (partial.manager || trackerHasAnyData(partialTracker))
@@ -488,7 +494,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     },
     onError: (err: Error) => {
       const partial = lastObjectRef.current
-      const partialTracker = buildTrackerFromResponse(partial)
+      let partialTracker = buildTrackerFromResponse(partial)
+      if (partialTracker) {
+        partialTracker = autoFixBindings(partialTracker as TrackerLike) as TrackerResponse
+      }
       const hasPartial =
         partial &&
         (partial.manager || trackerHasAnyData(partialTracker))
@@ -542,7 +551,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
 
   /** Resolved tracker for streaming UI: full tracker or base + trackerPatch. Use this so 2nd+ requests show streaming when LLM returns a patch. */
   const streamedDisplayTracker = useMemo(() => {
-    return buildTrackerFromResponse(object as MultiAgentSchema | undefined)
+    const built = buildTrackerFromResponse(object as MultiAgentSchema | undefined)
+    return built ? (autoFixBindings(built as TrackerLike) as TrackerResponse) : built
   }, [object])
 
   const scrollToBottom = () => {

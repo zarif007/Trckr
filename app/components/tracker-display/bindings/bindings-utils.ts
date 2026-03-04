@@ -176,6 +176,12 @@ export function validateBindingDraft(
       const gridFields = context.gridFieldMap.get(optionsGrid)
       if (gridFields && !gridFields.has(parsed.fieldId)) {
         errors.labelField = 'Label field does not exist in the selected options grid.'
+      } else if (key) {
+        const keyFieldId = parsePath(key).fieldId
+        if (keyFieldId && keyFieldId === parsed.fieldId) {
+          errors.labelField =
+            'The options grid must use a different field than the select field. Add a dedicated field (e.g. exercise_option) in the options grid and choose it here.'
+        }
       }
     }
   }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { ArrowLeft, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Database, Layout, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TeamSwitcher, TeamMembersDialog } from './teams'
@@ -92,8 +92,11 @@ export default function TrackerNavBar() {
   const { theme, setTheme } = useTheme()
   const ctx = useTrackerNav()
   const trackerNav = ctx?.trackerNav ?? null
-  const { onSaveTracker, isAgentBuilding } = ctx?.saveState ?? { onSaveTracker: null, isAgentBuilding: false }
-  const [saving, setSaving] = useState(false)
+  const { onSaveTracker, onSaveData, isAgentBuilding } = ctx?.saveState ?? { onSaveTracker: null, onSaveData: null, isAgentBuilding: false }
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const [savingTracker, setSavingTracker] = useState(false)
+  const [savingData, setSavingData] = useState(false)
+  const hasSave = Boolean(onSaveTracker || onSaveData)
 
   useEffect(() => setThemeMounted(true), [])
   useEffect(() => {
@@ -128,25 +131,73 @@ export default function TrackerNavBar() {
           </div>
 
           <div className="flex items-center gap-2">
-            {onSaveTracker && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                disabled={isAgentBuilding || saving}
-                onClick={async () => {
-                  setSaving(true)
-                  try {
-                    await onSaveTracker()
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-                aria-label="Save tracker to database"
-              >
-                <Save className="h-3.5 w-3.5" />
-                {saving ? 'Saving…' : 'Save'}
-              </Button>
+            {hasSave && (
+              <Popover open={saveMenuOpen} onOpenChange={setSaveMenuOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs"
+                    disabled={isAgentBuilding || savingTracker || savingData}
+                    aria-label="Save — tracker or data"
+                  >
+                    <Save className="h-3.5 w-3.5" />
+                    Save
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56 p-1.5" sideOffset={6}>
+                  <p className="px-2 py-1.5 text-[11px] text-muted-foreground border-b border-border/60 mb-1">
+                    What do you want to save?
+                  </p>
+                  {onSaveTracker && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-full justify-start gap-2 px-2 font-normal text-foreground hover:bg-muted"
+                      disabled={savingTracker}
+                      onClick={async () => {
+                        setSavingTracker(true)
+                        try {
+                          await onSaveTracker()
+                          setSaveMenuOpen(false)
+                        } finally {
+                          setSavingTracker(false)
+                        }
+                      }}
+                    >
+                      <Layout className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex flex-col items-start">
+                        <span>Save tracker</span>
+                        <span className="text-[10px] font-normal text-muted-foreground">Name and structure</span>
+                      </span>
+                    </Button>
+                  )}
+                  {onSaveData && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-full justify-start gap-2 px-2 font-normal text-foreground hover:bg-muted"
+                      disabled={savingData}
+                      onClick={async () => {
+                        setSavingData(true)
+                        try {
+                          await Promise.resolve(onSaveData())
+                          setSaveMenuOpen(false)
+                        } finally {
+                          setSavingData(false)
+                        }
+                      }}
+                    >
+                      <Database className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex flex-col items-start">
+                        <span>Save data</span>
+                        <span className="text-[10px] font-normal text-muted-foreground">Current grid as snapshot</span>
+                      </span>
+                    </Button>
+                  )}
+                </PopoverContent>
+              </Popover>
             )}
             <TeamSwitcher />
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
