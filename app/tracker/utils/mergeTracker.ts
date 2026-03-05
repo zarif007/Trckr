@@ -149,7 +149,7 @@ export function applyTrackerPatch(
       if (value === null) {
         delete bindings[key]
       } else {
-        bindings[key] = value as any
+        bindings[key] = value as typeof bindings[string]
       }
     }
   }
@@ -258,7 +258,7 @@ export function applyTrackerPatch(
         const existing = isPlainObject(styles[key]) ? styles[key] : {}
         styles[key] = { ...existing, ...value }
       } else {
-        styles[key] = value as any
+        styles[key] = value as typeof styles[string]
       }
     }
   }

@@ -75,7 +75,7 @@ function TrackerKanbanGridInner({
   styleOverrides,
   dependsOn,
   gridData = {},
-  gridDataRef,
+  gridDataRef: _gridDataRef,
   gridDataForThisGrid,
   onUpdate,
   onAddEntry,
@@ -86,8 +86,11 @@ function TrackerKanbanGridInner({
   const addable = (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false && onAddEntry != null
   const editable = grid.config?.isRowEditAble !== false
   const deleteable = (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false && onDeleteEntries != null
-  const fullGridData = gridDataRef?.current ?? gridData
   const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
+  const fullGridData = useMemo(
+    () => ({ ...gridData, [grid.id]: thisGridRows }),
+    [gridData, grid.id, thisGridRows]
+  )
   const gridDataForKanban = useMemo(
     () => ({ ...fullGridData, [grid.id]: thisGridRows }),
     [fullGridData, thisGridRows, grid.id]
@@ -118,25 +121,13 @@ function TrackerKanbanGridInner({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
-
-  if (!kanbanState) {
-    if (layoutNodes.filter((n) => n.gridId === grid.id).length === 0) return null
-    return (
-      <div className="text-muted-foreground text-sm">
-        Kanban view requires a grouping field (check grid config or ensure an options/multiselect field exists)
-      </div>
-    )
-  }
-
-  const {
-    groups,
-    groupByFieldId,
-    cardFieldsDisplay,
-    fieldMetadata,
-    fieldOrder,
-    kanbanFields,
-    rows,
-  } = kanbanState
+  const groups = kanbanState?.groups ?? []
+  const groupByFieldId = kanbanState?.groupByFieldId ?? ''
+  const cardFieldsDisplay = kanbanState?.cardFieldsDisplay ?? []
+  const fieldMetadata = kanbanState?.fieldMetadata ?? {}
+  const fieldOrder = kanbanState?.fieldOrder ?? []
+  const kanbanFields = kanbanState?.kanbanFields ?? []
+  const rows = kanbanState?.rows ?? []
 
   const groupedCards = useMemo(() => {
     const map = new Map<string, Array<Record<string, unknown> & { _originalIdx: number }>>()
@@ -287,6 +278,15 @@ function TrackerKanbanGridInner({
     const idx = parseInt(activeId.split('-')[0], 10)
     return Number.isNaN(idx) ? null : rows[idx]
   }, [activeId, rows])
+
+  if (!kanbanState) {
+    if (layoutNodes.filter((node) => node.gridId === grid.id).length === 0) return null
+    return (
+      <div className="text-muted-foreground text-sm">
+        Kanban view requires a grouping field (check grid config or ensure an options/multiselect field exists)
+      </div>
+    )
+  }
 
   return (
     <DndContext

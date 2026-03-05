@@ -41,7 +41,7 @@ export default function Examples() {
           >
             <div className="p-4 rounded-md bg-secondary/20 border border-border/40 hover:bg-secondary/40 hover:border-border transition-all cursor-pointer">
               <p className="text-sm text-foreground/80 font-mono leading-relaxed">
-                "{prompt}"
+                &ldquo;{prompt}&rdquo;
               </p>
             </div>
           </motion.div>

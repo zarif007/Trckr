@@ -1,6 +1,6 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useCallback } from 'react'
 import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -53,6 +53,11 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
   const fieldLabel = field.ui.label
   const opts = options ?? []
 
+  const onBooleanChange = useCallback(
+    (checked: boolean) => onUpdateWithTouched(fieldId, checked),
+    [fieldId, onUpdateWithTouched]
+  )
+
   const toItemValue = (v: unknown) => {
     const s = String(v ?? '').trim()
     return s === '' ? '__empty__' : s
@@ -84,7 +89,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             <Checkbox
               checked={value === true}
               disabled={isDisabled}
-              onCheckedChange={(checked) => onUpdateWithTouched(fieldId, checked)}
+              onCheckedChange={onBooleanChange}
             />
           </div>
         )

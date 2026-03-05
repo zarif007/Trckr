@@ -264,7 +264,7 @@ export function ValidationsTab({
                         </span>
                         {rule.message && (
                           <p className="text-xs text-muted-foreground mt-0.5 truncate" title={rule.message}>
-                            "{rule.message}"
+                            &ldquo;{rule.message}&rdquo;
                           </p>
                         )}
                       </div>

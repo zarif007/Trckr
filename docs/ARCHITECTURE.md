@@ -1,6 +1,13 @@
-# Architecture Overview
+# Architecture Overview (Legacy Entry)
 
-High-level structure of the Trckr application and how its main pieces fit together.
+This file is kept for backward compatibility. The maintained architecture docs now live in:
+
+- [`docs/README.md`](./README.md)
+- [`docs/architecture/system-overview.md`](./architecture/system-overview.md)
+- [`docs/architecture/module-boundaries.md`](./architecture/module-boundaries.md)
+- [`docs/architecture/data-flow.md`](./architecture/data-flow.md)
+
+The sections below summarize the same high-level architecture.
 
 ## Data Flow
 

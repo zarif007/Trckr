@@ -1,13 +1,11 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from 'react'
+import { useEffect, useMemo, type CSSProperties } from 'react'
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
-import type { DragEndEvent } from '@dnd-kit/core'
 import {
   SortableContext,
   horizontalListSortingStrategy,
-  arrayMove,
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -19,28 +17,12 @@ import { TrackerTabContent } from './sections'
 import { InlineEditableName } from './layout'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
-import { createNewTabId, getNextTabPlaceId } from './edit-mode'
-import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
-import {
-  applyCompiledCalculationsForRow,
-  buildAccumulateDepsBySourceGrid,
-  compileCalculationsForGrid,
-} from '@/lib/field-calculation'
 import { SHARED_TAB_ID } from '@/lib/depends-on-options'
 import { getEffectiveDependsOn } from '@/lib/depends-on'
+import { useTrackerTabs } from './state/useTrackerTabs'
+import { useGridDataEngine } from './state/useGridDataEngine'
+import { useSchemaTabActions } from './state/useSchemaTabActions'
 // Bindings grid (Shared tab) intentionally unused; bindings are configured per field settings now.
-
-const DEFAULT_SHARED_TAB: TrackerTab = {
-  id: SHARED_TAB_ID,
-  name: 'Shared',
-  placeId: 999,
-  config: {},
-}
-
-function getPreferredTabId(tabs: TrackerTab[]): string {
-  const nonShared = tabs.find((tab) => tab.id !== SHARED_TAB_ID)
-  return nonShared?.id ?? tabs[0]?.id ?? ''
-}
 
 // Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
 function SortableTabRow({
@@ -141,241 +123,33 @@ export function TrackerDisplayInline({
   undo,
   canUndo,
 }: TrackerDisplayProps) {
-  const normalizedTabs = useMemo(() => {
-    const list = (tabs ?? []).filter((tab) => !tab.config?.isHidden)
-    const hasShared = list.some((t) => t.id === SHARED_TAB_ID)
-    if (!hasShared) {
-      return [...list, DEFAULT_SHARED_TAB].sort((a, b) => a.placeId - b.placeId)
-    }
-    return list.sort((a, b) => a.placeId - b.placeId)
-  }, [tabs])
-
-  /** True when the Shared tab is in the displayed tab list. */
-  const hasSharedTabInView = useMemo(
-    () => normalizedTabs.some((t) => t.id === SHARED_TAB_ID),
-    [normalizedTabs]
-  )
-
-  const [activeTabId, setActiveTabId] = useState(() => getPreferredTabId(normalizedTabs))
-  const userSelectedTabRef = useRef(false)
-
-  useEffect(() => {
-    if (normalizedTabs.length > 0) {
-      const tabExists = normalizedTabs.some((tab) => tab.id === activeTabId)
-      const hasNonShared = normalizedTabs.some((tab) => tab.id !== SHARED_TAB_ID)
-      const shouldAutoMoveFromShared =
-        activeTabId === SHARED_TAB_ID && hasNonShared && !userSelectedTabRef.current
-      if (!activeTabId || !tabExists || shouldAutoMoveFromShared) {
-        setActiveTabId(getPreferredTabId(normalizedTabs))
-      }
-    }
-  }, [normalizedTabs, activeTabId])
-
-  const handleTabChange = useCallback((nextTabId: string) => {
-    userSelectedTabRef.current = true
-    setActiveTabId(nextTabId)
-  }, [])
-
-  const seedGridData = useMemo(() => {
-    const fromBindings = getInitialGridDataFromBindings(bindings ?? {})
-    const fromInitial = initialGridData ?? {}
-    const merged: Record<string, Array<Record<string, unknown>>> = {}
-    const allGridIds = new Set([...Object.keys(fromBindings), ...Object.keys(fromInitial)])
-    for (const gridId of allGridIds) {
-      const initialRows = fromInitial[gridId]
-      const bindingRows = fromBindings[gridId]
-      if (initialRows?.length > 0) {
-        merged[gridId] = initialRows
-      } else if (Array.isArray(bindingRows)) {
-        merged[gridId] = bindingRows
-      } else {
-        merged[gridId] = []
-      }
-    }
-    return merged
-  }, [bindings, initialGridData])
-
-  const [localGridData, setLocalGridData] = useState<
-    Record<string, Array<Record<string, unknown>>>
-  >(() => ({}))
-
   const effectiveSections = sections ?? []
   const effectiveGrids = grids ?? []
   const effectiveFields = fields ?? []
   const effectiveLayoutNodes = layoutNodes ?? []
-
-  const baseGridData = seedGridData
-
-  const gridData = useMemo(() => {
-    const merged = { ...baseGridData }
-    for (const [gridId, rows] of Object.entries(localGridData)) {
-      if (Array.isArray(rows)) merged[gridId] = rows
-    }
-    return merged
-  }, [baseGridData, localGridData])
-
-  const gridDataRef = useRef<Record<string, Array<Record<string, unknown>>>>(gridData)
-  gridDataRef.current = gridData
-
-  const compiledCalculationsByGrid = useMemo(() => {
-    const plans = new Map<string, ReturnType<typeof compileCalculationsForGrid>>()
-    if (!calculations || Object.keys(calculations).length === 0) return plans
-    for (const grid of effectiveGrids) {
-      plans.set(grid.id, compileCalculationsForGrid(grid.id, calculations))
-    }
-    return plans
-  }, [calculations, effectiveGrids])
-
-  /** Memo: source grid id -> target grid ids that have accumulate over it. Single-pass over calculations. */
-  const accumulateDepsBySourceGrid = useMemo(
-    () => buildAccumulateDepsBySourceGrid(calculations ?? undefined),
-    [calculations]
-  )
-
+  const { normalizedTabs, activeTabId, setActiveTabId, handleTabChange } = useTrackerTabs(tabs)
+  const {
+    gridData,
+    gridDataRef,
+    handleUpdate,
+    handleAddEntry,
+    handleDeleteEntries,
+  } = useGridDataEngine({
+    bindings,
+    initialGridData,
+    calculations,
+    gridIds: effectiveGrids.map((grid) => grid.id),
+  })
   const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
-
   const effectiveDependsOn = useMemo(
     () => getEffectiveDependsOn({ dependsOn, dependsOnByTarget }),
     [dependsOn, dependsOnByTarget]
   )
 
-  // Keep getDataRef.current set to the latest gridData getter. Do not clear on cleanup
-  // so that Save Data can read it even when effect deps change (avoids ref being null on click).
   useEffect(() => {
-    if (getDataRef) {
-      getDataRef.current = () => gridData
-    }
+    if (!getDataRef) return
+    getDataRef.current = () => gridData
   }, [gridData, getDataRef])
-
-  const handleUpdate = useCallback(
-    (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
-      const calculationKey = `${gridId}.${columnId}`
-      const isCalculatedField = !!calculations?.[calculationKey]
-
-      setLocalGridData((prev) => {
-        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
-        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        const next = [...current]
-        while (next.length <= rowIndex) next.push({})
-        const row = { ...next[rowIndex], [columnId]: value }
-        const plan = compiledCalculationsByGrid.get(gridId)
-        next[rowIndex] = row
-        result[gridId] = next
-        const gridDataForCalc = result
-
-        const calculatedRow = plan
-          ? applyCompiledCalculationsForRow({
-            plan,
-            row,
-            changedFieldIds: [columnId],
-            gridData: gridDataForCalc,
-          }).row
-          : row
-
-        const finalRow = isCalculatedField ? { ...calculatedRow, [columnId]: value } : calculatedRow
-
-        next[rowIndex] = finalRow
-        result[gridId] = next
-
-        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
-        if (dependentGridIds?.length) {
-          for (const depGridId of dependentGridIds) {
-            if (depGridId === gridId) continue
-            const depPlan = compiledCalculationsByGrid.get(depGridId)
-            if (!depPlan) continue
-            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
-            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
-            const updatedDepRows = rowsToRecalc.map((r) =>
-              applyCompiledCalculationsForRow({
-                plan: depPlan,
-                row: r,
-                gridData: gridDataForCalc,
-              }).row
-            )
-            result[depGridId] = updatedDepRows
-          }
-        }
-        return result
-      })
-    },
-    [baseGridData, calculations, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
-  )
-
-  const handleAddEntry = useCallback(
-    (gridId: string, newRow: Record<string, unknown>) => {
-      setLocalGridData((prev) => {
-        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
-        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        const newRows = [...current, newRow]
-        result[gridId] = newRows
-        const gridDataForCalc = result
-        const plan = compiledCalculationsByGrid.get(gridId)
-        const calculatedRow = plan
-          ? applyCompiledCalculationsForRow({
-            plan,
-            row: newRow,
-            changedFieldIds: Object.keys(newRow),
-            gridData: gridDataForCalc,
-          }).row
-          : newRow
-        result[gridId] = [...current, calculatedRow]
-
-        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
-        if (dependentGridIds?.length) {
-          for (const depGridId of dependentGridIds) {
-            if (depGridId === gridId) continue
-            const depPlan = compiledCalculationsByGrid.get(depGridId)
-            if (!depPlan) continue
-            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
-            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
-            const updatedDepRows = rowsToRecalc.map((r) =>
-              applyCompiledCalculationsForRow({
-                plan: depPlan,
-                row: r,
-                gridData: gridDataForCalc,
-              }).row
-            )
-            result[depGridId] = updatedDepRows
-          }
-        }
-        return result
-      })
-    },
-    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
-  )
-
-  const handleDeleteEntries = useCallback(
-    (gridId: string, rowIndices: number[]) => {
-      setLocalGridData((prev) => {
-        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
-        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        const filtered = current.filter((_, index) => !rowIndices.includes(index))
-        result[gridId] = filtered
-        const gridDataForCalc = result
-
-        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
-        if (dependentGridIds?.length) {
-          for (const depGridId of dependentGridIds) {
-            if (depGridId === gridId) continue
-            const depPlan = compiledCalculationsByGrid.get(depGridId)
-            if (!depPlan) continue
-            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
-            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
-            const updatedDepRows = rowsToRecalc.map((r) =>
-              applyCompiledCalculationsForRow({
-                plan: depPlan,
-                row: r,
-                gridData: gridDataForCalc,
-              }).row
-            )
-            result[depGridId] = updatedDepRows
-          }
-        }
-        return result
-      })
-    },
-    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
-  )
 
   const editModeSchema = useMemo(
     () =>
@@ -384,158 +158,23 @@ export function TrackerDisplayInline({
         : undefined,
     [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions]
   )
-
-  const handleAddTab = useCallback(() => {
-    if (!onSchemaChange) return
-    const tabList = tabs ?? []
-    const existingIds = new Set(tabList.map((t) => t.id))
-    const id = createNewTabId(existingIds)
-    const placeId = getNextTabPlaceId(tabList)
-    const newTab = { id, name: 'New tab', placeId, config: {} }
-    onSchemaChange({
-      tabs: [...tabList, newTab],
-      sections: sections ?? [],
-      grids: grids ?? [],
-      fields: fields ?? [],
-      layoutNodes: layoutNodes ?? [],
-      bindings: bindings ?? {},
-      validations,
-      calculations,
-      styles,
-      dependsOn,
-      dynamicOptions,
-    })
-    setActiveTabId(id)
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange])
-
-  const handleRemoveTab = useCallback(
-    (tabId: string) => {
-      if (!onSchemaChange || tabId === SHARED_TAB_ID) return
-      const tabList = (tabs ?? []).filter((t) => t.id !== tabId)
-      const sectionIdsInTab = new Set(
-        (sections ?? []).filter((s) => s.tabId === tabId).map((s) => s.id)
-      )
-      const nextSections = (sections ?? []).filter((s) => s.tabId !== tabId)
-      const nextGrids = (grids ?? []).filter((g) => !sectionIdsInTab.has(g.sectionId))
-      const removedGridIds = new Set(
-        (grids ?? []).filter((g) => sectionIdsInTab.has(g.sectionId)).map((g) => g.id)
-      )
-      const nextLayoutNodes = (layoutNodes ?? []).filter(
-        (n) => !removedGridIds.has(n.gridId)
-      )
-      onSchemaChange({
-        tabs: tabList,
-        sections: nextSections,
-        grids: nextGrids,
-        fields: fields ?? [],
-        layoutNodes: nextLayoutNodes,
-        bindings: bindings ?? {},
-        validations,
-        calculations,
-        styles,
-        dependsOn,
-        dynamicOptions,
-      })
-      if (activeTabId === tabId) {
-        const next = tabList[0]?.id ?? ''
-        setActiveTabId(next)
-      }
-    },
-    [
-      tabs,
-      sections,
-      grids,
-      fields,
-      layoutNodes,
-      bindings,
-      validations,
-      calculations,
-      styles,
-      dependsOn,
-      dynamicOptions,
-      onSchemaChange,
-      activeTabId,
-    ]
-  )
-
-  const handleRenameTab = useCallback(
-    (tabId: string, name: string) => {
-      if (!onSchemaChange || !tabs) return
-      const nextTabs = (tabs ?? []).map((t) =>
-        t.id === tabId ? { ...t, name: name.trim() || t.name } : t
-      )
-      onSchemaChange({
-        tabs: nextTabs,
-        sections: sections ?? [],
-        grids: grids ?? [],
-        fields: fields ?? [],
-        layoutNodes: layoutNodes ?? [],
-        bindings: bindings ?? {},
-        validations,
-        calculations,
-        styles,
-        dependsOn,
-        dynamicOptions,
-      })
-    },
-    [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange]
-  )
-
-  const handleTabDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const { active, over } = event
-      if (!onSchemaChange || !over || active.id === over.id) return
-
-      const activeId = String(active.id)
-      const overId = String(over.id)
-      if (!activeId.startsWith('tab-') || !overId.startsWith('tab-')) return
-      const activeTabIdFromDrag = activeId.slice(4)
-      const overTabIdFromDrag = overId.slice(4)
-
-      const oldIndex = normalizedTabs.findIndex((t) => t.id === activeTabIdFromDrag)
-      const newIndex = normalizedTabs.findIndex((t) => t.id === overTabIdFromDrag)
-      if (oldIndex < 0 || newIndex < 0) return
-
-      const reordered = arrayMove(normalizedTabs, oldIndex, newIndex)
-      const hiddenTabs = (tabs ?? []).filter((t) => t.config?.isHidden)
-      const reorderedWithPlaceIds: TrackerTab[] = reordered.map((t, i) => ({
-        ...t,
-        placeId: i,
-      }))
-      const hiddenWithPlaceIds: TrackerTab[] = hiddenTabs.map((t, i) => ({
-        ...t,
-        placeId: reordered.length + i,
-      }))
-      onSchemaChange({
-        tabs: [...reorderedWithPlaceIds, ...hiddenWithPlaceIds],
-        sections: sections ?? [],
-        grids: grids ?? [],
-        fields: fields ?? [],
-        layoutNodes: layoutNodes ?? [],
-        bindings: bindings ?? {},
-        validations,
-        calculations,
-        styles,
-        dependsOn,
-        dynamicOptions,
-      })
-    },
-    [
-      normalizedTabs,
-      tabs,
-      sections,
-      grids,
-      fields,
-      layoutNodes,
-      bindings,
-      validations,
-      calculations,
-      styles,
-      dependsOn,
-      dynamicOptions,
-      onSchemaChange,
-    ]
-  )
+  const { handleAddTab, handleRemoveTab, handleRenameTab, handleTabDragEnd } = useSchemaTabActions({
+    tabs,
+    sections,
+    grids,
+    fields,
+    layoutNodes,
+    bindings,
+    validations,
+    calculations,
+    styles,
+    dependsOn,
+    dynamicOptions,
+    onSchemaChange,
+    normalizedTabs,
+    activeTabId,
+    setActiveTabId,
+  })
 
   const tabSortableIds = useMemo(
     () => normalizedTabs.map((t) => `tab-${t.id}`),

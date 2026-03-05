@@ -100,7 +100,7 @@ export function TrackerMessageList({
                     >
                       <div className="pt-2 space-y-3 min-w-0">
                         <p className="text-sm font-medium leading-relaxed italic text-foreground/80 break-words">
-                          "{message.managerData.thinking}"
+                          &ldquo;{message.managerData.thinking}&rdquo;
                         </p>
                         {message.managerData.builderTodo && message.managerData.builderTodo.length > 0 && (
                           <div className="mt-2 space-y-1.5 min-w-0">

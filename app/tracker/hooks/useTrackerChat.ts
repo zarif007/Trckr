@@ -1,17 +1,28 @@
 'use client'
 
-import { useState, useEffect, useRef, useMemo } from 'react'
-import { Zap, Target, BookOpen, CheckSquare } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, autoFixBindings, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
-import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
+import { ensureConversation, persistMessage } from './conversation'
+import {
+  CONTINUE_PROMPT,
+  MAX_AUTO_CONTINUES,
+  MAX_VALIDATION_FIX_RETRIES,
+} from './constants'
+import {
+  isUntouchedFirstRunScaffold,
+  normalizeValidationAndCalculations,
+  trackerHasAnyData,
+} from './normalization'
 
-export interface TrackerResponse extends TrackerDisplayProps { }
+export { suggestions, quickSuggestions } from './constants'
+
+export type TrackerResponse = TrackerDisplayProps
 
 export interface Message {
   role: 'user' | 'assistant'
@@ -21,130 +32,6 @@ export interface Message {
   errorMessage?: string
   isThinkingOpen?: boolean
 }
-
-const CONTINUE_PROMPT =
-  'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
-
-const MAX_AUTO_CONTINUES = 3
-const MAX_VALIDATION_FIX_RETRIES = 2
-const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
-const DEFAULT_SHARED_TAB_ID = 'shared_tab'
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  value != null && typeof value === 'object' && !Array.isArray(value)
-
-const isEmptyObject = (value: unknown): boolean =>
-  !isPlainObject(value) || Object.keys(value).length === 0
-
-const isDefaultTabConfig = (value: unknown): boolean => {
-  if (!isPlainObject(value)) return true
-  for (const [key, v] of Object.entries(value)) {
-    if (key !== 'isHidden') return false
-    if (v !== false && v !== undefined) return false
-  }
-  return true
-}
-
-/**
- * Detect untouched first-run scaffold so we don't force patch mode:
- * - tabs are only default Overview (+ optional default Shared)
- * - no sections/grids/fields/layout nodes/bindings/validations/calculations/styles/dependsOn
- */
-const isUntouchedFirstRunScaffold = (tracker: TrackerLike | null | undefined): boolean => {
-  if (!tracker) return true
-  const trackerWithExtras = tracker as TrackerLike & { styles?: unknown; dynamicOptions?: unknown }
-
-  const sections = Array.isArray(tracker.sections) ? tracker.sections : []
-  const grids = Array.isArray(tracker.grids) ? tracker.grids : []
-  const fields = Array.isArray(tracker.fields) ? tracker.fields : []
-  const layoutNodes = Array.isArray(tracker.layoutNodes) ? tracker.layoutNodes : []
-  const dependsOn = Array.isArray(tracker.dependsOn) ? tracker.dependsOn : []
-
-  if (sections.length > 0 || grids.length > 0 || fields.length > 0 || layoutNodes.length > 0) {
-    return false
-  }
-
-  if (
-    !isEmptyObject(tracker.bindings) ||
-    !isEmptyObject(tracker.validations) ||
-    !isEmptyObject((tracker as TrackerLike & { calculations?: unknown }).calculations) ||
-    !isEmptyObject(trackerWithExtras.styles) ||
-    !isEmptyObject(trackerWithExtras.dynamicOptions)
-  ) {
-    return false
-  }
-  if (dependsOn.length > 0) return false
-
-  const tabs = Array.isArray(tracker.tabs) ? tracker.tabs : []
-  if (tabs.length === 0 || tabs.length > 2) return false
-
-  let sawOverview = false
-  for (const tab of tabs) {
-    if (!tab || typeof tab.id !== 'string') return false
-    if (!isDefaultTabConfig(tab.config)) return false
-
-    if (tab.id === DEFAULT_OVERVIEW_TAB_ID) {
-      sawOverview = true
-      if ((tab.name ?? 'Overview') !== 'Overview') return false
-      continue
-    }
-
-    if (tab.id === DEFAULT_SHARED_TAB_ID) {
-      if ((tab.name ?? 'Shared') !== 'Shared') return false
-      continue
-    }
-
-    return false
-  }
-
-  return sawOverview
-}
-
-export const suggestions = [
-  {
-    icon: Zap,
-    title: 'Personal Fitness Logger',
-    summary: 'Fitness log',
-    desc: 'Track workouts, weights, and progress over time',
-    query: 'Create a personal fitness tracker to log daily workouts, sets, reps, and body weight progress.',
-    gradient: 'from-orange-500/20 to-red-500/20',
-    iconColor: 'text-orange-500'
-  },
-  {
-    icon: Target,
-    title: 'Company Inventory',
-    summary: 'Inventory',
-    desc: 'Manage stock levels, suppliers, and SKU details',
-    query: 'Build a company inventory system to track stock levels, supplier contacts, and warehouse locations.',
-    gradient: 'from-blue-500/20 to-cyan-500/20',
-    iconColor: 'text-blue-500'
-  },
-  {
-    icon: BookOpen,
-    title: 'Recipe Collection',
-    summary: 'Recipe book',
-    desc: 'Save favorite recipes with ingredients and cooking steps',
-    query: 'Design a digital cookbook for saving recipes, including ingredient lists, difficulty ratings, and preparation time.',
-    gradient: 'from-green-500/20 to-emerald-500/20',
-    iconColor: 'text-green-500'
-  },
-  {
-    icon: CheckSquare,
-    title: 'Project Task Manager',
-    summary: 'Project tasks',
-    desc: 'Stay organized with deadlines, priorities, and status',
-    query: 'Create a project management tracker with task deadlines, priority levels, and kanban stages.',
-    gradient: 'from-purple-500/20 to-pink-500/20',
-    iconColor: 'text-purple-500'
-  }
-]
-
-export const quickSuggestions = [
-  { text: 'Add status column', icon: '📊' },
-  { text: 'Group by priority', icon: '🎯' },
-  { text: 'Add email field', icon: '📧' },
-  { text: 'Change color theme', icon: '🎨' }
-]
 
 export interface UseTrackerChatOptions {
   /** When provided, the chat starts with this tracker as the base (e.g. when editing an existing tracker by id). */
@@ -157,43 +44,12 @@ export interface UseTrackerChatOptions {
   initialMessages?: Message[]
 }
 
-async function ensureConversation(trackerId: string): Promise<string> {
-  const res = await fetch(`/api/trackers/${trackerId}/conversation`, { method: 'POST' })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.error ?? 'Failed to create conversation')
-  }
-  const data = (await res.json()) as { id: string }
-  return data.id
-}
-
-async function persistMessage(
-  conversationId: string,
-  payload: {
-    role: 'USER' | 'ASSISTANT'
-    content: string
-    trackerSchemaSnapshot?: object
-    managerData?: object
-  }
-): Promise<void> {
-  const res = await fetch(`/api/conversations/${conversationId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}))
-    throw new Error(data.error ?? 'Failed to save message')
-  }
-}
-
 export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const { initialTracker = null, trackerId, conversationId: initialConversationId, initialMessages } = options
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => initialMessages ?? [])
   const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null)
-  const [pendingQuery, setPendingQuery] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
@@ -252,29 +108,25 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     return getBaseTracker()
   }
 
-  const setResolvedTrackerData = (next: TrackerResponse | null) => {
-    _setActiveTrackerData(next)
-  }
+  const setResolvedTrackerData = useCallback(
+    (next: TrackerResponse | null) => {
+      _setActiveTrackerData(next)
+    },
+    [_setActiveTrackerData]
+  )
 
-  const setActiveTrackerData = (next: TrackerResponse | null) => {
-    _setActiveTrackerData(next)
-    const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
-    if (!hasGeneratedTracker) {
-      firstRunUserDraftRef.current = isUntouchedFirstRunScaffold(next as TrackerLike | null)
-        ? null
-        : next
-    }
-  }
-
-  const trackerHasAnyData = (tracker?: TrackerLike | null) => {
-    if (!tracker) return false
-    return Boolean(
-      (Array.isArray(tracker.tabs) && tracker.tabs.length > 0) ||
-      (Array.isArray(tracker.sections) && tracker.sections.length > 0) ||
-      (Array.isArray(tracker.grids) && tracker.grids.length > 0) ||
-      (Array.isArray(tracker.fields) && tracker.fields.length > 0),
-    )
-  }
+  const setActiveTrackerData = useCallback(
+    (next: TrackerResponse | null) => {
+      _setActiveTrackerData(next)
+      const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
+      if (!hasGeneratedTracker) {
+        firstRunUserDraftRef.current = isUntouchedFirstRunScaffold(next as TrackerLike | null)
+          ? null
+          : next
+      }
+    },
+    [_setActiveTrackerData]
+  )
 
   const buildTrackerFromResponse = (response?: MultiAgentSchema) => {
     if (!response) return null
@@ -288,62 +140,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     }
 
     if (!rawTracker) return null
-    // Ensure validations/calculations keys are always "gridId.fieldId" (like bindings).
-    const normalizeValidationAndCalculations = (tracker: TrackerLike): TrackerLike => {
-      const grids = tracker.grids ?? []
-      const fields = tracker.fields ?? []
-      const layoutNodes = tracker.layoutNodes ?? []
-      const validations = tracker.validations ?? {}
-      const calculations = (tracker as TrackerLike & { calculations?: Record<string, FieldCalculationRule> }).calculations ?? {}
-
-      const gridIds = new Set(grids.map((g) => g.id))
-      const fieldIds = new Set(fields.map((f) => f.id))
-      const gridsByFieldId = new Map<string, Set<string>>()
-      for (const n of layoutNodes) {
-        if (!gridIds.has(n.gridId) || !fieldIds.has(n.fieldId)) continue
-        if (!gridsByFieldId.has(n.fieldId)) gridsByFieldId.set(n.fieldId, new Set())
-        gridsByFieldId.get(n.fieldId)!.add(n.gridId)
-      }
-
-      const normalized: Record<string, FieldValidationRule[]> = {}
-      for (const [key, rules] of Object.entries(validations)) {
-        if (!key.includes('.')) {
-          const fieldId = key
-          if (!fieldIds.has(fieldId)) continue
-          const gridSet = gridsByFieldId.get(fieldId)
-          if (!gridSet || gridSet.size === 0) continue
-          for (const gridId of gridSet) {
-            const path = `${gridId}.${fieldId}`
-            const existing = normalized[path]
-            normalized[path] = existing ? [...existing, ...rules] : rules
-          }
-          continue
-        }
-
-        const [gridId, fieldId] = key.split('.')
-        if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
-        const existing = normalized[key]
-        normalized[key] = existing ? [...existing, ...rules] : rules
-      }
-      const normalizedCalculations: Record<string, FieldCalculationRule> = {}
-      for (const [key, rule] of Object.entries(calculations)) {
-        if (!key.includes('.')) {
-          const fieldId = key
-          if (!fieldIds.has(fieldId)) continue
-          const gridSet = gridsByFieldId.get(fieldId)
-          if (!gridSet || gridSet.size === 0) continue
-          for (const gridId of gridSet) {
-            normalizedCalculations[`${gridId}.${fieldId}`] = rule
-          }
-          continue
-        }
-        const [gridId, fieldId] = key.split('.')
-        if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
-        normalizedCalculations[key] = rule
-      }
-
-      return { ...tracker, validations: normalized, calculations: normalizedCalculations } as TrackerLike
-    }
     rawTracker = normalizeValidationAndCalculations(rawTracker)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
@@ -387,7 +183,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
               console.error('Failed to persist user message:', e)
             )
           }
-          setPendingQuery(fixPrompt)
           submit({
             query: fixPrompt,
             messages: nextMessages,
@@ -421,7 +216,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             managerData: finishedObject.manager ?? undefined,
           }).catch((err) => console.error('Failed to persist assistant message:', err))
         }
-        setPendingQuery(null)
         if (hasValidTracker) {
           continueCountRef.current = 0
           setResolvedTrackerData(tracker as TrackerResponse)
@@ -436,7 +230,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           }
         }
       } else {
-        setPendingQuery(null)
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current
         let partialTracker = buildTrackerFromResponse(partial)
@@ -522,7 +315,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             managerData: partial.manager ?? undefined,
           }).catch((e) => console.error('Failed to persist assistant message:', e))
         }
-        setPendingQuery(null)
         setPendingContinue(true)
         continueCountRef.current = 0
       } else {
@@ -539,7 +331,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             console.error('Failed to persist assistant message:', e)
           )
         }
-        setPendingQuery(null)
       }
       console.error('Error generating tracker:', err)
     },
@@ -570,7 +361,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     validationFixRetryCountRef.current = 0
     const userMessage = input.trim()
     setInput('')
-    setPendingQuery(userMessage)
 
     const newUserMessage: Message = {
       role: 'user',

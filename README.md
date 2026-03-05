@@ -9,7 +9,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The main tracker builder lives at `/tracker`.
+Open [http://localhost:3000](http://localhost:3000). Workspace entry is `/dashboard` after sign-in, and tracker editing lives under `/tracker` and `/tracker/[id]`.
+
+For the full engineering docs and onboarding flow, start at [`docs/README.md`](docs/README.md).
 
 ## Architecture
 
@@ -19,7 +21,11 @@ Open [http://localhost:3000](http://localhost:3000). The main tracker builder li
 
 The tracker display (`app/components/tracker-display/`) turns a schema + data into tabs, sections, and grid views. Data flows one-way; the parent supplies `gridData` and callbacks.
 
-For a detailed overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+For a detailed overview, see:
+
+- [`docs/README.md`](docs/README.md)
+- [`docs/architecture/system-overview.md`](docs/architecture/system-overview.md)
+- [`docs/architecture/module-boundaries.md`](docs/architecture/module-boundaries.md)
 
 ## Key Documentation
 
@@ -35,3 +41,8 @@ For a detailed overview, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 | `npm run build` | Production build          |
 | `npm run start` | Run production server     |
 | `npm run lint`  | Run ESLint                |
+| `npm run typecheck` | Run TypeScript check  |
+| `npm run docs:generate` | Generate docs maps |
+| `npm run docs:check` | Validate docs coverage and sync |
+| `npm run size:check` | Enforce file-size guardrails |
+| `npm run quality:check` | Run all blocking quality gates |

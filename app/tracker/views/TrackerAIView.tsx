@@ -1,0 +1,480 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ShareTrackerDialog } from '@/app/components/teams'
+import {
+  useUndoableSchemaChange,
+} from '@/app/components/tracker-display/edit-mode'
+import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
+import { useTrackerNav } from '../TrackerNavContext'
+import { useTrackerChat, type Message, type TrackerResponse } from '../hooks/useTrackerChat'
+import { useIsDesktop } from '../hooks/useMediaQuery'
+import { TrackerPanel, type GridDataSnapshot } from './TrackerPanel'
+import { TrackerChatPanel } from './TrackerChatPanel'
+
+const MIN_LEFT_PX = 320
+const MIN_RIGHT_PX = 360
+
+export interface TrackerEditorViewProps {
+  initialSchema?: TrackerResponse
+  onSaveTracker?: (schema: TrackerResponse) => Promise<void>
+  initialEditMode?: boolean
+  initialChatOpen?: boolean
+  trackerId?: string | null
+  initialConversationId?: string | null
+  initialMessages?: Message[]
+  initialLoadedSnapshot?: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string } | null
+}
+
+export function TrackerAIView(props: TrackerEditorViewProps = {}) {
+  const {
+    initialSchema,
+    onSaveTracker,
+    initialEditMode = true,
+    initialChatOpen = true,
+    trackerId,
+    initialConversationId,
+    initialMessages,
+    initialLoadedSnapshot,
+  } = props
+  const {
+    input,
+    setInput,
+    isFocused,
+    setIsFocused,
+    messages,
+    handleSubmit,
+    handleContinue,
+    applySuggestion,
+    setMessageThinkingOpen,
+    isLoading,
+    error,
+    object,
+    streamedDisplayTracker,
+    activeTrackerData,
+    setActiveTrackerData,
+    generationErrorMessage,
+    validationErrors,
+    resumingAfterError,
+    trackerDataRef,
+    messagesEndRef,
+    textareaRef,
+    isChatEmpty,
+  } = useTrackerChat({
+    initialTracker: initialSchema ?? undefined,
+    trackerId: trackerId ?? undefined,
+    conversationId: initialConversationId ?? undefined,
+    initialMessages,
+  })
+
+  const isDesktop = useIsDesktop()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [leftWidth, setLeftWidth] = useState<number | null>(null)
+  const [editMode, setEditMode] = useState(initialEditMode)
+  const [isChatOpen, setIsChatOpen] = useState(initialChatOpen)
+  const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [schema, setSchema] = useState<TrackerResponse>(
+    () => (initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse
+  )
+  const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
+  type LoadedSnapshot = {
+    id: string
+    label: string | null
+    data: GridDataSnapshot
+    updatedAt?: string
+  }
+  const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
+  const [latestSnapshot, setLatestSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
+  const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
+
+  useEffect(() => {
+    if (initialLoadedSnapshot) {
+      setLoadedSnapshot(initialLoadedSnapshot)
+      setLatestSnapshot(initialLoadedSnapshot)
+    }
+  }, [initialLoadedSnapshot])
+
+  const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
+  const trackerNavCtx = useTrackerNav()
+  const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
+  const setSaveState = trackerNavCtx?.setSaveState ?? null
+  const saveDataRef = useRef<() => void>(() => {})
+  const setTrackerNavRef = useRef(setTrackerNav)
+  setTrackerNavRef.current = setTrackerNav
+  const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
+
+  const onRegisterSaveData = useCallback((fn: () => void) => {
+    saveDataRef.current = fn
+  }, [])
+
+  useEffect(() => {
+    if (activeTrackerData && viewingMessageIndex === null) {
+      if (lastSyncedTrackerRef.current !== activeTrackerData) {
+        lastSyncedTrackerRef.current = activeTrackerData
+        setLastSyncedTracker(activeTrackerData)
+        setSchema(activeTrackerData)
+      }
+    }
+  }, [activeTrackerData, viewingMessageIndex])
+
+  const effectiveDisplaySchema = useMemo(() => {
+    if (isLoading && streamedDisplayTracker) {
+      return streamedDisplayTracker
+    }
+    if (viewingMessageIndex !== null) {
+      return schema
+    }
+    if (activeTrackerData && lastSyncedTracker !== activeTrackerData) {
+      return activeTrackerData
+    }
+    return schema
+  }, [isLoading, streamedDisplayTracker, viewingMessageIndex, activeTrackerData, schema, lastSyncedTracker])
+
+  const handleSchemaChange = useCallback((next: TrackerResponse) => {
+    setSchema(next)
+    setActiveTrackerData(next)
+  }, [setActiveTrackerData])
+
+  const schemaRef = useRef(schema)
+  useEffect(() => {
+    schemaRef.current = schema
+  }, [schema])
+
+  const stableOnTrackerNameChange = useCallback((name: string) => {
+    handleSchemaChange({ ...schemaRef.current, name })
+  }, [handleSchemaChange])
+
+  useEffect(() => {
+    if (!setTrackerNav) return
+    setTrackerNav({
+      name: trackerName,
+      onNameChange: stableOnTrackerNameChange,
+    })
+  }, [setTrackerNav, trackerName, stableOnTrackerNameChange])
+
+  useEffect(() => {
+    return () => setTrackerNavRef.current?.(null)
+  }, [])
+
+  const router = useRouter()
+
+  const handleSaveTracker = useCallback(async () => {
+    if (onSaveTracker) {
+      await onSaveTracker(schema)
+      return
+    }
+    const res = await fetch('/api/trackers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        new: true,
+        name: trackerName,
+        schema,
+      }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error ?? 'Failed to save tracker')
+    }
+    const data = (await res.json()) as { id: string }
+    router.push(`/tracker/${data.id}?new=true`)
+  }, [schema, trackerName, router, onSaveTracker])
+
+  useEffect(() => {
+    if (!setSaveState) return
+    setSaveState({
+      onSaveTracker: handleSaveTracker,
+      onSaveData: () => saveDataRef.current?.(),
+      isAgentBuilding: isLoading,
+    })
+  }, [setSaveState, handleSaveTracker, isLoading])
+
+  useEffect(() => {
+    if (!setSaveState) return
+    return () => setSaveState({ onSaveTracker: null, onSaveData: null, isAgentBuilding: false })
+  }, [setSaveState])
+
+  const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
+
+  const handleViewHistoricalTracker = useCallback((trackerData: TrackerResponse, messageIndex: number) => {
+    setSchema(trackerData)
+    setViewingMessageIndex(messageIndex)
+    setEditMode(false)
+    setMobileTab('preview')
+  }, [])
+
+  const handleLoadSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
+    setLoadedSnapshot(snapshot)
+  }, [])
+  const handleSavedNewSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
+    setLoadedSnapshot(snapshot)
+    setLatestSnapshot(snapshot)
+  }, [])
+  const handleClearLoadedSnapshot = useCallback(() => {
+    setLoadedSnapshot(null)
+  }, [])
+  const handleJumpToLatest = useCallback(() => {
+    if (latestSnapshot) setLoadedSnapshot(latestSnapshot)
+  }, [latestSnapshot])
+
+  const handleReturnToLatest = useCallback(() => {
+    setViewingMessageIndex(null)
+    if (activeTrackerData) {
+      setLastSyncedTracker(activeTrackerData)
+      setSchema(activeTrackerData)
+    }
+  }, [activeTrackerData])
+
+  const handleShareClick = useCallback(() => setShareDialogOpen(true), [])
+
+  const handleSubmitWithReset = useCallback(() => {
+    setViewingMessageIndex(null)
+    handleSubmit()
+  }, [handleSubmit])
+
+  useEffect(() => {
+    if (isDesktop && mobileTab === 'chat') {
+      setIsChatOpen(true)
+    }
+  }, [isDesktop, mobileTab])
+
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !isChatOpen || !isDesktop) return
+
+    const clampWidth = () => {
+      const rect = container.getBoundingClientRect()
+      const fallback = Math.round(rect.width * 0.75)
+      setLeftWidth((prev) => {
+        const current = prev ?? fallback
+        const maxLeft = Math.max(MIN_LEFT_PX, rect.width - MIN_RIGHT_PX)
+        return Math.max(MIN_LEFT_PX, Math.min(current, maxLeft))
+      })
+    }
+
+    clampWidth()
+    window.addEventListener('resize', clampWidth)
+    return () => window.removeEventListener('resize', clampWidth)
+  }, [isChatOpen, isDesktop])
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    const container = containerRef.current
+    if (!container) return
+
+    const rect = container.getBoundingClientRect()
+    const maxLeft = Math.max(MIN_LEFT_PX, rect.width - MIN_RIGHT_PX)
+
+    const handleMove = (moveEvent: PointerEvent) => {
+      const next = moveEvent.clientX - rect.left
+      const clamped = Math.max(MIN_LEFT_PX, Math.min(next, maxLeft))
+      setLeftWidth(clamped)
+    }
+
+    const handleUp = () => {
+      document.body.style.cursor = ''
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+    }
+
+    document.body.style.cursor = 'col-resize'
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+  }, [])
+
+  const hasGeneratedTracker = useMemo(
+    () => messages.some((message) => Boolean(message.trackerData)),
+    [messages]
+  )
+
+  const lastTrackerMessageIndex = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].trackerData) {
+        return i
+      }
+    }
+    return null
+  }, [messages])
+
+  const isViewingHistoricalVersion = useMemo(() => {
+    if (viewingMessageIndex === null) return false
+    if (lastTrackerMessageIndex === null) return false
+    return viewingMessageIndex !== lastTrackerMessageIndex
+  }, [viewingMessageIndex, lastTrackerMessageIndex])
+
+  const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
+  const hasAnyAssistantResponse = messages.some((m) => m.role === 'assistant')
+
+  const showStatusPanel =
+    Boolean(error) ||
+    Boolean(generationErrorMessage) ||
+    validationErrors.length > 0 ||
+    (!isLoading && messages.length > 0 && !hasGeneratedTracker && hasAnyAssistantResponse)
+
+  useEffect(() => {
+    if (isLoading) {
+      setEditMode(false)
+    }
+  }, [isLoading])
+
+  const chatStatusPanelProps = {
+    isLoading,
+    validationErrors,
+    error,
+    generationErrorMessage,
+    resumingAfterError,
+    onContinue: handleContinue,
+    messagesLength: messages.length,
+    hasGeneratedTracker,
+    hasAnyAssistantResponse,
+  }
+
+  const chatPanelProps = {
+    showStatusPanel,
+    statusPanelProps: chatStatusPanelProps,
+    input,
+    setInput,
+    isFocused,
+    setIsFocused,
+    handleSubmit: handleSubmitWithReset,
+    applySuggestion,
+    isLoading,
+    isChatEmpty,
+    textareaRef,
+    messages,
+    setMessageThinkingOpen,
+    messagesEndRef,
+    object,
+    onViewTracker: handleViewHistoricalTracker,
+    activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
+  }
+
+  const mobileLayout = (
+    <div
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-16 md:pt-20 md:hidden"
+      aria-hidden={isDesktop}
+    >
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Tabs
+          value={mobileTab}
+          onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
+          className="flex-1 min-h-0 flex flex-col gap-0"
+        >
+          <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="preview">Preview</TabsTrigger>
+              <TabsTrigger value="chat">Chat</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+            <TrackerPanel
+              schema={effectiveDisplaySchema}
+              editMode={editMode}
+              setEditMode={setEditMode}
+              isChatOpen={isChatOpen}
+              setIsChatOpen={setIsChatOpen}
+              isStreamingTracker={isStreamingTracker}
+              trackerDataRef={trackerDataRef}
+              handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
+              undo={editMode ? undoable.undo : undefined}
+              canUndo={editMode ? undoable.canUndo : false}
+              leftWidth={leftWidth}
+              fullWidth
+              hideChatToggle
+              onShareClick={handleShareClick}
+              trackerName={trackerName}
+              isViewingHistoricalVersion={isViewingHistoricalVersion}
+              onReturnToLatest={handleReturnToLatest}
+              trackerId={trackerId ?? undefined}
+              initialGridData={loadedSnapshot?.data ?? null}
+              loadedSnapshotId={loadedSnapshot?.id ?? null}
+              loadedSnapshotLabel={loadedSnapshot?.label ?? null}
+              loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
+              latestSnapshotId={latestSnapshot?.id ?? null}
+              onLoadSnapshot={handleLoadSnapshot}
+              onSavedNewSnapshot={handleSavedNewSnapshot}
+              onClearLoadedSnapshot={handleClearLoadedSnapshot}
+              onJumpToLatest={handleJumpToLatest}
+              onRegisterSaveData={onRegisterSaveData}
+            />
+          </TabsContent>
+          <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
+            <TrackerChatPanel {...chatPanelProps} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  )
+
+  const desktopLayout = (
+    <div
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20 hidden md:flex"
+      aria-hidden={!isDesktop}
+    >
+      <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
+        <TrackerPanel
+          schema={effectiveDisplaySchema}
+          editMode={editMode}
+          setEditMode={setEditMode}
+          isChatOpen={isChatOpen}
+          setIsChatOpen={setIsChatOpen}
+          isStreamingTracker={isStreamingTracker}
+          trackerDataRef={trackerDataRef}
+          handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
+          undo={editMode ? undoable.undo : undefined}
+          canUndo={editMode ? undoable.canUndo : false}
+          leftWidth={leftWidth}
+          onShareClick={handleShareClick}
+          trackerName={trackerName}
+          isViewingHistoricalVersion={isViewingHistoricalVersion}
+          onReturnToLatest={handleReturnToLatest}
+          trackerId={trackerId ?? undefined}
+          initialGridData={loadedSnapshot?.data ?? null}
+          loadedSnapshotId={loadedSnapshot?.id ?? null}
+          loadedSnapshotLabel={loadedSnapshot?.label ?? null}
+          loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
+          latestSnapshotId={latestSnapshot?.id ?? null}
+          onLoadSnapshot={handleLoadSnapshot}
+          onSavedNewSnapshot={handleSavedNewSnapshot}
+          onClearLoadedSnapshot={handleClearLoadedSnapshot}
+          onJumpToLatest={handleJumpToLatest}
+          onRegisterSaveData={onRegisterSaveData}
+        />
+
+        {isChatOpen && (
+          <>
+            <div
+              className="w-px shrink-0 cursor-col-resize bg-border/50 hover:bg-border transition-colors"
+              onPointerDown={handlePointerDown}
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize panels"
+            />
+
+            <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden">
+              <TrackerChatPanel {...chatPanelProps} />
+            </section>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <>
+      {mobileLayout}
+      {desktopLayout}
+      <ShareTrackerDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+        trackerName={trackerName}
+        onShare={(teamId, defaultRole) => {
+          console.info('Share tracker with team', teamId, defaultRole)
+        }}
+      />
+    </>
+  )
+}

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from 'react'
@@ -40,10 +41,13 @@ export function TrackerNavProvider({ children }: { children: ReactNode }) {
     setSaveStateInternal((prev) => ({ ...prev, ...patch }))
   }, [])
 
+  const value = useMemo(
+    () => ({ trackerNav, setTrackerNav, saveState, setSaveState }),
+    [trackerNav, saveState, setSaveState]
+  )
+
   return (
-    <TrackerNavContext.Provider
-      value={{ trackerNav, setTrackerNav, saveState, setSaveState }}
-    >
+    <TrackerNavContext.Provider value={value}>
       {children}
     </TrackerNavContext.Provider>
   )

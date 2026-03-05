@@ -11,7 +11,7 @@ import { buildValidationContext } from '@/lib/validate-tracker/context'
 import { validateCalculations } from '@/lib/validate-tracker/validators/calculations'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
-import type { ExprNode } from '@/lib/functions/types'
+import type { ExprNode, FieldCalculationRule } from '@/lib/functions/types'
 import type { TrackerLike } from '@/lib/validate-tracker/types'
 
 describe('field calculations', () => {
@@ -154,7 +154,7 @@ describe('field calculations', () => {
       'other_grid.x': {
         expr: { op: 'field', fieldId: 'other_grid.y' },
       },
-    }
+    } satisfies Record<string, FieldCalculationRule>
     expect(getGridIdsThatDependOnGridViaAccumulate(calcs, 'amounts_grid')).toEqual(['main_grid'])
     expect(getGridIdsThatDependOnGridViaAccumulate(calcs, 'other_grid')).toEqual([])
     expect(getGridIdsThatDependOnGridViaAccumulate(undefined, 'amounts_grid')).toEqual([])
@@ -176,7 +176,7 @@ describe('field calculations', () => {
           action: 'add',
         },
       },
-    }
+    } satisfies Record<string, FieldCalculationRule>
     const map = buildAccumulateDepsBySourceGrid(calcs)
     expect(map.get('amounts_grid')).toEqual(['main_grid'])
     expect(map.size).toBe(1)

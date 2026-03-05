@@ -59,23 +59,25 @@ export function useKanbanGroups({
     [connectedFieldNodes, fields]
   )
 
-  const rows = gridData[grid.id] ?? []
+  const rows = useMemo(() => gridData[grid.id] ?? [], [gridData, grid.id])
 
-  let groupByFieldId = grid.config?.groupBy
-  if (!groupByFieldId) {
+  const groupByFieldId = useMemo(() => {
+    if (grid.config?.groupBy) return grid.config.groupBy
     const optionField = kanbanFields.find(
-      (f) => f.dataType === 'options' || f.dataType === 'multiselect'
+      (field) => field.dataType === 'options' || field.dataType === 'multiselect'
     )
-    if (optionField) groupByFieldId = optionField.id
-  }
+    return optionField?.id ?? null
+  }, [grid.config?.groupBy, kanbanFields])
 
-  if (!groupByFieldId) return null
-
-  const groupingField = kanbanFields.find((f) => f.id === groupByFieldId)
-  if (!groupingField) return null
+  const groupingField = useMemo(() => {
+    if (!groupByFieldId) return null
+    return kanbanFields.find((field) => field.id === groupByFieldId) ?? null
+  }, [kanbanFields, groupByFieldId])
 
   const options = useMemo(
-    () =>
+    () => {
+      if (!groupingField) return []
+      return (
       resolveFieldOptionsV2(
         tabId,
         grid.id,
@@ -83,11 +85,14 @@ export function useKanbanGroups({
         bindings,
         gridData,
         trackerContext ?? undefined
-      ),
+      ) ?? []
+      )
+    },
     [tabId, grid.id, groupingField, bindings, gridData, trackerContext]
   )
 
   const groups = useMemo(() => {
+    if (!groupByFieldId) return []
     let list: Array<{ id: string; label: string }> = []
     if (options?.length) {
       list = options.map((o) => ({ id: toOptionId(o), label: o.label ?? '' }))
@@ -141,6 +146,8 @@ export function useKanbanGroups({
   }, [tabId, grid.id, kanbanFields, bindings, gridData, trackerContext, validations, calculations])
 
   const fieldOrder = useMemo(() => kanbanFields.map((f) => f.id), [kanbanFields])
+
+  if (!groupByFieldId || !groupingField) return null
 
   return {
     groups,

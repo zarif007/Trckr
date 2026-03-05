@@ -64,7 +64,7 @@ function TrackerTableGridInner({
   styleOverrides,
   dependsOn,
   gridData = {},
-  gridDataRef,
+  gridDataRef: _gridDataRef,
   gridDataForThisGrid,
   onUpdate,
   onAddEntry,
@@ -73,8 +73,11 @@ function TrackerTableGridInner({
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerTableGridProps) {
-  const fullGridData = gridDataRef?.current ?? gridData
   const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
+  const fullGridData = useMemo(
+    () => ({ ...gridData, [grid.id]: thisGridRows }),
+    [gridData, grid.id, thisGridRows]
+  )
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
   const [addColumnOpen, setAddColumnOpen] = useState(false)

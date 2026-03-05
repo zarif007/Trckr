@@ -6,8 +6,15 @@ The main tracker-builder page: chat UI + streaming tracker generation. **Page lo
 
 | Path | Responsibility |
 |------|-----------------|
-| **page.tsx** | Route entry; composes `useTrackerChat` and components from `@/app/components/tracker-page`. |
-| **hooks/useTrackerChat.ts** | Chat state, submit, streaming, tracker data, dialog state. Exports types (`Message`, `TrackerResponse`) and constants (`suggestions`, `quickSuggestions`) used by tracker-page components. |
+| **page.tsx** | Thin route wrapper (redirect + re-export). |
+| **views/TrackerAIView.tsx** | Main orchestration view for tracker editing/chat experience. |
+| **views/TrackerPanel.tsx** | Preview/edit panel shell and top-right action controls. |
+| **views/TrackerChatPanel.tsx** | Chat panel composition (empty state, message list, input). |
+| **views/TrackerStatusPanel.tsx** | Validation/error/no-tracker state banner area. |
+| **hooks/useTrackerChat.ts** | Chat generation state + streaming + persistence orchestration. |
+| **hooks/conversation.ts** | Conversation and message persistence service calls. |
+| **hooks/normalization.ts** | Schema normalization helpers for scaffolds and validation/calculation keys. |
+| **hooks/constants.ts** | Suggestions and generation retry constants. |
 | **utils/** | Tracker merge/transform utilities. |
 
 ## Where the UI lives
