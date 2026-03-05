@@ -20,6 +20,7 @@ Shared types, permissions, context, and constants for **team workspaces** in Trc
 | **constants.ts** | `ROLE_LABELS`, `TEAM_ROLES`—shared labels and role order for UI (dropdowns, member lists). |
 | **permissions.ts** | `getEffectiveGridPermissions(role, gridConfig)` → `{ addable, editable, deletable, editLayoutAble }`. Viewer → all false; editor/admin → follow grid config. Use when rendering table/kanban/div so read-only is consistent. |
 | **context.tsx** | `TeamProvider`, `useTeamContext`, `useTeamContextOrThrow`. Holds `currentUser`, `currentTeam`, `teams`, and `getRoleForTeam(teamId)`. Wired in root layout; UI and permission logic read from here. |
+| **service.ts** | `TeamService` interface + `getTeamService()` mock implementation so API/UI call a stable service boundary instead of hardcoded route data. |
 
 ---
 
@@ -46,7 +47,7 @@ Shared types, permissions, context, and constants for **team workspaces** in Trc
 - [x] **Permissions** — `getEffectiveGridPermissions(role, config)` implemented and used by the permission layer (grid config already supports add/edit/delete flags).
 - [x] **Context** — `TeamProvider` in root layout; `currentUser`, `currentTeam`, `teams`, `setCurrentTeam`, `setTeams`, `getRoleForTeam`.
 - [x] **UI shell** — Team Switcher, Members dialog, Share Tracker dialog (see `app/components/teams/README.md`). They use mock/context data only.
-- [x] **API stub** — `GET /api/teams` returns mock teams (see `app/api/teams/README.md`).
+- [x] **API stub + service boundary** — `GET /api/teams` returns mock teams via `TeamService` (see `app/api/teams/README.md`).
 
 ---
 

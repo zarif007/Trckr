@@ -1,12 +1,12 @@
 # Teams API
 
-Stub for team-related HTTP API. Right now only **GET /api/teams** exists and returns **mock data**. Replace it with real auth and persistence when you implement teams.
+Stub for team-related HTTP API. Right now only **GET /api/teams** exists and returns **mock data** via `lib/teams/service.ts`. Replace the service implementation with real auth and persistence when you implement teams.
 
 ---
 
 ## Current behavior
 
-- **GET /api/teams** — Returns a fixed list of one mock team with one mock member. No auth; any client can call it. Used by `TeamSwitcher` to populate the team list and context.
+- **GET /api/teams** — Calls `getTeamService().listTeamsForUser(...)` and returns mock teams. No auth yet; any client can call it. Used by `TeamSwitcher` to populate the team list and context.
 
 ---
 

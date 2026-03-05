@@ -1,6 +1,6 @@
 import { resolveDynamicOptions } from '@/lib/dynamic-options'
-import { deepseek } from '@ai-sdk/deepseek'
-import { generateObject } from 'ai'
+import { badRequest, createRequestLogContext, jsonError, jsonOk } from '@/lib/api'
+import { getDefaultAiProvider, hasDeepSeekApiKey, logAiError, runWithTimeout } from '@/lib/ai'
 import { z } from 'zod'
 import { getErrorMessage, parseResolveDynamicOptionsRequest } from './lib/validation'
 
@@ -55,10 +55,13 @@ async function extractRowsWithAi(input: {
   prompt: string
   payload: unknown
   maxRows: number
+  request: Request
 }): Promise<Array<Record<string, unknown>>> {
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!hasDeepSeekApiKey()) {
     return []
   }
+  const provider = getDefaultAiProvider()
+  const logContext = createRequestLogContext(input.request, 'dynamic-options/resolve')
 
   const system = [
     'You extract structured records for select options.',
@@ -75,35 +78,37 @@ async function extractRowsWithAi(input: {
     stringifyForPrompt(input.payload),
   ].join('\\n')
 
-  const run = generateObject({
-    model: deepseek('deepseek-chat'),
+  const run = provider.generateObject<{ rows: Array<Record<string, unknown>> }>({
     system,
     prompt,
     schema: aiExtractSchema,
     maxOutputTokens: 1400,
   })
 
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('AI extraction timed out')), AI_TIMEOUT_MS)
-  )
-
-  const { object } = await Promise.race([run, timeout])
-  return object.rows.slice(0, Math.max(1, Math.min(input.maxRows, AI_MAX_ROWS)))
+  try {
+    const object = await runWithTimeout(run, {
+      timeoutMs: AI_TIMEOUT_MS,
+      timeoutMessage: 'AI extraction timed out',
+    })
+    return object.rows.slice(0, Math.max(1, Math.min(input.maxRows, AI_MAX_ROWS)))
+  } catch (error) {
+    logAiError(logContext, 'extract-options', error)
+    throw error
+  }
 }
 
 export async function POST(request: Request) {
+  const logContext = createRequestLogContext(request, 'dynamic-options/resolve')
   try {
     const body = await request.json().catch(() => null)
+    if (body == null) return badRequest('Invalid request body for dynamic options resolve')
     const parsed = parseResolveDynamicOptionsRequest(body)
     if (!parsed.ok) {
-      return Response.json({ error: parsed.error }, { status: parsed.status })
+      return jsonError(parsed.error, parsed.status)
     }
 
     if (isRateLimited(parsed.data.functionId)) {
-      return Response.json(
-        { error: 'Rate limit exceeded for dynamic option resolution' },
-        { status: 429 }
-      )
+      return jsonError('Rate limit exceeded for dynamic option resolution', 429)
     }
 
     const result = await resolveDynamicOptions({
@@ -120,16 +125,14 @@ export async function POST(request: Request) {
           prompt,
           payload,
           maxRows,
+          request,
         }),
     })
 
-    return Response.json(result)
+    return jsonOk(result)
   } catch (error) {
     const message = getErrorMessage(error)
-    console.error('[dynamic-options/resolve] Error:', message)
-    return Response.json(
-      { error: message || 'Failed to resolve dynamic options' },
-      { status: 500 }
-    )
+    logAiError(logContext, 'resolve', error)
+    return jsonError(message || 'Failed to resolve dynamic options', 500)
   }
 }

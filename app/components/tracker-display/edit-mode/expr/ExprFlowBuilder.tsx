@@ -566,7 +566,7 @@ export function ExprFlowBuilder({
     setNodes((prev) =>
       prev.map((n) => ({ ...n, data: { ...n.data, availableFields } }))
     )
-  }, [availableFieldsKey, setNodes])
+  }, [availableFields, availableFieldsKey, setNodes])
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, ...EDGE_DEFAULTS }, eds)),

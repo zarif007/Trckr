@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import type { TrackerDisplayProps, TrackerFieldConfig } from '../../types'
+import type { TrackerFieldConfig } from '../../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerBindingEntry } from '@/lib/types/tracker-bindings'
 import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from '../utils'
@@ -60,7 +60,6 @@ export function useFieldSettingsState({
   const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
-  const [bindingDirty, setBindingDirty] = useState(false)
   const [dynamicOptionsDraft, setDynamicOptionsDraft] = useState<DynamicOptionsDefinitions>({})
   const [dynamicFunctionId, setDynamicFunctionId] = useState('')
   const [dynamicOptionsArgsText, setDynamicOptionsArgsText] = useState('')
@@ -129,7 +128,7 @@ export function useFieldSettingsState({
         dataType: fieldRef?.dataType,
       }
     })
-  }, [schema?.fields, schema?.layoutNodes, schema?.grids])
+  }, [schema])
 
   const defaultBindingDraft = useCallback((): BindingDraft => {
     return {
@@ -163,7 +162,6 @@ export function useFieldSettingsState({
     if (isBindable) return
     setBindingEnabled(false)
     setBindingDraft(null)
-    setBindingDirty(false)
   }, [isBindable])
 
   useEffect(() => {
@@ -244,11 +242,9 @@ export function useFieldSettingsState({
         setBindingEnabled(false)
         setBindingDraft(defaultBindingDraft())
       }
-      setBindingDirty(false)
     } else {
       setBindingEnabled(false)
       setBindingDraft(null)
-      setBindingDirty(false)
     }
     setDynamicOptionsDraft((schema?.dynamicOptions as DynamicOptionsDefinitions | undefined) ?? {})
     setDynamicFunctionId(
@@ -338,7 +334,6 @@ export function useFieldSettingsState({
 
   const setBindingDraftValue = useCallback((next: BindingDraft) => {
     setBindingDraft(next)
-    setBindingDirty(true)
   }, [])
 
   const applyAutoMappings = useCallback(() => {

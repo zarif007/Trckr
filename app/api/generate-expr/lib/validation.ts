@@ -1,3 +1,5 @@
+import { hasDeepSeekApiKey } from '@/lib/ai'
+
 /**
  * Request validation and error helpers for generate-expr.
  */
@@ -64,7 +66,7 @@ export function parseRequestBody(body: unknown): ParseResult {
       ? purpose
       : 'validation'
 
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!hasDeepSeekApiKey()) {
     return {
       ok: false,
       error: 'DEEPSEEK_API_KEY is not configured',

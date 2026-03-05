@@ -20,7 +20,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
@@ -201,7 +200,6 @@ const NODE_CATEGORY_STYLES: Record<string, { border: string; bg: string; icon: R
 
 const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md bg-background'
 const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2.5 text-xs font-semibold'
-const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
 const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
 
 // Enhanced edge styling with animated connections
@@ -710,7 +708,6 @@ export function DynamicFunctionFlowBuilder({
   const lastCompiledRef = useRef<ReturnType<typeof compileDynamicOptionFunctionGraph> | null>(null)
   const hasPatchedOnDelete = useRef(false)
 
-  const propGraphSignature = useMemo(() => JSON.stringify(value.graph), [value.graph])
   useEffect(() => {
     setNodes(value.graph.nodes.map((n) => toFlowNode(n, undefined)))
     setEdges(
@@ -726,7 +723,7 @@ export function DynamicFunctionFlowBuilder({
     setExpandedNodeId(null)
     // Reset the patch flag so nodes get patched with onDelete on next render
     hasPatchedOnDelete.current = false
-  }, [propGraphSignature, setEdges, setNodes])
+  }, [value.graph.edges, value.graph.nodes, setEdges, setNodes])
 
   const graphDraft = useMemo<DynamicFunctionGraphDef>(
     () => ({
@@ -743,8 +740,6 @@ export function DynamicFunctionFlowBuilder({
     }),
     [edges, nodes, value.graph.entryNodeId, value.graph.returnNodeId]
   )
-  const graphDraftSignature = useMemo(() => JSON.stringify(graphDraft), [graphDraft])
-
   const compiled = useMemo(
     () => {
       if (isDraggingNode && lastCompiledRef.current) {
@@ -968,18 +963,6 @@ export function DynamicFunctionFlowBuilder({
     }),
     [expandedNodeId, updateNodeConfig, grids, connectors, availableFields, openFilterExprDialog, deleteNode]
   )
-
-  const explainText = useMemo(() => {
-    if (!compiled.ok || !compiled.plan) return 'Connect nodes from Start to Return Options.'
-    const nodeById = new Map(graphDraft.nodes.map((node) => [node.id, node]))
-    const labels = compiled.plan.executionOrder
-      .map((nodeId) => {
-        const node = nodeById.get(nodeId)
-        return node ? nodeKindLabel(node.kind) : null
-      })
-      .filter((label): label is string => !!label)
-    return labels.join(' -> ')
-  }, [compiled, graphDraft.nodes])
 
   const getGroupIcon = (group: string) => {
     switch (group) {

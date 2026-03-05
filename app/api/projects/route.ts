@@ -1,28 +1,25 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { jsonOk } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { createProjectForUser, listProjectsForUser } from '@/lib/repositories'
+
+const createProjectBodySchema = z
+  .object({
+    name: z.string().optional(),
+  })
+  .passthrough()
 
 /**
  * GET /api/projects
  * Returns the current user's projects with their tracker schemas.
  */
 export async function GET() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const projects = await prisma.project.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: 'desc' },
-    include: {
-      trackerSchemas: {
-        orderBy: { updatedAt: 'desc' },
-      },
-    },
-  })
+  const projects = await listProjectsForUser(authResult.user.id)
 
-  return NextResponse.json(projects)
+  return jsonOk(projects)
 }
 
 /**
@@ -31,29 +28,19 @@ export async function GET() {
  * Body: { name?: string }
  */
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  let body: { name?: unknown } = {}
-  try {
-    body = await request.json()
-  } catch {
-    // Name is optional; fall back to default if no JSON body was sent.
-  }
+  const rawBody = await request.json().catch(() => ({}))
+  const body = createProjectBodySchema.safeParse(rawBody)
+  const input = body.success ? body.data : {}
 
   const name =
-    typeof body.name === 'string' && body.name.trim()
-      ? body.name.trim()
+    typeof input.name === 'string' && input.name.trim()
+      ? input.name.trim()
       : 'Untitled project'
 
-  const project = await prisma.project.create({
-    data: {
-      userId: session.user.id,
-      name,
-    },
-  })
+  const project = await createProjectForUser(authResult.user.id, name)
 
-  return NextResponse.json(project, { status: 201 })
+  return jsonOk(project, { status: 201 })
 }

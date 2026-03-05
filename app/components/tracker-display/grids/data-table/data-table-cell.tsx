@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS, type ResolvedTableStyles } from '@/lib/style-utils'
 import { applyFieldOverrides } from '@/lib/depends-on'
 
-interface DataTableCellProps<TData, TValue> {
+interface DataTableCellProps<TData> {
   cell: Cell<TData, any>
   row: Row<TData>
   fieldMetadata?: FieldMetadata
@@ -15,13 +15,13 @@ interface DataTableCellProps<TData, TValue> {
   rowOverrides?: Record<string, Record<string, unknown>>
 }
 
-export function DataTableCell<TData, TValue>({
+export function DataTableCell<TData>({
   cell,
   row,
   fieldMetadata,
   rowValues,
   rowOverrides,
-}: DataTableCellProps<TData, TValue>) {
+}: DataTableCellProps<TData>) {
   const isSelect = cell.column.id === 'select'
   const fieldInfo = fieldMetadata?.[cell.column.id]
   const meta = cell.getContext().table.options.meta as {

@@ -2,25 +2,24 @@ import { buildConversationContext, buildCurrentStateBlock } from './lib/context'
 import { generateTrackerResponse } from './lib/generate'
 import type { PromptInputs } from './lib/prompts'
 import { parseRequestBody, getErrorMessage } from './lib/validation'
+import { badRequest, createRequestLogContext, jsonError } from '@/lib/api'
+import { logAiError, logAiStage } from '@/lib/ai'
 
 export async function POST(request: Request) {
+  const logContext = createRequestLogContext(request, 'generate-tracker')
   try {
     let body: unknown
     try {
       body = await request.json()
     } catch {
-      return Response.json(
-        {
-          error:
-            'Invalid request body. Expected JSON with "query" and optional "messages" and "currentTracker".',
-        },
-        { status: 400 },
+      return badRequest(
+        'Invalid request body. Expected JSON with "query" and optional "messages" and "currentTracker".',
       )
     }
 
     const parsed = parseRequestBody(body)
     if (!parsed.ok) {
-      return Response.json({ error: parsed.error }, { status: parsed.status })
+      return jsonError(parsed.error, parsed.status)
     }
 
     const { query, messages, currentTracker } = parsed
@@ -36,28 +35,19 @@ export async function POST(request: Request) {
     }
 
     try {
-      const { response } = await generateTrackerResponse(promptInputs)
+      logAiStage(logContext, 'request', 'Generating tracker response.')
+      const { response } = await generateTrackerResponse(promptInputs, {
+        logContext,
+      })
       return response
     } catch (error) {
       const message = getErrorMessage(error)
-      console.error('[generate-tracker] All attempts failed:', message)
-      return Response.json(
-        {
-          error:
-            message ||
-            'Failed to generate tracker. Please try again.',
-        },
-        { status: 500 },
-      )
+      logAiError(logContext, 'all-attempts-failed', error)
+      return jsonError(message || 'Failed to generate tracker. Please try again.', 500)
     }
   } catch (error) {
     const message = getErrorMessage(error)
-    console.error('[generate-tracker] Error:', message, error)
-    return Response.json(
-      {
-        error: message || 'Failed to generate tracker. Please try again.',
-      },
-      { status: 500 },
-    )
+    logAiError(logContext, 'route-error', error)
+    return jsonError(message || 'Failed to generate tracker. Please try again.', 500)
   }
 }

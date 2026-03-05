@@ -1,10 +1,20 @@
-import { auth } from '@/auth'
-import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import {
-  createTrackerData,
-  listTrackerData,
   validateGridDataSnapshot,
 } from '@/lib/tracker-data'
+import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import {
+  createTrackerSnapshotForUser,
+  listTrackerSnapshotsForUser,
+} from '@/lib/repositories'
+
+const createTrackerDataBodySchema = z
+  .object({
+    label: z.string().optional(),
+    data: z.unknown().optional(),
+  })
+  .passthrough()
 
 /**
  * GET /api/trackers/[id]/data
@@ -14,15 +24,12 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id } = await params
-  if (!id) {
-    return NextResponse.json({ error: 'Missing tracker id' }, { status: 400 })
-  }
+  const { id } = await readParams(params)
+  const trackerId = requireParam(id, 'tracker id')
+  if (!trackerId) return badRequest('Missing tracker id')
 
   const { searchParams } = new URL(request.url)
   const limitParam = searchParams.get('limit')
@@ -30,12 +37,12 @@ export async function GET(
   const limit = limitParam != null ? parseInt(limitParam, 10) : 20
   const offset = offsetParam != null ? parseInt(offsetParam, 10) : 0
 
-  const result = await listTrackerData(id, session.user.id, { limit, offset })
+  const result = await listTrackerSnapshotsForUser(trackerId, authResult.user.id, { limit, offset })
   if (!result) {
-    return NextResponse.json({ error: 'Tracker not found' }, { status: 404 })
+    return notFound('Tracker not found')
   }
 
-  return NextResponse.json(result)
+  return jsonOk(result)
 }
 
 /**
@@ -46,43 +53,33 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id } = await params
-  if (!id) {
-    return NextResponse.json({ error: 'Missing tracker id' }, { status: 400 })
-  }
+  const { id } = await readParams(params)
+  const trackerId = requireParam(id, 'tracker id')
+  if (!trackerId) return badRequest('Missing tracker id')
 
-  let body: { label?: string; data?: unknown }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const rawBody = await request.json().catch(() => null)
+  if (rawBody == null) return badRequest('Invalid JSON body')
+  const parsedBody = createTrackerDataBodySchema.safeParse(rawBody)
+  if (!parsedBody.success) return badRequest('Invalid JSON body')
+  const body = parsedBody.data
 
   if (body.data === undefined) {
-    return NextResponse.json(
-      { error: 'Missing or invalid data' },
-      { status: 400 }
-    )
+    return badRequest('Missing or invalid data')
   }
   if (!validateGridDataSnapshot(body.data)) {
-    return NextResponse.json(
-      { error: 'Invalid data: must be an object with array-of-objects values' },
-      { status: 400 }
-    )
+    return badRequest('Invalid data: must be an object with array-of-objects values')
   }
 
-  const created = await createTrackerData(id, session.user.id, {
+  const created = await createTrackerSnapshotForUser(trackerId, authResult.user.id, {
     label: body.label,
     data: body.data,
   })
   if (!created) {
-    return NextResponse.json({ error: 'Tracker not found' }, { status: 404 })
+    return notFound('Tracker not found')
   }
 
-  return NextResponse.json(created)
+  return jsonOk(created)
 }

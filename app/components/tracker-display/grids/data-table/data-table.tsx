@@ -117,9 +117,10 @@ export function DataTable<TData, TValue>({
   calculations,
   gridData: gridDataProp,
   pageSize: pageSizeProp,
-  pageSizeOptions: _pageSizeOptions,
+  pageSizeOptions,
   defaultSort: defaultSortProp,
 }: DataTableProps<TData, TValue>) {
+  void pageSizeOptions
   const pageSize = pageSizeProp ?? 10
   const [tableData, setTableData] = useState<TData[]>(data)
   const [sorting, setSorting] = useState<SortingState>(() =>

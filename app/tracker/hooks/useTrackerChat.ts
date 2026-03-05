@@ -44,6 +44,15 @@ export interface UseTrackerChatOptions {
   initialMessages?: Message[]
 }
 
+function sanitizeManagerData(
+  manager: MultiAgentSchema['manager'] | undefined,
+): MultiAgentSchema['manager'] | undefined {
+  if (!manager) return undefined
+  const sanitized = { ...(manager as Record<string, unknown>) }
+  if ('thinking' in sanitized) delete sanitized.thinking
+  return sanitized as MultiAgentSchema['manager']
+}
+
 export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const { initialTracker = null, trackerId, conversationId: initialConversationId, initialMessages } = options
   const [input, setInput] = useState('')
@@ -88,11 +97,11 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     activeTrackerRef.current = activeTrackerData
   }, [activeTrackerData])
 
-  const getBaseTracker = () => {
+  const getBaseTracker = useCallback(() => {
     if (activeTrackerRef.current) return activeTrackerRef.current
     const reversed = [...messagesRef.current].reverse()
     return reversed.find((msg) => msg.trackerData)?.trackerData ?? null
-  }
+  }, [])
 
   /**
    * Current state sent to the API.
@@ -100,13 +109,13 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
    * - For the first request, send null when state is untouched default scaffold.
    * - For the first request with manual edits, include the edited state.
    */
-  const getCurrentTrackerForApi = (): TrackerResponse | null => {
+  const getCurrentTrackerForApi = useCallback((): TrackerResponse | null => {
     const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
     if (!hasGeneratedTracker) {
       return firstRunUserDraftRef.current
     }
     return getBaseTracker()
-  }
+  }, [getBaseTracker])
 
   const setResolvedTrackerData = useCallback(
     (next: TrackerResponse | null) => {
@@ -128,7 +137,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     [_setActiveTrackerData]
   )
 
-  const buildTrackerFromResponse = (response?: MultiAgentSchema) => {
+  const buildTrackerFromResponse = useCallback((response?: MultiAgentSchema) => {
     if (!response) return null
     // Keep merge base aligned with what we send to the API:
     // if we don't have a tracker yet, use the same initial schema baseline.
@@ -144,7 +153,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
     return tracker as TrackerResponse
-  }
+  }, [getBaseTracker])
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
@@ -213,7 +222,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             role: 'ASSISTANT',
             content: '',
             trackerSchemaSnapshot: (tracker as TrackerResponse) ?? undefined,
-            managerData: finishedObject.manager ?? undefined,
+            managerData: sanitizeManagerData(finishedObject.manager),
           }).catch((err) => console.error('Failed to persist assistant message:', err))
         }
         if (hasValidTracker) {
@@ -248,12 +257,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           setMessages((prev) => [...prev, assistantMessage])
           const cid = conversationIdRef.current
           if (cid) {
-            persistMessage(cid, {
-              role: 'ASSISTANT',
-              content: '',
-              trackerSchemaSnapshot: partialTracker ?? undefined,
-              managerData: partial.manager ?? undefined,
-            }).catch((err) => console.error('Failed to persist assistant message:', err))
+          persistMessage(cid, {
+            role: 'ASSISTANT',
+            content: '',
+            trackerSchemaSnapshot: partialTracker ?? undefined,
+            managerData: sanitizeManagerData(partial.manager),
+          }).catch((err) => console.error('Failed to persist assistant message:', err))
           }
           if (partialTracker) setResolvedTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
@@ -312,7 +321,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
             role: 'ASSISTANT',
             content: '',
             trackerSchemaSnapshot: partialTracker ?? undefined,
-            managerData: partial.manager ?? undefined,
+            managerData: sanitizeManagerData(partial.manager),
           }).catch((e) => console.error('Failed to persist assistant message:', e))
         }
         setPendingContinue(true)
@@ -344,7 +353,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const streamedDisplayTracker = useMemo(() => {
     const built = buildTrackerFromResponse(object as MultiAgentSchema | undefined)
     return built ? (autoFixBindings(built as TrackerLike) as TrackerResponse) : built
-  }, [object])
+  }, [object, buildTrackerFromResponse])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -433,7 +442,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     })
     setPendingContinue(false)
     continueCountRef.current += 1
-  }, [pendingContinue, isLoading, messages])
+  }, [pendingContinue, isLoading, messages, submit, getCurrentTrackerForApi])
 
   useEffect(() => {
     if (isLoading && (object?.tracker || object?.trackerPatch)) {

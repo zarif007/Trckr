@@ -1,11 +1,22 @@
-import { auth } from '@/auth'
-import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import {
-  getTrackerData,
-  updateTrackerData,
-  deleteTrackerData,
   validateGridDataSnapshot,
 } from '@/lib/tracker-data'
+import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import {
+  deleteTrackerSnapshotForUser,
+  getTrackerSnapshotForUser,
+  updateTrackerSnapshotForUser,
+} from '@/lib/repositories'
+import type { GridDataSnapshot } from '@/lib/tracker-data'
+
+const patchTrackerDataBodySchema = z
+  .object({
+    label: z.string().optional(),
+    data: z.unknown().optional(),
+  })
+  .passthrough()
 
 /**
  * GET /api/trackers/[id]/data/[dataId]
@@ -15,22 +26,19 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string; dataId: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { dataId } = await params
-  if (!dataId) {
-    return NextResponse.json({ error: 'Missing data id' }, { status: 400 })
-  }
+  const { dataId } = await readParams(params)
+  const snapshotId = requireParam(dataId, 'data id')
+  if (!snapshotId) return badRequest('Missing data id')
 
-  const row = await getTrackerData(dataId, session.user.id)
+  const row = await getTrackerSnapshotForUser(snapshotId, authResult.user.id)
   if (!row) {
-    return NextResponse.json({ error: 'Tracker data not found' }, { status: 404 })
+    return notFound('Tracker data not found')
   }
 
-  return NextResponse.json(row)
+  return jsonOk(row)
 }
 
 /**
@@ -41,40 +49,33 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string; dataId: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { dataId } = await params
-  if (!dataId) {
-    return NextResponse.json({ error: 'Missing data id' }, { status: 400 })
-  }
+  const { dataId } = await readParams(params)
+  const snapshotId = requireParam(dataId, 'data id')
+  if (!snapshotId) return badRequest('Missing data id')
 
-  let body: { label?: string; data?: unknown }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const rawBody = await request.json().catch(() => null)
+  if (rawBody == null) return badRequest('Invalid JSON body')
+  const parsedBody = patchTrackerDataBodySchema.safeParse(rawBody)
+  if (!parsedBody.success) return badRequest('Invalid JSON body')
+  const body = parsedBody.data
 
   if (body.data !== undefined && !validateGridDataSnapshot(body.data)) {
-    return NextResponse.json(
-      { error: 'Invalid data: must be an object with array-of-objects values' },
-      { status: 400 }
-    )
+    return badRequest('Invalid data: must be an object with array-of-objects values')
   }
 
-  const updateBody: { label?: string; data?: import('@/lib/tracker-data/types').GridDataSnapshot } = {}
+  const updateBody: { label?: string; data?: GridDataSnapshot } = {}
   if (body.label !== undefined) updateBody.label = body.label
-  if (body.data !== undefined) updateBody.data = body.data as import('@/lib/tracker-data/types').GridDataSnapshot
+  if (body.data !== undefined) updateBody.data = body.data as GridDataSnapshot
 
-  const updated = await updateTrackerData(dataId, session.user.id, updateBody)
+  const updated = await updateTrackerSnapshotForUser(snapshotId, authResult.user.id, updateBody)
   if (!updated) {
-    return NextResponse.json({ error: 'Tracker data not found' }, { status: 404 })
+    return notFound('Tracker data not found')
   }
 
-  return NextResponse.json(updated)
+  return jsonOk(updated)
 }
 
 /**
@@ -85,20 +86,17 @@ export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string; dataId: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { dataId } = await params
-  if (!dataId) {
-    return NextResponse.json({ error: 'Missing data id' }, { status: 400 })
-  }
+  const { dataId } = await readParams(params)
+  const snapshotId = requireParam(dataId, 'data id')
+  if (!snapshotId) return badRequest('Missing data id')
 
-  const deleted = await deleteTrackerData(dataId, session.user.id)
+  const deleted = await deleteTrackerSnapshotForUser(snapshotId, authResult.user.id)
   if (!deleted) {
-    return NextResponse.json({ error: 'Tracker data not found' }, { status: 404 })
+    return notFound('Tracker data not found')
   }
 
-  return NextResponse.json({ deleted: true })
+  return jsonOk({ deleted: true })
 }

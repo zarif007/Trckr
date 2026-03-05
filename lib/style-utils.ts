@@ -242,7 +242,6 @@ export function resolveKanbanStyles(
   overrides?: StyleOverrides,
 ): ResolvedKanbanStyles {
   const o = overrides ?? {}
-  const density = o.density ?? 'default'
   const cardSize = o.cardSize ?? 'md'
 
   return {

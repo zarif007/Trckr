@@ -36,6 +36,8 @@ import { parseDropZoneId, getPointerCoordinates, getDropPlacementByPointer } fro
 import { FieldDropZones } from './FieldDropZones'
 import { DivGridFieldCell } from './DivGridFieldCell'
 
+const EMPTY_ROWS: Array<Record<string, unknown>> = []
+
 function TrackerDivGridInner({
   tabId,
   grid,
@@ -56,7 +58,10 @@ function TrackerDivGridInner({
   trackerContext: trackerContextProp,
 }: TrackerDivGridProps) {
   const fullGridData = gridDataRef?.current ?? gridData
-  const thisGridRows = gridDataForThisGrid ?? gridData?.[grid.id] ?? []
+  const thisGridRows = useMemo(
+    () => gridDataForThisGrid ?? gridData?.[grid.id] ?? EMPTY_ROWS,
+    [gridDataForThisGrid, gridData, grid.id]
+  )
   const runtimeForDynamicOptionsRef = useRef<{
     currentGridId: string
     rowIndex: number
@@ -150,7 +155,7 @@ function TrackerDivGridInner({
       map.set(fieldId, asyncDynamicFieldOptions[fieldId] ?? syncOptions)
     })
     return map
-  }, [optionFieldIds, fieldsById, tabId, grid.id, bindings, fullGridData, trackerContext, asyncDynamicFieldOptions])
+  }, [optionFieldIds, fieldsById, tabId, grid.id, bindings, fullGridData, trackerContext, runtimeForDynamicOptions, asyncDynamicFieldOptions])
 
   useEffect(() => {
     let cancelled = false
@@ -440,7 +445,7 @@ function TrackerDivGridInner({
     return initial
   }, [addOptionContext?.optionsGridFields])
 
-  const data = useMemo(() => thisGridRows[0] ?? EMPTY_ROW, [thisGridRows, grid.id])
+  const data = useMemo(() => thisGridRows[0] ?? EMPTY_ROW, [thisGridRows])
   const [draftRow, setDraftRow] = useState<Record<string, unknown>>(() => data)
   const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(() => new Set())
   const [dirtyFieldIds, setDirtyFieldIds] = useState<Set<string>>(() => new Set())
@@ -461,7 +466,7 @@ function TrackerDivGridInner({
   }, [touchedFieldIds])
   useEffect(() => {
     setDraftRow(data)
-  }, [data, grid.id])
+  }, [data])
 
   const rowValuesForValidation = useMemo(() => {
     const base = { ...draftRow }
@@ -564,6 +569,7 @@ function TrackerDivGridInner({
       fullGridData,
       grid.id,
       onCrossGridUpdate,
+      onUpdate,
     ]
   )
 

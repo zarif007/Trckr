@@ -4,7 +4,6 @@ import type { DependsOnRuleForTarget } from '@/lib/depends-on'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options'
 
-type PatchItem<T> = Partial<T> & { id?: string; _delete?: boolean }
 type LayoutNodePatch = Partial<TrackerLayoutNode> & { gridId?: string; fieldId?: string; _delete?: boolean }
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
@@ -82,7 +81,8 @@ const mergeArrayById = <T extends { id: string }>(
       continue
     }
 
-    const { _delete, ...patchData } = item
+    const patchData = { ...item }
+    delete patchData._delete
     const existingIndex = next.findIndex((entry) => entry.id === id)
     if (existingIndex >= 0) {
       next[existingIndex] = mergeWithNested(next[existingIndex], patchData as Partial<T>, nestedKeys)
@@ -115,7 +115,8 @@ const mergeLayoutNodes = (
       continue
     }
 
-    const { _delete, ...patchData } = item
+    const patchData = { ...item }
+    delete patchData._delete
     const existingIndex = next.findIndex((node) => layoutNodeKey(node) === layoutNodeKey(item))
     if (existingIndex >= 0) {
       next[existingIndex] = { ...next[existingIndex], ...patchData }

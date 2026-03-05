@@ -1,6 +1,6 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { jsonOk } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { createLoginEvent } from '@/lib/repositories'
 
 /**
  * POST /api/auth/log-login
@@ -8,10 +8,8 @@ import { NextResponse } from 'next/server'
  * Call once after sign-in to track where/how they logged in.
  */
 export async function POST() {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
   const headers = await import('next/headers').then((m) => m.headers())
   const userAgent = headers.get('user-agent') ?? undefined
@@ -20,13 +18,11 @@ export async function POST() {
     headers.get('x-real-ip') ??
     undefined
 
-  await prisma.loginEvent.create({
-    data: {
-      userId: session.user.id,
-      userAgent,
-      ip,
-    },
+  await createLoginEvent({
+    userId: authResult.user.id,
+    userAgent,
+    ip,
   })
 
-  return NextResponse.json({ ok: true })
+  return jsonOk({ ok: true })
 }

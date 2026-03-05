@@ -1,8 +1,17 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
-import { Instance } from '@prisma/client'
+import { z } from 'zod'
 import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
+import { badRequest, jsonOk } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { createTrackerForUser } from '@/lib/repositories'
+
+const createTrackerBodySchema = z
+  .object({
+    name: z.string().optional(),
+    schema: z.unknown().optional(),
+    new: z.boolean().optional(),
+    projectId: z.string().optional(),
+  })
+  .passthrough()
 
 /**
  * POST /api/trackers
@@ -12,17 +21,15 @@ import { createEmptyTrackerSchema } from '@/app/components/tracker-display/track
  * - Otherwise requires schema. Uses projectId if provided and valid, else user's first project or creates "My Project".
  */
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  let body: { name?: string; schema?: unknown; new?: boolean; projectId?: string }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const parsed = await request.json().catch(() => null)
+  if (parsed == null) return badRequest('Invalid JSON body')
+
+  const bodyResult = createTrackerBodySchema.safeParse(parsed)
+  if (!bodyResult.success) return badRequest('Invalid JSON body')
+  const body = bodyResult.data
 
   const isNew = body.new === true
   const schemaFromBody = body.schema
@@ -34,10 +41,7 @@ export async function POST(request: Request) {
       : schemaFromBody
 
   if (schema === undefined || typeof schema !== 'object' || schema === null) {
-    return NextResponse.json(
-      { error: 'Missing or invalid schema' },
-      { status: 400 }
-    )
+    return badRequest('Missing or invalid schema')
   }
 
   const name =
@@ -45,35 +49,12 @@ export async function POST(request: Request) {
       ? body.name.trim()
       : 'Untitled tracker'
 
-  let project: { id: string } | null = null
-  if (typeof body.projectId === 'string' && body.projectId.trim()) {
-    project = await prisma.project.findFirst({
-      where: { id: body.projectId.trim(), userId: session.user.id },
-    })
-  }
-  if (!project) {
-    project = await prisma.project.findFirst({
-      where: { userId: session.user.id },
-      orderBy: { updatedAt: 'desc' },
-    })
-  }
-  if (!project) {
-    project = await prisma.project.create({
-      data: {
-        userId: session.user.id,
-        name: 'My Project',
-      },
-    })
-  }
-
-  const tracker = await prisma.trackerSchema.create({
-    data: {
-      projectId: project.id,
-      name,
-      instance: Instance.SINGLE,
-      schema: schema as object,
-    },
+  const tracker = await createTrackerForUser({
+    userId: authResult.user.id,
+    name,
+    schema: schema as object,
+    projectId: typeof body.projectId === 'string' ? body.projectId.trim() : undefined,
   })
 
-  return NextResponse.json(tracker)
+  return jsonOk(tracker)
 }

@@ -46,10 +46,6 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === 'object' && !Array.isArray(value)
 }
 
-function isEmptyRecord(value: unknown): boolean {
-  return !isPlainRecord(value) || Object.keys(value).length === 0
-}
-
 function isDefaultTabConfig(value: unknown): boolean {
   if (!isPlainRecord(value)) return true
   for (const [key, v] of Object.entries(value)) {

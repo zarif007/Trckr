@@ -102,14 +102,6 @@ function getCachedOptionRowIndex(
 // ============================================================================
 
 /**
- * Match a selected value against a row value.
- * Handles both strict equality and string coercion.
- */
-function matchValue(rowVal: unknown, selected: unknown): boolean {
-  return rowVal === selected || String(rowVal) === String(selected)
-}
-
-/**
  * Find the row in the options grid that matches the selected value.
  * Uses indexed lookup for O(1) performance when possible.
  * 

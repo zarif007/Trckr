@@ -1,5 +1,5 @@
-import { deepseek } from '@ai-sdk/deepseek'
-import { generateObject } from 'ai'
+import { getDefaultAiProvider } from '@/lib/ai'
+import type { ExprNode } from '@/lib/functions/types'
 import { exprOutputSchema, normalizeExprNode } from '@/lib/schemas/expr'
 import { buildSystemPrompt, buildUserPrompt, type ExprPromptInputs } from './prompts'
 
@@ -8,16 +8,16 @@ export interface GenerateExprResult {
 }
 
 export async function generateExpr(inputs: ExprPromptInputs): Promise<GenerateExprResult> {
+  const provider = getDefaultAiProvider()
   const system = buildSystemPrompt(inputs.purpose)
   const prompt = buildUserPrompt(inputs)
-  const { object } = await generateObject({
-    model: deepseek('deepseek-chat'),
+  const object = await provider.generateObject<{ expr: unknown }>({
     system,
     prompt,
     schema: exprOutputSchema,
     maxOutputTokens: 1024,
   })
 
-  const expr = normalizeExprNode(object.expr)
+  const expr = normalizeExprNode(object.expr as ExprNode)
   return { expr }
 }

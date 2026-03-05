@@ -1,7 +1,16 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
-import { Role } from '@prisma/client'
+import { z } from 'zod'
+import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { appendConversationMessage } from '@/lib/repositories'
+
+const createMessageBodySchema = z
+  .object({
+    role: z.string().optional(),
+    content: z.string().optional(),
+    trackerSchemaSnapshot: z.unknown().optional(),
+    managerData: z.unknown().optional(),
+  })
+  .passthrough()
 
 /**
  * POST /api/conversations/[id]/messages
@@ -11,57 +20,39 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id: conversationId } = await params
-  if (!conversationId) {
-    return NextResponse.json({ error: 'Missing conversation id' }, { status: 400 })
-  }
+  const { id } = await readParams(params)
+  const conversationId = requireParam(id, 'conversation id')
+  if (!conversationId) return badRequest('Missing conversation id')
 
-  let body: { role?: string; content?: string; trackerSchemaSnapshot?: unknown; managerData?: unknown }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const rawBody = await request.json().catch(() => null)
+  if (rawBody == null) return badRequest('Invalid JSON body')
+  const parsedBody = createMessageBodySchema.safeParse(rawBody)
+  if (!parsedBody.success) return badRequest('Invalid JSON body')
+  const body = parsedBody.data
 
-  const role = body.role === 'ASSISTANT' ? Role.ASSISTANT : Role.USER
+  const role = body.role === 'ASSISTANT' ? 'ASSISTANT' : 'USER'
   const content = typeof body.content === 'string' ? body.content : ''
   const trackerSchemaSnapshot =
     body.trackerSchemaSnapshot != null && typeof body.trackerSchemaSnapshot === 'object'
       ? (body.trackerSchemaSnapshot as object)
       : undefined
-  const managerData =
-    body.managerData != null && typeof body.managerData === 'object'
-      ? (body.managerData as object)
-      : undefined
 
-  const rows = await prisma.$queryRaw<
-    [{ userId: string }]
-  >`SELECT p."userId" FROM "Conversation" c
-    INNER JOIN "TrackerSchema" t ON t.id = c."trackerSchemaId"
-    INNER JOIN "Project" p ON p.id = t."projectId"
-    WHERE c.id = ${conversationId} LIMIT 1`
-  if (!rows.length || rows[0].userId !== session.user.id) {
-    return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
-  }
-
-  const message = await prisma.message.create({
-    data: {
-      conversationId,
-      role,
-      content: content ?? '',
-      trackerSchemaSnapshot: trackerSchemaSnapshot ?? undefined,
-      managerData: managerData ?? undefined,
-    },
+  const message = await appendConversationMessage({
+    conversationId,
+    userId: authResult.user.id,
+    role,
+    content: content ?? '',
+    trackerSchemaSnapshot: trackerSchemaSnapshot ?? undefined,
+    managerData: body.managerData,
   })
+  if (!message) return notFound('Conversation not found')
 
-  return NextResponse.json({
+  return jsonOk({
     id: message.id,
-    role: message.role === Role.USER ? 'user' : 'assistant',
+    role: message.role === 'USER' ? 'user' : 'assistant',
     content: message.content,
     trackerSchemaSnapshot: message.trackerSchemaSnapshot,
     managerData: message.managerData,

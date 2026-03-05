@@ -1,6 +1,6 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { jsonOk, notFound, readParams } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { findProjectByIdForUser } from '@/lib/repositories'
 
 /**
  * GET /api/projects/[id]
@@ -10,28 +10,16 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id } = await params
+  const { id } = await readParams(params)
 
-  const project = await prisma.project.findFirst({
-    where: {
-      id,
-      userId: session.user.id,
-    },
-    include: {
-      trackerSchemas: {
-        orderBy: { updatedAt: 'desc' },
-      },
-    },
-  })
+  const project = await findProjectByIdForUser(id, authResult.user.id)
 
   if (!project) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return notFound('Not found')
   }
 
-  return NextResponse.json(project)
+  return jsonOk(project)
 }

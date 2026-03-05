@@ -10,7 +10,8 @@ export const DEPENDS_ON_ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as co
 
 const ACTIONS = DEPENDS_ON_ACTIONS
 
-export function allActions(_context: DynamicOptionsContext): DynamicOption[] {
+export function allActions(context: DynamicOptionsContext): DynamicOption[] {
+  void context
   return ACTIONS.map((a) => ({
     value: a,
     label: a,

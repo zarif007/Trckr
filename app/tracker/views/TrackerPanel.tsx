@@ -72,7 +72,6 @@ export const TrackerPanel = memo(function TrackerPanel({
   fullWidth,
   hideChatToggle,
   onShareClick,
-  trackerName: _trackerName,
   isViewingHistoricalVersion,
   onReturnToLatest,
   trackerId,
@@ -83,7 +82,6 @@ export const TrackerPanel = memo(function TrackerPanel({
   latestSnapshotId,
   onLoadSnapshot,
   onSavedNewSnapshot,
-  onClearLoadedSnapshot,
   onJumpToLatest,
   onRegisterSaveData,
 }: TrackerPanelProps) {

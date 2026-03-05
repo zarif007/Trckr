@@ -11,7 +11,6 @@ import {
   getDefaultClassNames,
   type DayButton,
   type DateRange,
-  type DayPickerProps,
   type Modifiers,
 } from "react-day-picker"
 

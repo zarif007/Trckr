@@ -1,6 +1,14 @@
-import { auth } from '@/auth'
-import { prisma } from '@/lib/db'
-import { NextResponse } from 'next/server'
+import { z } from 'zod'
+import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { findTrackerByIdForUser, updateTrackerByIdForUser } from '@/lib/repositories'
+
+const patchTrackerBodySchema = z
+  .object({
+    name: z.string().optional(),
+    schema: z.unknown().optional(),
+  })
+  .passthrough()
 
 /**
  * GET /api/trackers/[id]
@@ -10,28 +18,20 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id } = await params
-  if (!id) {
-    return NextResponse.json({ error: 'Missing tracker id' }, { status: 400 })
-  }
+  const { id } = await readParams(params)
+  const trackerId = requireParam(id, 'tracker id')
+  if (!trackerId) return badRequest('Missing tracker id')
 
-  const tracker = await prisma.trackerSchema.findFirst({
-    where: {
-      id,
-      project: { userId: session.user.id },
-    },
-  })
+  const tracker = await findTrackerByIdForUser(trackerId, authResult.user.id)
 
   if (!tracker) {
-    return NextResponse.json({ error: 'Tracker not found' }, { status: 404 })
+    return notFound('Tracker not found')
   }
 
-  return NextResponse.json(tracker)
+  return jsonOk(tracker)
 }
 
 /**
@@ -42,32 +42,23 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth()
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
 
-  const { id } = await params
-  if (!id) {
-    return NextResponse.json({ error: 'Missing tracker id' }, { status: 400 })
-  }
+  const { id } = await readParams(params)
+  const trackerId = requireParam(id, 'tracker id')
+  if (!trackerId) return badRequest('Missing tracker id')
 
-  let body: { name?: string; schema?: unknown }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  }
+  const rawBody = await request.json().catch(() => null)
+  if (rawBody == null) return badRequest('Invalid JSON body')
+  const parsedBody = patchTrackerBodySchema.safeParse(rawBody)
+  if (!parsedBody.success) return badRequest('Invalid JSON body')
+  const body = parsedBody.data
 
-  const tracker = await prisma.trackerSchema.findFirst({
-    where: {
-      id,
-      project: { userId: session.user.id },
-    },
-  })
+  const tracker = await findTrackerByIdForUser(trackerId, authResult.user.id)
 
   if (!tracker) {
-    return NextResponse.json({ error: 'Tracker not found' }, { status: 404 })
+    return notFound('Tracker not found')
   }
 
   const updateData: { name?: string | null; schema?: object } = {}
@@ -79,13 +70,11 @@ export async function PATCH(
   }
 
   if (Object.keys(updateData).length === 0) {
-    return NextResponse.json(tracker)
+    return jsonOk(tracker)
   }
 
-  const updated = await prisma.trackerSchema.update({
-    where: { id },
-    data: updateData,
-  })
+  const updated = await updateTrackerByIdForUser(trackerId, authResult.user.id, updateData)
+  if (!updated) return notFound('Tracker not found')
 
-  return NextResponse.json(updated)
+  return jsonOk(updated)
 }

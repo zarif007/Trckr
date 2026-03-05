@@ -1,3 +1,5 @@
+import { hasDeepSeekApiKey } from '@/lib/ai'
+
 /**
  * Request validation and error helpers for generate-tracker.
  */
@@ -42,7 +44,7 @@ export function parseRequestBody(body: unknown): ParseResult {
     }
   }
 
-  if (!process.env.DEEPSEEK_API_KEY) {
+  if (!hasDeepSeekApiKey()) {
     return {
       ok: false,
       error: 'DEEPSEEK_API_KEY is not configured',

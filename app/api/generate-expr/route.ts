@@ -1,30 +1,29 @@
 import { parseRequestBody, getErrorMessage } from './lib/validation'
 import { deriveAvailableFields } from './lib/prompts'
 import { generateExpr } from './lib/generate'
+import { badRequest, createRequestLogContext, jsonError, jsonOk } from '@/lib/api'
+import { logAiError, logAiStage } from '@/lib/ai'
 
 export async function POST(request: Request) {
+  const logContext = createRequestLogContext(request, 'generate-expr')
   try {
     let body: unknown
     try {
       body = await request.json()
     } catch {
-      return Response.json(
-        {
-          error: 'Invalid request body. Expected JSON with "prompt", "gridId", and "fieldId".',
-        },
-        { status: 400 }
-      )
+      return badRequest('Invalid request body. Expected JSON with "prompt", "gridId", and "fieldId".')
     }
 
     const parsed = parseRequestBody(body)
     if (!parsed.ok) {
-      return Response.json({ error: parsed.error }, { status: parsed.status })
+      return jsonError(parsed.error, parsed.status)
     }
 
     const { prompt, gridId, fieldId, purpose, currentTracker } = parsed
     const availableFields = deriveAvailableFields(currentTracker, gridId)
 
     try {
+      logAiStage(logContext, 'request', 'Generating expression.')
       const { expr } = await generateExpr({
         prompt,
         gridId,
@@ -32,21 +31,15 @@ export async function POST(request: Request) {
         purpose,
         availableFields,
       })
-      return Response.json({ expr })
+      return jsonOk({ expr })
     } catch (error) {
       const message = getErrorMessage(error)
-      console.error('[generate-expr] Error:', message)
-      return Response.json(
-        { error: message || 'Failed to generate expression.' },
-        { status: 500 }
-      )
+      logAiError(logContext, 'generation-error', error)
+      return jsonError(message || 'Failed to generate expression.', 500)
     }
   } catch (error) {
     const message = getErrorMessage(error)
-    console.error('[generate-expr] Unexpected error:', message)
-    return Response.json(
-      { error: message || 'Failed to generate expression.' },
-      { status: 500 }
-    )
+    logAiError(logContext, 'route-error', error)
+    return jsonError(message || 'Failed to generate expression.', 500)
   }
 }

@@ -14,7 +14,8 @@ export const DEPENDS_ON_OPERATORS = [
 
 const OPERATORS = DEPENDS_ON_OPERATORS
 
-export function allOperators(_context: DynamicOptionsContext): DynamicOption[] {
+export function allOperators(context: DynamicOptionsContext): DynamicOption[] {
+  void context
   return OPERATORS.map((op) => ({
     value: op,
     label: op,

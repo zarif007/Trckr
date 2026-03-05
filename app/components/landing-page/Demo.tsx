@@ -3,43 +3,42 @@
 import { useMemo } from 'react'
 import { TrackerDisplay } from '@/app/components/tracker-display'
 
-export default function Demo() {
-  // Dummy data for a small-team project pipeline
-  const examples = [
-    {
-      project: 'New onboarding flow',
-      owner: 'Sara',
-      team: 'Product',
-      dueDate: '2026-01-25',
-      priority: 'High',
-      status: 'In Progress',
-    },
-    {
-      project: 'Vendor consolidation',
-      owner: 'David',
-      team: 'Operations',
-      dueDate: '2026-02-05',
-      priority: 'Medium',
-      status: 'Not Started',
-    },
-    {
-      project: 'Laptop refresh Q1',
-      owner: 'Priya',
-      team: 'IT',
-      dueDate: '2026-01-30',
-      priority: 'High',
-      status: 'Blocked',
-    },
-    {
-      project: 'Office move checklist',
-      owner: 'Alex',
-      team: 'People',
-      dueDate: '2026-03-15',
-      priority: 'Low',
-      status: 'Completed',
-    },
-  ]
+const EXAMPLES = [
+  {
+    project: 'New onboarding flow',
+    owner: 'Sara',
+    team: 'Product',
+    dueDate: '2026-01-25',
+    priority: 'High',
+    status: 'In Progress',
+  },
+  {
+    project: 'Vendor consolidation',
+    owner: 'David',
+    team: 'Operations',
+    dueDate: '2026-02-05',
+    priority: 'Medium',
+    status: 'Not Started',
+  },
+  {
+    project: 'Laptop refresh Q1',
+    owner: 'Priya',
+    team: 'IT',
+    dueDate: '2026-01-30',
+    priority: 'High',
+    status: 'Blocked',
+  },
+  {
+    project: 'Office move checklist',
+    owner: 'Alex',
+    team: 'People',
+    dueDate: '2026-03-15',
+    priority: 'Low',
+    status: 'Completed',
+  },
+]
 
+export default function Demo() {
   const demoData = {
     tabs: [
       { id: 'projects_tab', name: 'Projects', placeId: 1 },
@@ -201,7 +200,7 @@ export default function Demo() {
   }
 
   const initialGridData = useMemo(() => {
-    const projectListRows = examples.map((e) => ({
+    const projectListRows = EXAMPLES.map((e) => ({
       project_name: e.project,
       project_owner: e.owner,
       project_team: e.team,
@@ -210,7 +209,7 @@ export default function Demo() {
       project_status: e.status,
     }))
 
-    const kanbanRows = examples.map((e) => ({
+    const kanbanRows = EXAMPLES.map((e) => ({
       kb_project_name: e.project,
       kb_project_owner: e.owner,
       kb_project_due_date: e.dueDate,

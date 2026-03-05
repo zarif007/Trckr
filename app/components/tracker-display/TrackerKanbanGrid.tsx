@@ -44,6 +44,10 @@ import type {
 import type { TrackerContextForOptions } from '@/lib/binding'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
+const EMPTY_ROWS: Array<Record<string, unknown>> = []
+const EMPTY_GROUPS: Array<{ id: string; label: string }> = []
+const EMPTY_FIELDS: TrackerField[] = []
+
 export interface TrackerKanbanGridProps {
   tabId: string
   grid: TrackerGrid
@@ -75,7 +79,6 @@ function TrackerKanbanGridInner({
   styleOverrides,
   dependsOn,
   gridData = {},
-  gridDataRef: _gridDataRef,
   gridDataForThisGrid,
   onUpdate,
   onAddEntry,
@@ -86,7 +89,10 @@ function TrackerKanbanGridInner({
   const addable = (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false && onAddEntry != null
   const editable = grid.config?.isRowEditAble !== false
   const deleteable = (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false && onDeleteEntries != null
-  const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
+  const thisGridRows = useMemo(
+    () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
+    [gridDataForThisGrid, gridData, grid.id]
+  )
   const fullGridData = useMemo(
     () => ({ ...gridData, [grid.id]: thisGridRows }),
     [gridData, grid.id, thisGridRows]
@@ -121,13 +127,13 @@ function TrackerKanbanGridInner({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
-  const groups = kanbanState?.groups ?? []
+  const groups = kanbanState?.groups ?? EMPTY_GROUPS
   const groupByFieldId = kanbanState?.groupByFieldId ?? ''
   const cardFieldsDisplay = kanbanState?.cardFieldsDisplay ?? []
   const fieldMetadata = kanbanState?.fieldMetadata ?? {}
   const fieldOrder = kanbanState?.fieldOrder ?? []
-  const kanbanFields = kanbanState?.kanbanFields ?? []
-  const rows = kanbanState?.rows ?? []
+  const kanbanFields = kanbanState?.kanbanFields ?? EMPTY_FIELDS
+  const rows = kanbanState?.rows ?? EMPTY_ROWS
 
   const groupedCards = useMemo(() => {
     const map = new Map<string, Array<Record<string, unknown> & { _originalIdx: number }>>()
@@ -248,9 +254,11 @@ function TrackerKanbanGridInner({
               for (const update of updates) {
                 const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(update.targetPath)
                 if (targetGridId && targetFieldId) {
-                  onCrossGridUpdate
-                    ? onCrossGridUpdate(targetGridId, editRowIndex, targetFieldId, update.value)
-                    : targetGridId === grid.id && onUpdate(editRowIndex, targetFieldId, update.value)
+                  if (onCrossGridUpdate) {
+                    onCrossGridUpdate(targetGridId, editRowIndex, targetFieldId, update.value)
+                  } else if (targetGridId === grid.id) {
+                    onUpdate(editRowIndex, targetFieldId, update.value)
+                  }
                 }
               }
             }

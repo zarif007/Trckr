@@ -58,7 +58,8 @@ export async function getTrackerData(id: string, userId: string) {
     },
   })
   if (!row || row.trackerSchema.project.userId !== userId) return null
-  const { trackerSchema: _, ...rest } = row
+  const { trackerSchema, ...rest } = row
+  void trackerSchema
   return rest
 }
 

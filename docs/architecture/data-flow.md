@@ -28,3 +28,10 @@
 - `lib/depends-on`: visibility/required/disabled overrides.
 - `lib/field-validation` + `lib/field-calculation`: field-level runtime checks and recalculation.
 - `lib/dynamic-options`: built-in and user-defined dynamic option providers.
+
+## API Handler Flow (Refactor Pattern)
+
+1. Route handler calls `requireAuthenticatedUser()` from `lib/auth/server` when protected.
+2. Params/body validation happens via `lib/api` helpers + Zod schemas.
+3. Persistence reads/writes go through `lib/repositories`.
+4. Response formatting uses `lib/api/http` helpers.

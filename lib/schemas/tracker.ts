@@ -1,13 +1,6 @@
 import { z } from 'zod'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options/user-functions/schema'
 
-const fieldName = () =>
-  z
-    .string()
-    .describe(
-      'CamelCase identifier for code usage (ids should be unique)'
-    )
-
 const tabId = () =>
   z
     .string()

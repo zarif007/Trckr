@@ -1,5 +1,4 @@
-import { deepseek } from '@ai-sdk/deepseek'
-import { generateObject } from 'ai'
+import { getDefaultAiProvider } from '@/lib/ai'
 import {
   dynamicOptionFunctionSchema,
   generateDynamicOptionFunctionOutputSchema,
@@ -76,11 +75,13 @@ function toGraphFallback(
 export async function generateDynamicOptionFunction(
   input: GenerateDynamicOptionsInput,
 ) {
+  const provider = getDefaultAiProvider()
   const system = buildSystemPrompt()
   const prompt = buildUserPrompt(input)
 
-  const { object } = await generateObject({
-    model: deepseek('deepseek-chat'),
+  const object = await provider.generateObject<{
+    function: Record<string, unknown>
+  }>({
     system,
     prompt,
     schema: generateDynamicOptionFunctionOutputSchema,

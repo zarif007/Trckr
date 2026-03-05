@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 import { DashboardProvider, useDashboard } from './dashboard-context'
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const pathname = usePathname()
   const {
     projects,

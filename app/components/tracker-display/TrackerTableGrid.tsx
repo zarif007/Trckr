@@ -26,6 +26,8 @@ import { useEditMode, useLayoutActions, AddColumnOrFieldDialog, SortableColumnHe
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 
+const EMPTY_ROWS: Array<Record<string, unknown>> = []
+
 interface TrackerTableGridProps {
   tabId: string
   grid: TrackerGrid
@@ -64,7 +66,6 @@ function TrackerTableGridInner({
   styleOverrides,
   dependsOn,
   gridData = {},
-  gridDataRef: _gridDataRef,
   gridDataForThisGrid,
   onUpdate,
   onAddEntry,
@@ -73,7 +74,10 @@ function TrackerTableGridInner({
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerTableGridProps) {
-  const thisGridRows = gridDataForThisGrid ?? gridData[grid.id] ?? []
+  const thisGridRows = useMemo(
+    () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
+    [gridDataForThisGrid, gridData, grid.id]
+  )
   const fullGridData = useMemo(
     () => ({ ...gridData, [grid.id]: thisGridRows }),
     [gridData, grid.id, thisGridRows]
@@ -168,7 +172,7 @@ function TrackerTableGridInner({
       out[idx] = resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, idx, row)
     })
     return out
-  }, [dependsOnForGrid, fullGridData, grid.id])
+  }, [dependsOnForGrid, fullGridData, grid.id, rows])
 
   const hiddenTargetFields = useMemo(() => {
     const targets = new Set<string>()
@@ -245,7 +249,7 @@ function TrackerTableGridInner({
       map.set(field.id, asyncDynamicFieldOptions[field.id] ?? syncOptions)
     })
     return map
-  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext, asyncDynamicFieldOptions])
+  }, [tableFields, tabId, grid.id, bindings, fullGridData, trackerContext, runtimeForDynamicOptions, asyncDynamicFieldOptions])
 
   useEffect(() => {
     let cancelled = false

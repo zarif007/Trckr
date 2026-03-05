@@ -15,6 +15,6 @@ This catalog is used for onboarding and docs coverage checks. Every path below m
 | Dynamic options engine | `lib/dynamic-options` | Built-ins + graph/user function execution. |
 | Binding + path resolution | `lib/binding`, `lib/resolve-bindings` | Select options and mapping propagation. |
 | Depends-on and validation | `lib/depends-on`, `lib/validate-tracker`, `lib/field-validation`, `lib/field-calculation` | Runtime field behavior and schema validation. |
-| Team context and sharing | `lib/teams`, `app/components/teams`, `app/api/teams` | Team selector and current mock API. |
+| Team context and sharing | `lib/teams`, `lib/teams/service.ts`, `app/components/teams`, `app/api/teams` | Team selector and current mock API behind service interface. |
 | Tracker data services | `lib/tracker-data` | Data snapshot CRUD services. |
 | Database schema | `prisma/schema.prisma`, `prisma/migrations` | Source of DB truth. |

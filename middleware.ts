@@ -1,27 +1,12 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-
-// Lightweight auth check using session cookie directly
-// Avoids importing heavy auth/prisma dependencies in Edge Runtime
-function getSessionToken(req: NextRequest): string | undefined {
-  const cookie = req.cookies.get('authjs.session-token')?.value
-  if (cookie) return cookie
-  
-  // Support for production cookie name
-  return req.cookies.get('__Secure-authjs.session-token')?.value
-}
-
-function isValidSession(token: string | undefined): boolean {
-  // Simple presence check - actual validation happens in API routes
-  return !!token && token.length > 0
-}
+import { isAuthenticatedRequest } from '@/lib/auth/server'
 
 export default function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
   if (pathname.startsWith('/api/auth')) return NextResponse.next()
 
-  const sessionToken = getSessionToken(req)
-  const isLoggedIn = isValidSession(sessionToken)
+  const isLoggedIn = isAuthenticatedRequest(req)
   const isTracker = pathname.startsWith('/tracker')
   const isDashboard = pathname.startsWith('/dashboard')
   const isLogin = pathname === '/login'
