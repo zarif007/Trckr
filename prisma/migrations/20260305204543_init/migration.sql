@@ -4,6 +4,9 @@ CREATE TYPE "Instance" AS ENUM ('SINGLE', 'MULTI');
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('USER', 'ASSISTANT');
 
+-- CreateEnum
+CREATE TYPE "ProjectFileType" AS ENUM ('TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -70,6 +73,18 @@ CREATE TABLE "Project" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Project_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ProjectFile" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "type" "ProjectFileType" NOT NULL,
+    "content" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ProjectFile_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -140,6 +155,12 @@ CREATE INDEX "LoginEvent_createdAt_idx" ON "LoginEvent"("createdAt");
 CREATE INDEX "Project_userId_idx" ON "Project"("userId");
 
 -- CreateIndex
+CREATE INDEX "ProjectFile_projectId_idx" ON "ProjectFile"("projectId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ProjectFile_projectId_type_key" ON "ProjectFile"("projectId", "type");
+
+-- CreateIndex
 CREATE INDEX "TrackerSchema_projectId_idx" ON "TrackerSchema"("projectId");
 
 -- CreateIndex
@@ -162,6 +183,9 @@ ALTER TABLE "LoginEvent" ADD CONSTRAINT "LoginEvent_userId_fkey" FOREIGN KEY ("u
 
 -- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ProjectFile" ADD CONSTRAINT "ProjectFile_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;

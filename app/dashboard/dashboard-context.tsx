@@ -18,12 +18,35 @@ export type TrackerSchema = {
   updatedAt: string
 }
 
+export type ProjectFileType =
+  | 'TEAMS'
+  | 'SETTINGS'
+  | 'RULES'
+  | 'CONNECTIONS'
+
+export const PROJECT_FILE_LABELS: Record<ProjectFileType, string> = {
+  TEAMS: 'Teams',
+  SETTINGS: 'Settings',
+  RULES: 'Rules',
+  CONNECTIONS: 'Connections',
+}
+
+export type ProjectFile = {
+  id: string
+  projectId: string
+  type: ProjectFileType
+  content: unknown
+  createdAt: string
+  updatedAt: string
+}
+
 export type Project = {
   id: string
   name: string | null
   userId: string
   createdAt: string
   updatedAt: string
+  projectFiles: ProjectFile[]
   trackerSchemas: TrackerSchema[]
 }
 

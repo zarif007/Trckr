@@ -726,14 +726,14 @@ function TrackerDivGridInner({
             key={rowKey}
             className={`grid ${gridCols} gap-2.5 min-w-0 transition-[box-shadow,border-color] duration-150 ${isDropRow ? 'ring-1 ring-primary/20 rounded-md p-1 -m-1' : ''}`}
           >
-            {nodesInRow.map((node, nodeIndex) => {
+            {nodesInRow.map((node) => {
               const index = fieldIndexById.get(node.fieldId) ?? 0
               const indicator =
                 canEditLayout && activeDragId && dropIndicator?.overId === fieldSortableId(grid.id, node.fieldId)
                   ? dropIndicator.placement
                   : null
               return (
-                <div key={`${rowKey}-${nodeIndex}`} className="relative min-w-0">
+                <div key={node.fieldId} className="relative min-w-0">
                   {renderFieldContent(node, index)}
                   <FieldDropZones gridId={grid.id} fieldId={node.fieldId} enabled={canEditLayout} />
                   {indicator === 'left' && (

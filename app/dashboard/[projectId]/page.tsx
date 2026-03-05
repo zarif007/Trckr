@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import {
@@ -11,10 +11,22 @@ import {
   Calendar,
   ChevronRight,
   MoreVertical,
+  Users,
+  Settings,
+  ScrollText,
+  Network,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import type { Project } from '../dashboard-context'
+import type { Project, ProjectFile, ProjectFileType } from '../dashboard-context'
+import { PROJECT_FILE_LABELS } from '../dashboard-context'
+
+const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
+  TEAMS: Users,
+  SETTINGS: Settings,
+  RULES: ScrollText,
+  CONNECTIONS: Network,
+}
 
 export default function DashboardProjectPage() {
   const router = useRouter()
@@ -54,6 +66,34 @@ export default function DashboardProjectPage() {
   useEffect(() => {
     if (projectId) fetchProject()
   }, [projectId, fetchProject])
+
+  const projectFiles = project?.projectFiles ?? []
+  const trackerSchemas = project?.trackerSchemas ?? []
+  const totalItems = projectFiles.length + trackerSchemas.length
+  const isEmpty = totalItems === 0
+
+  const tableRows = useMemo(() => {
+    if (!project) return []
+    const fileRows = projectFiles.map((file: ProjectFile) => ({
+      kind: 'file' as const,
+      id: file.id,
+      label: PROJECT_FILE_LABELS[file.type],
+      sublabel: '',
+      icon: PROJECT_FILE_ICONS[file.type],
+      updatedAt: file.updatedAt,
+      href: `/dashboard/${projectId}/file/${file.id}`,
+    }))
+    const trackerRows = trackerSchemas.map((tracker) => ({
+      kind: 'tracker' as const,
+      id: tracker.id,
+      label: tracker.name || 'Untitled tracker',
+      sublabel: 'Tracker',
+      icon: FileText,
+      updatedAt: tracker.updatedAt,
+      href: `/tracker/${tracker.id}`,
+    }))
+    return [...fileRows, ...trackerRows]
+  }, [projectId, project, projectFiles, trackerSchemas])
 
   const handleCreateTracker = async () => {
     setCreating(true)
@@ -124,7 +164,7 @@ export default function DashboardProjectPage() {
 
         <div className="flex-1 overflow-auto p-6">
           <div className="h-full flex flex-col rounded-xl border border-border/50 bg-background/50 overflow-hidden min-h-0">
-            {project.trackerSchemas.length === 0 ? (
+            {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
                 <div className="w-14 h-14 rounded-xl bg-muted/30 flex items-center justify-center border border-dashed border-border/30">
                   <FileText className="h-7 w-7 opacity-40" />
@@ -152,52 +192,57 @@ export default function DashboardProjectPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {project.trackerSchemas.map((tracker) => (
-                      <tr
-                        key={tracker.id}
-                        onClick={() => router.push(`/tracker/${tracker.id}`)}
-                        className="group hover:bg-muted/40 cursor-pointer transition-colors"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
-                              <FileText className="h-4 w-4 text-primary/60" />
+                    {tableRows.map((row) => {
+                      const Icon = row.icon
+                      return (
+                        <tr
+                          key={row.kind === 'file' ? `file-${row.id}` : `tracker-${row.id}`}
+                          onClick={() => router.push(row.href)}
+                          className="group hover:bg-muted/40 cursor-pointer transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors">
+                                <Icon className="h-4 w-4 text-primary/60" />
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium block">
+                                  {row.label}
+                                </span>
+                                {row.sublabel ? (
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {row.sublabel}
+                                  </span>
+                                ) : null}
+                              </div>
                             </div>
-                            <div>
-                              <span className="text-sm font-medium block">
-                                {tracker.name || 'Untitled tracker'}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground">
-                                Tracker
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                            <Calendar className="h-3 w-3 opacity-50" />
-                            {new Date(tracker.updatedAt).toLocaleDateString(
-                              undefined,
-                              {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              }
-                            )}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            className="p-1.5 rounded-md hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                              <Calendar className="h-3 w-3 opacity-50" />
+                              {new Date(row.updatedAt).toLocaleDateString(
+                                undefined,
+                                {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                }
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              className="p-1.5 rounded-md hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
                 <div className="p-3 border-t border-border/30">
@@ -222,8 +267,8 @@ export default function DashboardProjectPage() {
 
       <div className="h-6 flex-shrink-0 border-t border-border/50 flex items-center justify-between px-3 text-[10px] text-muted-foreground bg-muted/20">
         <span>
-          {project.trackerSchemas.length} item
-          {project.trackerSchemas.length !== 1 ? 's' : ''}
+          {totalItems} item
+          {totalItems !== 1 ? 's' : ''}
         </span>
         <span className="tabular-nums">
           {currentTime.toLocaleDateString(undefined, {
