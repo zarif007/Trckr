@@ -88,9 +88,33 @@ CREATE TABLE "ProjectFile" (
 );
 
 -- CreateTable
+CREATE TABLE "Module" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "name" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Module_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ModuleFile" (
+    "id" TEXT NOT NULL,
+    "moduleId" TEXT NOT NULL,
+    "type" "ProjectFileType" NOT NULL,
+    "content" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ModuleFile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "TrackerSchema" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
+    "moduleId" TEXT,
     "name" TEXT,
     "instance" "Instance" NOT NULL DEFAULT 'SINGLE',
     "schema" JSONB NOT NULL,
@@ -161,7 +185,19 @@ CREATE INDEX "ProjectFile_projectId_idx" ON "ProjectFile"("projectId");
 CREATE UNIQUE INDEX "ProjectFile_projectId_type_key" ON "ProjectFile"("projectId", "type");
 
 -- CreateIndex
+CREATE INDEX "Module_projectId_idx" ON "Module"("projectId");
+
+-- CreateIndex
+CREATE INDEX "ModuleFile_moduleId_idx" ON "ModuleFile"("moduleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ModuleFile_moduleId_type_key" ON "ModuleFile"("moduleId", "type");
+
+-- CreateIndex
 CREATE INDEX "TrackerSchema_projectId_idx" ON "TrackerSchema"("projectId");
+
+-- CreateIndex
+CREATE INDEX "TrackerSchema_moduleId_idx" ON "TrackerSchema"("moduleId");
 
 -- CreateIndex
 CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
@@ -188,7 +224,16 @@ ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId"
 ALTER TABLE "ProjectFile" ADD CONSTRAINT "ProjectFile_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Module" ADD CONSTRAINT "Module_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ModuleFile" ADD CONSTRAINT "ModuleFile_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;

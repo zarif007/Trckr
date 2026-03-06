@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import { gridViewSchema, trackerSchema } from './tracker'
 
+const suggestedModuleSchema = z
+  .object({
+    name: z.string().describe('Module name (e.g. "HR", "Finance")'),
+    trackerNames: z.array(z.string()).optional().describe('Tracker names that belong to this module'),
+  })
+  .passthrough()
+
 export const managerSchema = z
   .object({
     thinking: z.string().optional().describe('Detailed thinking process or internal monologue of the manager'),
@@ -8,6 +15,10 @@ export const managerSchema = z
       .object({
         name: z.string().optional().describe('Short name for the tracker'),
         keyFeatures: z.array(z.string()).optional().describe('List of key features or goals'),
+        suggestedModules: z
+          .array(suggestedModuleSchema)
+          .optional()
+          .describe('Optional modules for multi-domain projects. Omit for simple single-domain projects.'),
       })
       .partial()
       .optional()

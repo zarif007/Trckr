@@ -10,6 +10,7 @@ const createTrackerBodySchema = z
     schema: z.unknown().optional(),
     new: z.boolean().optional(),
     projectId: z.string().optional(),
+    moduleId: z.string().optional(),
   })
   .passthrough()
 
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
     name,
     schema: schema as object,
     projectId: typeof body.projectId === 'string' ? body.projectId.trim() : undefined,
+    moduleId: typeof body.moduleId === 'string' ? body.moduleId.trim() : undefined,
   })
 
   return jsonOk(tracker)

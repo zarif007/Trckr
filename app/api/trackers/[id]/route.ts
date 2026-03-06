@@ -1,7 +1,11 @@
 import { z } from 'zod'
 import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { findTrackerByIdForUser, updateTrackerByIdForUser } from '@/lib/repositories'
+import {
+  findTrackerByIdForUser,
+  updateTrackerByIdForUser,
+  deleteTrackerByIdForUser,
+} from '@/lib/repositories'
 
 const patchTrackerBodySchema = z
   .object({
@@ -77,4 +81,24 @@ export async function PATCH(
   if (!updated) return notFound('Tracker not found')
 
   return jsonOk(updated)
+}
+
+/**
+ * DELETE /api/trackers/[id]
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
+
+  const { id } = await readParams(params)
+  const trackerId = requireParam(id, 'tracker id')
+  if (!trackerId) return badRequest('Missing tracker id')
+
+  const deleted = await deleteTrackerByIdForUser(trackerId, authResult.user.id)
+  if (!deleted) return notFound('Tracker not found')
+
+  return jsonOk({ deleted: true })
 }

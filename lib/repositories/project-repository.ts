@@ -18,6 +18,12 @@ export async function listProjectsForUser(userId: string) {
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
       },
+      modules: {
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+        },
+      },
     },
   })
 }
@@ -42,6 +48,9 @@ export async function createProjectForUser(userId: string, name: string) {
         projectFiles: {
           orderBy: { type: 'asc' },
         },
+        modules: {
+          orderBy: { updatedAt: 'desc' },
+        },
       },
     })
   })
@@ -60,6 +69,13 @@ export async function findProjectByIdForUser(projectId: string, userId: string) 
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
       },
+      modules: {
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          moduleFiles: { orderBy: { type: 'asc' } },
+          trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+        },
+      },
     },
   })
 }
@@ -68,6 +84,27 @@ export async function findMostRecentProjectForUser(userId: string) {
   return prisma.project.findFirst({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
+  })
+}
+
+export async function updateProjectForUser(
+  projectId: string,
+  userId: string,
+  data: { name: string },
+) {
+  const existing = await findProjectByIdForUser(projectId, userId)
+  if (!existing) return null
+  return prisma.project.update({
+    where: { id: projectId },
+    data: { name: data.name },
+  })
+}
+
+export async function deleteProjectForUser(projectId: string, userId: string) {
+  const existing = await findProjectByIdForUser(projectId, userId)
+  if (!existing) return null
+  return prisma.project.delete({
+    where: { id: projectId },
   })
 }
 

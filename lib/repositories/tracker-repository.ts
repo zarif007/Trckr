@@ -30,6 +30,14 @@ export async function updateTrackerByIdForUser(
   })
 }
 
+export async function deleteTrackerByIdForUser(trackerId: string, userId: string) {
+  const existing = await findTrackerByIdForUser(trackerId, userId)
+  if (!existing) return null
+  return prisma.trackerSchema.delete({
+    where: { id: trackerId },
+  })
+}
+
 export async function resolveTargetProjectForTrackerCreate(
   userId: string,
   preferredProjectId?: string,
@@ -54,12 +62,24 @@ export async function createTrackerForUser(params: {
   name: string
   schema: object
   projectId?: string
+  moduleId?: string
 }) {
   const project = await resolveTargetProjectForTrackerCreate(params.userId, params.projectId)
+
+  if (params.moduleId) {
+    const mod = await prisma.module.findFirst({
+      where: { id: params.moduleId, projectId: project.id },
+      select: { id: true },
+    })
+    if (!mod) {
+      throw new Error('Module not found or does not belong to project')
+    }
+  }
 
   return prisma.trackerSchema.create({
     data: {
       projectId: project.id,
+      moduleId: params.moduleId ?? null,
       name: params.name,
       instance: Instance.SINGLE,
       schema: params.schema,

@@ -13,6 +13,7 @@ export type TrackerSchema = {
   id: string
   name: string | null
   projectId: string
+  moduleId: string | null
   instance: string
   createdAt: string
   updatedAt: string
@@ -40,6 +41,25 @@ export type ProjectFile = {
   updatedAt: string
 }
 
+export type ModuleFile = {
+  id: string
+  moduleId: string
+  type: ProjectFileType
+  content: unknown
+  createdAt: string
+  updatedAt: string
+}
+
+export type Module = {
+  id: string
+  projectId: string
+  name: string | null
+  createdAt: string
+  updatedAt: string
+  moduleFiles: ModuleFile[]
+  trackerSchemas: TrackerSchema[]
+}
+
 export type Project = {
   id: string
   name: string | null
@@ -48,6 +68,7 @@ export type Project = {
   updatedAt: string
   projectFiles: ProjectFile[]
   trackerSchemas: TrackerSchema[]
+  modules: Module[]
 }
 
 type DashboardContextValue = {

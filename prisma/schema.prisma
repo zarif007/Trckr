@@ -101,6 +101,7 @@ model Project {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectFiles   ProjectFile[]
   trackerSchemas TrackerSchema[]
+  modules        Module[]
 
   @@index([userId])
 }
@@ -118,19 +119,48 @@ model ProjectFile {
   @@index([projectId])
 }
 
+model Module {
+  id             String         @id @default(cuid())
+  projectId      String
+  name           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trackerSchemas TrackerSchema[]
+  moduleFiles    ModuleFile[]
+
+  @@index([projectId])
+}
+
+model ModuleFile {
+  id        String          @id @default(cuid())
+  moduleId  String
+  type      ProjectFileType
+  content   Json            @default("{}")
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  module    Module          @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([moduleId, type])
+  @@index([moduleId])
+}
+
 model TrackerSchema {
   id          String       @id @default(cuid())
   projectId   String
+  moduleId    String?
   name        String?
   instance    Instance     @default(SINGLE)
   schema      Json
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  module        Module?       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   trackerData   TrackerData[]
   conversations Conversation[]
 
   @@index([projectId])
+  @@index([moduleId])
 }
 
 model TrackerData {

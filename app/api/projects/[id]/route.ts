@@ -1,6 +1,15 @@
-import { jsonOk, notFound, readParams } from '@/lib/api'
+import { z } from 'zod'
+import { jsonOk, notFound, readParams, parseJsonBody } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { findProjectByIdForUser } from '@/lib/repositories'
+import {
+  findProjectByIdForUser,
+  updateProjectForUser,
+  deleteProjectForUser,
+} from '@/lib/repositories'
+
+const updateProjectBody = z.object({
+  name: z.string().min(1, 'Project name is required'),
+})
 
 /**
  * GET /api/projects/[id]
@@ -22,4 +31,43 @@ export async function GET(
   }
 
   return jsonOk(project)
+}
+
+/**
+ * PATCH /api/projects/[id]
+ * Update project name.
+ */
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
+
+  const { id } = await readParams(params)
+  const body = await parseJsonBody(request, updateProjectBody)
+  if (!body.ok) return body.response
+
+  const project = await updateProjectForUser(id, authResult.user.id, body.data)
+  if (!project) return notFound('Project not found')
+
+  return jsonOk(project)
+}
+
+/**
+ * DELETE /api/projects/[id]
+ */
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const authResult = await requireAuthenticatedUser()
+  if (!authResult.ok) return authResult.response
+
+  const { id } = await readParams(params)
+
+  const deleted = await deleteProjectForUser(id, authResult.user.id)
+  if (!deleted) return notFound('Project not found')
+
+  return jsonOk({ deleted: true })
 }

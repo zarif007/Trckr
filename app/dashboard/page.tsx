@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -15,6 +15,15 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { useDashboard } from './dashboard-context'
 
@@ -25,29 +34,59 @@ export default function DashboardPage() {
   const [creating, setCreating] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [createProjectOpen, setCreateProjectOpen] = useState(false)
+  const [projectName, setProjectName] = useState('')
+  const createProjectInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
 
-  const handleCreateProject = async () => {
-    setCreating(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New Project' }),
-      })
-      if (!res.ok) throw new Error('Failed to create project')
-      await fetchProjects()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error creating project')
-    } finally {
-      setCreating(false)
+  useEffect(() => {
+    if (createProjectOpen) {
+      setProjectName('')
+      requestAnimationFrame(() => createProjectInputRef.current?.focus())
     }
-  }
+  }, [createProjectOpen])
+
+  const handleOpenCreateProject = useCallback(() => {
+    setCreateProjectOpen(true)
+  }, [])
+
+  const handleCreateProject = useCallback(
+    async (nameOverride?: string) => {
+      const name =
+        (nameOverride ?? projectName).trim() || 'New Project'
+      setCreating(true)
+      setError(null)
+      setCreateProjectOpen(false)
+      try {
+        const res = await fetch('/api/projects', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        })
+        if (!res.ok) throw new Error('Failed to create project')
+        await fetchProjects()
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Error creating project')
+      } finally {
+        setCreating(false)
+      }
+    },
+    [projectName, fetchProjects],
+  )
+
+  const handleCreateProjectKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleCreateProject(e.currentTarget.value)
+      }
+    },
+    [handleCreateProject],
+  )
 
   const handleCreateTracker = async (projectId?: string) => {
     setCreating(true)
@@ -84,7 +123,7 @@ export default function DashboardPage() {
               size="sm"
               variant="ghost"
               className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
-              onClick={handleCreateProject}
+              onClick={handleOpenCreateProject}
               disabled={creating}
             >
               <FolderPlus className="h-3.5 w-3.5" />
@@ -174,7 +213,7 @@ export default function DashboardPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   className="flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
-                  onClick={handleCreateProject}
+                  onClick={handleOpenCreateProject}
                 >
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center">
                     {creating ? (
@@ -217,7 +256,7 @@ export default function DashboardPage() {
                   </Link>
                 ))}
                 <button
-                  onClick={handleCreateProject}
+                  onClick={handleOpenCreateProject}
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"
                 >
                   <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -247,6 +286,70 @@ export default function DashboardPage() {
           })}
         </span>
       </div>
+
+      <Dialog open={createProjectOpen} onOpenChange={setCreateProjectOpen}>
+        <DialogContent
+          showCloseButton={true}
+          className="sm:max-w-[380px] rounded-xl border-border/60 bg-background/95 shadow-xl backdrop-blur-sm p-0 gap-0 overflow-hidden"
+        >
+          <div className="flex flex-col">
+            <div className="flex items-center gap-4 pt-6 pl-6 pr-12 pb-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10">
+                <FolderPlus className="h-5 w-5" />
+              </div>
+              <DialogHeader className="p-0 gap-1 text-left min-w-0">
+                <DialogTitle className="text-base font-semibold tracking-tight">
+                  New project
+                </DialogTitle>
+                <DialogDescription className="text-[13px] text-muted-foreground/90">
+                  Give your project a name. You can rename it anytime.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="px-6 pb-6 space-y-2">
+              <label
+                htmlFor="create-project-name"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Project name
+              </label>
+              <Input
+                id="create-project-name"
+                ref={createProjectInputRef}
+                placeholder="e.g. Marketing site"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                onKeyDown={handleCreateProjectKeyDown}
+                className="h-10 rounded-lg border-border/80 bg-muted/30 focus:bg-background transition-colors placeholder:text-muted-foreground/60"
+              />
+            </div>
+            <DialogFooter className="flex-row gap-2 justify-end px-6 py-4 bg-muted/20 border-t border-border/50">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-lg"
+                onClick={() => setCreateProjectOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="rounded-lg min-w-[72px]"
+                onClick={() => handleCreateProject()}
+                disabled={creating}
+              >
+                {creating ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Create'
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {error && (
         <motion.div
