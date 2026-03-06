@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isAuthenticatedRequest } from '@/lib/auth/server'
+// Import only the middleware-safe helper to avoid pulling in @/auth (NextAuth/Prisma) into the Edge bundle
+import { isAuthenticatedRequest } from '@/lib/auth/server/middleware-auth'
 
 export default function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
