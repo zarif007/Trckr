@@ -22,8 +22,10 @@ export async function GET(
 
   const conversation = await prisma.conversation.findFirst({
     where: {
-      trackerSchemaId: trackerId,
-      trackerSchema: { project: { userId: authResult.user.id } },
+      trackerSchema: {
+        id: trackerId,
+        project: { userId: authResult.user.id },
+      },
     },
     orderBy: { createdAt: 'desc' },
     include: {
