@@ -20,22 +20,26 @@ export async function GET(
   const trackerId = requireParam(id, 'tracker id')
   if (!trackerId) return badRequest('Missing tracker id')
 
-  const conversation = await prisma.conversation.findFirst({
+  const tracker = await prisma.trackerSchema.findFirst({
     where: {
-      trackerSchema: {
-        id: trackerId,
-        project: { userId: authResult.user.id },
-      },
+      id: trackerId,
+      project: { userId: authResult.user.id },
     },
-    orderBy: { createdAt: 'desc' },
     include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
-        include: { toolCalls: true },
+      conversations: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+            include: { toolCalls: true },
+          },
+        },
       },
     },
   })
 
+  const conversation = tracker?.conversations?.[0]
   if (!conversation) {
     return notFound('No conversation yet')
   }
