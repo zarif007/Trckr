@@ -1,5 +1,14 @@
-import { Role } from '@prisma/client'
+import { Role, ToolCallStatus } from '@prisma/client'
 import { prisma } from '@/lib/db'
+
+export type ToolCallInsert = {
+  purpose: 'validation' | 'calculation'
+  fieldPath: string
+  description: string
+  status: 'pending' | 'running' | 'done' | 'error'
+  error?: string
+  result?: unknown
+}
 
 export async function findLatestConversationForTracker(
   trackerId: string,
@@ -81,6 +90,16 @@ function sanitizeManagerData(input: unknown): object | undefined {
   return sanitized
 }
 
+const toolCallStatusToDb = (s: ToolCallInsert['status']): ToolCallStatus => {
+  switch (s) {
+    case 'pending': return ToolCallStatus.pending
+    case 'running': return ToolCallStatus.running
+    case 'done': return ToolCallStatus.done
+    case 'error': return ToolCallStatus.error
+    default: return ToolCallStatus.pending
+  }
+}
+
 export async function appendConversationMessage(params: {
   conversationId: string
   userId: string
@@ -88,18 +107,37 @@ export async function appendConversationMessage(params: {
   content: string
   trackerSchemaSnapshot?: object
   managerData?: unknown
+  toolCalls?: ToolCallInsert[]
 }) {
   const canAccess = await userOwnsConversation(params.conversationId, params.userId)
   if (!canAccess) return null
 
-  const message = await prisma.message.create({
-    data: {
-      conversationId: params.conversationId,
-      role: params.role === 'ASSISTANT' ? Role.ASSISTANT : Role.USER,
-      content: params.content,
-      trackerSchemaSnapshot: params.trackerSchemaSnapshot,
-      managerData: sanitizeManagerData(params.managerData),
-    },
+  const message = await prisma.$transaction(async (tx) => {
+    const msg = await tx.message.create({
+      data: {
+        conversationId: params.conversationId,
+        role: params.role === 'ASSISTANT' ? Role.ASSISTANT : Role.USER,
+        content: params.content,
+        trackerSchemaSnapshot: params.trackerSchemaSnapshot,
+        managerData: sanitizeManagerData(params.managerData),
+      },
+    })
+
+    if (params.toolCalls?.length) {
+      await tx.toolCall.createMany({
+        data: params.toolCalls.map((tc) => ({
+          messageId: msg.id,
+          purpose: tc.purpose,
+          fieldPath: tc.fieldPath,
+          description: tc.description,
+          status: toolCallStatusToDb(tc.status),
+          error: tc.error ?? null,
+          ...(tc.result !== undefined && tc.result !== null && { result: tc.result as object }),
+        })),
+      })
+    }
+
+    return msg
   })
 
   return message

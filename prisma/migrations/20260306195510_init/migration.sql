@@ -7,6 +7,9 @@ CREATE TYPE "Role" AS ENUM ('USER', 'ASSISTANT');
 -- CreateEnum
 CREATE TYPE "ProjectFileType" AS ENUM ('TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS');
 
+-- CreateEnum
+CREATE TYPE "ToolCallStatus" AS ENUM ('pending', 'running', 'done', 'error');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -160,6 +163,22 @@ CREATE TABLE "Message" (
     CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "ToolCall" (
+    "id" TEXT NOT NULL,
+    "messageId" TEXT NOT NULL,
+    "purpose" TEXT NOT NULL,
+    "fieldPath" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "status" "ToolCallStatus" NOT NULL DEFAULT 'pending',
+    "error" TEXT,
+    "result" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ToolCall_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -208,6 +227,9 @@ CREATE INDEX "Conversation_trackerSchemaId_idx" ON "Conversation"("trackerSchema
 -- CreateIndex
 CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
 
+-- CreateIndex
+CREATE INDEX "ToolCall_messageId_idx" ON "ToolCall"("messageId");
+
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -243,3 +265,6 @@ ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_trackerSchemaId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY ("conversationId") REFERENCES "Conversation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ToolCall" ADD CONSTRAINT "ToolCall_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE CASCADE ON UPDATE CASCADE;

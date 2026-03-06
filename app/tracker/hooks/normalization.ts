@@ -84,7 +84,7 @@ export function normalizeValidationAndCalculations(tracker: TrackerLike): Tracke
   const fields = tracker.fields ?? []
   const layoutNodes = tracker.layoutNodes ?? []
   const validations = tracker.validations ?? {}
-  const calculations = (tracker as TrackerLike & { calculations?: Record<string, FieldCalculationRule> }).calculations ?? {}
+  const calculations = (tracker as TrackerLike & { calculations?: Record<string, Record<string, unknown>> }).calculations ?? {}
 
   const gridIds = new Set(grids.map((g) => g.id))
   const fieldIds = new Set(fields.map((f) => f.id))
@@ -124,13 +124,13 @@ export function normalizeValidationAndCalculations(tracker: TrackerLike): Tracke
       const gridSet = gridsByFieldId.get(fieldId)
       if (!gridSet || gridSet.size === 0) continue
       for (const gridId of gridSet) {
-        normalizedCalculations[`${gridId}.${fieldId}`] = rule
+        normalizedCalculations[`${gridId}.${fieldId}`] = rule as FieldCalculationRule
       }
       continue
     }
     const [gridId, fieldId] = key.split('.')
     if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
-    normalizedCalculations[key] = rule
+    normalizedCalculations[key] = rule as FieldCalculationRule
   }
 
   return { ...tracker, validations: normalized, calculations: normalizedCalculations } as TrackerLike

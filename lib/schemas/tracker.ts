@@ -193,11 +193,14 @@ export const validationsSchema = z
   .default({})
   .describe('Field validations keyed by field id. Rules are evaluated in order.')
 
-/** Top-level calculations map (target fieldId -> expression rule). */
+/** Top-level calculations map (target fieldId -> expression rule or intent). */
 export const calculationsSchema = z
-  .record(z.string(), z.object({ expr: z.any() }).passthrough())
+  .record(z.string(), z.union([
+    z.object({ expr: z.any() }).passthrough(),
+    z.object({ _intent: z.string() }).passthrough(),
+  ]))
   .default({})
-  .describe('Field calculations keyed by target field id (grid_id.field_id).')
+  .describe('Field calculations keyed by target field id (grid_id.field_id). Value is either { expr: ExprNode } or { _intent: string }.')
 
 export const trackerSchema = z
   .object({

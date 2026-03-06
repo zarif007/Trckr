@@ -196,6 +196,30 @@ model Message {
   managerData           Json?
   createdAt             DateTime     @default(now())
   conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  toolCalls             ToolCall[]
 
   @@index([conversationId])
+}
+
+enum ToolCallStatus {
+  pending
+  running
+  done
+  error
+}
+
+model ToolCall {
+  id          String         @id @default(cuid())
+  messageId  String
+  message    Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  purpose     String         // "validation" | "calculation"
+  fieldPath   String
+  description String
+  status      ToolCallStatus @default(pending)
+  error       String?
+  result      Json?          // resolved expr or validation rule payload for audit
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([messageId])
 }

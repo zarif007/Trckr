@@ -378,6 +378,10 @@ export function validateCalculations(ctx: ValidationContext): ValidatorResult {
       continue
     }
 
+    if (typeof (rawRule as Record<string, unknown>)._intent === 'string') {
+      continue
+    }
+
     const rule = rawRule as FieldCalculationRule
     if (!isExprNode(rule.expr)) {
       errors.push(`calculations.${key}.expr must be a valid expression node`)

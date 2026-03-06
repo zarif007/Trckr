@@ -19,7 +19,13 @@ import {
   normalizeValidationAndCalculations,
   trackerHasAnyData,
 } from './normalization'
+import {
+  detectIntents,
+  resolveExprIntents,
+  type ToolCallEntry,
+} from './resolveExprIntents'
 
+export type { ToolCallEntry } from './resolveExprIntents'
 export { suggestions, quickSuggestions } from './constants'
 
 export type TrackerResponse = TrackerDisplayProps
@@ -65,6 +71,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
   const [resumingAfterError, setResumingAfterError] = useState(false)
+  const [toolCalls, setToolCalls] = useState<ToolCallEntry[]>([])
+  const [isResolvingExpressions, setIsResolvingExpressions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const continueCountRef = useRef(0)
@@ -75,6 +83,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
   const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
   const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const submitRef = useRef<(input: any) => void>(() => {})
 
   useEffect(() => {
     conversationIdRef.current = conversationId
@@ -155,6 +165,93 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     return tracker as TrackerResponse
   }, [getBaseTracker])
 
+  const finalizeTracker = useCallback((
+    tracker: TrackerResponse | null,
+    managerData: MultiAgentSchema['manager'],
+    toolCallsForPersist?: ToolCallEntry[],
+  ) => {
+    const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
+
+    if (
+      !validation.valid &&
+      validation.errors.length > 0 &&
+      tracker &&
+      validationFixRetryCountRef.current < MAX_VALIDATION_FIX_RETRIES
+    ) {
+      validationFixRetryCountRef.current += 1
+      const fixPrompt = `Fix these schema validation errors:\n${validation.errors.map((e) => `- ${e}`).join('\n')}`
+      const assistantMessage: Message = {
+        role: 'assistant',
+        trackerData: tracker as TrackerResponse,
+        managerData,
+      }
+      const fixUserMessage: Message = { role: 'user', content: fixPrompt }
+      const nextMessages = [...messagesRef.current, assistantMessage, fixUserMessage]
+      setMessages(nextMessages)
+      const cidFix = conversationIdRef.current
+      if (cidFix) {
+        persistMessage(cidFix, { role: 'USER', content: fixPrompt }).catch((e) =>
+          console.error('Failed to persist user message:', e)
+        )
+      }
+      submitRef.current({
+        query: fixPrompt,
+        messages: nextMessages,
+        currentTracker: tracker as TrackerResponse,
+      })
+      return
+    }
+
+    if (!validation.valid) {
+      setValidationErrors(validation.errors)
+    } else {
+      validationFixRetryCountRef.current = 0
+    }
+    const hasValidTracker =
+      tracker &&
+      Array.isArray(tracker.tabs) &&
+      tracker.tabs.length > 0
+    const assistantMessage: Message = {
+      role: 'assistant',
+      trackerData: tracker as TrackerResponse,
+      managerData,
+    }
+    setMessages((prev) => [...prev, assistantMessage])
+    const cid = conversationIdRef.current
+    if (cid) {
+      const payload: Parameters<typeof persistMessage>[1] = {
+        role: 'ASSISTANT',
+        content: '',
+        trackerSchemaSnapshot: (tracker as TrackerResponse) ?? undefined,
+        managerData: sanitizeManagerData(managerData),
+      }
+      if (toolCallsForPersist?.length) {
+        payload.toolCalls = toolCallsForPersist.map((tc) => ({
+          purpose: tc.purpose,
+          fieldPath: tc.fieldPath,
+          description: tc.description,
+          status: tc.status,
+          ...(tc.error != null && { error: tc.error }),
+          ...(tc.result !== undefined && { result: tc.result }),
+        }))
+      }
+      persistMessage(cid, payload).catch((err) => console.error('Failed to persist assistant message:', err))
+    }
+    if (hasValidTracker) {
+      continueCountRef.current = 0
+      setResolvedTrackerData(tracker as TrackerResponse)
+    } else {
+      if (continueCountRef.current < MAX_AUTO_CONTINUES) {
+        setPendingContinue(true)
+      } else {
+        continueCountRef.current = 0
+        setGenerationErrorMessage(
+          'The AI responded but did not produce a complete tracker (missing or empty tabs). You can click "Continue" to try again from where it left off.'
+        )
+      }
+    }
+  }, [setResolvedTrackerData])
+
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
     schema: multiAgentSchema,
@@ -162,82 +259,40 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       setGenerationErrorMessage(null)
       setResumingAfterError(false)
       setValidationErrors([])
+      setToolCalls([])
+      setIsResolvingExpressions(false)
       if (finishedObject) {
         let tracker = buildTrackerFromResponse(finishedObject)
         if (tracker) {
           tracker = autoFixBindings(tracker as TrackerLike) as TrackerResponse
         }
-        const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
 
-        // Auto-retry: send validation errors back to the AI to fix (e.g. unsupported expr.op like "count")
-        if (
-          !validation.valid &&
-          validation.errors.length > 0 &&
-          tracker &&
-          validationFixRetryCountRef.current < MAX_VALIDATION_FIX_RETRIES
-        ) {
-          validationFixRetryCountRef.current += 1
-          const fixPrompt = `Fix these schema validation errors:\n${validation.errors.map((e) => `- ${e}`).join('\n')}`
-          const assistantMessage: Message = {
-            role: 'assistant',
-            trackerData: tracker as TrackerResponse,
-            managerData: finishedObject.manager,
-          }
-          const fixUserMessage: Message = { role: 'user', content: fixPrompt }
-          const nextMessages = [...messagesRef.current, assistantMessage, fixUserMessage]
-          setMessages(nextMessages)
-          const cidFix = conversationIdRef.current
-          if (cidFix) {
-            persistMessage(cidFix, { role: 'USER', content: fixPrompt }).catch((e) =>
-              console.error('Failed to persist user message:', e)
-            )
-          }
-          submit({
-            query: fixPrompt,
-            messages: nextMessages,
-            currentTracker: tracker as TrackerResponse,
-          })
+        const intents = tracker ? detectIntents(tracker as TrackerLike) : []
+
+        if (intents.length > 0 && tracker) {
+          setIsResolvingExpressions(true)
+          resolveExprIntents(tracker as TrackerLike, setToolCalls)
+            .then(({ tracker: resolved, errors, toolCalls: resolvedToolCalls }) => {
+              let resolvedTracker = resolved as TrackerResponse
+              if (resolvedTracker) {
+                resolvedTracker = autoFixBindings(resolvedTracker as TrackerLike) as TrackerResponse
+              }
+              if (errors.length > 0) {
+                setValidationErrors((prev) => [...prev, ...errors])
+              }
+              finalizeTracker(resolvedTracker, finishedObject.manager, resolvedToolCalls)
+            })
+            .catch((err) => {
+              console.error('Expression resolution failed:', err)
+              finalizeTracker(tracker as TrackerResponse, finishedObject.manager)
+            })
+            .finally(() => {
+              setIsResolvingExpressions(false)
+            })
           return
         }
 
-        if (!validation.valid) {
-          setValidationErrors(validation.errors)
-        } else {
-          validationFixRetryCountRef.current = 0
-        }
-        const hasValidTracker =
-          tracker &&
-          Array.isArray(tracker.tabs) &&
-          tracker.tabs.length > 0
-        const assistantMessage: Message = {
-          role: 'assistant',
-          trackerData: tracker as TrackerResponse,
-          managerData: finishedObject.manager,
-        }
-        console.log('assistantMessage', assistantMessage)
-        setMessages((prev) => [...prev, assistantMessage])
-        const cid = conversationIdRef.current
-        if (cid) {
-          persistMessage(cid, {
-            role: 'ASSISTANT',
-            content: '',
-            trackerSchemaSnapshot: (tracker as TrackerResponse) ?? undefined,
-            managerData: sanitizeManagerData(finishedObject.manager),
-          }).catch((err) => console.error('Failed to persist assistant message:', err))
-        }
-        if (hasValidTracker) {
-          continueCountRef.current = 0
-          setResolvedTrackerData(tracker as TrackerResponse)
-        } else {
-          if (continueCountRef.current < MAX_AUTO_CONTINUES) {
-            setPendingContinue(true)
-          } else {
-            continueCountRef.current = 0
-            setGenerationErrorMessage(
-              'The AI responded but did not produce a complete tracker (missing or empty tabs). You can click "Continue" to try again from where it left off.'
-            )
-          }
-        }
+        finalizeTracker(tracker, finishedObject.manager)
       } else {
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current
@@ -344,6 +399,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       console.error('Error generating tracker:', err)
     },
   })
+
+  submitRef.current = submit
 
   useEffect(() => {
     lastObjectRef.current = object as MultiAgentSchema | undefined
@@ -508,5 +565,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     textareaRef,
     isChatEmpty,
     clearDialogError,
+    toolCalls,
+    isResolvingExpressions,
   }
 }

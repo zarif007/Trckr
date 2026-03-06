@@ -24,7 +24,7 @@ const isFieldValidationRule = (value: unknown): value is FieldValidationRule => 
     case 'maxLength':
       return typeof value.value === 'number' && !Number.isNaN(value.value)
     case 'expr':
-      return isExprNode(value.expr)
+      return isExprNode(value.expr) || typeof value._intent === 'string'
     default:
       return false
   }
@@ -36,10 +36,12 @@ const coerceValidationRules = (value: unknown): FieldValidationRule[] | null => 
   return value.filter(isFieldValidationRule)
 }
 
-const isFieldCalculationRule = (value: unknown): value is FieldCalculationRule =>
-  isPlainObject(value) && isExprNode(value.expr)
+type CalculationEntryMerge = FieldCalculationRule | { _intent: string }
 
-const coerceCalculationRule = (value: unknown): FieldCalculationRule | null =>
+const isFieldCalculationRule = (value: unknown): value is CalculationEntryMerge =>
+  isPlainObject(value) && (isExprNode(value.expr) || typeof value._intent === 'string')
+
+const coerceCalculationRule = (value: unknown): CalculationEntryMerge | null =>
   isFieldCalculationRule(value) ? value : null
 
 const mergeWithNested = <T extends Record<string, unknown>>(
@@ -213,7 +215,7 @@ export function applyTrackerPatch(
     normalizedValidations[key] = existing ? [...existing, ...rules] : rules
   }
 
-  const calculations: Record<string, FieldCalculationRule> = { ...(base.calculations ?? {}) }
+  const calculations: Record<string, CalculationEntryMerge> = { ...(base.calculations ?? {}) } as Record<string, CalculationEntryMerge>
   if (patch.calculations) {
     for (const [key, value] of Object.entries(patch.calculations)) {
       if (value === null) {
@@ -240,13 +242,13 @@ export function applyTrackerPatch(
       const gridSet = gridsByFieldId.get(fieldId)
       if (!gridSet || gridSet.size === 0) continue
       for (const gridId of gridSet) {
-        normalizedCalculations[`${gridId}.${fieldId}`] = rule
+        normalizedCalculations[`${gridId}.${fieldId}`] = rule as FieldCalculationRule
       }
       continue
     }
     const [gridId, fieldId] = key.split('.')
     if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
-    normalizedCalculations[key] = rule
+    normalizedCalculations[key] = rule as FieldCalculationRule
   }
 
   // --- Styles ---

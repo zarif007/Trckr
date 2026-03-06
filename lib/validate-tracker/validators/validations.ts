@@ -303,6 +303,9 @@ export function validateValidations(ctx: ValidationContext): ValidatorResult {
           }
           return
         case 'expr': {
+          if (typeof (rule as Record<string, unknown>)._intent === 'string') {
+            return
+          }
           const expr = (rule as { expr?: unknown }).expr
           if (!isExprNode(expr)) {
             errors.push(`${path}.expr must be a valid expression node`)

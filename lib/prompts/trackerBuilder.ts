@@ -233,65 +233,62 @@ Example — "green accents on kanban": styles: { "tasks_kanban_view": { "accentC
 
 Use a top-level "validations" object keyed by "<grid_id>.<field_id>" (like bindings, no tab).
 There is no bare "<field_id>" validations key.
-Basic constraints live in field.config (isRequired, min, max, minLength, maxLength). Use validations for regex and expression rules.
+Basic constraints live in field.config (isRequired, min, max, minLength, maxLength). Use the "validations" object for regex checks, cross-field comparisons, and other expression-based rules.
+
+Whenever the user requests field validation that goes beyond simple min/max/required (e.g. "email must be valid", "end date after start date", "password must match"), you MUST add an entry in validations.
 
 Structure:
 validations: {
   "<grid_id>.<field_id>": [
-    { type: "required", message?: "..." },
-    { type: "min" | "max" | "minLength" | "maxLength", value: <number>, message?: "..." },
-    { type: "expr", expr: <ExprNode>, message?: "..." }
+    { "type": "required", "message": "..." },
+    { "type": "min" | "max" | "minLength" | "maxLength", "value": <number>, "message": "..." },
+    { "type": "expr", "_intent": "<natural language description of the validation logic>", "message": "..." }
   ]
 }
 
-For validations expr use only the operators defined in "ExprNode — supported operators" below.
+EXPRESSION INTENTS: For type "expr" rules, do NOT write raw AST/expression objects. Instead, provide an "_intent" string that clearly describes the validation logic in plain language. A specialized expression agent will convert it into the correct AST.
+- Reference fields by their label or id so the expression agent can resolve them.
+- Be specific about comparisons, conditions, and the expected outcome.
+- The "_intent" string is REQUIRED for type "expr" rules.
+
+Examples:
+  { "type": "expr", "_intent": "ensure value is a valid email address (regex)", "message": "Invalid email format" }
+  { "type": "expr", "_intent": "value must be greater than the start_date field", "message": "End date must be after start date" }
+  { "type": "expr", "_intent": "value must not equal the password field", "message": "Cannot reuse current password" }
 
 If no validations are needed, omit "validations" or use an empty object.
 
-=== EXPRNODE — SUPPORTED OPERATORS (USE ONLY THESE TO BUILD expr) ===
+=== CALCULATIONS (TOP-LEVEL — MANDATORY when user asks for computed/auto-calculated fields) ===
 
-When building validations[].expr or calculations[].expr, use ONLY these operators and shapes. Any other op will fail validation.
+Whenever the user requests a computed, auto-calculated, derived, or formula field, you MUST:
+1. Create the target field if it does not exist (with appropriate dataType like "number", "currency", "percentage").
+2. Set isDisabled: true in the field's config (computed fields are read-only).
+3. Add a layoutNode for the field in the correct grid.
+4. Add an entry in the top-level "calculations" object.
 
-- const: { op: "const", value: <any> }
-- field: { op: "field", fieldId: "<grid_id>.<field_id>" }   // always use grid_id.field_id
-- add: { op: "add", args: [ <ExprNode>, <ExprNode>, ... ] }
-- mul: { op: "mul", args: [ <ExprNode>, <ExprNode>, ... ] }
-- sub: { op: "sub", left: <ExprNode>, right: <ExprNode> }
-- div: { op: "div", left: <ExprNode>, right: <ExprNode> }
-- eq, neq, gt, gte, lt, lte: { op: "eq"|"neq"|"gt"|"gte"|"lt"|"lte", left: <ExprNode>, right: <ExprNode> }
-- and: { op: "and", args: [ <ExprNode>, ... ] }
-- or: { op: "or", args: [ <ExprNode>, ... ] }
-- not: { op: "not", arg: <ExprNode> }
-- if: { op: "if", cond: <ExprNode>, then: <ExprNode>, else: <ExprNode> }
-- regex: { op: "regex", value: <ExprNode>, pattern: "<string>", flags?: "<string>" }
-- accumulate: { op: "accumulate", sourceFieldId: "<grid_id>.<field_id>", action: "add"|"sub"|"mul", startIndex?: number, endIndex?: number, increment?: number, initialValue?: number }
-- sum: { op: "sum", sourceFieldId: "<grid_id>.<field_id>", startIndex?: number, endIndex?: number, increment?: number, initialValue?: number }   // sum of column
-- count: { op: "count", sourceFieldId: "<grid_id>.<field_id>" }   // number of rows in that grid
+The "calculations" object is keyed by "<grid_id>.<field_id>".
+Each entry MUST contain an "_intent" string describing the calculation in plain language. Do NOT write raw AST or expression JSON — a specialized expression agent will build the correct AST from your description.
 
-Nested expr: any slot above that says <ExprNode> can be another operator from this list (e.g. field, const, add, …).
-
-=== CALCULATIONS (TOP-LEVEL) ===
-
-Use a top-level "calculations" object keyed by target "<grid_id>.<field_id>".
-Each target has exactly one expression rule. Build expr using ONLY the operators from "ExprNode — supported operators" above.
-
+Structure:
 calculations: {
   "<grid_id>.<field_id>": {
-    expr: <ExprNode>
+    "_intent": "<natural language description of the calculation>"
   }
 }
 
 Rules:
 1. Key must be "grid_id.field_id" (no tab).
-2. expr must produce the target value (not a boolean validation result).
-3. Field references inside expr must use "grid_id.field_id".
+2. "_intent" must describe a computation that produces the target field's value (not a boolean).
+3. Reference other fields by their label or id so the expression agent can resolve them. Mention the grid name/id if cross-grid.
 4. Keep references in the same grid as the target field unless the user explicitly asks otherwise.
 5. If no calculations are needed, omit "calculations" or use an empty object.
+6. The "_intent" string is REQUIRED — do not leave it empty or omit it.
 
-Common patterns:
-- Total count of rows in another grid: { op: "count", sourceFieldId: "<grid_id>.<field_id>" }
-- Sum of a column: { op: "sum", sourceFieldId: "<grid_id>.<field_id>" }
-- Reduce with other operations: { op: "accumulate", sourceFieldId: "<grid_id>.<field_id>", action: "add"|"sub"|"mul" }
+Examples:
+  { "_intent": "multiply the quantity field by the unit_price field" }
+  { "_intent": "sum of all values in the amount field across all rows" }
+  { "_intent": "count of rows in the tasks_grid" }
+  { "_intent": "if status equals 'completed' then 100, otherwise calculate (completed_items / total_items) * 100" }
 
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `

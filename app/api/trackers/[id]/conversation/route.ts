@@ -1,10 +1,8 @@
 import { Role } from '@prisma/client'
 import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import {
-  ensureConversationForTracker,
-  findLatestConversationForTrackerWithMessages,
-} from '@/lib/repositories'
+import { prisma } from '@/lib/db'
+import { ensureConversationForTracker } from '@/lib/repositories'
 
 /**
  * GET /api/trackers/[id]/conversation
@@ -22,10 +20,19 @@ export async function GET(
   const trackerId = requireParam(id, 'tracker id')
   if (!trackerId) return badRequest('Missing tracker id')
 
-  const conversation = await findLatestConversationForTrackerWithMessages(
-    trackerId,
-    authResult.user.id,
-  )
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      trackerSchemaId: trackerId,
+      trackerSchema: { project: { userId: authResult.user.id } },
+    },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+        include: { toolCalls: true },
+      },
+    },
+  })
 
   if (!conversation) {
     return notFound('No conversation yet')
@@ -38,6 +45,15 @@ export async function GET(
     trackerData: m.trackerSchemaSnapshot as unknown,
     managerData: m.managerData as unknown,
     createdAt: m.createdAt,
+    toolCalls: m.toolCalls?.map((tc) => ({
+      id: tc.id,
+      purpose: tc.purpose,
+      fieldPath: tc.fieldPath,
+      description: tc.description,
+      status: tc.status,
+      error: tc.error ?? undefined,
+      result: tc.result ?? undefined,
+    })),
   }))
 
   return jsonOk({

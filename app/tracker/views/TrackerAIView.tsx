@@ -62,6 +62,8 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     messagesEndRef,
     textareaRef,
     isChatEmpty,
+    toolCalls,
+    isResolvingExpressions,
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
@@ -315,10 +317,10 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     (!isLoading && messages.length > 0 && !hasGeneratedTracker && hasAnyAssistantResponse)
 
   useEffect(() => {
-    if (isLoading) {
+    if (isLoading || isResolvingExpressions) {
       setEditMode(false)
     }
-  }, [isLoading])
+  }, [isLoading, isResolvingExpressions])
 
   const chatStatusPanelProps = {
     isLoading,
@@ -350,6 +352,8 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     object,
     onViewTracker: handleViewHistoricalTracker,
     activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
+    toolCalls,
+    isResolvingExpressions,
   }
 
   const mobileLayout = (

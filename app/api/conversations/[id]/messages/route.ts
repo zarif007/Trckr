@@ -3,12 +3,22 @@ import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/ap
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { appendConversationMessage } from '@/lib/repositories'
 
+const toolCallSchema = z.object({
+  purpose: z.enum(['validation', 'calculation']),
+  fieldPath: z.string(),
+  description: z.string(),
+  status: z.enum(['pending', 'running', 'done', 'error']),
+  error: z.string().optional(),
+  result: z.unknown().optional(),
+})
+
 const createMessageBodySchema = z
   .object({
     role: z.string().optional(),
     content: z.string().optional(),
     trackerSchemaSnapshot: z.unknown().optional(),
     managerData: z.unknown().optional(),
+    toolCalls: z.array(toolCallSchema).optional(),
   })
   .passthrough()
 
@@ -40,6 +50,18 @@ export async function POST(
       ? (body.trackerSchemaSnapshot as object)
       : undefined
 
+  const toolCalls =
+    Array.isArray(body.toolCalls) && body.toolCalls.length > 0
+      ? body.toolCalls.map((tc) => ({
+          purpose: tc.purpose as 'validation' | 'calculation',
+          fieldPath: tc.fieldPath,
+          description: tc.description,
+          status: tc.status as 'pending' | 'running' | 'done' | 'error',
+          error: tc.error,
+          result: tc.result,
+        }))
+      : undefined
+
   const message = await appendConversationMessage({
     conversationId,
     userId: authResult.user.id,
@@ -47,6 +69,7 @@ export async function POST(
     content: content ?? '',
     trackerSchemaSnapshot: trackerSchemaSnapshot ?? undefined,
     managerData: body.managerData,
+    toolCalls,
   })
   if (!message) return notFound('Conversation not found')
 

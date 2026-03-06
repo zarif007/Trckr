@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion'
 import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { Message, TrackerResponse } from '@/app/tracker/hooks/useTrackerChat'
+import type { Message, TrackerResponse, ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
+import { ToolCallProgress } from './ToolCallProgress'
 
 interface TrackerMessageListProps {
   messages: Message[]
@@ -16,6 +17,8 @@ interface TrackerMessageListProps {
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
   /** Index of the message whose tracker is currently being viewed (for highlighting) */
   activeTrackerMessageIndex?: number | null
+  toolCalls?: ToolCallEntry[]
+  isResolvingExpressions?: boolean
 }
 
 function renderStreamingPreview() {
@@ -35,6 +38,8 @@ export function TrackerMessageList({
   messagesEndRef,
   onViewTracker,
   activeTrackerMessageIndex,
+  toolCalls = [],
+  isResolvingExpressions = false,
 }: TrackerMessageListProps) {
   const object = streamedObject as {
     manager?: { thinking?: string; prd?: { name?: string; description?: string }; builderTodo?: Array<{ action?: string; target?: string; task?: string }> }
@@ -162,7 +167,7 @@ export function TrackerMessageList({
           )}
         </motion.div>
       ))}
-      {isLoading && (
+      {(isLoading || isResolvingExpressions) && (
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -177,13 +182,15 @@ export function TrackerMessageList({
               <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground text-sm font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground/70" />
                 <p className="text-sm">
-                  {!object?.manager ? 'Consulting product manager…' :
-                    !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
-                      'Building your tracker…'}
+                  {isResolvingExpressions
+                    ? 'Generating expressions…'
+                    : !object?.manager ? 'Consulting product manager…' :
+                      !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
+                        'Building your tracker…'}
                 </p>
               </div>
 
-              {object?.manager && (
+              {isLoading && object?.manager && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -224,6 +231,10 @@ export function TrackerMessageList({
                     </motion.div>
                   )}
                 </motion.div>
+              )}
+
+              {toolCalls.length > 0 && (
+                <ToolCallProgress toolCalls={toolCalls} />
               )}
             </div>
           </div>

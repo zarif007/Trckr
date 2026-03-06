@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { TrackerEmptyState } from '@/app/components/tracker-page/TrackerEmptyState'
 import { TrackerInputArea } from '@/app/components/tracker-page/TrackerInputArea'
 import { TrackerMessageList } from '@/app/components/tracker-page/TrackerMessageList'
-import type { Message, TrackerResponse } from '../hooks/useTrackerChat'
+import type { Message, TrackerResponse, ToolCallEntry } from '../hooks/useTrackerChat'
 import { TrackerStatusPanel, type TrackerStatusPanelProps } from './TrackerStatusPanel'
 
 interface TrackerChatPanelProps {
@@ -25,6 +25,8 @@ interface TrackerChatPanelProps {
   object: unknown
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
   activeTrackerMessageIndex?: number | null
+  toolCalls?: ToolCallEntry[]
+  isResolvingExpressions?: boolean
 }
 
 export function TrackerChatPanel({
@@ -45,6 +47,8 @@ export function TrackerChatPanel({
   object,
   onViewTracker,
   activeTrackerMessageIndex,
+  toolCalls,
+  isResolvingExpressions,
 }: TrackerChatPanelProps) {
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/30 border-l border-border/60">
@@ -82,6 +86,8 @@ export function TrackerChatPanel({
                 messagesEndRef={messagesEndRef}
                 onViewTracker={onViewTracker}
                 activeTrackerMessageIndex={activeTrackerMessageIndex}
+                toolCalls={toolCalls}
+                isResolvingExpressions={isResolvingExpressions}
               />
             )}
           </AnimatePresence>
