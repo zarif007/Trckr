@@ -236,14 +236,14 @@ export default function Demo() {
   return (
     <div
       id="demo"
-      className="mt-8 p-8 rounded-3xl bg-secondary/30 border border-border/50 hover:bg-secondary/40 transition-all"
+      className="mt-6 sm:mt-8 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-secondary/30 border border-border/50 hover:bg-secondary/40 transition-all"
     >
-      <div className="max-w-7xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h3 className="text-2xl font-bold tracking-tight text-foreground">
+      <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
+        <div className="text-center space-y-1.5 sm:space-y-2">
+          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             See it in action
           </h3>
-          <p className="text-muted-foreground text-sm font-medium">
+          <p className="text-muted-foreground text-xs sm:text-sm font-medium">
             A project pipeline for a 10–20 person team—built and ready to use in seconds.
           </p>
         </div>

@@ -10,10 +10,10 @@ import Demo from './components/landing-page/Demo'
 export default function Home() {
   return (
     <div className="min-h-screen font-sans bg-background selection:bg-primary selection:text-primary-foreground">
-      <div className="relative max-w-full mx-auto px-0 py-0 space-y-24 z-20">
+      <div className="relative max-w-full mx-auto px-0 py-0 space-y-16 md:space-y-24 z-20">
         <Hero />
 
-        <section className='max-w-7xl mx-auto flex flex-col space-y-20 px-4 md:space-y-40'>
+        <section className='max-w-7xl mx-auto flex flex-col space-y-12 px-4 sm:space-y-16 md:space-y-20 md:px-4 lg:space-y-40'>
           <Features />
           <Examples />
           <Protocol />
