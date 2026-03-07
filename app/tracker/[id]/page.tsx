@@ -28,6 +28,14 @@ type SavedSnapshot = {
   updatedAt?: string
 }
 
+/** Merge tracker.name into schema so the view and top bar show the correct name. */
+function schemaWithTrackerName(data: TrackerRecord): TrackerResponse {
+  const base = (data.schema ?? {}) as TrackerResponse
+  const name = data.name ?? base?.name ?? null
+  if (name != null) return { ...base, name }
+  return base
+}
+
 export default function TrackerByIdPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -43,7 +51,7 @@ export default function TrackerByIdPage() {
       if (!stored) return { tracker: null, schema: null }
       const data = JSON.parse(stored) as TrackerRecord
       sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
-      return { tracker: data, schema: (data.schema ?? {}) as TrackerResponse }
+      return { tracker: data, schema: schemaWithTrackerName(data) }
     } catch {
       return { tracker: null, schema: null }
     }
@@ -63,7 +71,7 @@ export default function TrackerByIdPage() {
       try {
         const data = JSON.parse(stored) as TrackerRecord
         sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
-        setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+        setState({ tracker: data, schema: schemaWithTrackerName(data) })
         return
       } catch {
         // fall through to fetch
@@ -81,7 +89,7 @@ export default function TrackerByIdPage() {
         }
         const data = await res.json()
         if (!cancelled) {
-          setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+          setState({ tracker: data, schema: schemaWithTrackerName(data) })
         }
       } catch {
         if (!cancelled) setError('Failed to load tracker')
@@ -174,7 +182,7 @@ export default function TrackerByIdPage() {
         throw new Error(data.error ?? 'Failed to save tracker')
       }
       const data = await res.json()
-      setState({ tracker: data, schema: (data.schema ?? {}) as TrackerResponse })
+      setState({ tracker: data, schema: schemaWithTrackerName(data) })
     },
     [id, state.tracker?.name]
   )

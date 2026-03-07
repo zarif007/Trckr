@@ -8,6 +8,8 @@ import {
   useMemo,
   type ReactNode,
 } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { dashboardQueryKeys } from './query-keys'
 
 export type TrackerSchema = {
   id: string
@@ -82,23 +84,45 @@ type DashboardContextValue = {
 
 const DashboardContext = createContext<DashboardContextValue | null>(null)
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [projectsLoading, setProjectsLoading] = useState(true)
+async function fetchProjectsApi(): Promise<Project[]> {
+  const res = await fetch('/api/projects')
+  if (!res.ok) return []
+  return res.json()
+}
+
+export function DashboardProvider({
+  children,
+  initialProjects = null,
+}: {
+  children: ReactNode
+  initialProjects?: Project[] | null
+}) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const queryClient = useQueryClient()
+
+  const {
+    data: projects = [],
+    isPending: projectsLoading,
+  } = useQuery({
+    queryKey: dashboardQueryKeys.projects(),
+    queryFn: fetchProjectsApi,
+    initialData: initialProjects ?? undefined,
+    staleTime: 60 * 1000,
+  })
+
+  const setProjects = useCallback(
+    (updater: Project[] | ((prev: Project[]) => Project[])) => {
+      queryClient.setQueryData<Project[]>(
+        dashboardQueryKeys.projects(),
+        (old) => (typeof updater === 'function' ? updater(old ?? []) : updater),
+      )
+    },
+    [queryClient],
+  )
 
   const fetchProjects = useCallback(async () => {
-    try {
-      const res = await fetch('/api/projects')
-      if (!res.ok) return
-      const data = await res.json()
-      setProjects(data)
-    } catch {
-      // ignore
-    } finally {
-      setProjectsLoading(false)
-    }
-  }, [])
+    await queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.projects() })
+  }, [queryClient])
 
   const value = useMemo<DashboardContextValue>(
     () => ({
@@ -109,7 +133,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
       sidebarCollapsed,
       setSidebarCollapsed,
     }),
-    [projects, projectsLoading, fetchProjects, sidebarCollapsed]
+    [projects, projectsLoading, fetchProjects, sidebarCollapsed, setProjects],
   )
 
   return (
