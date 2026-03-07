@@ -12,6 +12,7 @@ import {
   Folder,
   HardDrive,
   LayoutGrid,
+  Activity,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -55,8 +56,8 @@ function SidebarProject({
     (project.projectFiles?.length ?? 0)
 
   return (
-    <div>
-      <div className="flex items-center">
+    <div className="min-w-0">
+      <div className="flex items-center min-w-0">
         {hasModules && (
           <button
             onClick={() => setExpanded((v) => !v)}
@@ -72,7 +73,7 @@ function SidebarProject({
         <Link
           href={`/dashboard/${project.id}`}
           className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors min-w-0 flex-1 overflow-hidden',
             !hasModules && 'ml-[18px]',
             isActive
               ? 'bg-primary/10 text-primary font-medium'
@@ -97,40 +98,43 @@ function SidebarProject({
           )}
         </Link>
       </div>
-      {expanded &&
-        project.modules.map((mod) => {
-          const isModuleActive =
-            project.id === currentProjectId && mod.id === currentModuleId
-          return (
-            <Link
-              key={mod.id}
-              href={`/dashboard/${project.id}/module/${mod.id}`}
-              className={cn(
-                'flex items-center gap-2 pl-9 pr-2.5 py-1.5 rounded-lg text-left transition-colors',
-                isModuleActive
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-              )}
-              onContextMenu={(e) =>
-                onContextMenu(e, {
-                  kind: 'module',
-                  id: mod.id,
-                  label: mod.name || 'Untitled module',
-                })
-              }
-            >
-              <Folder className="h-3.5 w-3.5 flex-shrink-0 opacity-70" />
-              <span className="text-[11px] truncate flex-1">
-                {mod.name || 'Untitled module'}
-              </span>
-              {(mod.trackerSchemas?.length ?? 0) > 0 && (
-                <span className="text-[10px] text-muted-foreground/60 tabular-nums">
-                  {mod.trackerSchemas?.length ?? 0}
+      {expanded && (
+        <div className="ml-5 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
+          {project.modules.map((mod) => {
+            const isModuleActive =
+              project.id === currentProjectId && mod.id === currentModuleId
+            return (
+              <Link
+                key={mod.id}
+                href={`/dashboard/${project.id}/module/${mod.id}`}
+                className={cn(
+                  'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
+                  isModuleActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                )}
+                onContextMenu={(e) =>
+                  onContextMenu(e, {
+                    kind: 'module',
+                    id: mod.id,
+                    label: mod.name || 'Untitled module',
+                  })
+                }
+              >
+                <Folder className="h-3 w-3 flex-shrink-0 opacity-70" />
+                <span className="text-[11px] truncate flex-1 min-w-0">
+                  {mod.name || 'Untitled module'}
                 </span>
-              )}
-            </Link>
-          )
-        })}
+                {(mod.trackerSchemas?.length ?? 0) > 0 && (
+                  <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
+                    {mod.trackerSchemas?.length ?? 0}
+                  </span>
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -326,7 +330,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-background text-foreground overflow-hidden flex flex-col font-sans select-none mt-10">
+    <div className="fixed inset-0 bg-background text-foreground overflow-hidden flex flex-col font-sans select-none">
       {sidebarContextMenu &&
         typeof document !== 'undefined' &&
         createPortal(
@@ -360,7 +364,6 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>,
           document.body,
         )}
-      <header className="h-9 flex-shrink-0 border-b border-border/60 flex items-center justify-between px-3 bg-background/95" />
       <div className="flex flex-1 min-h-0">
         <aside
           className={cn(
@@ -368,25 +371,36 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             sidebarCollapsed ? 'w-12' : 'w-52'
           )}
         >
-          <div className="p-2 flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden">
-            <Link
-              href="/dashboard"
-              className={cn(
-                'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors',
-                isDesktop
-                  ? 'bg-primary/10 text-primary font-medium'
-                  : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-              )}
-            >
-              <LayoutGrid className="h-4 w-4 flex-shrink-0" />
+          <div className="p-2 flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden min-w-0">
+            <div className="flex items-center gap-1 min-w-0">
+              <Link
+                href="/dashboard"
+                className={cn(
+                  'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                  isDesktop
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                )}
+              >
+                <LayoutGrid className="h-4 w-4 flex-shrink-0" />
+                {!sidebarCollapsed && (
+                  <span className="text-xs truncate">Dashboard</span>
+                )}
+              </Link>
               {!sidebarCollapsed && (
-                <span className="text-xs truncate">Desktop</span>
+                <Link
+                  href="/"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  aria-label="Go to landing page"
+                >
+                  <Activity className="h-4 w-4" />
+                </Link>
               )}
-            </Link>
+            </div>
             {!sidebarCollapsed && (
               <>
                 <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  Folders
+                  Project
                 </div>
                 {projects.map((project) => (
                   <SidebarProject

@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { TrackerAIView } from '../page'
 import { TrackerPageSkeleton } from './TrackerPageSkeleton'
@@ -39,6 +38,7 @@ function schemaWithTrackerName(data: TrackerRecord): TrackerResponse {
 export default function TrackerByIdPage() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : null
   const isNew = searchParams.get('new') === 'true'
   const [state, setState] = useState<{
@@ -187,12 +187,20 @@ export default function TrackerByIdPage() {
     [id, state.tracker?.name]
   )
 
+  const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back()
+    } else {
+      router.push('/dashboard')
+    }
+  }, [router])
+
   if (!id) {
     return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center gap-4 pt-24">
+      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
         <p className="text-muted-foreground">Invalid tracker</p>
-        <Button asChild variant="outline">
-          <Link href="/dashboard">Back to dashboard</Link>
+        <Button variant="outline" onClick={handleBack}>
+          Back
         </Button>
       </div>
     )
@@ -200,10 +208,10 @@ export default function TrackerByIdPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center gap-4 pt-24">
+      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
         <p className="text-muted-foreground">{error}</p>
-        <Button asChild variant="outline">
-          <Link href="/dashboard">Back to dashboard</Link>
+        <Button variant="outline" onClick={handleBack}>
+          Back
         </Button>
       </div>
     )
@@ -224,10 +232,10 @@ export default function TrackerByIdPage() {
 
   if (!hasValidSchema) {
     return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-col items-center justify-center gap-4 pt-24">
+      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
         <p className="text-muted-foreground">Invalid tracker schema</p>
-        <Button asChild variant="outline">
-          <Link href="/dashboard">Back to dashboard</Link>
+        <Button variant="outline" onClick={handleBack}>
+          Back
         </Button>
       </div>
     )

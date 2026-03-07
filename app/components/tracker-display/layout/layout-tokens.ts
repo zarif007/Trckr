@@ -16,9 +16,9 @@ export const GRID_STACK_GAP = 'space-y-6'
 /** Section group root: one section bar + its grids. Same in edit and view. */
 export const SECTION_GROUP_ROOT = 'w-full min-w-0 pt-5'
 
-/** Grids container: gap from section bar + gap between grids. Compact so sections are easily distinguishable. */
+/** Grids container: gap from section bar + gap between grids. Flex wrap so multiple grids wrap. */
 export const GRIDS_CONTAINER =
-  'space-y-3 mt-2 w-full min-w-0'
+  'flex flex-wrap gap-3 mt-2 w-full min-w-0'
 
 /** Wrapper for each grid block (edit SortableBlockItem content, view ViewBlockWrapper content). */
 export const GRID_ITEM_WRAPPER = 'w-full min-w-0'

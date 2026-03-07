@@ -8,7 +8,7 @@ The dashboard is the main workspace for projects, modules, and trackers. It uses
 app/dashboard/
 ├── README.md                 # This file
 ├── layout.tsx                # Server layout: fetches projects, passes to client
-├── page.tsx                  # Desktop (project list) page
+├── page.tsx                  # Dashboard (project list) page
 ├── dashboard-context.tsx     # Projects list from TanStack Query + UI state
 ├── query-keys.ts             # TanStack Query key factory
 ├── hooks/                    # Shared hooks (rename/delete context menu, etc.)

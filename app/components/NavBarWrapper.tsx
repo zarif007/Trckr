@@ -10,8 +10,9 @@ import NavBar from './NavBar'
 export default function NavBarWrapper() {
   const pathname = usePathname()
   const isTrackerPage = pathname?.startsWith('/tracker') ?? false
+  const isDashboardPage = pathname?.startsWith('/dashboard') ?? false
 
-  if (isTrackerPage) {
+  if (isTrackerPage || isDashboardPage) {
     return null
   }
 

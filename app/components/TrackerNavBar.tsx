@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { ArrowLeft, ChevronDown, Database, Layout, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
@@ -85,6 +85,7 @@ function TrackerNameEdit({
 }
 
 export default function TrackerNavBar() {
+  const router = useRouter()
   const [membersOpen, setMembersOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [themeMounted, setThemeMounted] = useState(false)
@@ -115,13 +116,20 @@ export default function TrackerNavBar() {
       <nav className="mx-auto flex h-full max-w-full items-center px-3 sm:px-5">
         <div className="flex w-full items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
-            <Link
-              href="/"
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.history.length > 1) {
+                  router.back()
+                } else {
+                  router.push('/dashboard')
+                }
+              }}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Back to home"
+              aria-label="Back"
             >
               <ArrowLeft className="h-4 w-4" strokeWidth={2} />
-            </Link>
+            </button>
             {trackerNav && (
               <TrackerNameEdit
                 name={trackerNav.name}

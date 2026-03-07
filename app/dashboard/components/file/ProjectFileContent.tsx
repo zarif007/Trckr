@@ -75,7 +75,7 @@ export function ProjectFileContent({
       <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">
-            Desktop
+            Dashboard
           </Link>
           <ChevronRight className="h-3 w-3 opacity-50" />
           <Link

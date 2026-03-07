@@ -28,6 +28,7 @@ import {
   type ContextMenuItem,
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
+import { DashboardPageSkeleton } from '../skeleton/DashboardPageSkeleton'
 
 const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
   TEAMS: Users,
@@ -396,14 +397,7 @@ export function ProjectContent({
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
   if (loading && !project) {
-    return (
-      <div className="flex-1 flex flex-col min-w-0 min-h-0 flex items-center justify-center gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
-        <p className="text-[11px] font-medium tracking-widest uppercase text-muted-foreground">
-          Loading…
-        </p>
-      </div>
-    )
+    return <DashboardPageSkeleton breadcrumbCount={3} />
   }
 
   if (!project) {
@@ -416,7 +410,7 @@ export function ProjectContent({
         <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
             <Link href="/dashboard" className="hover:text-foreground transition-colors flex-shrink-0">
-              Desktop
+              Dashboard
             </Link>
             <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
             {renaming?.kind === 'project' && renaming.id === project.id ? (
@@ -516,7 +510,7 @@ export function ProjectContent({
               </div>
             ) : (
               <div
-                className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(6.5rem,1fr))] max-w-2xl"
+                className="flex flex-wrap gap-6 w-full"
                 aria-label="Project items"
               >
                 {tableRows.map((row) => {
@@ -534,7 +528,7 @@ export function ProjectContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
-                      className="flex flex-col items-center gap-2.5"
+                      className="flex flex-col items-center gap-2.5 min-w-[6.5rem] flex-[1_1_6.5rem]"
                     >
                       <button
                         type="button"
