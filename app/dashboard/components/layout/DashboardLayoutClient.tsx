@@ -15,48 +15,155 @@ import {
   ChevronDown,
   Pencil,
   Trash2,
+  FileText,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { DashboardProvider, useDashboard, type Project } from '../../dashboard-context'
+import { DashboardProvider, useDashboard, type Project, type TrackerSchema } from '../../dashboard-context'
 import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
   | { kind: 'module'; id: string; label: string }
 
+function SidebarModule({
+  projectId,
+  module: mod,
+  currentProjectId,
+  currentModuleId,
+  currentTrackerId,
+  onContextMenu,
+}: {
+  projectId: string
+  module: Project['modules'][0]
+  currentProjectId: string | null
+  currentModuleId: string | null
+  currentTrackerId: string | null
+  onContextMenu: (e: React.MouseEvent, item: SidebarContextItem) => void
+}) {
+  const isModuleActive =
+    projectId === currentProjectId && mod.id === currentModuleId
+  const trackers = mod.trackerSchemas ?? []
+  const hasTrackers = trackers.length > 0
+  const containsActive =
+    isModuleActive || (currentTrackerId != null && trackers.some((t) => t.id === currentTrackerId))
+  const [expanded, setExpanded] = useState(containsActive || (hasTrackers && isModuleActive))
+
+  useEffect(() => {
+    if (containsActive && hasTrackers) setExpanded(true)
+  }, [containsActive, hasTrackers])
+
+  return (
+    <div className="min-w-0 pl-3">
+      <div className="flex items-center min-w-0">
+        {hasTrackers ? (
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              setExpanded((v) => !v)
+            }}
+            className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
+          >
+            {expanded ? (
+              <ChevronDown className="h-3 w-3" />
+            ) : (
+              <ChevronRight className="h-3 w-3" />
+            )}
+          </button>
+        ) : (
+          <span className="w-[18px] flex-shrink-0" aria-hidden />
+        )}
+        <Link
+          href={`/dashboard/${projectId}/module/${mod.id}`}
+          className={cn(
+            'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+            isModuleActive
+              ? 'bg-primary/10 text-primary font-medium'
+              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+          )}
+          onContextMenu={(e) =>
+            onContextMenu(e, {
+              kind: 'module',
+              id: mod.id,
+              label: mod.name || 'Untitled module',
+            })
+          }
+        >
+          <Folder className="h-3 w-3 flex-shrink-0 opacity-70" />
+          <span className="text-[11px] truncate flex-1 min-w-0">
+            {mod.name || 'Untitled module'}
+          </span>
+          {trackers.length > 0 && (
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
+              {trackers.length}
+            </span>
+          )}
+        </Link>
+      </div>
+      {expanded && hasTrackers && (
+        <div className="pl-3 mr-1 mt-0.5 flex flex-col gap-0.5 min-w-0">
+          {trackers.map((tracker) => {
+            const isTrackerActive = tracker.id === currentTrackerId
+            return (
+              <Link
+                key={tracker.id}
+                href={`/tracker/${tracker.id}`}
+                className={cn(
+                  'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
+                  isTrackerActive
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                )}
+              >
+                <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+                <span className="text-[11px] truncate flex-1 min-w-0">
+                  {tracker.name || 'Untitled tracker'}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SidebarProject({
   project,
   currentProjectId,
   currentModuleId,
+  currentTrackerId,
   onContextMenu,
 }: {
   project: Project
   currentProjectId: string | null
   currentModuleId: string | null
+  currentTrackerId: string | null
   onContextMenu: (e: React.MouseEvent, item: SidebarContextItem) => void
 }) {
   const isActive = project.id === currentProjectId && !currentModuleId
-  const hasModules = project.modules.length > 0
-  const containsActive = project.id === currentProjectId
-  const [expanded, setExpanded] = useState(containsActive && hasModules)
-
-  useEffect(() => {
-    if (containsActive && hasModules) setExpanded(true)
-  }, [containsActive, hasModules])
-
   const projectLevelTrackers = (project.trackerSchemas ?? []).filter(
     (t) => !t.moduleId
   )
+  const hasModules = project.modules.length > 0
+  const hasProjectTrackers = projectLevelTrackers.length > 0
+  const hasChildren = hasModules || hasProjectTrackers
+  const containsActive = project.id === currentProjectId
+  const [expanded, setExpanded] = useState(containsActive && hasChildren)
+
+  useEffect(() => {
+    if (containsActive && hasChildren) setExpanded(true)
+  }, [containsActive, hasChildren])
+
   const itemCount =
     projectLevelTrackers.length +
     project.modules.length +
     (project.projectFiles?.length ?? 0)
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 pl-3">
       <div className="flex items-center min-w-0">
-        {hasModules && (
+        {hasChildren && (
           <button
             onClick={() => setExpanded((v) => !v)}
             className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
@@ -72,7 +179,7 @@ function SidebarProject({
           href={`/dashboard/${project.id}`}
           className={cn(
             'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors min-w-0 flex-1 overflow-hidden',
-            !hasModules && 'ml-[18px]',
+            !hasChildren && 'ml-[18px]',
             isActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -86,48 +193,46 @@ function SidebarProject({
           }
         >
           <FolderOpen className="h-4 w-4 flex-shrink-0 opacity-70" />
-          <span className="text-xs truncate flex-1">
+          <span className="text-xs truncate flex-1 min-w-0">
             {project.name || 'Untitled folder'}
           </span>
           {itemCount > 0 && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums">
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
               {itemCount}
             </span>
           )}
         </Link>
       </div>
       {expanded && (
-        <div className="ml-5 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
-          {project.modules.map((mod) => {
-            const isModuleActive =
-              project.id === currentProjectId && mod.id === currentModuleId
+        <div className="pl-3 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
+          {project.modules.map((mod) => (
+            <SidebarModule
+              key={mod.id}
+              projectId={project.id}
+              module={mod}
+              currentProjectId={currentProjectId}
+              currentModuleId={currentModuleId}
+              currentTrackerId={currentTrackerId}
+              onContextMenu={onContextMenu}
+            />
+          ))}
+          {projectLevelTrackers.map((tracker) => {
+            const isTrackerActive = tracker.id === currentTrackerId
             return (
               <Link
-                key={mod.id}
-                href={`/dashboard/${project.id}/module/${mod.id}`}
+                key={tracker.id}
+                href={`/tracker/${tracker.id}`}
                 className={cn(
                   'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
-                  isModuleActive
+                  isTrackerActive
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                 )}
-                onContextMenu={(e) =>
-                  onContextMenu(e, {
-                    kind: 'module',
-                    id: mod.id,
-                    label: mod.name || 'Untitled module',
-                  })
-                }
               >
-                <Folder className="h-3 w-3 flex-shrink-0 opacity-70" />
+                <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
                 <span className="text-[11px] truncate flex-1 min-w-0">
-                  {mod.name || 'Untitled module'}
+                  {tracker.name || 'Untitled tracker'}
                 </span>
-                {(mod.trackerSchemas?.length ?? 0) > 0 && (
-                  <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
-                    {mod.trackerSchemas?.length ?? 0}
-                  </span>
-                )}
               </Link>
             )
           })}
@@ -279,23 +384,43 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const lastActivity =
     projects.length > 0
       ? projects
-          .flatMap((p) =>
-            (p.trackerSchemas ?? []).map((t) => ({
-              date: t.updatedAt,
-              name: p.name,
-            }))
-          )
-          .sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          )[0]
+        .flatMap((p) =>
+          (p.trackerSchemas ?? []).map((t) => ({
+            date: t.updatedAt,
+            name: p.name,
+          }))
+        )
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        )[0]
       : null
-  const isDesktop = pathname === '/dashboard'
   const pathSegments = pathname.split('/')
   const currentProjectId = pathname.startsWith('/dashboard/')
     ? pathSegments[2] ?? null
     : null
   const currentModuleId =
     pathSegments[3] === 'module' ? pathSegments[4] ?? null : null
+  const currentTrackerId =
+    pathname.startsWith('/tracker/') && pathSegments[2] ? pathSegments[2] : null
+
+  const allTrackers = projects.flatMap((p) => [
+    ...(p.trackerSchemas ?? []),
+    ...(p.modules ?? []).flatMap((m) => m.trackerSchemas ?? []),
+  ])
+  const trackersById = new Map(allTrackers.map((t) => [t.id, t]))
+  const recentTrackers: TrackerSchema[] = [...trackersById.values()]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+    .slice(0, 5)
+
+  const [projectSectionOpen, setProjectSectionOpen] = useState(true)
+  const [recentSectionOpen, setRecentSectionOpen] = useState(true)
+
+  const isProjectsPage = pathname === '/dashboard/projects'
+  const isRecentsPage = pathname === '/dashboard/recents'
+  const isDashboardHome = pathname === '/dashboard' || pathname === '/dashboard/'
 
   if (status === 'loading' || (status === 'authenticated' && projectsLoading)) {
     return (
@@ -405,7 +530,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 href="/dashboard"
                 className={cn(
                   'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
-                  isDesktop
+                  isDashboardHome
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 )}
@@ -419,18 +544,89 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             </div>
             {!sidebarCollapsed && (
               <>
-                <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  Project
+                <div className="flex items-center gap-1 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => setProjectSectionOpen((v) => !v)}
+                    className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
+                  >
+                    {projectSectionOpen ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Link
+                    href="/dashboard/projects"
+                    className={cn(
+                      'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                      isProjectsPage
+                        ? 'text-primary'
+                        : 'text-muted-foreground/70 hover:text-muted-foreground'
+                    )}
+                  >
+                    Project
+                  </Link>
                 </div>
-                {projects.map((project) => (
-                  <SidebarProject
-                    key={project.id}
-                    project={project}
-                    currentProjectId={currentProjectId}
-                    currentModuleId={currentModuleId}
-                    onContextMenu={openSidebarContextMenu}
-                  />
-                ))}
+                {projectSectionOpen &&
+                  projects.map((project) => (
+                    <SidebarProject
+                      key={project.id}
+                      project={project}
+                      currentProjectId={currentProjectId}
+                      currentModuleId={currentModuleId}
+                      currentTrackerId={currentTrackerId}
+                      onContextMenu={openSidebarContextMenu}
+                    />
+                  ))}
+                <div className="flex items-center gap-1 min-w-0 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecentSectionOpen((v) => !v)}
+                    className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
+                  >
+                    {recentSectionOpen ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Link
+                    href="/dashboard/recents"
+                    className={cn(
+                      'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                      isRecentsPage
+                        ? 'text-primary'
+                        : 'text-muted-foreground/70 hover:text-muted-foreground'
+                    )}
+                  >
+                    Recent
+                  </Link>
+                </div>
+                {recentSectionOpen && recentTrackers.length > 0 && (
+                  <div className="flex flex-col gap-0.5 min-w-0 pl-3">
+                    {recentTrackers.map((tracker) => {
+                      const isTrackerActive = tracker.id === currentTrackerId
+                      return (
+                        <Link
+                          key={tracker.id}
+                          href={`/tracker/${tracker.id}`}
+                          className={cn(
+                            'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
+                            isTrackerActive
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                          )}
+                        >
+                          <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+                          <span className="text-[11px] truncate flex-1 min-w-0">
+                            {tracker.name || 'Untitled tracker'}
+                          </span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
               </>
             )}
           </div>

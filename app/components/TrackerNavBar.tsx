@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes'
 import { ArrowLeft, ChevronDown, Database, Layout, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { TeamSwitcher, TeamMembersDialog } from './teams'
+import { TeamMembersDialog } from './teams'
 import { useTrackerNav } from '@/app/tracker/TrackerNavContext'
 
 const DEFAULT_TRACKER_NAME = 'Untitled tracker'
@@ -207,7 +207,6 @@ export default function TrackerNavBar() {
                 </PopoverContent>
               </Popover>
             )}
-            <TeamSwitcher />
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
               <PopoverTrigger asChild>
                 <Button

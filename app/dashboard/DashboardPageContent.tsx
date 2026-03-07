@@ -12,6 +12,7 @@ import {
   ExternalLink,
   LayoutGrid,
   List,
+  FileText,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -28,7 +29,9 @@ import { cn } from '@/lib/utils'
 import { useDashboard } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
 
-export function DashboardPageContent() {
+export type DashboardView = 'all' | 'projects' | 'recents'
+
+export function DashboardPageContent({ view = 'all' }: { view?: DashboardView }) {
   const router = useRouter()
   const { projects, projectsLoading, fetchProjects } = useDashboard()
   const [error, setError] = useState<string | null>(null)
@@ -115,6 +118,18 @@ export function DashboardPageContent() {
     0
   )
 
+  const allTrackers = projects.flatMap((p) => [
+    ...(p.trackerSchemas ?? []),
+    ...(p.modules ?? []).flatMap((m) => m.trackerSchemas ?? []),
+  ])
+  const trackersById = new Map(allTrackers.map((t) => [t.id, t]))
+  const recentTrackers = [...trackersById.values()]
+    .sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+    )
+    .slice(0, 5)
+
   if (projectsLoading) {
     return <DashboardHomeSkeleton />
   }
@@ -124,16 +139,18 @@ export function DashboardPageContent() {
       <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background">
         <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-4 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
-              onClick={handleOpenCreateProject}
-              disabled={creating}
-            >
-              <FolderPlus className="h-3.5 w-3.5" />
-              New Project
-            </Button>
+            {view !== 'recents' && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                onClick={handleOpenCreateProject}
+                disabled={creating}
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                New Project
+              </Button>
+            )}
             <Button
               size="sm"
               variant="ghost"
@@ -148,41 +165,46 @@ export function DashboardPageContent() {
               )}
               New Tracker
             </Button>
-            <div className="w-px h-4 bg-border/60" />
-            <div className="flex rounded-md border border-border/50 overflow-hidden">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'p-1.5 transition-colors',
-                  viewMode === 'grid'
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/50'
-                )}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'p-1.5 transition-colors',
-                  viewMode === 'list'
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted/50'
-                )}
-              >
-                <List className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {view !== 'recents' && (
+              <>
+                <div className="w-px h-4 bg-border/60" />
+                <div className="flex rounded-md border border-border/50 overflow-hidden">
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={cn(
+                      'p-1.5 transition-colors',
+                      viewMode === 'grid'
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={cn(
+                      'p-1.5 transition-colors',
+                      viewMode === 'list'
+                        ? 'bg-muted text-foreground'
+                        : 'text-muted-foreground hover:bg-muted/50'
+                    )}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         <div className="flex-1 overflow-auto p-6">
+          {(view === 'all' || view === 'projects') && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15 }}
             className={cn(
-              'h-full',
+              view === 'projects' && 'h-full',
               viewMode === 'grid'
                 ? 'flex flex-wrap gap-4 content-start'
                 : 'flex flex-col gap-1'
@@ -277,6 +299,81 @@ export function DashboardPageContent() {
               </>
             )}
           </motion.div>
+          )}
+          {view === 'all' && recentTrackers.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className="pt-3 mt-3 border-t border-border/50"
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-3">
+                Recent trackers
+              </h2>
+              <div className="flex flex-col gap-1">
+                {recentTrackers.map((tracker) => (
+                  <Link
+                    key={tracker.id}
+                    href={`/tracker/${tracker.id}`}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="text-sm font-medium truncate flex-1 min-w-0">
+                      {tracker.name || 'Untitled tracker'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                      {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </span>
+                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+          {view === 'recents' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className="h-full"
+            >
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-3">
+                Recent trackers
+              </h2>
+              {recentTrackers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No trackers yet.</p>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  {recentTrackers.map((tracker) => (
+                    <Link
+                      key={tracker.id}
+                      href={`/tracker/${tracker.id}`}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium truncate flex-1 min-w-0">
+                        {tracker.name || 'Untitled tracker'}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
+                        {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
       </main>
 

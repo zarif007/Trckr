@@ -358,7 +358,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const mobileLayout = (
     <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-16 md:pt-20 md:hidden"
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-12 md:pt-14 md:hidden"
       aria-hidden={isDesktop}
     >
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -415,7 +415,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const desktopLayout = (
     <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-20 md:pt-20 hidden md:flex"
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-14 hidden md:flex"
       aria-hidden={!isDesktop}
     >
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
