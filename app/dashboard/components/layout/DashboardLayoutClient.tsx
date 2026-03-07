@@ -11,8 +11,6 @@ import {
   FolderOpen,
   Folder,
   HardDrive,
-  LayoutGrid,
-  Activity,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -374,28 +372,50 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="p-2 flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden min-w-0">
             <div className="flex items-center gap-1 min-w-0">
               <Link
+                href="/"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                aria-label="Go to home"
+              >
+                <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-current"
+                  >
+                    <path
+                      d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
+                      fill="currentColor"
+                      className="opacity-100"
+                    />
+                    <path
+                      d="M12 12L20 7.5V16.5L12 21V12Z"
+                      fill="currentColor"
+                      className="opacity-70"
+                    />
+                    <path
+                      d="M12 12L4 7.5V16.5L12 21V12Z"
+                      fill="currentColor"
+                      className="opacity-40"
+                    />
+                  </svg>
+                </span>
+              </Link>
+              <Link
                 href="/dashboard"
                 className={cn(
-                  'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                  'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
                   isDesktop
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                 )}
               >
-                <LayoutGrid className="h-4 w-4 flex-shrink-0" />
-                {!sidebarCollapsed && (
+                {sidebarCollapsed ? (
+                  <span className="text-xs font-medium w-6 text-center">D</span>
+                ) : (
                   <span className="text-xs truncate">Dashboard</span>
                 )}
               </Link>
-              {!sidebarCollapsed && (
-                <Link
-                  href="/"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                  aria-label="Go to landing page"
-                >
-                  <Activity className="h-4 w-4" />
-                </Link>
-              )}
             </div>
             {!sidebarCollapsed && (
               <>

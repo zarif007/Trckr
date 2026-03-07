@@ -63,20 +63,20 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[180px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
-                              <Skeleton className="h-4 w-24" />
-                              <Skeleton className="h-4 w-32" />
-                              <Skeleton className="h-4 w-20" />
+                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
+                            <div className="flex w-full gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
+                              <Skeleton className="h-4 w-24 shrink-0" />
+                              <Skeleton className="h-4 flex-1 min-w-0 max-w-[8rem]" />
+                              <Skeleton className="h-4 w-20 shrink-0" />
                             </div>
                             {[1, 2, 3, 4].map((i) => (
                               <div
                                 key={i}
-                                className="flex gap-4 px-4 py-3 border-b border-border/30 last:border-0"
+                                className="flex w-full gap-4 px-4 py-3 border-b border-border/30 last:border-0"
                               >
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-4 w-24 shrink-0" />
+                                <Skeleton className="h-4 flex-1 min-w-0 max-w-[8rem]" />
+                                <Skeleton className="h-4 w-20 shrink-0" />
                               </div>
                             ))}
                           </div>
@@ -90,18 +90,18 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[140px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
-                              <Skeleton className="h-4 w-28" />
-                              <Skeleton className="h-4 w-20" />
+                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
+                            <div className="flex w-full gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
+                              <Skeleton className="h-4 w-28 shrink-0" />
+                              <Skeleton className="h-4 flex-1 min-w-0 max-w-[6rem]" />
                             </div>
                             {[1, 2, 3].map((i) => (
                               <div
                                 key={i}
-                                className="flex gap-4 px-4 py-3 border-b border-border/30 last:border-0"
+                                className="flex w-full gap-4 px-4 py-3 border-b border-border/30 last:border-0"
                               >
-                                <Skeleton className="h-4 w-28" />
-                                <Skeleton className="h-4 w-20" />
+                                <Skeleton className="h-4 w-28 shrink-0" />
+                                <Skeleton className="h-4 flex-1 min-w-0 max-w-[6rem]" />
                               </div>
                             ))}
                           </div>
@@ -153,18 +153,18 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[160px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex gap-3 px-3 py-2.5 border-b border-border/40 bg-muted/30">
-                              <Skeleton className="h-3.5 w-16" />
-                              <Skeleton className="h-3.5 w-20" />
+                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
+                            <div className="flex w-full gap-3 px-3 py-2.5 border-b border-border/40 bg-muted/30">
+                              <Skeleton className="h-3.5 w-16 shrink-0" />
+                              <Skeleton className="h-3.5 flex-1 min-w-0 max-w-[5rem]" />
                             </div>
                             {[1, 2, 3, 4].map((i) => (
                               <div
                                 key={i}
-                                className="flex gap-3 px-3 py-2.5 border-b border-border/30 last:border-0"
+                                className="flex w-full gap-3 px-3 py-2.5 border-b border-border/30 last:border-0"
                               >
-                                <Skeleton className="h-3.5 w-16" />
-                                <Skeleton className="h-3.5 w-20" />
+                                <Skeleton className="h-3.5 w-16 shrink-0" />
+                                <Skeleton className="h-3.5 flex-1 min-w-0 max-w-[5rem]" />
                               </div>
                             ))}
                           </div>

@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   FolderOpen,
-  Home,
   Loader2,
   X,
   FolderPlus,
@@ -123,7 +122,7 @@ export function DashboardPageContent() {
   return (
     <>
       <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80 backdrop-blur-sm">
+        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-4 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -174,16 +173,6 @@ export function DashboardPageContent() {
                 <List className="h-3.5 w-3.5" />
               </button>
             </div>
-          </div>
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <span>Dashboard</span>
-            <Link
-              href="/"
-              className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Go to home"
-            >
-              <Home className="h-4 w-4" />
-            </Link>
           </div>
         </div>
 
