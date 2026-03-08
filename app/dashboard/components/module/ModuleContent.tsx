@@ -7,7 +7,6 @@ import {
   Loader2,
   X,
   FilePlus,
-  FolderPlus,
   FileText,
   Folder,
   ChevronRight,
@@ -29,6 +28,7 @@ import {
   type ContextMenuItem,
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
+import { NewModuleButton } from '../NewModuleButton'
 
 const MODULE_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
   TEAMS: Users,
@@ -107,7 +107,6 @@ export function ModuleContent({
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [creatingSubmodule, setCreatingSubmodule] = useState(false)
   const [addingConfig, setAddingConfig] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -120,6 +119,9 @@ export function ModuleContent({
     queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.projects() })
     queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.project(projectId) })
   }, [queryClient, moduleId, projectId])
+
+  // Legacy stub: creation is handled by NewModuleButton; kept so stale closures (e.g. HMR) don’t throw
+  const handleCreateSubmodule = useCallback(() => {}, [])
 
   const onRename = useCallback(
     async (kind: ContextMenuItem['kind'], id: string, newName: string) => {
@@ -466,27 +468,6 @@ export function ModuleContent({
     }
   }
 
-  const handleCreateSubmodule = async () => {
-    setCreatingSubmodule(true)
-    setErrorMessage(null)
-    try {
-      const res = await fetch(`/api/projects/${projectId}/modules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: 'New Module', parentId: moduleId }),
-      })
-      if (!res.ok) throw new Error('Failed to create module')
-      const data = (await res.json()) as { id: string }
-      invalidateModuleAndProjects()
-      await fetchProjects()
-      router.push(`/dashboard/${projectId}/module/${data.id}`)
-    } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : 'Error creating module')
-    } finally {
-      setCreatingSubmodule(false)
-    }
-  }
-
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
   if (loading && !mod) {
@@ -568,20 +549,12 @@ export function ModuleContent({
             )}
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
-              onClick={handleCreateSubmodule}
-              disabled={creatingSubmodule}
-            >
-              {creatingSubmodule ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FolderPlus className="h-3.5 w-3.5" />
-              )}
-              New Module
-            </Button>
+            <NewModuleButton
+              projectId={projectId}
+              parentId={moduleId}
+              variant="toolbar"
+              onError={(msg) => setErrorMessage(msg || null)}
+            />
             {availableFileTypes.length > 0 && (
               <div className="relative group">
                 <Button
@@ -638,16 +611,12 @@ export function ModuleContent({
                 </div>
                 <p className="text-xs font-medium">This module is empty</p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="rounded-full gap-1.5"
-                    onClick={handleCreateSubmodule}
-                    disabled={creatingSubmodule}
-                  >
-                    <FolderPlus className="h-3.5 w-3.5" />
-                    New Module
-                  </Button>
+                  <NewModuleButton
+                    projectId={projectId}
+                    parentId={moduleId}
+                    variant="empty"
+                    onError={(msg) => setErrorMessage(msg || null)}
+                  />
                   <Button
                     size="sm"
                     variant="secondary"

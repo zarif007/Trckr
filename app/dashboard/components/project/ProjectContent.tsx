@@ -7,7 +7,6 @@ import {
   Loader2,
   X,
   FilePlus,
-  FolderPlus,
   FileText,
   Folder,
   ChevronRight,
@@ -16,14 +15,6 @@ import {
   ScrollText,
   Network,
 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -41,6 +32,7 @@ import {
   type ContextMenuItem,
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
+import { NewModuleButton } from '../NewModuleButton'
 import { DashboardPageSkeleton } from '../skeleton/DashboardPageSkeleton'
 
 const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
@@ -112,22 +104,11 @@ export function ProjectContent({
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [creatingModule, setCreatingModule] = useState(false)
-  const [createModuleOpen, setCreateModuleOpen] = useState(false)
-  const [moduleName, setModuleName] = useState('')
-  const createModuleInputRef = useRef<HTMLInputElement>(null)
   const [currentTime, setCurrentTime] = useState(new Date())
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
   const { fetchProjects, setProjects } = useDashboard()
-
-  useEffect(() => {
-    if (createModuleOpen) {
-      setModuleName('')
-      requestAnimationFrame(() => createModuleInputRef.current?.focus())
-    }
-  }, [createModuleOpen])
 
   const invalidateProjectAndProjects = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.project(projectId) })
@@ -426,42 +407,6 @@ export function ProjectContent({
     }
   }
 
-  const handleCreateModule = useCallback(
-    async (nameOverride?: string) => {
-      const name = (nameOverride ?? moduleName).trim() || 'New Module'
-      setCreatingModule(true)
-      setErrorMessage(null)
-      setCreateModuleOpen(false)
-      try {
-        const res = await fetch(`/api/projects/${projectId}/modules`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
-        })
-        if (!res.ok) throw new Error('Failed to create module')
-        const mod = (await res.json()) as { id: string }
-        invalidateProjectAndProjects()
-        await fetchProjects()
-        router.push(`/dashboard/${projectId}/module/${mod.id}`)
-      } catch (e) {
-        setErrorMessage(e instanceof Error ? e.message : 'Error creating module')
-      } finally {
-        setCreatingModule(false)
-      }
-    },
-    [projectId, moduleName, invalidateProjectAndProjects, fetchProjects, router],
-  )
-
-  const handleCreateModuleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault()
-        handleCreateModule(e.currentTarget.value)
-      }
-    },
-    [handleCreateModule],
-  )
-
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
   if (loading && !project) {
@@ -514,20 +459,11 @@ export function ProjectContent({
             )}
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
-              onClick={() => setCreateModuleOpen(true)}
-              disabled={creatingModule}
-            >
-              {creatingModule ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FolderPlus className="h-3.5 w-3.5" />
-              )}
-              New Module
-            </Button>
+            <NewModuleButton
+              projectId={projectId}
+              variant="toolbar"
+              onError={(msg) => setErrorMessage(msg || null)}
+            />
             <Button
               size="sm"
               variant="ghost"
@@ -554,16 +490,11 @@ export function ProjectContent({
                 </div>
                 <p className="text-xs font-medium">This folder is empty</p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="rounded-full gap-1.5"
-                    onClick={() => setCreateModuleOpen(true)}
-                    disabled={creatingModule}
-                  >
-                    <FolderPlus className="h-3.5 w-3.5" />
-                    New Module
-                  </Button>
+                  <NewModuleButton
+                    projectId={projectId}
+                    variant="empty"
+                    onError={(msg) => setErrorMessage(msg || null)}
+                  />
                   <Button
                     size="sm"
                     variant="secondary"
@@ -666,70 +597,6 @@ export function ProjectContent({
           })}
         </span>
       </div>
-
-      <Dialog open={createModuleOpen} onOpenChange={setCreateModuleOpen}>
-        <DialogContent
-          showCloseButton={true}
-          className="sm:max-w-[380px] rounded-xl border-border/60 bg-background/95 shadow-xl backdrop-blur-sm p-0 gap-0 overflow-hidden"
-        >
-          <div className="flex flex-col">
-            <div className="flex items-center gap-4 pt-6 pl-6 pr-12 pb-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10">
-                <FolderPlus className="h-5 w-5" />
-              </div>
-              <DialogHeader className="p-0 gap-1 text-left min-w-0">
-                <DialogTitle className="text-base font-semibold tracking-tight">
-                  New module
-                </DialogTitle>
-                <DialogDescription className="text-[13px] text-muted-foreground/90">
-                  Give your module a name. You can rename it anytime.
-                </DialogDescription>
-              </DialogHeader>
-            </div>
-            <div className="px-6 pb-6 space-y-2">
-              <label
-                htmlFor="create-module-name"
-                className="text-xs font-medium text-muted-foreground"
-              >
-                Module name
-              </label>
-              <Input
-                id="create-module-name"
-                ref={createModuleInputRef}
-                placeholder="e.g. Product team"
-                value={moduleName}
-                onChange={(e) => setModuleName(e.target.value)}
-                onKeyDown={handleCreateModuleKeyDown}
-                className="h-10 rounded-lg border-border/80 bg-muted/30 focus:bg-background transition-colors placeholder:text-muted-foreground/60"
-              />
-            </div>
-            <DialogFooter className="flex-row gap-2 justify-end px-6 py-4 bg-muted/20 border-t border-border/50">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="rounded-lg"
-                onClick={() => setCreateModuleOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="rounded-lg min-w-[72px]"
-                onClick={() => handleCreateModule()}
-                disabled={creatingModule}
-              >
-                {creatingModule ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Create'
-                )}
-              </Button>
-            </DialogFooter>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <RenameDeleteContextMenuPortal
         contextMenu={contextMenu}

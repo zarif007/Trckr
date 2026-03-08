@@ -92,7 +92,7 @@ function SidebarModule({
   }, [containsActive, hasExpandableContent])
 
   return (
-    <div className="min-w-0 pl-3">
+    <div className="min-w-0 pl-1.5">
       <div className="flex items-center min-w-0">
         {hasExpandableContent ? (
           <button
@@ -114,7 +114,7 @@ function SidebarModule({
         <Link
           href={`/dashboard/${projectId}/module/${mod.id}`}
           className={cn(
-            'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+            'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isModuleActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -139,7 +139,7 @@ function SidebarModule({
         </Link>
       </div>
       {expanded && hasExpandableContent && (
-        <div className="pl-3 mr-1 mt-0.5 flex flex-col gap-0.5 min-w-0">
+        <div className="pl-1.5 mr-1 mt-0.5 flex flex-col gap-0.5 min-w-0">
           {children.map((child) => (
             <SidebarModule
               key={child.id}
@@ -154,21 +154,23 @@ function SidebarModule({
           {trackers.map((tracker) => {
             const isTrackerActive = tracker.id === currentTrackerId
             return (
-              <Link
-                key={tracker.id}
-                href={`/tracker/${tracker.id}`}
-                className={cn(
-                  'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
-                  isTrackerActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                )}
-              >
-                <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                <span className="text-[11px] truncate flex-1 min-w-0">
-                  {tracker.name || 'Untitled tracker'}
-                </span>
-              </Link>
+              <div key={tracker.id} className="flex items-center min-w-0 pl-1.5">
+                <span className="w-[18px] flex-shrink-0" aria-hidden />
+                <Link
+                  href={`/tracker/${tracker.id}`}
+                  className={cn(
+                    'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+                    isTrackerActive
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+                  <span className="text-[11px] truncate flex-1 min-w-0">
+                    {tracker.name || 'Untitled tracker'}
+                  </span>
+                </Link>
+              </div>
             )
           })}
         </div>
@@ -210,7 +212,7 @@ function SidebarProject({
     (project.projectFiles?.length ?? 0)
 
   return (
-    <div className="min-w-0 pl-3">
+    <div className="min-w-0 pl-1.5">
       <div className="flex items-center min-w-0">
         {hasChildren && (
           <button
@@ -253,7 +255,7 @@ function SidebarProject({
         </Link>
       </div>
       {expanded && (
-        <div className="pl-3 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
+        <div className="pl-1.5 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
           {project.modules.map((mod) => (
             <SidebarModule
               key={mod.id}
@@ -268,21 +270,23 @@ function SidebarProject({
           {projectLevelTrackers.map((tracker) => {
             const isTrackerActive = tracker.id === currentTrackerId
             return (
-              <Link
-                key={tracker.id}
-                href={`/tracker/${tracker.id}`}
-                className={cn(
-                  'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
-                  isTrackerActive
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                )}
-              >
-                <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                <span className="text-[11px] truncate flex-1 min-w-0">
-                  {tracker.name || 'Untitled tracker'}
-                </span>
-              </Link>
+              <div key={tracker.id} className="flex items-center min-w-0 pl-1.5">
+                <span className="w-[18px] flex-shrink-0" aria-hidden />
+                <Link
+                  href={`/tracker/${tracker.id}`}
+                  className={cn(
+                    'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+                    isTrackerActive
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                  )}
+                >
+                  <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+                  <span className="text-[11px] truncate flex-1 min-w-0">
+                    {tracker.name || 'Untitled tracker'}
+                  </span>
+                </Link>
+              </div>
             )
           })}
         </div>
@@ -542,56 +546,58 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             sidebarCollapsed ? 'w-12' : 'w-52'
           )}
         >
-          <div className="p-2 flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden min-w-0">
-            <div className="flex items-center gap-1 min-w-0">
-              <Link
-                href="/"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                aria-label="Go to home"
-              >
-                <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="text-current"
-                  >
-                    <path
-                      d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
-                      fill="currentColor"
-                      className="opacity-100"
-                    />
-                    <path
-                      d="M12 12L20 7.5V16.5L12 21V12Z"
-                      fill="currentColor"
-                      className="opacity-70"
-                    />
-                    <path
-                      d="M12 12L4 7.5V16.5L12 21V12Z"
-                      fill="currentColor"
-                      className="opacity-40"
-                    />
-                  </svg>
-                </span>
-              </Link>
-              <Link
-                href="/dashboard"
-                className={cn(
-                  'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
-                  isDashboardHome
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                )}
-              >
-                {sidebarCollapsed ? (
-                  <span className="text-xs font-medium w-6 text-center">D</span>
-                ) : (
-                  <span className="text-xs truncate">Dashboard</span>
-                )}
-              </Link>
+          <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+            <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-1 min-w-0">
+                <Link
+                  href="/"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                  aria-label="Go to home"
+                >
+                  <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="text-current"
+                    >
+                      <path
+                        d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
+                        fill="currentColor"
+                        className="opacity-100"
+                      />
+                      <path
+                        d="M12 12L20 7.5V16.5L12 21V12Z"
+                        fill="currentColor"
+                        className="opacity-70"
+                      />
+                      <path
+                        d="M12 12L4 7.5V16.5L12 21V12Z"
+                        fill="currentColor"
+                        className="opacity-40"
+                      />
+                    </svg>
+                  </span>
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className={cn(
+                    'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                    isDashboardHome
+                      ? 'bg-primary/10 text-primary font-medium'
+                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                  )}
+                >
+                  {sidebarCollapsed ? (
+                    <span className="text-xs font-medium w-6 text-center">D</span>
+                  ) : (
+                    <span className="text-xs truncate">Dashboard</span>
+                  )}
+                </Link>
+              </div>
             </div>
             {!sidebarCollapsed && (
-              <>
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-1 min-w-0">
                   <button
                     type="button"
@@ -652,30 +658,32 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   </Link>
                 </div>
                 {recentSectionOpen && recentTrackers.length > 0 && (
-                  <div className="flex flex-col gap-0.5 min-w-0 pl-3">
+                  <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
                     {recentTrackers.map((tracker) => {
                       const isTrackerActive = tracker.id === currentTrackerId
                       return (
-                        <Link
-                          key={tracker.id}
-                          href={`/tracker/${tracker.id}`}
-                          className={cn(
-                            'flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 overflow-hidden',
-                            isTrackerActive
-                              ? 'bg-primary/10 text-primary font-medium'
-                              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                          )}
-                        >
-                          <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                          <span className="text-[11px] truncate flex-1 min-w-0">
-                            {tracker.name || 'Untitled tracker'}
-                          </span>
-                        </Link>
+                        <div key={tracker.id} className="flex items-center min-w-0">
+                          <span className="w-[18px] flex-shrink-0" aria-hidden />
+                          <Link
+                            href={`/tracker/${tracker.id}`}
+                            className={cn(
+                              'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+                              isTrackerActive
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                            )}
+                          >
+                            <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+                            <span className="text-[11px] truncate flex-1 min-w-0">
+                              {tracker.name || 'Untitled tracker'}
+                            </span>
+                          </Link>
+                        </div>
                       )
                     })}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
           <div
