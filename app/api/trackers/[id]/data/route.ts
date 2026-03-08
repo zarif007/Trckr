@@ -13,6 +13,8 @@ const createTrackerDataBodySchema = z
   .object({
     label: z.string().optional(),
     data: z.unknown().optional(),
+    branchName: z.string().optional(),
+    basedOnId: z.string().optional(),
   })
   .passthrough()
 
@@ -47,7 +49,9 @@ export async function GET(
 
 /**
  * POST /api/trackers/[id]/data
- * Create a new TrackerData snapshot. Body: { label?: string, data: GridDataSnapshot }
+ * Create a new TrackerData snapshot/branch.
+ * Body: { label?: string, data: GridDataSnapshot, branchName?: string, basedOnId?: string }
+ * authorId is auto-set from the authenticated session.
  */
 export async function POST(
   request: Request,
@@ -76,6 +80,9 @@ export async function POST(
   const created = await createTrackerSnapshotForUser(trackerId, authResult.user.id, {
     label: body.label,
     data: body.data,
+    branchName: body.branchName,
+    basedOnId: body.basedOnId,
+    authorId: authResult.user.id,
   })
   if (!created) {
     return notFound('Tracker not found')

@@ -7,12 +7,18 @@ export type GridDataSnapshot = Record<
   Array<Record<string, unknown>>
 >
 
-/** Body for creating a new TrackerData snapshot. */
+/** Body for creating a new TrackerData snapshot or branch. */
 export interface CreateTrackerDataBody {
   /** Optional label (e.g. "March 5", "Backup before migration"). */
   label?: string
   /** Full grid data snapshot. Required. */
   data: GridDataSnapshot
+  /** Branch name for VC mode (default: "main"). */
+  branchName?: string
+  /** ID of the TrackerData record this branch was derived from. */
+  basedOnId?: string
+  /** User ID of the author creating this branch/instance. */
+  authorId?: string
 }
 
 /** Body for updating an existing TrackerData snapshot. */

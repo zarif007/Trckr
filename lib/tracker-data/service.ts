@@ -1,6 +1,13 @@
 import { prisma } from '@/lib/db'
 import type { CreateTrackerDataBody, UpdateTrackerDataBody } from './types'
 
+/** Prisma include for author info on TrackerData queries. */
+const authorInclude = {
+  author: {
+    select: { id: true, name: true, email: true },
+  },
+} as const
+
 export async function createTrackerData(
   trackerSchemaId: string,
   userId: string,
@@ -19,7 +26,11 @@ export async function createTrackerData(
       trackerSchemaId,
       label: typeof body.label === 'string' && body.label.trim() ? body.label.trim() : null,
       data: body.data as object,
+      branchName: body.branchName ?? 'main',
+      authorId: body.authorId ?? null,
+      basedOnId: body.basedOnId ?? null,
     },
+    include: authorInclude,
   })
 }
 
@@ -44,6 +55,7 @@ export async function listTrackerData(
     orderBy: { updatedAt: 'desc' },
     take: limit,
     skip: offset,
+    include: authorInclude,
   })
   return { items }
 }
@@ -55,6 +67,7 @@ export async function getTrackerData(id: string, userId: string) {
       trackerSchema: {
         select: { project: { select: { userId: true } } },
       },
+      ...authorInclude,
     },
   })
   if (!row || row.trackerSchema.project.userId !== userId) return null
@@ -93,6 +106,7 @@ export async function updateTrackerData(
   return prisma.trackerData.update({
     where: { id },
     data: updateData,
+    include: authorInclude,
   })
 }
 

@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { TrackerAIView } from '../page'
 import { TrackerPageSkeleton } from './TrackerPageSkeleton'
+import { TrackerInstanceListView } from '../views/TrackerInstanceListView'
 import type { TrackerResponse, Message } from '../hooks/useTrackerChat'
 
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
@@ -13,6 +14,9 @@ type TrackerRecord = {
   id: string
   name: string | null
   schema: unknown
+  instance?: string
+  versionControl?: boolean
+  listForSchemaId?: string | null
 }
 
 type ConversationState = {
@@ -41,6 +45,7 @@ export default function TrackerByIdPage() {
   const router = useRouter()
   const id = typeof params.id === 'string' ? params.id : null
   const isNew = searchParams.get('new') === 'true'
+  const instanceId = searchParams.get('instanceId')
   const [state, setState] = useState<{
     tracker: TrackerRecord | null
     schema: TrackerResponse | null
@@ -134,37 +139,53 @@ export default function TrackerByIdPage() {
     }
   }, [id, state.tracker])
 
-  // Load latest saved snapshot so the tracker opens with the last saved data
+  // Load snapshot: if instanceId is specified, load that specific instance;
+  // otherwise load the most recent snapshot.
+  // Skip if versionControl is on (branch fetching handled in TrackerAIView).
   useEffect(() => {
     if (!id || !state.tracker) return
+    if (state.tracker.versionControl) return
+    // For list-view schemas, don't pre-load (TrackerInstanceListView handles it)
+    if (state.tracker.listForSchemaId) return
+
     let cancelled = false
-    async function fetchLatestSnapshot() {
+
+    async function fetchSnapshot() {
       try {
-        const res = await fetch(`/api/trackers/${id}/data?limit=1`)
-        if (!res.ok || cancelled) return
-        const data = await res.json()
-        const items = data?.items
-        if (cancelled || !Array.isArray(items) || items.length === 0) return
-        const first = items[0]
-        if (first?.id && first?.data && typeof first.data === 'object' && !Array.isArray(first.data)) {
-          if (!cancelled) {
-            setLatestSnapshot({
-              id: first.id,
-              label: first.label ?? null,
-              data: first.data,
-              updatedAt: first.updatedAt,
-            })
+        let item: SavedSnapshot | null = null
+
+        if (instanceId && instanceId !== 'new') {
+          // Load the specific instance
+          const res = await fetch(`/api/trackers/${id}/data/${instanceId}`)
+          if (!res.ok || cancelled) return
+          const data = await res.json()
+          if (data?.id && data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
+            item = { id: data.id, label: data.label ?? null, data: data.data, updatedAt: data.updatedAt }
           }
+        } else {
+          // Load the latest snapshot
+          const res = await fetch(`/api/trackers/${id}/data?limit=1`)
+          if (!res.ok || cancelled) return
+          const data = await res.json()
+          const items = data?.items
+          if (cancelled || !Array.isArray(items) || items.length === 0) return
+          const first = items[0]
+          if (first?.id && first?.data && typeof first.data === 'object' && !Array.isArray(first.data)) {
+            item = { id: first.id, label: first.label ?? null, data: first.data, updatedAt: first.updatedAt }
+          }
+        }
+
+        if (!cancelled && item) {
+          setLatestSnapshot(item)
         }
       } catch {
         // ignore
       }
     }
-    fetchLatestSnapshot()
-    return () => {
-      cancelled = true
-    }
-  }, [id, state.tracker])
+
+    fetchSnapshot()
+    return () => { cancelled = true }
+  }, [id, state.tracker, instanceId])
 
   const handleSaveTracker = useCallback(
     async (schema: TrackerResponse) => {
@@ -241,6 +262,17 @@ export default function TrackerByIdPage() {
     )
   }
 
+  // If this is a .list companion schema, render the instance list view
+  if (state.tracker?.listForSchemaId) {
+    return (
+      <TrackerInstanceListView
+        listSchemaId={id}
+        parentTrackerId={state.tracker.listForSchemaId}
+        listName={state.tracker.name ?? 'Instances'}
+      />
+    )
+  }
+
   return (
     <TrackerAIView
       initialSchema={schema}
@@ -251,6 +283,7 @@ export default function TrackerByIdPage() {
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       initialLoadedSnapshot={latestSnapshot}
+      versionControl={state.tracker?.versionControl ?? false}
     />
   )
 }

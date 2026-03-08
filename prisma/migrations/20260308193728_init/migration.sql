@@ -121,6 +121,8 @@ CREATE TABLE "TrackerSchema" (
     "moduleId" TEXT,
     "name" TEXT,
     "instance" "Instance" NOT NULL DEFAULT 'SINGLE',
+    "versionControl" BOOLEAN NOT NULL DEFAULT false,
+    "listForSchemaId" TEXT,
     "schema" JSONB NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -134,6 +136,10 @@ CREATE TABLE "TrackerData" (
     "trackerSchemaId" TEXT NOT NULL,
     "label" TEXT,
     "data" JSONB NOT NULL,
+    "branchName" TEXT NOT NULL DEFAULT 'main',
+    "authorId" TEXT,
+    "basedOnId" TEXT,
+    "isMerged" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -217,6 +223,9 @@ CREATE INDEX "ModuleFile_moduleId_idx" ON "ModuleFile"("moduleId");
 CREATE UNIQUE INDEX "ModuleFile_moduleId_type_key" ON "ModuleFile"("moduleId", "type");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "TrackerSchema_listForSchemaId_key" ON "TrackerSchema"("listForSchemaId");
+
+-- CreateIndex
 CREATE INDEX "TrackerSchema_projectId_idx" ON "TrackerSchema"("projectId");
 
 -- CreateIndex
@@ -224,6 +233,12 @@ CREATE INDEX "TrackerSchema_moduleId_idx" ON "TrackerSchema"("moduleId");
 
 -- CreateIndex
 CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
+
+-- CreateIndex
+CREATE INDEX "TrackerData_authorId_idx" ON "TrackerData"("authorId");
+
+-- CreateIndex
+CREATE INDEX "TrackerData_basedOnId_idx" ON "TrackerData"("basedOnId");
 
 -- CreateIndex
 CREATE INDEX "Conversation_trackerSchemaId_idx" ON "Conversation"("trackerSchemaId");
@@ -265,7 +280,16 @@ ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIG
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_listForSchemaId_fkey" FOREIGN KEY ("listForSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_basedOnId_fkey" FOREIGN KEY ("basedOnId") REFERENCES "TrackerData"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;

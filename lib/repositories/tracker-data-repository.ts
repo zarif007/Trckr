@@ -18,7 +18,13 @@ export async function listTrackerSnapshotsForUser(
 export async function createTrackerSnapshotForUser(
   trackerId: string,
   userId: string,
-  body: { label?: string; data: GridDataSnapshot },
+  body: {
+    label?: string
+    data: GridDataSnapshot
+    branchName?: string
+    basedOnId?: string
+    authorId?: string
+  },
 ) {
   return createTrackerData(trackerId, userId, body)
 }
@@ -38,4 +44,3 @@ export async function updateTrackerSnapshotForUser(
 export async function deleteTrackerSnapshotForUser(snapshotId: string, userId: string) {
   return deleteTrackerData(snapshotId, userId)
 }
-

@@ -13,6 +13,7 @@ import { useTrackerChat, type Message, type TrackerResponse } from '../hooks/use
 import { useIsDesktop } from '../hooks/useMediaQuery'
 import { TrackerPanel, type GridDataSnapshot } from './TrackerPanel'
 import { TrackerChatPanel } from './TrackerChatPanel'
+import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
@@ -26,6 +27,8 @@ export interface TrackerEditorViewProps {
   initialConversationId?: string | null
   initialMessages?: Message[]
   initialLoadedSnapshot?: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string } | null
+  /** Whether this tracker has version control enabled */
+  versionControl?: boolean
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
@@ -38,6 +41,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     initialConversationId,
     initialMessages,
     initialLoadedSnapshot,
+    versionControl = false,
   } = props
   const {
     input,
@@ -92,12 +96,54 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const [latestSnapshot, setLatestSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
   const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
 
+  // --- Version Control state ---
+  const [vcBranches, setVcBranches] = useState<BranchRecord[]>([])
+  const [vcCurrentBranch, setVcCurrentBranch] = useState<BranchRecord | null>(null)
+  const vcCurrentBranchRef = useRef<BranchRecord | null>(null)
+  vcCurrentBranchRef.current = vcCurrentBranch
+
   useEffect(() => {
     if (initialLoadedSnapshot) {
       setLoadedSnapshot(initialLoadedSnapshot)
       setLatestSnapshot(initialLoadedSnapshot)
     }
   }, [initialLoadedSnapshot])
+
+  // Fetch branches when version control is enabled
+  useEffect(() => {
+    if (!versionControl || !trackerId) return
+    let cancelled = false
+    async function fetchBranches() {
+      try {
+        const res = await fetch(`/api/trackers/${trackerId}/branches`)
+        if (!res.ok || cancelled) return
+        const data = await res.json()
+        if (cancelled) return
+        const branches: BranchRecord[] = data.branches ?? []
+        setVcBranches(branches)
+        // Default to main branch
+        const main = branches.find((b) => b.branchName === 'main' && !b.isMerged)
+        if (main) {
+          setVcCurrentBranch(main)
+          // Load main branch data into the snapshot display
+          if (main.data && typeof main.data === 'object') {
+            const snapshot: LoadedSnapshot = {
+              id: main.id,
+              label: main.label ?? main.branchName,
+              data: main.data as GridDataSnapshot,
+              updatedAt: main.updatedAt,
+            }
+            setLoadedSnapshot(snapshot)
+            setLatestSnapshot(snapshot)
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
+    fetchBranches()
+    return () => { cancelled = true }
+  }, [versionControl, trackerId])
 
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
   const trackerNavCtx = useTrackerNav()
@@ -109,8 +155,11 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
 
   const onRegisterSaveData = useCallback((fn: () => void) => {
-    saveDataRef.current = fn
-  }, [])
+    // In VC mode the nav bar save goes through the VC save flow instead
+    if (!versionControl) {
+      saveDataRef.current = fn
+    }
+  }, [versionControl])
 
   useEffect(() => {
     if (activeTrackerData && viewingMessageIndex === null) {
@@ -229,6 +278,94 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       setSchema(activeTrackerData)
     }
   }, [activeTrackerData])
+
+  // --- Version Control callbacks ---
+  const handleVcBranchSwitch = useCallback((branch: BranchRecord) => {
+    setVcCurrentBranch(branch)
+    if (branch.data && typeof branch.data === 'object') {
+      const snapshot: LoadedSnapshot = {
+        id: branch.id,
+        label: branch.label ?? branch.branchName,
+        data: branch.data as GridDataSnapshot,
+        updatedAt: branch.updatedAt,
+      }
+      setLoadedSnapshot(snapshot)
+      setLatestSnapshot(snapshot)
+    }
+  }, [])
+
+  const handleVcBranchCreated = useCallback((branch: BranchRecord) => {
+    setVcBranches((prev) => [branch, ...prev])
+    handleVcBranchSwitch(branch)
+  }, [handleVcBranchSwitch])
+
+  const handleVcMergedToMain = useCallback((updatedMain: BranchRecord) => {
+    setVcBranches((prev) => prev.map((b) => {
+      if (b.branchName === 'main' && !b.isMerged) return updatedMain
+      if (b.id === vcCurrentBranchRef.current?.id) return { ...b, isMerged: true }
+      return b
+    }))
+    handleVcBranchSwitch(updatedMain)
+  }, [handleVcBranchSwitch])
+
+  /**
+   * Save current grid data to the current VC branch.
+   * Creates main branch on first save if none exists.
+   */
+  const handleVcSaveData = useCallback(async () => {
+    if (!trackerId) return
+    const data = trackerDataRef.current?.() ?? {}
+    const currentBranch = vcCurrentBranchRef.current
+
+    if (currentBranch) {
+      // Update existing branch
+      const res = await fetch(`/api/trackers/${trackerId}/branches/${currentBranch.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      })
+      if (res.ok) {
+        const updated = (await res.json()) as BranchRecord
+        setVcBranches((prev) => prev.map((b) => b.id === updated.id ? updated : b))
+        setVcCurrentBranch(updated)
+        const snapshot: LoadedSnapshot = {
+          id: updated.id,
+          label: updated.label ?? updated.branchName,
+          data: updated.data as GridDataSnapshot,
+          updatedAt: updated.updatedAt,
+        }
+        setLoadedSnapshot(snapshot)
+        setLatestSnapshot(snapshot)
+      }
+    } else {
+      // Create initial main branch
+      const res = await fetch(`/api/trackers/${trackerId}/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data, branchName: 'main', label: 'main' }),
+      })
+      if (res.ok) {
+        const newBranch = (await res.json()) as BranchRecord
+        setVcBranches([newBranch])
+        setVcCurrentBranch(newBranch)
+        const snapshot: LoadedSnapshot = {
+          id: newBranch.id,
+          label: newBranch.label ?? newBranch.branchName,
+          data: newBranch.data as GridDataSnapshot,
+          updatedAt: newBranch.updatedAt,
+        }
+        setLoadedSnapshot(snapshot)
+        setLatestSnapshot(snapshot)
+      }
+    }
+  }, [trackerId, trackerDataRef])
+
+  // In VC mode, wire the nav bar save to the VC save function (must be after handleVcSaveData)
+  useEffect(() => {
+    if (versionControl) {
+      saveDataRef.current = handleVcSaveData
+    }
+  }, [versionControl, handleVcSaveData])
 
   const handleShareClick = useCallback(() => setShareDialogOpen(true), [])
 
@@ -398,11 +535,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               loadedSnapshotLabel={loadedSnapshot?.label ?? null}
               loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
               latestSnapshotId={latestSnapshot?.id ?? null}
-              onLoadSnapshot={handleLoadSnapshot}
-              onSavedNewSnapshot={handleSavedNewSnapshot}
+              onLoadSnapshot={versionControl ? undefined : handleLoadSnapshot}
+              onSavedNewSnapshot={versionControl ? undefined : handleSavedNewSnapshot}
               onClearLoadedSnapshot={handleClearLoadedSnapshot}
               onJumpToLatest={handleJumpToLatest}
               onRegisterSaveData={onRegisterSaveData}
+              versionControl={versionControl}
+              vcCurrentBranch={vcCurrentBranch}
+              vcBranches={vcBranches}
+              onVcBranchSwitch={handleVcBranchSwitch}
+              onVcBranchCreated={handleVcBranchCreated}
+              onVcMergedToMain={handleVcMergedToMain}
             />
           </TabsContent>
           <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
@@ -441,11 +584,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           loadedSnapshotLabel={loadedSnapshot?.label ?? null}
           loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
           latestSnapshotId={latestSnapshot?.id ?? null}
-          onLoadSnapshot={handleLoadSnapshot}
-          onSavedNewSnapshot={handleSavedNewSnapshot}
+          onLoadSnapshot={versionControl ? undefined : handleLoadSnapshot}
+          onSavedNewSnapshot={versionControl ? undefined : handleSavedNewSnapshot}
           onClearLoadedSnapshot={handleClearLoadedSnapshot}
           onJumpToLatest={handleJumpToLatest}
           onRegisterSaveData={onRegisterSaveData}
+          versionControl={versionControl}
+          vcCurrentBranch={vcCurrentBranch}
+          vcBranches={vcBranches}
+          onVcBranchSwitch={handleVcBranchSwitch}
+          onVcBranchCreated={handleVcBranchCreated}
+          onVcMergedToMain={handleVcMergedToMain}
         />
 
         {isChatOpen && (

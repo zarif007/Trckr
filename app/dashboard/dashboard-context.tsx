@@ -17,6 +17,9 @@ export type TrackerSchema = {
   projectId: string
   moduleId: string | null
   instance: string
+  versionControl: boolean
+  /** If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance) */
+  listForSchemaId: string | null
   createdAt: string
   updatedAt: string
 }

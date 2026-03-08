@@ -21,10 +21,11 @@ model User {
   image         String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  loginEvents   LoginEvent[]
-  projects      Project[]
+  accounts             Account[]
+  sessions             Session[]
+  loginEvents          LoginEvent[]
+  projects             Project[]
+  authoredTrackerData  TrackerData[] @relation("TrackerDataAuthor")
 }
 
 model Account {
@@ -150,18 +151,25 @@ model ModuleFile {
 }
 
 model TrackerSchema {
-  id          String       @id @default(cuid())
-  projectId   String
-  moduleId    String?
-  name        String?
-  instance    Instance     @default(SINGLE)
-  schema      Json
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  module        Module?       @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  trackerData   TrackerData[]
-  conversations Conversation[]
+  id               String       @id @default(cuid())
+  projectId        String
+  moduleId         String?
+  name             String?
+  instance         Instance     @default(SINGLE)
+  versionControl   Boolean      @default(false)
+  /// If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance only)
+  listForSchemaId  String?      @unique
+  schema           Json
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  module           Module?      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  /// The parent schema this is a list companion for (null if this is not a .list schema)
+  listForSchema    TrackerSchema? @relation("ListCompanion", fields: [listForSchemaId], references: [id], onDelete: Cascade)
+  /// The .list companion schema (null if this schema has no list companion)
+  listCompanion    TrackerSchema? @relation("ListCompanion")
+  trackerData      TrackerData[]
+  conversations    Conversation[]
 
   @@index([projectId])
   @@index([moduleId])
@@ -172,11 +180,24 @@ model TrackerData {
   trackerSchemaId  String
   label            String?
   data             Json
+  /// Branch name for version-controlled trackers (default "main")
+  branchName       String        @default("main")
+  /// User who created/owns this branch or instance
+  authorId         String?
+  /// For VC branches: which TrackerData record this was branched from
+  basedOnId        String?
+  /// Whether this branch has been merged into main
+  isMerged         Boolean       @default(false)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   trackerSchema    TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+  author           User?         @relation("TrackerDataAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  basedOn          TrackerData?  @relation("BranchLineage", fields: [basedOnId], references: [id], onDelete: SetNull)
+  derivedBranches  TrackerData[] @relation("BranchLineage")
 
   @@index([trackerSchemaId])
+  @@index([authorId])
+  @@index([basedOnId])
 }
 
 model Conversation {

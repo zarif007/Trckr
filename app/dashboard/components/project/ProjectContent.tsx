@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import {
-  Loader2,
   X,
   FilePlus,
   FileText,
@@ -33,6 +32,7 @@ import {
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
 import { NewModuleButton } from '../NewModuleButton'
+import { NewTrackerDialog } from '../NewTrackerDialog'
 import { DashboardPageSkeleton } from '../skeleton/DashboardPageSkeleton'
 
 const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
@@ -103,7 +103,6 @@ export function ProjectContent({
   }, [isError, error, router])
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -386,26 +385,14 @@ export function ProjectContent({
     return [...fileRows, ...moduleRows, ...trackerRows]
   }, [projectId, project, projectFiles, modules, projectLevelTrackers])
 
-  const handleCreateTracker = async () => {
-    setCreating(true)
-    setErrorMessage(null)
-    try {
-      const body: { new: true; projectId?: string } = { new: true }
-      if (projectId?.trim()) body.projectId = projectId.trim()
-      const res = await fetch('/api/trackers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error('Failed to create tracker')
-      const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}?new=true`)
-    } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : 'Error creating tracker')
-    } finally {
-      setCreating(false)
-    }
-  }
+  const handleTrackerCreated = useCallback(
+    async (trackerId: string) => {
+      await fetchProjects()
+      invalidateProjectAndProjects()
+      router.push(`/tracker/${trackerId}?new=true`)
+    },
+    [fetchProjects, invalidateProjectAndProjects, router],
+  )
 
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
@@ -464,20 +451,11 @@ export function ProjectContent({
               variant="toolbar"
               onError={(msg) => setErrorMessage(msg || null)}
             />
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
-              onClick={handleCreateTracker}
-              disabled={creating}
-            >
-              {creating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FilePlus className="h-3.5 w-3.5" />
-              )}
-              New Tracker
-            </Button>
+            <NewTrackerDialog
+              projectId={projectId}
+              onCreated={handleTrackerCreated}
+              onError={(msg) => setErrorMessage(msg)}
+            />
           </div>
         </div>
 
@@ -495,16 +473,17 @@ export function ProjectContent({
                     variant="empty"
                     onError={(msg) => setErrorMessage(msg || null)}
                   />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="rounded-full gap-1.5"
-                    onClick={handleCreateTracker}
-                    disabled={creating}
-                  >
-                    <FilePlus className="h-3.5 w-3.5" />
-                    New Tracker
-                  </Button>
+                  <NewTrackerDialog
+                    projectId={projectId}
+                    onCreated={handleTrackerCreated}
+                    onError={(msg) => setErrorMessage(msg)}
+                    trigger={
+                      <Button size="sm" variant="secondary" className="rounded-full gap-1.5">
+                        <FilePlus className="h-3.5 w-3.5" />
+                        New Tracker
+                      </Button>
+                    }
+                  />
                 </div>
               </div>
             ) : (

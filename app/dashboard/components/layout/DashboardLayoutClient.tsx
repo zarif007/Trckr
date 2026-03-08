@@ -16,6 +16,9 @@ import {
   Pencil,
   Trash2,
   FileText,
+  LayoutList,
+  GitBranch,
+  Layers,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -57,6 +60,110 @@ function updateModuleInTree(
   return modules.map((m) =>
     m.id === id ? upd(m) : { ...m, children: updateModuleInTree(m.children, id, upd) },
   )
+}
+
+/**
+ * Renders a single tracker link in the sidebar.
+ * List companions (listForSchemaId != null) get a LayoutList icon and slightly different styling.
+ */
+function SidebarTrackerLink({
+  tracker,
+  currentTrackerId,
+  indent = false,
+}: {
+  tracker: TrackerSchema
+  currentTrackerId: string | null
+  indent?: boolean
+}) {
+  const isActive = tracker.id === currentTrackerId
+  const isList = tracker.listForSchemaId != null
+  const isMulti = tracker.instance === 'MULTI'
+
+  return (
+    <div className={cn('flex items-center min-w-0', indent ? 'pl-3' : 'pl-1.5')}>
+      <span className="w-[18px] flex-shrink-0" aria-hidden />
+      <Link
+        href={`/tracker/${tracker.id}`}
+        className={cn(
+          'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+          isActive
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+        )}
+      >
+        {isList ? (
+          <LayoutList className="h-3 w-3 flex-shrink-0 opacity-70" />
+        ) : isMulti ? (
+          <Layers className="h-3 w-3 flex-shrink-0 opacity-70" />
+        ) : tracker.versionControl ? (
+          <GitBranch className="h-3 w-3 flex-shrink-0 opacity-70" />
+        ) : (
+          <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
+        )}
+        <span className="text-[11px] truncate flex-1 min-w-0">
+          {tracker.name || (isList ? 'Untitled list' : 'Untitled tracker')}
+        </span>
+      </Link>
+    </div>
+  )
+}
+
+/**
+ * Renders a tracker (and its .list companion, if any) in the sidebar.
+ * Companion is indented under the parent tracker.
+ */
+function SidebarTrackerGroup({
+  tracker,
+  listCompanion,
+  currentTrackerId,
+}: {
+  tracker: TrackerSchema
+  listCompanion?: TrackerSchema
+  currentTrackerId: string | null
+}) {
+  return (
+    <>
+      <SidebarTrackerLink tracker={tracker} currentTrackerId={currentTrackerId} />
+      {listCompanion && (
+        <SidebarTrackerLink
+          tracker={listCompanion}
+          currentTrackerId={currentTrackerId}
+          indent
+        />
+      )}
+    </>
+  )
+}
+
+/**
+ * Given a flat list of tracker schemas, group root trackers with their .list companions.
+ * Returns an array of { tracker, listCompanion? } pairs.
+ * List companions that are orphaned (parent not in list) are shown as standalone.
+ */
+function groupTrackers(trackers: TrackerSchema[]): Array<{ tracker: TrackerSchema; listCompanion?: TrackerSchema }> {
+  const byId = new Map(trackers.map((t) => [t.id, t]))
+  const listCompanions = new Set(trackers.filter((t) => t.listForSchemaId != null).map((t) => t.id))
+
+  const result: Array<{ tracker: TrackerSchema; listCompanion?: TrackerSchema }> = []
+
+  for (const tracker of trackers) {
+    // Skip list companions — they're attached to their parent below
+    if (listCompanions.has(tracker.id)) continue
+
+    // Find the list companion for this tracker (if any)
+    const companion = trackers.find((t) => t.listForSchemaId === tracker.id)
+
+    result.push({ tracker, listCompanion: companion })
+  }
+
+  // Add any orphaned list companions whose parents aren't in this list
+  for (const tracker of trackers) {
+    if (!listCompanions.has(tracker.id)) continue
+    if (tracker.listForSchemaId && byId.has(tracker.listForSchemaId)) continue
+    result.push({ tracker })
+  }
+
+  return result
 }
 
 function SidebarModule({
@@ -151,28 +258,14 @@ function SidebarModule({
               onContextMenu={onContextMenu}
             />
           ))}
-          {trackers.map((tracker) => {
-            const isTrackerActive = tracker.id === currentTrackerId
-            return (
-              <div key={tracker.id} className="flex items-center min-w-0 pl-1.5">
-                <span className="w-[18px] flex-shrink-0" aria-hidden />
-                <Link
-                  href={`/tracker/${tracker.id}`}
-                  className={cn(
-                    'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
-                    isTrackerActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                  )}
-                >
-                  <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                  <span className="text-[11px] truncate flex-1 min-w-0">
-                    {tracker.name || 'Untitled tracker'}
-                  </span>
-                </Link>
-              </div>
-            )
-          })}
+          {groupTrackers(trackers).map(({ tracker, listCompanion }) => (
+            <SidebarTrackerGroup
+              key={tracker.id}
+              tracker={tracker}
+              listCompanion={listCompanion}
+              currentTrackerId={currentTrackerId}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -267,28 +360,14 @@ function SidebarProject({
               onContextMenu={onContextMenu}
             />
           ))}
-          {projectLevelTrackers.map((tracker) => {
-            const isTrackerActive = tracker.id === currentTrackerId
-            return (
-              <div key={tracker.id} className="flex items-center min-w-0 pl-1.5">
-                <span className="w-[18px] flex-shrink-0" aria-hidden />
-                <Link
-                  href={`/tracker/${tracker.id}`}
-                  className={cn(
-                    'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
-                    isTrackerActive
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                  )}
-                >
-                  <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                  <span className="text-[11px] truncate flex-1 min-w-0">
-                    {tracker.name || 'Untitled tracker'}
-                  </span>
-                </Link>
-              </div>
-            )
-          })}
+          {groupTrackers(projectLevelTrackers).map(({ tracker, listCompanion }) => (
+            <SidebarTrackerGroup
+              key={tracker.id}
+              tracker={tracker}
+              listCompanion={listCompanion}
+              currentTrackerId={currentTrackerId}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -659,28 +738,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 </div>
                 {recentSectionOpen && recentTrackers.length > 0 && (
                   <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
-                    {recentTrackers.map((tracker) => {
-                      const isTrackerActive = tracker.id === currentTrackerId
-                      return (
-                        <div key={tracker.id} className="flex items-center min-w-0">
-                          <span className="w-[18px] flex-shrink-0" aria-hidden />
-                          <Link
-                            href={`/tracker/${tracker.id}`}
-                            className={cn(
-                              'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
-                              isTrackerActive
-                                ? 'bg-primary/10 text-primary font-medium'
-                                : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                            )}
-                          >
-                            <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-                            <span className="text-[11px] truncate flex-1 min-w-0">
-                              {tracker.name || 'Untitled tracker'}
-                            </span>
-                          </Link>
-                        </div>
-                      )
-                    })}
+                    {recentTrackers.map((tracker) => (
+                      <SidebarTrackerLink
+                        key={tracker.id}
+                        tracker={tracker}
+                        currentTrackerId={currentTrackerId}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

@@ -11,15 +11,19 @@ const createTrackerBodySchema = z
     new: z.boolean().optional(),
     projectId: z.string().optional(),
     moduleId: z.string().optional(),
+    instance: z.enum(['SINGLE', 'MULTI']).optional(),
+    versionControl: z.boolean().optional(),
   })
   .passthrough()
 
 /**
  * POST /api/trackers
  * Create a tracker in the database.
- * Body: { name?: string, schema?: object, new?: boolean, projectId?: string }
+ * Body: { name?, schema?, new?, projectId?, moduleId?, instance?, versionControl? }
  * - If new: true, creates a new tracker: use body.schema if valid, else empty schema; no schema required.
- * - Otherwise requires schema. Uses projectId if provided and valid, else user's first project or creates "My Project".
+ * - Otherwise requires schema.
+ * - instance defaults to SINGLE. Multi-instance trackers auto-create a ".list" companion schema.
+ * - versionControl is only honoured for SINGLE instance (forced false for MULTI).
  */
 export async function POST(request: Request) {
   const authResult = await requireAuthenticatedUser()
@@ -50,12 +54,18 @@ export async function POST(request: Request) {
       ? body.name.trim()
       : 'Untitled tracker'
 
+  const instance = body.instance === 'MULTI' ? 'MULTI' : 'SINGLE'
+  // Version control is only for single-instance trackers
+  const versionControl = instance === 'SINGLE' ? (body.versionControl ?? false) : false
+
   const tracker = await createTrackerForUser({
     userId: authResult.user.id,
     name,
     schema: schema as object,
     projectId: typeof body.projectId === 'string' ? body.projectId.trim() : undefined,
     moduleId: typeof body.moduleId === 'string' ? body.moduleId.trim() : undefined,
+    instance,
+    versionControl,
   })
 
   return jsonOk(tracker)

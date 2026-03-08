@@ -20,6 +20,8 @@ import {
   useUndoKeyboardShortcut,
 } from '@/app/components/tracker-display/edit-mode'
 import { TrackerDataSave } from '@/app/components/tracker-page/TrackerDataSave'
+import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchPanel'
+import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
 
 const DEFAULT_LEFT_RATIO = 0.75
@@ -55,6 +57,13 @@ interface TrackerPanelProps {
   onClearLoadedSnapshot?: () => void
   onJumpToLatest?: () => void
   onRegisterSaveData?: (fn: () => void) => void
+  /** Version control props — only relevant when versionControl === true */
+  versionControl?: boolean
+  vcCurrentBranch?: BranchRecord | null
+  vcBranches?: BranchRecord[]
+  onVcBranchSwitch?: (branch: BranchRecord) => void
+  onVcBranchCreated?: (branch: BranchRecord) => void
+  onVcMergedToMain?: (updatedMain: BranchRecord) => void
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -84,6 +93,12 @@ export const TrackerPanel = memo(function TrackerPanel({
   onSavedNewSnapshot,
   onJumpToLatest,
   onRegisterSaveData,
+  versionControl,
+  vcCurrentBranch,
+  vcBranches,
+  onVcBranchSwitch,
+  onVcBranchCreated,
+  onVcMergedToMain,
 }: TrackerPanelProps) {
   const isViewingLatestSnapshot = loadedSnapshotId != null && loadedSnapshotId === latestSnapshotId
   const showSavedBar = loadedSnapshotId != null && !isViewingLatestSnapshot
@@ -102,6 +117,10 @@ export const TrackerPanel = memo(function TrackerPanel({
     const data = trackerDataRef.current?.() ?? {}
     setDataSnapshot(data)
     setDebugView('data')
+  }, [trackerDataRef])
+
+  const getCurrentData = useCallback((): GridDataSnapshot => {
+    return trackerDataRef.current?.() ?? {}
   }, [trackerDataRef])
 
   const debugJson =
@@ -167,6 +186,22 @@ export const TrackerPanel = memo(function TrackerPanel({
           </div>
         </div>
       )}
+      {/* Version control branch panel — shown as a secondary bar when VC is enabled */}
+      {versionControl && trackerId && onVcBranchSwitch && onVcBranchCreated && onVcMergedToMain && (
+        <div className="absolute top-[3.5rem] left-2 right-4 z-20 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/90 px-2 py-1 shadow-sm">
+          <TrackerBranchPanel
+            trackerId={trackerId}
+            currentBranch={vcCurrentBranch ?? null}
+            branches={vcBranches ?? []}
+            onBranchSwitch={onVcBranchSwitch}
+            onBranchCreated={onVcBranchCreated}
+            onMergedToMain={onVcMergedToMain}
+            getCurrentData={getCurrentData}
+            disabled={isStreamingTracker}
+          />
+        </div>
+      )}
+
       <div
         className={`absolute top-4 z-20 flex flex-wrap items-center justify-end gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-4'}`}
       >
@@ -366,7 +401,13 @@ export const TrackerPanel = memo(function TrackerPanel({
       </Dialog>
 
       <div
-        className={`h-full overflow-y-auto ${hideChatToggle ? 'px-1 pt-14 pb-2' : 'px-4 pt-16 pb-6'}`}
+        className={`h-full overflow-y-auto ${
+          hideChatToggle
+            ? 'px-1 pt-14 pb-2'
+            : versionControl
+              ? 'px-4 pt-24 pb-6'
+              : 'px-4 pt-16 pb-6'
+        }`}
       >
         <TrackerDisplayErrorBoundary key={displayKey}>
           {isStreamingTracker ? (

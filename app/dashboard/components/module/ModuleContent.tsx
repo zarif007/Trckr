@@ -29,6 +29,7 @@ import {
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
 import { NewModuleButton } from '../NewModuleButton'
+import { NewTrackerDialog } from '../NewTrackerDialog'
 
 const MODULE_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
   TEAMS: Users,
@@ -106,7 +107,6 @@ export function ModuleContent({
   }, [isError, error, router, projectId])
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [creating, setCreating] = useState(false)
   const [addingConfig, setAddingConfig] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -430,24 +430,14 @@ export function ModuleContent({
     return [...fileRows, ...moduleRows, ...trackerRows]
   }, [projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
 
-  const handleCreateTracker = async () => {
-    setCreating(true)
-    setErrorMessage(null)
-    try {
-      const res = await fetch('/api/trackers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ new: true, projectId, moduleId }),
-      })
-      if (!res.ok) throw new Error('Failed to create tracker')
-      const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}?new=true`)
-    } catch (e) {
-      setErrorMessage(e instanceof Error ? e.message : 'Error creating tracker')
-    } finally {
-      setCreating(false)
-    }
-  }
+  const handleTrackerCreated = useCallback(
+    async (trackerId: string) => {
+      invalidateModuleAndProjects()
+      await fetchProjects()
+      router.push(`/tracker/${trackerId}?new=true`)
+    },
+    [invalidateModuleAndProjects, fetchProjects, router],
+  )
 
   const handleAddConfig = async (type: ProjectFileType) => {
     setAddingConfig(true)
@@ -585,20 +575,12 @@ export function ModuleContent({
                 </div>
               </div>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium"
-              onClick={handleCreateTracker}
-              disabled={creating}
-            >
-              {creating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FilePlus className="h-3.5 w-3.5" />
-              )}
-              New Tracker
-            </Button>
+            <NewTrackerDialog
+              projectId={projectId}
+              moduleId={moduleId}
+              onCreated={handleTrackerCreated}
+              onError={(msg) => setErrorMessage(msg)}
+            />
           </div>
         </div>
 
@@ -617,16 +599,18 @@ export function ModuleContent({
                     variant="empty"
                     onError={(msg) => setErrorMessage(msg || null)}
                   />
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="rounded-full gap-1.5"
-                    onClick={handleCreateTracker}
-                    disabled={creating}
-                  >
-                    <FilePlus className="h-3.5 w-3.5" />
-                    New Tracker
-                  </Button>
+                  <NewTrackerDialog
+                    projectId={projectId}
+                    moduleId={moduleId}
+                    onCreated={handleTrackerCreated}
+                    onError={(msg) => setErrorMessage(msg)}
+                    trigger={
+                      <Button size="sm" variant="secondary" className="rounded-full gap-1.5">
+                        <FilePlus className="h-3.5 w-3.5" />
+                        New Tracker
+                      </Button>
+                    }
+                  />
                 </div>
               </div>
             ) : (

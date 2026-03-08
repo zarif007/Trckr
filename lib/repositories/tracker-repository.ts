@@ -57,12 +57,43 @@ export async function resolveTargetProjectForTrackerCreate(
   return { id: created.id }
 }
 
+/**
+ * Resolves a unique tracker name within a project/module scope.
+ * If the name already exists, appends " (1)", " (2)", etc. — like OS file naming.
+ */
+export async function resolveUniqueTrackerName(
+  baseName: string,
+  projectId: string,
+  moduleId?: string | null,
+): Promise<string> {
+  const scopeWhere = moduleId
+    ? { projectId, moduleId }
+    : { projectId, moduleId: null }
+
+  const existing = await prisma.trackerSchema.findMany({
+    where: scopeWhere,
+    select: { name: true },
+  })
+
+  const existingNames = new Set(existing.map((t) => t.name?.trim() ?? ''))
+
+  if (!existingNames.has(baseName)) return baseName
+
+  let counter = 1
+  while (existingNames.has(`${baseName} (${counter})`)) {
+    counter++
+  }
+  return `${baseName} (${counter})`
+}
+
 export async function createTrackerForUser(params: {
   userId: string
   name: string
   schema: object
   projectId?: string
   moduleId?: string
+  instance?: 'SINGLE' | 'MULTI'
+  versionControl?: boolean
 }) {
   const project = await resolveTargetProjectForTrackerCreate(params.userId, params.projectId)
 
@@ -76,14 +107,47 @@ export async function createTrackerForUser(params: {
     }
   }
 
-  return prisma.trackerSchema.create({
+  const instance = params.instance === 'MULTI' ? Instance.MULTI : Instance.SINGLE
+  // Version control is only supported for single-instance trackers
+  const versionControl = instance === Instance.SINGLE ? (params.versionControl ?? false) : false
+
+  const resolvedName = await resolveUniqueTrackerName(
+    params.name,
+    project.id,
+    params.moduleId,
+  )
+
+  const tracker = await prisma.trackerSchema.create({
     data: {
       projectId: project.id,
       moduleId: params.moduleId ?? null,
-      name: params.name,
-      instance: Instance.SINGLE,
+      name: resolvedName,
+      instance,
+      versionControl,
       schema: params.schema,
     },
   })
-}
 
+  // For MULTI instance: auto-create the ".list" companion schema
+  if (instance === Instance.MULTI) {
+    const listName = await resolveUniqueTrackerName(
+      `${resolvedName}.list`,
+      project.id,
+      params.moduleId,
+    )
+    await prisma.trackerSchema.create({
+      data: {
+        projectId: project.id,
+        moduleId: params.moduleId ?? null,
+        name: listName,
+        instance: Instance.MULTI,
+        versionControl: false,
+        listForSchemaId: tracker.id,
+        // List companion has the same schema structure as the parent
+        schema: params.schema,
+      },
+    })
+  }
+
+  return tracker
+}
