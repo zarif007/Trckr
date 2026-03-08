@@ -509,7 +509,7 @@ export function ModuleContent({
               </div>
             ) : (
               <div
-                className="grid gap-6 [grid-template-columns:repeat(auto-fill,minmax(6.5rem,1fr))] max-w-2xl"
+                className="flex flex-wrap gap-6 w-fit"
                 aria-label="Module items"
               >
                 {tableRows.map((row) => {
@@ -527,7 +527,7 @@ export function ModuleContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `tracker-${row.id}`}
-                      className="flex flex-col items-center gap-2.5"
+                      className="flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0"
                     >
                       <button
                         type="button"

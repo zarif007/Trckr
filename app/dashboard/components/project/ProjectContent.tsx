@@ -543,7 +543,7 @@ export function ProjectContent({
               </div>
             ) : (
               <div
-                className="flex flex-wrap gap-6 w-full"
+                className="flex flex-wrap gap-6 w-fit"
                 aria-label="Project items"
               >
                 {tableRows.map((row) => {
@@ -561,7 +561,7 @@ export function ProjectContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
-                      className="flex flex-col items-center gap-2.5 min-w-[6.5rem] flex-[1_1_6.5rem]"
+                      className="flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0"
                     >
                       <button
                         type="button"
