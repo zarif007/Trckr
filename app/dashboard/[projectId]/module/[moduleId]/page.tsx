@@ -16,6 +16,7 @@ export default async function DashboardModulePage({
     <ModuleContent
       initialModule={data.module}
       initialProjectName={data.projectName}
+      initialBreadcrumb={data.breadcrumb}
     />
   )
 }

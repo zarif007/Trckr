@@ -19,6 +19,7 @@ export async function createModuleForProject(
   projectId: string,
   userId: string,
   name: string,
+  parentId?: string,
 ) {
   const project = await prisma.project.findFirst({
     where: { id: projectId, userId },
@@ -26,8 +27,20 @@ export async function createModuleForProject(
   })
   if (!project) return null
 
+  if (parentId) {
+    const parent = await prisma.module.findFirst({
+      where: { id: parentId, projectId: project.id, project: { userId } },
+      select: { id: true },
+    })
+    if (!parent) return null
+  }
+
   return prisma.module.create({
-    data: { projectId: project.id, name },
+    data: {
+      projectId: project.id,
+      name,
+      parentId: parentId ?? null,
+    },
     include: {
       moduleFiles: { orderBy: { type: 'asc' } },
       trackerSchemas: { orderBy: { updatedAt: 'desc' } },
@@ -70,6 +83,14 @@ export async function updateModuleForUser(
 export async function deleteModuleForUser(moduleId: string, userId: string) {
   const existing = await findModuleByIdForUser(moduleId, userId)
   if (!existing) return null
+
+  const children = await prisma.module.findMany({
+    where: { parentId: moduleId },
+    select: { id: true },
+  })
+  for (const child of children) {
+    await deleteModuleForUser(child.id, userId)
+  }
 
   return prisma.module.delete({ where: { id: moduleId } })
 }

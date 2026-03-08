@@ -6,6 +6,7 @@ import {
   updateProjectForUser,
   deleteProjectForUser,
 } from '@/lib/repositories'
+import { getProjectForUser } from '@/lib/dashboard-data'
 
 const updateProjectBody = z.object({
   name: z.string().min(1, 'Project name is required'),
@@ -13,7 +14,7 @@ const updateProjectBody = z.object({
 
 /**
  * GET /api/projects/[id]
- * Returns a single project with tracker schemas (only if owned by current user).
+ * Returns a single project with modules as tree (only if owned by current user).
  */
 export async function GET(
   _request: Request,
@@ -24,7 +25,7 @@ export async function GET(
 
   const { id } = await readParams(params)
 
-  const project = await findProjectByIdForUser(id, authResult.user.id)
+  const project = await getProjectForUser(id)
 
   if (!project) {
     return notFound('Not found')

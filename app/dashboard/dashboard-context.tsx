@@ -55,11 +55,13 @@ export type ModuleFile = {
 export type Module = {
   id: string
   projectId: string
+  parentId: string | null
   name: string | null
   createdAt: string
   updatedAt: string
   moduleFiles: ModuleFile[]
   trackerSchemas: TrackerSchema[]
+  children: Module[]
 }
 
 export type Project = {
@@ -71,6 +73,13 @@ export type Project = {
   projectFiles: ProjectFile[]
   trackerSchemas: TrackerSchema[]
   modules: Module[]
+}
+
+export function collectTrackersFromModules(modules: Module[]): TrackerSchema[] {
+  return modules.flatMap((m) => [
+    ...(m.trackerSchemas ?? []),
+    ...collectTrackersFromModules(m.children ?? []),
+  ])
 }
 
 type DashboardContextValue = {

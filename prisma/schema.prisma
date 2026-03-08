@@ -122,14 +122,18 @@ model ProjectFile {
 model Module {
   id             String         @id @default(cuid())
   projectId      String
+  parentId       String?
   name           String?
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
   project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent         Module?        @relation("ModuleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Module[]       @relation("ModuleHierarchy")
   trackerSchemas TrackerSchema[]
   moduleFiles    ModuleFile[]
 
   @@index([projectId])
+  @@index([parentId])
 }
 
 model ModuleFile {

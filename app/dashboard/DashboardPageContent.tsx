@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import { useDashboard } from './dashboard-context'
+import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
 
 export type DashboardView = 'all' | 'projects' | 'recents'
@@ -114,13 +114,16 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
   }
 
   const totalTrackers = projects.reduce(
-    (acc, p) => acc + p.trackerSchemas.length,
-    0
+    (acc, p) =>
+      acc +
+      (p.trackerSchemas?.length ?? 0) +
+      collectTrackersFromModules(p.modules ?? []).length,
+    0,
   )
 
   const allTrackers = projects.flatMap((p) => [
     ...(p.trackerSchemas ?? []),
-    ...(p.modules ?? []).flatMap((m) => m.trackerSchemas ?? []),
+    ...collectTrackersFromModules(p.modules ?? []),
   ])
   const trackersById = new Map(allTrackers.map((t) => [t.id, t]))
   const recentTrackers = [...trackersById.values()]

@@ -2,10 +2,10 @@ import { z } from 'zod'
 import { jsonOk, notFound, readParams, parseJsonBody } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import {
-  findModuleByIdForUser,
   updateModuleForUser,
   deleteModuleForUser,
 } from '@/lib/repositories'
+import { getModuleWithChildrenForUser } from '@/lib/dashboard-data'
 
 export async function GET(
   _request: Request,
@@ -16,7 +16,7 @@ export async function GET(
 
   const { id } = await readParams(params)
 
-  const mod = await findModuleByIdForUser(id, authResult.user.id)
+  const mod = await getModuleWithChildrenForUser(id)
   if (!mod) return notFound('Module not found')
 
   return jsonOk(mod)

@@ -28,7 +28,12 @@ import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { Project, ProjectFile, ProjectFileType } from '../../dashboard-context'
+import type {
+  Project,
+  ProjectFile,
+  ProjectFileType,
+  Module,
+} from '../../dashboard-context'
 import { PROJECT_FILE_LABELS, useDashboard } from '../../dashboard-context'
 import {
   useRenameDeleteContextMenu,
@@ -46,6 +51,31 @@ const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
 }
 
 const STALE_TIME_MS = 60 * 1000
+
+function updateModuleInTree(
+  modules: Module[],
+  id: string,
+  upd: (m: Module) => Module,
+): Module[] {
+  return modules.map((m) =>
+    m.id === id ? upd(m) : { ...m, children: updateModuleInTree(m.children, id, upd) },
+  )
+}
+
+function removeModuleFromTree(modules: Module[], id: string): Module[] {
+  return modules
+    .filter((m) => m.id !== id)
+    .map((m) => ({ ...m, children: removeModuleFromTree(m.children, id) }))
+}
+
+function findModuleInTree(modules: Module[], id: string): Module | null {
+  for (const m of modules) {
+    if (m.id === id) return m
+    const found = findModuleInTree(m.children, id)
+    if (found) return found
+  }
+  return null
+}
 
 export function ProjectContent({
   initialProject,
@@ -152,9 +182,7 @@ export function ProjectContent({
           if (kind === 'module') {
             return {
               ...prev,
-              modules: prev.modules.map((m) =>
-                m.id === id ? { ...m, name } : m,
-              ),
+              modules: updateModuleInTree(prev.modules, id, (m) => ({ ...m, name })),
             }
           }
           return {
@@ -171,9 +199,7 @@ export function ProjectContent({
             if (kind === 'module') {
               return {
                 ...p,
-                modules: p.modules.map((m) =>
-                  m.id === id ? { ...m, name } : m,
-                ),
+                modules: updateModuleInTree(p.modules, id, (m) => ({ ...m, name })),
               }
             }
             return {
@@ -229,30 +255,39 @@ export function ProjectContent({
         }
       }
       if (item.kind === 'module' && project) {
-        const mod = project.modules.find((m) => m.id === item.id)
+        const mod = findModuleInTree(project.modules, item.id)
         if (!mod) return
         queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
           prev
-            ? { ...prev, modules: prev.modules.filter((m) => m.id !== item.id) }
+            ? { ...prev, modules: removeModuleFromTree(prev.modules, item.id) }
             : prev,
         )
         setProjects((prev) =>
           prev.map((p) =>
             p.id !== projectId
               ? p
-              : { ...p, modules: p.modules.filter((m) => m.id !== item.id) },
+              : { ...p, modules: removeModuleFromTree(p.modules, item.id) },
           ),
         )
         return () => {
-          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
-            prev ? { ...prev, modules: [...prev.modules, mod] } : prev,
+          const insertAt = mod.parentId
+            ? (prev: Project) => ({
+                ...prev,
+                modules: updateModuleInTree(prev.modules, mod.parentId!, (m) => ({
+                  ...m,
+                  children: [...m.children, mod],
+                })),
+              })
+            : (prev: Project) => ({
+                ...prev,
+                modules: [...prev.modules, mod],
+              })
+          queryClient.setQueryData<Project>(
+            dashboardQueryKeys.project(projectId),
+            (prev) => (prev ? insertAt(prev) : prev),
           )
           setProjects((prev) =>
-            prev.map((p) =>
-              p.id !== projectId
-                ? p
-                : { ...p, modules: [...p.modules, mod] },
-            ),
+            prev.map((p) => (p.id !== projectId ? p : insertAt(p))),
           )
         }
       }

@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { jsonOk } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { createProjectForUser, listProjectsForUser } from '@/lib/repositories'
+import { createProjectForUser } from '@/lib/repositories'
+import { getProjectsForUser } from '@/lib/dashboard-data'
 
 const createProjectBodySchema = z
   .object({
@@ -11,15 +12,14 @@ const createProjectBodySchema = z
 
 /**
  * GET /api/projects
- * Returns the current user's projects with their tracker schemas.
+ * Returns the current user's projects with modules as tree.
  */
 export async function GET() {
   const authResult = await requireAuthenticatedUser()
   if (!authResult.ok) return authResult.response
 
-  const projects = await listProjectsForUser(authResult.user.id)
-
-  return jsonOk(projects)
+  const projects = await getProjectsForUser()
+  return jsonOk(projects ?? [])
 }
 
 /**

@@ -94,6 +94,7 @@ CREATE TABLE "ProjectFile" (
 CREATE TABLE "Module" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
+    "parentId" TEXT,
     "name" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -207,6 +208,9 @@ CREATE UNIQUE INDEX "ProjectFile_projectId_type_key" ON "ProjectFile"("projectId
 CREATE INDEX "Module_projectId_idx" ON "Module"("projectId");
 
 -- CreateIndex
+CREATE INDEX "Module_parentId_idx" ON "Module"("parentId");
+
+-- CreateIndex
 CREATE INDEX "ModuleFile_moduleId_idx" ON "ModuleFile"("moduleId");
 
 -- CreateIndex
@@ -247,6 +251,9 @@ ALTER TABLE "ProjectFile" ADD CONSTRAINT "ProjectFile_projectId_fkey" FOREIGN KE
 
 -- AddForeignKey
 ALTER TABLE "Module" ADD CONSTRAINT "Module_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Module" ADD CONSTRAINT "Module_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ModuleFile" ADD CONSTRAINT "ModuleFile_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;

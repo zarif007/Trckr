@@ -19,12 +19,45 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { DashboardProvider, useDashboard, type Project, type TrackerSchema } from '../../dashboard-context'
+import {
+  DashboardProvider,
+  useDashboard,
+  collectTrackersFromModules,
+  type Project,
+  type Module,
+  type TrackerSchema,
+} from '../../dashboard-context'
 import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
   | { kind: 'module'; id: string; label: string }
+
+function moduleContainsActive(
+  mod: Module,
+  currentModuleId: string | null,
+  currentTrackerId: string | null,
+): boolean {
+  if (currentModuleId === mod.id) return true
+  if (
+    currentTrackerId != null &&
+    (mod.trackerSchemas?.some((t) => t.id === currentTrackerId) ?? false)
+  )
+    return true
+  return (mod.children ?? []).some((c) =>
+    moduleContainsActive(c, currentModuleId, currentTrackerId),
+  )
+}
+
+function updateModuleInTree(
+  modules: Module[],
+  id: string,
+  upd: (m: Module) => Module,
+): Module[] {
+  return modules.map((m) =>
+    m.id === id ? upd(m) : { ...m, children: updateModuleInTree(m.children, id, upd) },
+  )
+}
 
 function SidebarModule({
   projectId,
@@ -35,7 +68,7 @@ function SidebarModule({
   onContextMenu,
 }: {
   projectId: string
-  module: Project['modules'][0]
+  module: Module
   currentProjectId: string | null
   currentModuleId: string | null
   currentTrackerId: string | null
@@ -44,19 +77,24 @@ function SidebarModule({
   const isModuleActive =
     projectId === currentProjectId && mod.id === currentModuleId
   const trackers = mod.trackerSchemas ?? []
+  const children = mod.children ?? []
   const hasTrackers = trackers.length > 0
+  const hasChildModules = children.length > 0
+  const hasExpandableContent = hasTrackers || hasChildModules
   const containsActive =
-    isModuleActive || (currentTrackerId != null && trackers.some((t) => t.id === currentTrackerId))
-  const [expanded, setExpanded] = useState(containsActive || (hasTrackers && isModuleActive))
+    isModuleActive || moduleContainsActive(mod, currentModuleId, currentTrackerId)
+  const [expanded, setExpanded] = useState(
+    containsActive || (hasExpandableContent && isModuleActive),
+  )
 
   useEffect(() => {
-    if (containsActive && hasTrackers) setExpanded(true)
-  }, [containsActive, hasTrackers])
+    if (containsActive && hasExpandableContent) setExpanded(true)
+  }, [containsActive, hasExpandableContent])
 
   return (
     <div className="min-w-0 pl-3">
       <div className="flex items-center min-w-0">
-        {hasTrackers ? (
+        {hasExpandableContent ? (
           <button
             onClick={(e) => {
               e.preventDefault()
@@ -93,15 +131,26 @@ function SidebarModule({
           <span className="text-[11px] truncate flex-1 min-w-0">
             {mod.name || 'Untitled module'}
           </span>
-          {trackers.length > 0 && (
+          {(trackers.length > 0 || children.length > 0) && (
             <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
-              {trackers.length}
+              {trackers.length + children.length}
             </span>
           )}
         </Link>
       </div>
-      {expanded && hasTrackers && (
+      {expanded && hasExpandableContent && (
         <div className="pl-3 mr-1 mt-0.5 flex flex-col gap-0.5 min-w-0">
+          {children.map((child) => (
+            <SidebarModule
+              key={child.id}
+              projectId={projectId}
+              module={child}
+              currentProjectId={currentProjectId}
+              currentModuleId={currentModuleId}
+              currentTrackerId={currentTrackerId}
+              onContextMenu={onContextMenu}
+            />
+          ))}
           {trackers.map((tracker) => {
             const isTrackerActive = tracker.id === currentTrackerId
             return (
@@ -296,13 +345,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               if (p.id === item.id) return { ...p, name }
               return p
             }
-            const hasModule = p.modules.some((m) => m.id === item.id)
-            if (!hasModule) return p
             return {
               ...p,
-              modules: p.modules.map((m) =>
-                m.id === item.id ? { ...m, name } : m,
-              ),
+              modules: updateModuleInTree(p.modules, item.id, (m) => ({ ...m, name })),
             }
           }),
         )
@@ -378,8 +423,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   )
 
   const totalTrackers = projects.reduce(
-    (acc, p) => acc + (p.trackerSchemas?.length ?? 0),
-    0
+    (acc, p) =>
+      acc +
+      (p.trackerSchemas?.length ?? 0) +
+      collectTrackersFromModules(p.modules ?? []).length,
+    0,
   )
   const lastActivity =
     projects.length > 0
@@ -405,7 +453,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const allTrackers = projects.flatMap((p) => [
     ...(p.trackerSchemas ?? []),
-    ...(p.modules ?? []).flatMap((m) => m.trackerSchemas ?? []),
+    ...collectTrackersFromModules(p.modules ?? []),
   ])
   const trackersById = new Map(allTrackers.map((t) => [t.id, t]))
   const recentTrackers: TrackerSchema[] = [...trackersById.values()]

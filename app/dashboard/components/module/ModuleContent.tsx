@@ -7,7 +7,9 @@ import {
   Loader2,
   X,
   FilePlus,
+  FolderPlus,
   FileText,
+  Folder,
   ChevronRight,
   Users,
   Settings,
@@ -39,12 +41,39 @@ const ALL_FILE_TYPES: ProjectFileType[] = ['TEAMS', 'SETTINGS', 'RULES', 'CONNEC
 
 const STALE_TIME_MS = 60 * 1000
 
+function updateModuleInTree(
+  modules: Module[],
+  id: string,
+  upd: (m: Module) => Module,
+): Module[] {
+  return modules.map((m) =>
+    m.id === id ? upd(m) : { ...m, children: updateModuleInTree(m.children, id, upd) },
+  )
+}
+
+function removeModuleFromTree(modules: Module[], id: string): Module[] {
+  return modules
+    .filter((m) => m.id !== id)
+    .map((m) => ({ ...m, children: removeModuleFromTree(m.children, id) }))
+}
+
+function findModuleInTree(modules: Module[], id: string): Module | null {
+  for (const m of modules) {
+    if (m.id === id) return m
+    const found = findModuleInTree(m.children, id)
+    if (found) return found
+  }
+  return null
+}
+
 export function ModuleContent({
   initialModule,
   initialProjectName,
+  initialBreadcrumb = [],
 }: {
   initialModule: Module
   initialProjectName: string | null
+  initialBreadcrumb?: { id: string; name: string }[]
 }) {
   const router = useRouter()
   const params = useParams()
@@ -78,11 +107,13 @@ export function ModuleContent({
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [creatingSubmodule, setCreatingSubmodule] = useState(false)
   const [addingConfig, setAddingConfig] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const { fetchProjects, setProjects } = useDashboard()
   const projectName = initialProjectName ?? null
+  const breadcrumb = initialBreadcrumb ?? []
 
   const invalidateModuleAndProjects = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.module(moduleId) })
@@ -122,7 +153,9 @@ export function ModuleContent({
         queryClient.removeQueries({ queryKey: dashboardQueryKeys.module(item.id) })
         invalidateModuleAndProjects()
         await fetchProjects()
-        router.replace(`/dashboard/${projectId}`)
+        if (item.id === moduleId) {
+          router.replace(`/dashboard/${projectId}`)
+        }
       } else if (item.kind === 'tracker') {
         const res = await fetch(`/api/trackers/${item.id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('Failed to delete tracker')
@@ -141,19 +174,30 @@ export function ModuleContent({
       previousName: string,
     ): (() => void) => {
       const applyOptimistic = (name: string) => {
-        if (kind === 'module' && mod?.id === id) {
-          queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
-            prev ? { ...prev, name } : prev,
-          )
+        if (kind === 'module' && mod) {
+          if (mod.id === id) {
+            queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
+              prev ? { ...prev, name } : prev,
+            )
+          } else {
+            queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    children: prev.children.map((m) =>
+                      m.id === id ? { ...m, name } : m,
+                    ),
+                  }
+                : prev,
+            )
+          }
           setProjects((prev) =>
             prev.map((p) =>
               p.id !== projectId
                 ? p
                 : {
                     ...p,
-                    modules: p.modules.map((m) =>
-                      m.id === id ? { ...m, name } : m,
-                    ),
+                    modules: updateModuleInTree(p.modules, id, (m) => ({ ...m, name })),
                   },
             ),
           )
@@ -174,16 +218,12 @@ export function ModuleContent({
                 ? p
                 : {
                     ...p,
-                    modules: p.modules.map((m) =>
-                      m.id === moduleId
-                        ? {
-                            ...m,
-                            trackerSchemas: m.trackerSchemas.map((t) =>
-                              t.id === id ? { ...t, name } : t,
-                            ),
-                          }
-                        : m,
-                    ),
+                    modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                      ...m,
+                      trackerSchemas: m.trackerSchemas.map((t) =>
+                        t.id === id ? { ...t, name } : t,
+                      ),
+                    })),
                   },
             ),
           )
@@ -197,27 +237,75 @@ export function ModuleContent({
 
   const optimisticDelete = useCallback(
     (item: ContextMenuItem): (() => void) | void => {
-      if (item.kind === 'module' && mod?.id === item.id) {
-        const deleted = mod
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id !== projectId
-              ? p
-              : { ...p, modules: p.modules.filter((m) => m.id !== item.id) },
-          ),
-        )
-        queryClient.removeQueries({ queryKey: dashboardQueryKeys.module(item.id) })
-        router.replace(`/dashboard/${projectId}`)
-        return () => {
-          queryClient.setQueryData(dashboardQueryKeys.module(item.id), deleted)
+      if (item.kind === 'module' && mod) {
+        const deleted = mod.id === item.id ? mod : findModuleInTree(mod.children, item.id) ?? null
+        if (!deleted) return
+        if (mod.id === item.id) {
           setProjects((prev) =>
             prev.map((p) =>
               p.id !== projectId
                 ? p
-                : { ...p, modules: [...p.modules, deleted] },
+                : { ...p, modules: removeModuleFromTree(p.modules, item.id) },
             ),
           )
-          router.replace(`/dashboard/${projectId}/module/${item.id}`)
+          queryClient.removeQueries({ queryKey: dashboardQueryKeys.module(item.id) })
+          router.replace(`/dashboard/${projectId}`)
+        } else {
+          queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
+            prev
+              ? {
+                  ...prev,
+                  children: prev.children.filter((m) => m.id !== item.id),
+                }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, modules: removeModuleFromTree(p.modules, item.id) },
+            ),
+          )
+        }
+        return () => {
+          if (mod.id === item.id) {
+            queryClient.setQueryData(dashboardQueryKeys.module(item.id), deleted)
+            setProjects((prev) =>
+              prev.map((p) =>
+                p.id !== projectId
+                  ? p
+                  : {
+                      ...p,
+                      modules: deleted.parentId
+                        ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
+                            ...m,
+                            children: [...m.children, deleted],
+                          }))
+                        : [...p.modules, deleted],
+                    },
+              ),
+            )
+            router.replace(`/dashboard/${projectId}/module/${item.id}`)
+          } else {
+            queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
+              prev ? { ...prev, children: [...prev.children, deleted] } : prev,
+            )
+            setProjects((prev) =>
+              prev.map((p) =>
+                p.id !== projectId
+                  ? p
+                  : {
+                      ...p,
+                      modules: deleted.parentId
+                        ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
+                            ...m,
+                            children: [...m.children, deleted],
+                          }))
+                        : [...p.modules, deleted],
+                    },
+              ),
+            )
+          }
         }
       }
       if (item.kind === 'tracker' && mod) {
@@ -239,16 +327,12 @@ export function ModuleContent({
               ? p
               : {
                   ...p,
-                  modules: p.modules.map((m) =>
-                    m.id === moduleId
-                      ? {
-                          ...m,
-                          trackerSchemas: m.trackerSchemas.filter(
-                            (t) => t.id !== item.id,
-                          ),
-                        }
-                      : m,
-                  ),
+                  modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                    ...m,
+                    trackerSchemas: m.trackerSchemas.filter(
+                      (t) => t.id !== item.id,
+                    ),
+                  })),
                 },
           ),
         )
@@ -267,14 +351,10 @@ export function ModuleContent({
                 ? p
                 : {
                     ...p,
-                    modules: p.modules.map((m) =>
-                      m.id === moduleId
-                        ? {
-                            ...m,
-                            trackerSchemas: [...m.trackerSchemas, tracker],
-                          }
-                        : m,
-                    ),
+                    modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                      ...m,
+                      trackerSchemas: [...m.trackerSchemas, tracker],
+                    })),
                   },
             ),
           )
@@ -308,7 +388,9 @@ export function ModuleContent({
 
   const moduleFiles = mod?.moduleFiles ?? []
   const trackerSchemas = mod?.trackerSchemas ?? []
-  const totalItems = moduleFiles.length + trackerSchemas.length
+  const childModules = mod?.children ?? []
+  const totalItems =
+    moduleFiles.length + trackerSchemas.length + childModules.length
   const isEmpty = totalItems === 0
 
   const existingFileTypes = new Set(moduleFiles.map((f) => f.type))
@@ -325,6 +407,15 @@ export function ModuleContent({
       updatedAt: file.updatedAt,
       href: `/dashboard/${projectId}/module/${moduleId}/file/${file.id}`,
     }))
+    const moduleRows = childModules.map((child) => ({
+      kind: 'module' as const,
+      id: child.id,
+      label: child.name || 'Untitled module',
+      sublabel: `${child.trackerSchemas.length} tracker${child.trackerSchemas.length !== 1 ? 's' : ''}`,
+      icon: Folder,
+      updatedAt: child.updatedAt,
+      href: `/dashboard/${projectId}/module/${child.id}`,
+    }))
     const trackerRows = trackerSchemas.map((tracker) => ({
       kind: 'tracker' as const,
       id: tracker.id,
@@ -334,8 +425,8 @@ export function ModuleContent({
       updatedAt: tracker.updatedAt,
       href: `/tracker/${tracker.id}`,
     }))
-    return [...fileRows, ...trackerRows]
-  }, [projectId, moduleId, mod, moduleFiles, trackerSchemas])
+    return [...fileRows, ...moduleRows, ...trackerRows]
+  }, [projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
 
   const handleCreateTracker = async () => {
     setCreating(true)
@@ -375,6 +466,27 @@ export function ModuleContent({
     }
   }
 
+  const handleCreateSubmodule = async () => {
+    setCreatingSubmodule(true)
+    setErrorMessage(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/modules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'New Module', parentId: moduleId }),
+      })
+      if (!res.ok) throw new Error('Failed to create module')
+      const data = (await res.json()) as { id: string }
+      invalidateModuleAndProjects()
+      await fetchProjects()
+      router.push(`/dashboard/${projectId}/module/${data.id}`)
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : 'Error creating module')
+    } finally {
+      setCreatingSubmodule(false)
+    }
+  }
+
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
   if (loading && !mod) {
@@ -396,18 +508,33 @@ export function ModuleContent({
     <>
       <main className="flex-1 flex flex-col min-w-0 min-h-0">
         <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Link href="/dashboard" className="hover:text-foreground transition-colors">
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
+            <Link href="/dashboard" className="hover:text-foreground transition-colors flex-shrink-0">
               Dashboard
             </Link>
-            <ChevronRight className="h-3 w-3 opacity-50" />
+            <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
             <Link
               href={`/dashboard/${projectId}`}
-              className="hover:text-foreground transition-colors"
+              className="hover:text-foreground transition-colors flex-shrink-0"
             >
               {projectName || 'Untitled folder'}
             </Link>
-            <ChevronRight className="h-3 w-3 opacity-50" />
+            {breadcrumb.length > 0 && (
+              <>
+                {breadcrumb.slice(0, -1).map((item) => (
+                  <span key={item.id} className="flex items-center gap-2 flex-shrink-0">
+                    <ChevronRight className="h-3 w-3 opacity-50" />
+                    <Link
+                      href={`/dashboard/${projectId}/module/${item.id}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  </span>
+                ))}
+                <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
+              </>
+            )}
             {renaming?.kind === 'module' && renaming.id === mod.id ? (
               <Input
                 ref={renameInputRef}
@@ -441,6 +568,20 @@ export function ModuleContent({
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 rounded-md text-xs font-medium"
+              onClick={handleCreateSubmodule}
+              disabled={creatingSubmodule}
+            >
+              {creatingSubmodule ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FolderPlus className="h-3.5 w-3.5" />
+              )}
+              New Module
+            </Button>
             {availableFileTypes.length > 0 && (
               <div className="relative group">
                 <Button
@@ -496,16 +637,28 @@ export function ModuleContent({
                   <FileText className="h-7 w-7 opacity-40" />
                 </div>
                 <p className="text-xs font-medium">This module is empty</p>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="rounded-full gap-1.5"
-                  onClick={handleCreateTracker}
-                  disabled={creating}
-                >
-                  <FilePlus className="h-3.5 w-3.5" />
-                  New Tracker
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full gap-1.5"
+                    onClick={handleCreateSubmodule}
+                    disabled={creatingSubmodule}
+                  >
+                    <FolderPlus className="h-3.5 w-3.5" />
+                    New Module
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="rounded-full gap-1.5"
+                    onClick={handleCreateTracker}
+                    disabled={creating}
+                  >
+                    <FilePlus className="h-3.5 w-3.5" />
+                    New Tracker
+                  </Button>
+                </div>
               </div>
             ) : (
               <div
@@ -523,10 +676,14 @@ export function ModuleContent({
                     renaming &&
                     renaming.kind === row.kind &&
                     renaming.id === row.id
-                  const canRenameDelete = row.kind === 'tracker'
+                  const canRenameDelete = row.kind === 'module' || row.kind === 'tracker'
                   return (
                     <div
-                      key={row.kind === 'file' ? `file-${row.id}` : `tracker-${row.id}`}
+                      key={
+                        row.kind === 'file'
+                          ? `file-${row.id}`
+                          : `${row.kind}-${row.id}`
+                      }
                       className="flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0"
                     >
                       <button
