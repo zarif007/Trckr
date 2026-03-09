@@ -50,9 +50,14 @@ When creating a new tracker from the Project or Module pages, a dialog offers th
 ### Instance Types
 
 #### Single Instance
-The default mode. One shared tracker with a single dataset. Supports full version control when enabled.
+
+The default mode. One shared tracker with a single dataset.
+
+- **Without version control (default):** Direct save — data is persisted as a single `TrackerData` record, upserted in-place on every save. No version history, no branches, no snapshots. The Save Data button in the navbar writes directly to the database.
+- **With version control:** Enables the full branching system (see [Version Control](#version-control-single-instance-only) below).
 
 #### Multi Instance
+
 Multiple independent data entries for the same tracker structure. When you create a tracker named `"xyz"` with Multi selected:
 - `xyz` is created — the tracker schema definition (used to edit/view its structure)
 - `xyz.list` is created automatically — a companion list view
@@ -62,7 +67,9 @@ In the sidebar, both entries appear grouped under the same tracker. The `xyz.lis
 **Using the list view (`xyz.list`):**
 - Shows all saved instances in a table with: index, label, data preview, author, created-at
 - Click any row to open that instance in the tracker (loads its data)
-- **New Instance** button → opens the tracker with a blank form; save via the nav bar
+- **New Instance** button opens the tracker with a blank form; save via the nav bar
+- Search/filter instances by label, author, or data content
+- Delete instances with confirmation dialog
 - Supports pagination (50 per page)
 
 **Saving a new instance (Multi mode):**
@@ -89,16 +96,26 @@ Each branch is backed by a `TrackerData` record. The `main` branch is the canoni
 |---|---|
 | Switch branch | Click the branch selector dropdown |
 | New branch | Click the dropdown → `+ New branch from <current>` → enter name → confirm |
-| Save to branch | Use nav bar **Save Data** or keyboard shortcut — saves to current branch |
-| View diff | Click **Diff** — opens side-by-side modal comparing current branch vs `main` |
-| Merge to main | Click **Merge** (only visible on non-main branches) — copies branch data to `main`, marks branch as merged |
+| Save to branch | Use nav bar **Save Data** — saves to the current branch |
+| View diff | Click **Diff** — opens side-by-side or unified diff comparing current branch vs `main` |
+| Merge to main | Click **Merge** → confirmation dialog → copies branch data to `main`, marks branch as merged |
 
 #### Diff View
 
-The diff modal shows a side-by-side table for each changed grid:
-- **Green rows** — added in branch (not in main)
-- **Red rows** — removed from main (not in branch)
-- **Yellow cells** — field-level modification within a row
+The diff modal supports two display modes (toggle via Split/Unified buttons):
+
+**Side-by-side (Split):**
+- Left panel shows `main` (base), right panel shows the current branch
+- Green rows — added in branch
+- Red rows — removed from main
+- Yellow cells — field-level modifications
+
+**Unified (Inline):**
+- Single table with `+`, `-`, `~` prefixes
+- Modified rows show the old value struck through below the new value
+- Only changed rows are displayed
+
+Row matching uses `id`, `_id`, `rowId`, or `key` fields when available, falling back to index-based matching.
 
 #### Branch Lifecycle
 
@@ -109,6 +126,10 @@ main ──────── save ──────── save
                                       ↑
                                   compare with main
 ```
+
+#### Branch History
+
+Merged branches are preserved in the branch dropdown under a "Merged" section with a visual indicator. They cannot be modified but serve as an audit trail.
 
 #### API Endpoints
 
@@ -122,6 +143,21 @@ main ──────── save ──────── save
 
 ---
 
+### Data Persistence Modes
+
+| Mode | Instance | VC | Behavior |
+|---|---|---|---|
+| **Direct Save** | Single | Off | Upserts a single `TrackerData` record in-place |
+| **Branch Save** | Single | On | Each branch is a `TrackerData` record; saves update current branch |
+| **Instance Save** | Multi | Off | Each instance is a new `TrackerData` record with author/timestamp |
+
+The `POST /api/trackers/[id]/data` endpoint automatically detects the tracker mode and routes accordingly:
+- Single + No VC → upserts the single record
+- Single + VC → creates a new branch/snapshot record
+- Multi → creates a new instance record
+
+---
+
 ### Name Deduplication
 
 When creating a tracker, if a tracker with the same name already exists in the same project/module scope, a numeric suffix is appended automatically:
@@ -132,6 +168,39 @@ When creating a tracker, if a tracker with the same name already exists in the s
 ```
 
 This applies to both the main tracker and its `.list` companion (for Multi instance).
+
+---
+
+### Sidebar Icons
+
+| Icon | Meaning |
+|---|---|
+| `FileText` | Single instance, no version control |
+| `GitBranch` | Single instance, version control enabled |
+| `Layers` | Multi instance |
+| `LayoutList` | List companion (`.list` schema for Multi) |
+
+---
+
+## Database Schema
+
+### TrackerSchema
+
+| Field | Type | Description |
+|---|---|---|
+| `instance` | `SINGLE \| MULTI` | Instance mode |
+| `versionControl` | `Boolean` | Whether branching is enabled (only for SINGLE) |
+| `listForSchemaId` | `String?` | Links `.list` companion to parent schema |
+
+### TrackerData
+
+| Field | Type | Description |
+|---|---|---|
+| `data` | `Json` | Grid data snapshot (`GridDataSnapshot`) |
+| `branchName` | `String` | Branch identifier (default: `"main"`) |
+| `authorId` | `String?` | User who created/owns this record |
+| `basedOnId` | `String?` | Parent branch (for VC branching) |
+| `isMerged` | `Boolean` | Whether this branch has been merged into main |
 
 ---
 

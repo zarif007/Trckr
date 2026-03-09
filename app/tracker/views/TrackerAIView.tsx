@@ -154,8 +154,32 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   setTrackerNavRef.current = setTrackerNav
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
 
+  const handleDirectSave = useCallback(async () => {
+    if (!trackerId) return
+    const data = trackerDataRef.current?.() ?? {}
+    try {
+      const res = await fetch(`/api/trackers/${trackerId}/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      })
+      if (res.ok) {
+        const saved = await res.json()
+        if (saved?.id && saved?.data) {
+          setLoadedSnapshot({
+            id: saved.id,
+            label: saved.label ?? null,
+            data: saved.data as GridDataSnapshot,
+            updatedAt: saved.updatedAt,
+          })
+        }
+      }
+    } catch {
+      // silent — nav bar handles display
+    }
+  }, [trackerId, trackerDataRef])
+
   const onRegisterSaveData = useCallback((fn: () => void) => {
-    // In VC mode the nav bar save goes through the VC save flow instead
     if (!versionControl) {
       saveDataRef.current = fn
     }
@@ -360,12 +384,13 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     }
   }, [trackerId, trackerDataRef])
 
-  // In VC mode, wire the nav bar save to the VC save function (must be after handleVcSaveData)
   useEffect(() => {
     if (versionControl) {
       saveDataRef.current = handleVcSaveData
+    } else {
+      saveDataRef.current = handleDirectSave
     }
-  }, [versionControl, handleVcSaveData])
+  }, [versionControl, handleVcSaveData, handleDirectSave])
 
   const handleShareClick = useCallback(() => setShareDialogOpen(true), [])
 
@@ -535,8 +560,8 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               loadedSnapshotLabel={loadedSnapshot?.label ?? null}
               loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
               latestSnapshotId={latestSnapshot?.id ?? null}
-              onLoadSnapshot={versionControl ? undefined : handleLoadSnapshot}
-              onSavedNewSnapshot={versionControl ? undefined : handleSavedNewSnapshot}
+              onLoadSnapshot={versionControl ? handleLoadSnapshot : undefined}
+              onSavedNewSnapshot={versionControl ? handleSavedNewSnapshot : undefined}
               onClearLoadedSnapshot={handleClearLoadedSnapshot}
               onJumpToLatest={handleJumpToLatest}
               onRegisterSaveData={onRegisterSaveData}
@@ -584,8 +609,8 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           loadedSnapshotLabel={loadedSnapshot?.label ?? null}
           loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
           latestSnapshotId={latestSnapshot?.id ?? null}
-          onLoadSnapshot={versionControl ? undefined : handleLoadSnapshot}
-          onSavedNewSnapshot={versionControl ? undefined : handleSavedNewSnapshot}
+          onLoadSnapshot={versionControl ? handleLoadSnapshot : undefined}
+          onSavedNewSnapshot={versionControl ? handleSavedNewSnapshot : undefined}
           onClearLoadedSnapshot={handleClearLoadedSnapshot}
           onJumpToLatest={handleJumpToLatest}
           onRegisterSaveData={onRegisterSaveData}

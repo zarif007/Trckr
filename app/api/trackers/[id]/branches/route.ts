@@ -94,8 +94,7 @@ export async function POST(
       trackerSchemaId: trackerId,
       branchName: body.branchName,
       label: body.label ?? null,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: basedOn.data as any,
+      data: basedOn.data ?? {},
       authorId: authResult.user.id,
       basedOnId: body.basedOnId,
       isMerged: false,

@@ -10,4 +10,5 @@ export {
   getTrackerData,
   updateTrackerData,
   deleteTrackerData,
+  upsertCurrentData,
 } from './service'

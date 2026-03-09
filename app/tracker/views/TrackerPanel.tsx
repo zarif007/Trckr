@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useState } from 'react'
-import { Bot, Database, Eye, History, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
+import { Bot, Database, Eye, GitBranch, History, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -106,6 +106,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [vcDrawerOpen, setVcDrawerOpen] = useState(false)
 
   useUndoKeyboardShortcut(editMode, canUndo ?? false, undo)
 
@@ -132,7 +133,7 @@ export const TrackerPanel = memo(function TrackerPanel({
 
   return (
     <section
-      className="relative h-full bg-background/60 rounded-lg transition-shadow duration-300"
+      className="relative h-full bg-background/60 rounded-lg transition-shadow duration-300 overflow-hidden"
       style={{
         width: fullWidth ? '100%' : isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%',
       }}
@@ -162,7 +163,7 @@ export const TrackerPanel = memo(function TrackerPanel({
           </div>
         </div>
       )}
-      {showSavedBar && (
+      {versionControl && showSavedBar && (
         <div className="absolute top-0 left-0 right-0 z-30 px-4 py-2 bg-muted/80 border-b border-border backdrop-blur-sm">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium text-muted-foreground truncate min-w-0">
@@ -186,22 +187,6 @@ export const TrackerPanel = memo(function TrackerPanel({
           </div>
         </div>
       )}
-      {/* Version control branch panel — shown as a secondary bar when VC is enabled */}
-      {versionControl && trackerId && onVcBranchSwitch && onVcBranchCreated && onVcMergedToMain && (
-        <div className="absolute top-[3.5rem] left-2 right-4 z-20 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/90 px-2 py-1 shadow-sm">
-          <TrackerBranchPanel
-            trackerId={trackerId}
-            currentBranch={vcCurrentBranch ?? null}
-            branches={vcBranches ?? []}
-            onBranchSwitch={onVcBranchSwitch}
-            onBranchCreated={onVcBranchCreated}
-            onMergedToMain={onVcMergedToMain}
-            getCurrentData={getCurrentData}
-            disabled={isStreamingTracker}
-          />
-        </div>
-      )}
-
       <div
         className={`absolute top-4 z-20 flex flex-wrap items-center justify-end gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-4'}`}
       >
@@ -261,6 +246,18 @@ export const TrackerPanel = memo(function TrackerPanel({
             aria-label={isChatOpen ? 'Hide agent chat' : 'Show agent chat'}
           >
             <Bot className="h-4 w-4" />
+          </Button>
+        )}
+        {versionControl && trackerId && onVcBranchSwitch && onVcBranchCreated && onVcMergedToMain && (
+          <Button
+            variant={vcDrawerOpen ? 'default' : 'outline'}
+            size="sm"
+            className="h-8 gap-1.5 text-xs shrink-0"
+            onClick={() => setVcDrawerOpen((prev) => !prev)}
+            aria-label={vcDrawerOpen ? 'Close version control' : 'Open version control'}
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{vcCurrentBranch?.branchName ?? 'Branches'}</span>
           </Button>
         )}
         {hideChatToggle ? (
@@ -368,7 +365,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                 Share
               </Button>
             )}
-            {trackerId && (onLoadSnapshot || onSavedNewSnapshot) && (
+            {versionControl && trackerId && (onLoadSnapshot || onSavedNewSnapshot) && (
               <TrackerDataSave
                 trackerId={trackerId}
                 trackerDataRef={trackerDataRef as React.RefObject<(() => GridDataSnapshot) | null>}
@@ -404,9 +401,7 @@ export const TrackerPanel = memo(function TrackerPanel({
         className={`h-full overflow-y-auto ${
           hideChatToggle
             ? 'px-1 pt-14 pb-2'
-            : versionControl
-              ? 'px-4 pt-24 pb-6'
-              : 'px-4 pt-16 pb-6'
+            : 'px-4 pt-16 pb-6'
         }`}
       >
         <TrackerDisplayErrorBoundary key={displayKey}>
@@ -463,6 +458,21 @@ export const TrackerPanel = memo(function TrackerPanel({
           )}
         </TrackerDisplayErrorBoundary>
       </div>
+
+      {versionControl && trackerId && onVcBranchSwitch && onVcBranchCreated && onVcMergedToMain && (
+        <TrackerBranchPanel
+          trackerId={trackerId}
+          currentBranch={vcCurrentBranch ?? null}
+          branches={vcBranches ?? []}
+          onBranchSwitch={onVcBranchSwitch}
+          onBranchCreated={onVcBranchCreated}
+          onMergedToMain={onVcMergedToMain}
+          getCurrentData={getCurrentData}
+          disabled={isStreamingTracker}
+          open={vcDrawerOpen}
+          onClose={() => setVcDrawerOpen(false)}
+        />
+      )}
     </section>
   )
 })

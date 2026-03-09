@@ -42,12 +42,10 @@ export async function POST(
   })
   if (!mainBranch) return notFound('Main branch not found')
 
-  // Merge in a transaction: update main data + mark source as merged
   const [updatedMain] = await prisma.$transaction([
     prisma.trackerData.update({
       where: { id: mainBranch.id },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      data: { data: sourceBranch.data as any },
+      data: { data: sourceBranch.data ?? {} },
       include: {
         author: { select: { id: true, name: true, email: true } },
       },

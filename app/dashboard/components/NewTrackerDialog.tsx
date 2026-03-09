@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, FilePlus, GitBranch, Layers, Info } from 'lucide-react'
+import { Loader2, FilePlus, GitBranch, Layers, Info, FileText } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,26 @@ interface NewTrackerDialogProps {
 }
 
 type InstanceType = 'SINGLE' | 'MULTI'
+
+const INSTANCE_OPTIONS: Array<{
+  value: InstanceType
+  label: string
+  icon: typeof FileText
+  description: string
+}> = [
+  {
+    value: 'SINGLE',
+    label: 'Single',
+    icon: FileText,
+    description: 'One shared tracker with a single dataset. Supports optional version control with branches, diffs, and merging.',
+  },
+  {
+    value: 'MULTI',
+    label: 'Multi',
+    icon: Layers,
+    description: 'Multiple independent instances of this tracker, each with its own data, author, and timestamp.',
+  },
+]
 
 export function NewTrackerDialog({
   projectId,
@@ -52,7 +72,6 @@ export function NewTrackerDialog({
     (next: boolean) => {
       setOpen(next)
       if (next) {
-        // Focus name input after open animation
         setTimeout(() => inputRef.current?.focus(), 80)
       } else {
         reset()
@@ -120,13 +139,6 @@ export function NewTrackerDialog({
     [name, instance, versionControl, projectId, moduleId, router, onCreated, onError, reset],
   )
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') handleSubmit()
-    },
-    [handleSubmit],
-  )
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -149,73 +161,87 @@ export function NewTrackerDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 pt-1">
           {/* Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <label
+              htmlFor="tracker-name"
+              className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+            >
               Name
             </label>
             <Input
+              id="tracker-name"
               ref={inputRef}
               value={name}
               onChange={(e) => { setName(e.target.value); setError(null) }}
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
               placeholder="e.g. budget-tracker"
               className="h-9 text-sm"
               disabled={creating}
+              autoComplete="off"
             />
             <p className="text-[10px] text-muted-foreground/70">
-              If a tracker with this name already exists here, a suffix like <span className="font-mono">(1)</span> will be added automatically.
+              If a tracker with this name already exists, a suffix like <span className="font-mono">(1)</span> will be added.
             </p>
           </div>
 
           {/* Instance */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
               <Layers className="h-3 w-3" />
               Instance
-            </label>
+            </legend>
             <div className="flex gap-2">
-              {(['SINGLE', 'MULTI'] as InstanceType[]).map((val) => (
-                <button
-                  key={val}
-                  type="button"
-                  onClick={() => handleInstanceChange(val)}
-                  disabled={creating}
-                  className={cn(
-                    'flex-1 rounded-lg border px-3 py-2.5 text-left transition-colors',
-                    instance === val
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                  )}
-                >
-                  <div className="text-xs font-semibold mb-0.5">{val === 'SINGLE' ? 'Single' : 'Multi'}</div>
-                  <div className="text-[10px] leading-snug opacity-80">
-                    {val === 'SINGLE'
-                      ? 'One shared tracker — the classic mode. Supports version control.'
-                      : 'Multiple separate instances of this tracker, each with its own data.'}
-                  </div>
-                </button>
-              ))}
+              {INSTANCE_OPTIONS.map((opt) => {
+                const Icon = opt.icon
+                const isSelected = instance === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleInstanceChange(opt.value)}
+                    disabled={creating}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      'flex-1 rounded-lg border px-3 py-2.5 text-left transition-all duration-150',
+                      isSelected
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
+                        : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                    )}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Icon className="h-3.5 w-3.5" />
+                      <span className="text-xs font-semibold">{opt.label}</span>
+                    </div>
+                    <div className="text-[10px] leading-snug opacity-80">
+                      {opt.description}
+                    </div>
+                  </button>
+                )
+              })}
             </div>
-          </div>
+          </fieldset>
 
           {/* Version Control */}
-          <div
+          <fieldset
             className={cn(
-              'flex flex-col gap-1.5 transition-opacity',
+              'flex flex-col gap-1.5 transition-all duration-200',
               instance === 'MULTI' && 'opacity-40 pointer-events-none',
             )}
+            disabled={instance === 'MULTI'}
           >
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
               <GitBranch className="h-3 w-3" />
               Version Control
-            </label>
+            </legend>
             <button
               type="button"
+              role="switch"
+              aria-checked={versionControl && instance === 'SINGLE'}
               onClick={() => instance === 'SINGLE' && setVersionControl((v) => !v)}
               disabled={creating || instance === 'MULTI'}
               className={cn(
-                'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors w-full',
+                'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-all duration-150 w-full',
                 versionControl && instance === 'SINGLE'
-                  ? 'border-primary bg-primary/10'
+                  ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
                   : 'border-border bg-muted/20 hover:bg-muted/50',
               )}
             >
@@ -225,39 +251,44 @@ export function NewTrackerDialog({
                 </div>
                 <div className="text-[10px] text-muted-foreground leading-snug">
                   {instance === 'MULTI'
-                    ? 'Not available for Multi-instance trackers'
-                    : 'Create branches, compare diffs, and merge changes like Git.'}
+                    ? 'Not available for Multi-instance trackers.'
+                    : 'Create branches, compare diffs, and merge changes.'}
                 </div>
               </div>
-              {/* Toggle pill */}
               <div
+                aria-hidden="true"
                 className={cn(
-                  'flex-shrink-0 ml-4 w-9 h-5 rounded-full transition-colors relative',
+                  'flex-shrink-0 ml-4 w-9 h-5 rounded-full transition-colors duration-200 relative',
                   versionControl && instance === 'SINGLE' ? 'bg-primary' : 'bg-muted-foreground/30',
                 )}
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform',
+                    'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
                     versionControl && instance === 'SINGLE' ? 'translate-x-4' : 'translate-x-0.5',
                   )}
                 />
               </div>
             </button>
 
-            {versionControl && instance === 'SINGLE' && (
-              <div className="flex items-start gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-3 py-2">
+            <div
+              className={cn(
+                'overflow-hidden transition-all duration-200',
+                versionControl && instance === 'SINGLE' ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0',
+              )}
+            >
+              <div className="flex items-start gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 mt-1">
                 <Info className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
                 <p className="text-[10px] text-primary/80 leading-snug">
-                  A <strong>main</strong> branch will be created automatically on first save. You can branch, diff, and merge from the tracker toolbar.
+                  A <strong>main</strong> branch will be created on first save. You can branch, diff, and merge from the tracker toolbar.
                 </p>
               </div>
-            )}
-          </div>
+            </div>
+          </fieldset>
 
           {/* Error */}
           {error && (
-            <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md">
+            <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md" role="alert">
               {error}
             </p>
           )}

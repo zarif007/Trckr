@@ -1,20 +1,27 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Loader2,
   Plus,
-  ExternalLink,
-  User,
-  Clock,
-  FileText,
-  List,
   ArrowLeft,
+  FileText,
   RefreshCw,
   Layers,
+  Trash2,
+  Search,
+  X,
+  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
 interface Author {
@@ -47,103 +54,77 @@ function formatRelative(dateStr: string): string {
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-/**
- * Returns a quick one-line preview of the instance data.
- * Shows the first grid, first row, first few fields.
- */
 function getDataPreview(data: Instance['data']): string {
   const grids = Object.values(data)
-  if (!grids.length) return '(empty)'
+  if (!grids.length) return 'Empty'
   const firstGrid = grids[0]
-  if (!firstGrid.length) return '(no rows)'
+  if (!firstGrid.length) return 'No rows'
   const row = firstGrid[0]
   const entries = Object.entries(row)
     .filter(([, v]) => v !== null && v !== undefined && v !== '')
     .slice(0, 3)
-  if (!entries.length) return '(empty row)'
-  return entries.map(([k, v]) => `${k}: ${String(v)}`).join(' · ')
+  if (!entries.length) return 'Empty row'
+  return entries.map(([, v]) => String(v)).join(' · ')
 }
 
 function InstanceRow({
   instance,
   index,
   onOpen,
+  onDelete,
+  isDeleting,
 }: {
   instance: Instance
   index: number
   onOpen: (id: string) => void
+  onDelete: (id: string) => void
+  isDeleting: boolean
 }) {
   const preview = getDataPreview(instance.data)
-  const gridCount = Object.keys(instance.data).length
   const rowCount = Object.values(instance.data).reduce((acc, rows) => acc + rows.length, 0)
 
   return (
     <div
-      className="group flex items-center gap-3 px-4 py-3 border-b border-border/40 hover:bg-muted/30 transition-colors cursor-pointer"
+      className={cn(
+        'group flex items-center gap-3 mx-3 px-3 py-3 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer',
+        isDeleting && 'opacity-50 pointer-events-none',
+      )}
       onClick={() => onOpen(instance.id)}
     >
-      {/* Index badge */}
-      <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center text-[11px] font-semibold text-muted-foreground tabular-nums">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-muted/70 flex items-center justify-center text-[11px] font-medium text-muted-foreground tabular-nums">
         {index + 1}
       </div>
 
-      {/* Main content */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-medium text-foreground truncate">
-            {instance.label || `Instance ${index + 1}`}
-          </span>
-          <span className="text-[10px] text-muted-foreground/60 flex-shrink-0 tabular-nums">
-            {rowCount} row{rowCount !== 1 ? 's' : ''}
-          </span>
+        <div className="text-[13px] font-medium text-foreground truncate">
+          {instance.label || `Instance ${index + 1}`}
         </div>
-        <p className="text-[11px] text-muted-foreground/70 truncate leading-snug">
-          {preview}
-        </p>
+        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground/60">
+          <span className="truncate">{preview}</span>
+          <span className="flex-shrink-0">·</span>
+          <span className="flex-shrink-0 tabular-nums">{rowCount} row{rowCount !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
-      {/* Author */}
-      <div className="flex-shrink-0 hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground/60 min-w-0">
-        {instance.author?.name ? (
-          <>
-            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-primary flex-shrink-0">
-              {instance.author.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="truncate max-w-[100px]">{instance.author.name}</span>
-          </>
-        ) : (
-          <User className="h-3 w-3 opacity-50" />
-        )}
-      </div>
-
-      {/* Timestamp */}
-      <div
-        className="flex-shrink-0 hidden md:flex items-center gap-1 text-[11px] text-muted-foreground/60"
-        title={formatDate(instance.createdAt)}
-      >
-        <Clock className="h-3 w-3" />
+      <div className="flex-shrink-0 text-[11px] text-muted-foreground/50 hidden sm:block">
         {formatRelative(instance.createdAt)}
       </div>
 
-      {/* Open action */}
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onOpen(instance.id) }}
-        className="flex-shrink-0 h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-muted/60 transition-colors opacity-0 group-hover:opacity-100"
-        title="Open instance"
-      >
-        <ExternalLink className="h-3.5 w-3.5" />
-      </button>
+      <div className="flex items-center gap-0.5 flex-shrink-0">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(instance.id)
+          }}
+          disabled={isDeleting}
+          className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+          title="Delete"
+        >
+          {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+        </button>
+        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
+      </div>
     </div>
   )
 }
@@ -159,12 +140,17 @@ export function TrackerInstanceListView({
   parentTrackerId,
   listName,
 }: TrackerInstanceListViewProps) {
+  void listSchemaId
   const router = useRouter()
   const [instances, setInstances] = useState<Instance[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; label: string } | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const PAGE_SIZE = 50
 
   const fetchInstances = useCallback(async (pageNum: number = 0) => {
@@ -190,6 +176,17 @@ export function TrackerInstanceListView({
     fetchInstances(0)
   }, [fetchInstances])
 
+  const filteredInstances = useMemo(() => {
+    if (!searchQuery.trim()) return instances
+    const q = searchQuery.toLowerCase()
+    return instances.filter((inst) => {
+      const label = (inst.label || '').toLowerCase()
+      const authorName = (inst.author?.name || '').toLowerCase()
+      const preview = getDataPreview(inst.data).toLowerCase()
+      return label.includes(q) || authorName.includes(q) || preview.includes(q)
+    })
+  }, [instances, searchQuery])
+
   const handleOpenInstance = useCallback((instanceId: string) => {
     router.push(`/tracker/${parentTrackerId}?instanceId=${instanceId}`)
   }, [router, parentTrackerId])
@@ -202,67 +199,118 @@ export function TrackerInstanceListView({
     router.push(`/tracker/${parentTrackerId}`)
   }, [router, parentTrackerId])
 
+  const handleDeleteInstance = useCallback(async (id: string) => {
+    setDeletingId(id)
+    setDeleteConfirm(null)
+    try {
+      const res = await fetch(`/api/trackers/${parentTrackerId}/data/${id}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setInstances((prev) => prev.filter((inst) => inst.id !== id))
+        setTotal((prev) => Math.max(0, prev - 1))
+      }
+    } finally {
+      setDeletingId(null)
+    }
+  }, [parentTrackerId])
+
+  const handleRequestDelete = useCallback((id: string) => {
+    const inst = instances.find((i) => i.id === id)
+    setDeleteConfirm({ id, label: inst?.label || 'this instance' })
+  }, [instances])
+
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
-      {/* Header bar */}
-      <div className="flex-shrink-0 h-10 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
+      {/* Header */}
+      <div className="flex-shrink-0 h-12 border-b border-border/40 flex items-center justify-between px-4 gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
             onClick={handleOpenTracker}
-            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-            title="Open tracker definition"
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+            title="Back to tracker"
           >
-            <ArrowLeft className="h-3 w-3" />
-            <FileText className="h-3 w-3" />
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <FileText className="h-3.5 w-3.5" />
           </button>
-          <span className="text-muted-foreground/40">/</span>
-          <div className="flex items-center gap-1.5 min-w-0">
-            <List className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-            <span className="text-[11px] font-semibold truncate">{listName}</span>
-          </div>
+          <span className="text-muted-foreground/30 text-sm">/</span>
+          <span className="text-sm font-semibold truncate">{listName}</span>
+          {!loading && (
+            <span className="text-[11px] text-muted-foreground/50 tabular-nums flex-shrink-0">
+              ({total})
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {instances.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchOpen(!searchOpen)
+                if (searchOpen) setSearchQuery('')
+              }}
+              className={cn(
+                'h-7 w-7 rounded-md flex items-center justify-center transition-colors',
+                searchOpen
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted/50',
+              )}
+            >
+              <Search className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
             onClick={() => fetchInstances(page)}
             disabled={loading}
-            className="flex items-center gap-1 h-7 px-2 rounded-md text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+            className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/60 hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={cn('h-3 w-3', loading && 'animate-spin')} />
+            <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
           </button>
           <Button
             size="sm"
-            className="h-7 gap-1.5 text-xs rounded-md"
+            className="h-7 gap-1.5 text-xs rounded-md ml-1"
             onClick={handleNewInstance}
           >
             <Plus className="h-3.5 w-3.5" />
-            New Instance
+            New
           </Button>
         </div>
       </div>
 
-      {/* Summary bar */}
-      <div className="flex-shrink-0 flex items-center gap-3 px-4 py-2 border-b border-border/30 bg-muted/10">
-        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          <Layers className="h-3 w-3" />
-          <span className="font-semibold">{total}</span>
-          <span>instance{total !== 1 ? 's' : ''}</span>
+      {/* Search bar (collapsible) */}
+      {searchOpen && (
+        <div className="flex-shrink-0 px-4 py-2 border-b border-border/30">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search instances..."
+              className="h-8 text-xs pl-8 pr-8"
+              autoFocus
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </div>
-        {!loading && instances.length > 0 && (
-          <span className="text-[10px] text-muted-foreground/50">
-            Showing {instances.length} of {total}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto min-h-0">
         {loading && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground">
-            <Loader2 className="h-8 w-8 animate-spin opacity-40" />
-            <p className="text-xs">Loading instances…</p>
+            <Loader2 className="h-6 w-6 animate-spin opacity-30" />
+            <p className="text-xs text-muted-foreground/60">Loading...</p>
           </div>
         )}
 
@@ -276,17 +324,17 @@ export function TrackerInstanceListView({
         )}
 
         {!loading && !error && instances.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground py-16">
-            <div className="w-16 h-16 rounded-2xl bg-muted/30 border border-dashed border-border/40 flex items-center justify-center">
-              <Layers className="h-7 w-7 opacity-30" />
+          <div className="flex flex-col items-center justify-center h-full gap-4 py-16">
+            <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center">
+              <Layers className="h-5 w-5 text-muted-foreground/30" />
             </div>
             <div className="text-center space-y-1">
-              <p className="text-sm font-medium">No instances yet</p>
-              <p className="text-xs text-muted-foreground/70">
-                Create your first instance to start tracking data.
+              <p className="text-sm font-medium text-foreground">No instances yet</p>
+              <p className="text-xs text-muted-foreground/60">
+                Create your first instance to get started.
               </p>
             </div>
-            <Button size="sm" className="gap-1.5 rounded-full" onClick={handleNewInstance}>
+            <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={handleNewInstance}>
               <Plus className="h-3.5 w-3.5" />
               New Instance
             </Button>
@@ -294,28 +342,27 @@ export function TrackerInstanceListView({
         )}
 
         {!loading && !error && instances.length > 0 && (
-          <>
-            {/* Column headers */}
-            <div className="flex items-center gap-3 px-4 py-2 border-b border-border/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              <div className="w-8" />
-              <div className="flex-1">Label / Preview</div>
-              <div className="hidden sm:block w-28">Author</div>
-              <div className="hidden md:block w-24">Created</div>
-              <div className="w-7" />
-            </div>
+          <div className="py-1">
+            {filteredInstances.length === 0 && searchQuery && (
+              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+                <Search className="h-5 w-5 opacity-20" />
+                <p className="text-xs text-muted-foreground/60">No results for &quot;{searchQuery}&quot;</p>
+              </div>
+            )}
 
-            {instances.map((instance, i) => (
+            {filteredInstances.map((instance, i) => (
               <InstanceRow
                 key={instance.id}
                 instance={instance}
                 index={i + page * PAGE_SIZE}
                 onOpen={handleOpenInstance}
+                onDelete={handleRequestDelete}
+                isDeleting={deletingId === instance.id}
               />
             ))}
 
-            {/* Pagination */}
             {total > PAGE_SIZE && (
-              <div className="flex items-center justify-center gap-2 px-4 py-4 border-t border-border/30">
+              <div className="flex items-center justify-center gap-2 px-4 py-4">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -325,8 +372,8 @@ export function TrackerInstanceListView({
                 >
                   Previous
                 </Button>
-                <span className="text-[11px] text-muted-foreground">
-                  Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}
+                <span className="text-[11px] text-muted-foreground/50 tabular-nums">
+                  {page + 1} / {Math.ceil(total / PAGE_SIZE)}
                 </span>
                 <Button
                   variant="ghost"
@@ -339,20 +386,41 @@ export function TrackerInstanceListView({
                 </Button>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
 
-      {/* Status bar */}
-      <div className="flex-shrink-0 h-6 border-t border-border/50 flex items-center px-3 text-[10px] text-muted-foreground bg-muted/10">
-        <span className="flex items-center gap-1">
-          <List className="h-2.5 w-2.5" />
-          {listName}
-        </span>
-        <span className="ml-auto tabular-nums">
-          {total} instance{total !== 1 ? 's' : ''}
-        </span>
-      </div>
+      {/* Delete confirmation */}
+      <Dialog open={deleteConfirm !== null} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Trash2 className="h-4 w-4 text-destructive" />
+              Delete instance
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-1">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete <span className="font-medium text-foreground">{deleteConfirm?.label}</span>?
+              This cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => deleteConfirm && handleDeleteInstance(deleteConfirm.id)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

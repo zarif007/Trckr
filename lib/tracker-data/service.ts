@@ -50,14 +50,17 @@ export async function listTrackerData(
   const limit = Math.min(Math.max(1, options.limit ?? 20), 100)
   const offset = Math.max(0, options.offset ?? 0)
 
-  const items = await prisma.trackerData.findMany({
-    where: { trackerSchemaId },
-    orderBy: { updatedAt: 'desc' },
-    take: limit,
-    skip: offset,
-    include: authorInclude,
-  })
-  return { items }
+  const [items, total] = await Promise.all([
+    prisma.trackerData.findMany({
+      where: { trackerSchemaId },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset,
+      include: authorInclude,
+    }),
+    prisma.trackerData.count({ where: { trackerSchemaId } }),
+  ])
+  return { items, total }
 }
 
 export async function getTrackerData(id: string, userId: string) {
@@ -106,6 +109,48 @@ export async function updateTrackerData(
   return prisma.trackerData.update({
     where: { id },
     data: updateData,
+    include: authorInclude,
+  })
+}
+
+/**
+ * Upsert the single current data record for a non-VC, single-instance tracker.
+ * If a TrackerData row already exists for this tracker, it is updated in-place.
+ * If none exists, a new one is created. At most one record should ever exist.
+ */
+export async function upsertCurrentData(
+  trackerSchemaId: string,
+  userId: string,
+  data: object,
+) {
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: {
+      id: trackerSchemaId,
+      project: { userId },
+    },
+  })
+  if (!tracker) return null
+
+  const existing = await prisma.trackerData.findFirst({
+    where: { trackerSchemaId },
+    orderBy: { updatedAt: 'desc' },
+  })
+
+  if (existing) {
+    return prisma.trackerData.update({
+      where: { id: existing.id },
+      data: { data, authorId: userId },
+      include: authorInclude,
+    })
+  }
+
+  return prisma.trackerData.create({
+    data: {
+      trackerSchemaId,
+      data,
+      branchName: 'main',
+      authorId: userId,
+    },
     include: authorInclude,
   })
 }

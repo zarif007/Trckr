@@ -4,9 +4,11 @@ import {
 } from '@/lib/tracker-data'
 import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { prisma } from '@/lib/db'
 import {
   createTrackerSnapshotForUser,
   listTrackerSnapshotsForUser,
+  upsertCurrentDataForUser,
 } from '@/lib/repositories'
 
 const createTrackerDataBodySchema = z
@@ -75,6 +77,22 @@ export async function POST(
   }
   if (!validateGridDataSnapshot(body.data)) {
     return badRequest('Invalid data: must be an object with array-of-objects values')
+  }
+
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: { id: trackerId, project: { userId: authResult.user.id } },
+    select: { instance: true, versionControl: true },
+  })
+  if (!tracker) return notFound('Tracker not found')
+
+  if (tracker.instance === 'SINGLE' && !tracker.versionControl) {
+    const result = await upsertCurrentDataForUser(
+      trackerId,
+      authResult.user.id,
+      body.data as Record<string, Array<Record<string, unknown>>>,
+    )
+    if (!result) return notFound('Tracker not found')
+    return jsonOk(result)
   }
 
   const created = await createTrackerSnapshotForUser(trackerId, authResult.user.id, {

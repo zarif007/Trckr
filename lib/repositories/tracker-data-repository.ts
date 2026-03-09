@@ -4,6 +4,7 @@ import {
   getTrackerData,
   listTrackerData,
   updateTrackerData,
+  upsertCurrentData,
 } from '@/lib/tracker-data'
 import type { GridDataSnapshot } from '@/lib/tracker-data'
 
@@ -43,4 +44,12 @@ export async function updateTrackerSnapshotForUser(
 
 export async function deleteTrackerSnapshotForUser(snapshotId: string, userId: string) {
   return deleteTrackerData(snapshotId, userId)
+}
+
+export async function upsertCurrentDataForUser(
+  trackerId: string,
+  userId: string,
+  data: GridDataSnapshot,
+) {
+  return upsertCurrentData(trackerId, userId, data as object)
 }
