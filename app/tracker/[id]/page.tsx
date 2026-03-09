@@ -24,17 +24,9 @@ type ConversationState = {
   messages: Message[]
 }
 
-type SavedSnapshot = {
-  id: string
-  label: string | null
-  data: Record<string, Array<Record<string, unknown>>>
-  updatedAt?: string
-}
-
 type TrackerResource = {
   tracker: TrackerRecord
   schema: TrackerResponse
-  latestSnapshot: SavedSnapshot | null
 }
 
 /** Merge tracker.name into schema so the view and top bar show the correct name. */
@@ -83,47 +75,7 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
       schema = schemaWithTrackerName(tracker)
     }
 
-    let latestSnapshot: SavedSnapshot | null = null
-
-    if (!tracker.versionControl && !tracker.listForSchemaId && instanceId !== 'new') {
-      try {
-        if (instanceId) {
-          const res = await fetch(`/api/trackers/${id}/data/${instanceId}`)
-          if (res.ok) {
-            const data = await res.json()
-            if (data?.id && data?.data && typeof data.data === 'object' && !Array.isArray(data.data)) {
-              latestSnapshot = {
-                id: data.id,
-                label: data.label ?? null,
-                data: data.data,
-                updatedAt: data.updatedAt,
-              }
-            }
-          }
-        } else {
-          const res = await fetch(`/api/trackers/${id}/data?limit=1`)
-          if (res.ok) {
-            const data = await res.json()
-            const items = data?.items
-            if (Array.isArray(items) && items.length > 0) {
-              const first = items[0]
-              if (first?.id && first?.data && typeof first.data === 'object' && !Array.isArray(first.data)) {
-                latestSnapshot = {
-                  id: first.id,
-                  label: first.label ?? null,
-                  data: first.data,
-                  updatedAt: first.updatedAt,
-                }
-              }
-            }
-          }
-        }
-      } catch {
-        // ignore snapshot errors
-      }
-    }
-
-    return { tracker, schema, latestSnapshot }
+    return { tracker, schema }
   })()
 
   trackerCache.set(key, p)
@@ -134,11 +86,15 @@ function TrackerByIdContent({
   id,
   isNew,
   instanceId,
+  initialBranchName,
+  onBranchChange,
   onBack,
 }: {
   id: string
   isNew: boolean
   instanceId: string | null
+  initialBranchName: string | null
+  onBranchChange: (branchName: string) => void
   onBack: () => void
 }) {
   const initial = use(getTrackerResource(id, instanceId))
@@ -199,13 +155,12 @@ function TrackerByIdContent({
       const next: TrackerResource = {
         tracker: data,
         schema: schemaWithTrackerName(data),
-        latestSnapshot: state.latestSnapshot,
       }
       setState(next)
       const key = `${id}::${instanceId ?? ''}`
       trackerCache.set(key, Promise.resolve(next))
     },
-    [id, instanceId, state.tracker?.name, state.latestSnapshot]
+    [id, instanceId, state.tracker?.name]
   )
 
   const schema = state.schema
@@ -248,8 +203,9 @@ function TrackerByIdContent({
       trackerId={id}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
-      initialLoadedSnapshot={state.latestSnapshot}
       versionControl={state.tracker?.versionControl ?? false}
+      initialBranchName={initialBranchName}
+      onBranchChange={onBranchChange}
     />
   )
 }
@@ -291,6 +247,23 @@ export default function TrackerByIdPage() {
   const id = typeof params.id === 'string' ? params.id : null
   const isNew = searchParams.get('new') === 'true'
   const instanceId = searchParams.get('instanceId')
+  const branchFromUrl = searchParams.get('branch')
+
+  const handleBranchChange = useCallback(
+    (branchName: string) => {
+      if (!id) return
+      const next = new URLSearchParams(searchParams.toString())
+      if (branchName) {
+        next.set('branch', branchName)
+      } else {
+        next.delete('branch')
+      }
+      const qs = next.toString()
+      router.replace(`/tracker/${id}${qs ? `?${qs}` : ''}`, { scroll: false })
+    },
+    [id, router, searchParams]
+  )
+
   const handleBack = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back()
@@ -317,6 +290,8 @@ export default function TrackerByIdPage() {
           id={id}
           isNew={isNew}
           instanceId={instanceId}
+          initialBranchName={branchFromUrl}
+          onBranchChange={handleBranchChange}
           onBack={handleBack}
         />
       </TrackerErrorBoundary>

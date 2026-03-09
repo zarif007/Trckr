@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { GitMerge, Plus, Minus, Edit2, Info, Columns2, Rows3 } from 'lucide-react'
 import {
   Dialog,
@@ -265,6 +265,24 @@ export function TrackerDiffView({
   currentBranch,
 }: TrackerDiffViewProps) {
   const [mode, setMode] = useState<'side-by-side' | 'inline'>('side-by-side')
+  const scrollRefsRef = useRef<Record<string, { left: HTMLDivElement | null; right: HTMLDivElement | null }>>({})
+  const isSyncingScrollRef = useRef(false)
+
+  const syncHorizontalScroll = useCallback((source: 'left' | 'right', gridId: string) => {
+    const pair = scrollRefsRef.current[gridId]
+    if (!pair?.left || !pair?.right) return
+    if (isSyncingScrollRef.current) return
+
+    isSyncingScrollRef.current = true
+    if (source === 'left') {
+      pair.right.scrollLeft = pair.left.scrollLeft
+    } else {
+      pair.left.scrollLeft = pair.right.scrollLeft
+    }
+    requestAnimationFrame(() => {
+      isSyncingScrollRef.current = false
+    })
+  }, [])
 
   const diffs = useMemo(
     () => computeGridDiff(mainBranch.data, currentBranch.data),
@@ -282,7 +300,7 @@ export function TrackerDiffView({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="!max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <GitMerge className="h-4 w-4 text-primary" />
@@ -353,7 +371,7 @@ export function TrackerDiffView({
         </div>
 
         {/* Diff content */}
-        <div className="flex-1 overflow-auto min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           {!hasAnyChanges && (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
               <GitMerge className="h-8 w-8 opacity-30" />
@@ -364,97 +382,128 @@ export function TrackerDiffView({
             </div>
           )}
 
-          {changedGrids.map((diff) => (
-            <div key={diff.gridId} className="mb-6">
-              <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                <span>Grid: {diff.gridId}</span>
-                <span className="font-normal normal-case tracking-normal">
-                  ({diff.stats.added + diff.stats.removed + diff.stats.modified} change{diff.stats.added + diff.stats.removed + diff.stats.modified !== 1 ? 's' : ''})
-                </span>
-              </div>
-
-              {mode === 'side-by-side' ? (
-                <div className="grid grid-cols-2 divide-x divide-border/50 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b border-border/30 bg-muted/10">
-                      {mainBranch.branchName} (base)
+          {hasAnyChanges && mode === 'side-by-side' && (
+            <div className="flex-1 overflow-auto min-h-0 space-y-4">
+              {changedGrids.map((diff) => {
+                const gridId = diff.gridId
+                return (
+                  <div key={diff.gridId} className="border border-border/50 rounded-md overflow-hidden">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      <span>Grid: {diff.gridId}</span>
+                      <span className="font-normal normal-case tracking-normal">
+                        ({diff.stats.added + diff.stats.removed + diff.stats.modified} change{diff.stats.added + diff.stats.removed + diff.stats.modified !== 1 ? 's' : ''})
+                      </span>
                     </div>
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-border/30">
-                          {diff.allFields.map((f) => (
-                            <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0">
-                              {f}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/20">
-                        {diff.rows.map((row, i) => (
-                          <SideBySideDiffRow key={i} row={row} fields={diff.allFields} side="main" />
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary/70 border-b border-border/30 bg-primary/5">
-                      {currentBranch.branchName} (branch)
+                    <div className="grid grid-cols-2 divide-x divide-border/50 max-h-[320px]">
+                      <div
+                        ref={(el) => {
+                          if (!scrollRefsRef.current[gridId]) scrollRefsRef.current[gridId] = { left: null, right: null }
+                          scrollRefsRef.current[gridId].left = el
+                        }}
+                        className="overflow-auto min-h-0"
+                        onScroll={() => syncHorizontalScroll('left', gridId)}
+                      >
+                        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-b border-border/30 bg-muted/10 sticky top-0 z-10">
+                          {mainBranch.branchName} (base)
+                        </div>
+                        <table className="w-full border-collapse min-w-0">
+                          <thead>
+                            <tr className="border-b border-border/30">
+                              {diff.allFields.map((f) => (
+                                <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0 whitespace-nowrap">
+                                  {f}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/20">
+                            {diff.rows.map((row, i) => (
+                              <SideBySideDiffRow key={i} row={row} fields={diff.allFields} side="main" />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div
+                        ref={(el) => {
+                          if (!scrollRefsRef.current[gridId]) scrollRefsRef.current[gridId] = { left: null, right: null }
+                          scrollRefsRef.current[gridId].right = el
+                        }}
+                        className="overflow-auto min-h-0"
+                        onScroll={() => syncHorizontalScroll('right', gridId)}
+                      >
+                        <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-primary/70 border-b border-border/30 bg-primary/5 sticky top-0 z-10">
+                          {currentBranch.branchName} (branch)
+                        </div>
+                        <table className="w-full border-collapse min-w-0">
+                          <thead>
+                            <tr className="border-b border-border/30">
+                              {diff.allFields.map((f) => (
+                                <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0 whitespace-nowrap">
+                                  {f}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border/20">
+                            {diff.rows.map((row, i) => (
+                              <SideBySideDiffRow key={i} row={row} fields={diff.allFields} side="branch" />
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-border/30">
-                          {diff.allFields.map((f) => (
-                            <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0">
-                              {f}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/20">
-                        {diff.rows.map((row, i) => (
-                          <SideBySideDiffRow key={i} row={row} fields={diff.allFields} side="branch" />
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-border/30">
-                        <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-muted-foreground w-6 border-r border-border/30" />
-                        {diff.allFields.map((f) => (
-                          <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0">
-                            {f}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/20">
-                      {diff.rows
-                        .filter((r) => r.status !== 'unchanged')
-                        .map((row, i) => (
-                          <InlineDiffRow key={i} row={row} fields={diff.allFields} />
-                        ))}
-                      {diff.rows.every((r) => r.status === 'unchanged') && (
-                        <tr>
-                          <td colSpan={diff.allFields.length + 1} className="px-3 py-4 text-center text-xs text-muted-foreground">
-                            All rows are identical
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                )
+              })}
             </div>
-          ))}
+          )}
+
+          {hasAnyChanges && mode === 'inline' && (
+            <div className="flex-1 overflow-auto min-h-0">
+              {changedGrids.map((diff) => (
+                <div key={diff.gridId} className="mb-6">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    <span>Grid: {diff.gridId}</span>
+                    <span className="font-normal normal-case tracking-normal">
+                      ({diff.stats.added + diff.stats.removed + diff.stats.modified} change{diff.stats.added + diff.stats.removed + diff.stats.modified !== 1 ? 's' : ''})
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-border/30">
+                          <th className="px-2 py-1.5 text-center text-[10px] font-semibold text-muted-foreground w-6 border-r border-border/30" />
+                          {diff.allFields.map((f) => (
+                            <th key={f} className="px-3 py-1.5 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-r border-border/30 last:border-r-0">
+                              {f}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/20">
+                        {diff.rows
+                          .filter((r) => r.status !== 'unchanged')
+                          .map((row, i) => (
+                            <InlineDiffRow key={i} row={row} fields={diff.allFields} />
+                          ))}
+                        {diff.rows.every((r) => r.status === 'unchanged') && (
+                          <tr>
+                            <td colSpan={diff.allFields.length + 1} className="px-3 py-4 text-center text-xs text-muted-foreground">
+                              All rows are identical
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Unchanged grids summary */}
           {diffs.some((d) => !d.hasChanges) && hasAnyChanges && (
-            <div className="px-3 py-2 text-[11px] text-muted-foreground/50 border-t border-border/30">
+            <div className="flex-shrink-0 px-3 py-2 text-[11px] text-muted-foreground/50 border-t border-border/30">
               {diffs.filter((d) => !d.hasChanges).length} unchanged grid{diffs.filter((d) => !d.hasChanges).length !== 1 ? 's' : ''} not shown
             </div>
           )}

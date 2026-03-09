@@ -19,7 +19,6 @@ import {
   EditModeUndoButton,
   useUndoKeyboardShortcut,
 } from '@/app/components/tracker-display/edit-mode'
-import { TrackerDataSave } from '@/app/components/tracker-page/TrackerDataSave'
 import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
@@ -48,15 +47,6 @@ interface TrackerPanelProps {
   onReturnToLatest?: () => void
   trackerId?: string | null
   initialGridData?: GridDataSnapshot | null
-  loadedSnapshotId?: string | null
-  loadedSnapshotLabel?: string | null
-  loadedSnapshotUpdatedAt?: string | null
-  latestSnapshotId?: string | null
-  onLoadSnapshot?: (snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => void
-  onSavedNewSnapshot?: (snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => void
-  onClearLoadedSnapshot?: () => void
-  onJumpToLatest?: () => void
-  onRegisterSaveData?: (fn: () => void) => void
   /** Version control props — only relevant when versionControl === true */
   versionControl?: boolean
   vcCurrentBranch?: BranchRecord | null
@@ -85,14 +75,6 @@ export const TrackerPanel = memo(function TrackerPanel({
   onReturnToLatest,
   trackerId,
   initialGridData,
-  loadedSnapshotId,
-  loadedSnapshotLabel,
-  loadedSnapshotUpdatedAt,
-  latestSnapshotId,
-  onLoadSnapshot,
-  onSavedNewSnapshot,
-  onJumpToLatest,
-  onRegisterSaveData,
   versionControl,
   vcCurrentBranch,
   vcBranches,
@@ -100,9 +82,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   onVcBranchCreated,
   onVcMergedToMain,
 }: TrackerPanelProps) {
-  const isViewingLatestSnapshot = loadedSnapshotId != null && loadedSnapshotId === latestSnapshotId
-  const showSavedBar = loadedSnapshotId != null && !isViewingLatestSnapshot
-  const displayKey = `tracker-display-${loadedSnapshotId ?? 'default'}`
+  const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
@@ -158,30 +138,6 @@ export const TrackerPanel = memo(function TrackerPanel({
                 onClick={onReturnToLatest}
               >
                 Return to latest
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
-      {versionControl && showSavedBar && (
-        <div className="absolute top-0 left-0 right-0 z-30 px-4 py-2 bg-muted/80 border-b border-border backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs font-medium text-muted-foreground truncate min-w-0">
-              {loadedSnapshotLabel ?? 'Unnamed'}
-              {loadedSnapshotUpdatedAt && (
-                <span className="text-muted-foreground/80 ml-1">
-                  · {new Date(loadedSnapshotUpdatedAt).toLocaleDateString(undefined, { dateStyle: 'short' })}
-                </span>
-              )}
-            </span>
-            {onJumpToLatest && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs font-medium text-muted-foreground hover:bg-muted shrink-0"
-                onClick={onJumpToLatest}
-              >
-                Jump to latest
               </Button>
             )}
           </div>
@@ -364,16 +320,6 @@ export const TrackerPanel = memo(function TrackerPanel({
                 <Share2 className="h-3.5 w-3.5" />
                 Share
               </Button>
-            )}
-            {versionControl && trackerId && (onLoadSnapshot || onSavedNewSnapshot) && (
-              <TrackerDataSave
-                trackerId={trackerId}
-                trackerDataRef={trackerDataRef as React.RefObject<(() => GridDataSnapshot) | null>}
-                onLoadSnapshot={onLoadSnapshot}
-                onSavedNewSnapshot={onSavedNewSnapshot}
-                onRegisterSaveData={onRegisterSaveData}
-                disabled={isStreamingTracker}
-              />
             )}
             <EditModeUndoButton
               undo={undo}

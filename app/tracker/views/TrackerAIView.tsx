@@ -26,9 +26,12 @@ export interface TrackerEditorViewProps {
   trackerId?: string | null
   initialConversationId?: string | null
   initialMessages?: Message[]
-  initialLoadedSnapshot?: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string } | null
   /** Whether this tracker has version control enabled */
   versionControl?: boolean
+  /** Initial branch name from URL (?branch=...) */
+  initialBranchName?: string | null
+  /** Called when user switches branch so URL can be updated */
+  onBranchChange?: (branchName: string) => void
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
@@ -40,8 +43,9 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     trackerId,
     initialConversationId,
     initialMessages,
-    initialLoadedSnapshot,
     versionControl = false,
+    initialBranchName,
+    onBranchChange,
   } = props
   const {
     input,
@@ -92,8 +96,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     data: GridDataSnapshot
     updatedAt?: string
   }
-  const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
-  const [latestSnapshot, setLatestSnapshot] = useState<LoadedSnapshot | null>(() => initialLoadedSnapshot ?? null)
+  const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(null)
   const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
 
   // --- Version Control state ---
@@ -101,13 +104,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const [vcCurrentBranch, setVcCurrentBranch] = useState<BranchRecord | null>(null)
   const vcCurrentBranchRef = useRef<BranchRecord | null>(null)
   vcCurrentBranchRef.current = vcCurrentBranch
-
-  useEffect(() => {
-    if (initialLoadedSnapshot) {
-      setLoadedSnapshot(initialLoadedSnapshot)
-      setLatestSnapshot(initialLoadedSnapshot)
-    }
-  }, [initialLoadedSnapshot])
 
   // Fetch branches when version control is enabled
   useEffect(() => {
@@ -121,20 +117,19 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         if (cancelled) return
         const branches: BranchRecord[] = data.branches ?? []
         setVcBranches(branches)
-        // Default to main branch
-        const main = branches.find((b) => b.branchName === 'main' && !b.isMerged)
-        if (main) {
-          setVcCurrentBranch(main)
-          // Load main branch data into the snapshot display
-          if (main.data && typeof main.data === 'object') {
-            const snapshot: LoadedSnapshot = {
-              id: main.id,
-              label: main.label ?? main.branchName,
-              data: main.data as GridDataSnapshot,
-              updatedAt: main.updatedAt,
-            }
-            setLoadedSnapshot(snapshot)
-            setLatestSnapshot(snapshot)
+        // Prefer branch from URL, else default to main
+        const selected =
+          (initialBranchName && branches.find((b) => b.branchName === initialBranchName && !b.isMerged)) ??
+          branches.find((b) => b.branchName === 'main' && !b.isMerged)
+        if (selected) {
+          setVcCurrentBranch(selected)
+          if (selected.data && typeof selected.data === 'object') {
+            setLoadedSnapshot({
+              id: selected.id,
+              label: selected.label ?? selected.branchName,
+              data: selected.data as GridDataSnapshot,
+              updatedAt: selected.updatedAt,
+            })
           }
         }
       } catch {
@@ -143,7 +138,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     }
     fetchBranches()
     return () => { cancelled = true }
-  }, [versionControl, trackerId])
+  }, [versionControl, trackerId, initialBranchName])
 
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
   const trackerNavCtx = useTrackerNav()
@@ -290,20 +285,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     setMobileTab('preview')
   }, [])
 
-  const handleLoadSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
-    setLoadedSnapshot(snapshot)
-  }, [])
-  const handleSavedNewSnapshot = useCallback((snapshot: { id: string; label: string | null; data: GridDataSnapshot; updatedAt?: string }) => {
-    setLoadedSnapshot(snapshot)
-    setLatestSnapshot(snapshot)
-  }, [])
-  const handleClearLoadedSnapshot = useCallback(() => {
-    setLoadedSnapshot(null)
-  }, [])
-  const handleJumpToLatest = useCallback(() => {
-    if (latestSnapshot) setLoadedSnapshot(latestSnapshot)
-  }, [latestSnapshot])
-
   const handleReturnToLatest = useCallback(() => {
     setViewingMessageIndex(null)
     if (activeTrackerData) {
@@ -313,19 +294,22 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [activeTrackerData])
 
   // --- Version Control callbacks ---
-  const handleVcBranchSwitch = useCallback((branch: BranchRecord) => {
-    setVcCurrentBranch(branch)
-    if (branch.data && typeof branch.data === 'object') {
-      const snapshot: LoadedSnapshot = {
-        id: branch.id,
-        label: branch.label ?? branch.branchName,
-        data: branch.data as GridDataSnapshot,
-        updatedAt: branch.updatedAt,
+  const handleVcBranchSwitch = useCallback(
+    (branch: BranchRecord) => {
+      setVcCurrentBranch(branch)
+      if (branch.data && typeof branch.data === 'object') {
+        const snapshot: LoadedSnapshot = {
+          id: branch.id,
+          label: branch.label ?? branch.branchName,
+          data: branch.data as GridDataSnapshot,
+          updatedAt: branch.updatedAt,
+        }
+        setLoadedSnapshot(snapshot)
       }
-      setLoadedSnapshot(snapshot)
-      setLatestSnapshot(snapshot)
-    }
-  }, [])
+      onBranchChange?.(branch.branchName)
+    },
+    [onBranchChange]
+  )
 
   const handleVcBranchCreated = useCallback((branch: BranchRecord) => {
     setVcBranches((prev) => [branch, ...prev])
@@ -368,7 +352,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           updatedAt: updated.updatedAt,
         }
         setLoadedSnapshot(snapshot)
-        setLatestSnapshot(snapshot)
       }
     } else {
       // Create initial main branch
@@ -388,7 +371,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           updatedAt: newBranch.updatedAt,
         }
         setLoadedSnapshot(snapshot)
-        setLatestSnapshot(snapshot)
       }
     }
   }, [trackerId, trackerDataRef])
@@ -565,15 +547,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               onReturnToLatest={handleReturnToLatest}
               trackerId={trackerId ?? undefined}
               initialGridData={loadedSnapshot?.data ?? null}
-              loadedSnapshotId={loadedSnapshot?.id ?? null}
-              loadedSnapshotLabel={loadedSnapshot?.label ?? null}
-              loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
-              latestSnapshotId={latestSnapshot?.id ?? null}
-              onLoadSnapshot={versionControl ? handleLoadSnapshot : undefined}
-              onSavedNewSnapshot={versionControl ? handleSavedNewSnapshot : undefined}
-              onClearLoadedSnapshot={handleClearLoadedSnapshot}
-              onJumpToLatest={handleJumpToLatest}
-              onRegisterSaveData={onRegisterSaveData}
               versionControl={versionControl}
               vcCurrentBranch={vcCurrentBranch}
               vcBranches={vcBranches}
@@ -614,15 +587,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           onReturnToLatest={handleReturnToLatest}
           trackerId={trackerId ?? undefined}
           initialGridData={loadedSnapshot?.data ?? null}
-          loadedSnapshotId={loadedSnapshot?.id ?? null}
-          loadedSnapshotLabel={loadedSnapshot?.label ?? null}
-          loadedSnapshotUpdatedAt={loadedSnapshot?.updatedAt ?? null}
-          latestSnapshotId={latestSnapshot?.id ?? null}
-          onLoadSnapshot={versionControl ? handleLoadSnapshot : undefined}
-          onSavedNewSnapshot={versionControl ? handleSavedNewSnapshot : undefined}
-          onClearLoadedSnapshot={handleClearLoadedSnapshot}
-          onJumpToLatest={handleJumpToLatest}
-          onRegisterSaveData={onRegisterSaveData}
           versionControl={versionControl}
           vcCurrentBranch={vcCurrentBranch}
           vcBranches={vcBranches}

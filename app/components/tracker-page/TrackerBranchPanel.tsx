@@ -175,11 +175,17 @@ export function TrackerBranchPanel({
 
   const diffData = useMemo<{ main: BranchInfo; current: BranchInfo } | null>(() => {
     if (!mainBranch || !currentBranch || isOnMain) return null
+    // Use saved branch data for comparison so the diff is reliable. The live grid
+    // (getCurrentData()) can be stale when switching branches because grid state
+    // is not reset, so comparing main to currentBranch.data (saved) ensures we
+    // show actual differences between the two branches.
+    const mainData = mainBranch.data && typeof mainBranch.data === 'object' ? mainBranch.data : {}
+    const currentData = currentBranch.data && typeof currentBranch.data === 'object' ? currentBranch.data : {}
     return {
-      main: mainBranch,
-      current: { ...currentBranch, data: getCurrentData() },
+      main: { ...mainBranch, data: mainData },
+      current: { ...currentBranch, data: currentData },
     }
-  }, [mainBranch, currentBranch, isOnMain, getCurrentData])
+  }, [mainBranch, currentBranch, isOnMain])
 
   return (
     <>
