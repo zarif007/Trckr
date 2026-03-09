@@ -425,7 +425,7 @@ export function ModuleContent({
       sublabel: 'Tracker',
       icon: FileText,
       updatedAt: tracker.updatedAt,
-      href: `/tracker/${tracker.id}`,
+      href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
     }))
     return [...fileRows, ...moduleRows, ...trackerRows]
   }, [projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
@@ -478,7 +478,7 @@ export function ModuleContent({
   return (
     <>
       <main className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
+        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
             <Link href="/dashboard" className="hover:text-foreground transition-colors flex-shrink-0">
               Dashboard
@@ -584,7 +584,7 @@ export function ModuleContent({
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto px-4 py-6">
           <div className="h-full min-h-0">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">

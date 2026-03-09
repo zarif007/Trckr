@@ -196,7 +196,8 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [activeTrackerData, viewingMessageIndex])
 
   const effectiveDisplaySchema = useMemo(() => {
-    if (isLoading && streamedDisplayTracker) {
+    const isTrackerBusy = isLoading || isResolvingExpressions
+    if (isTrackerBusy && streamedDisplayTracker) {
       return streamedDisplayTracker
     }
     if (viewingMessageIndex !== null) {
@@ -206,7 +207,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       return activeTrackerData
     }
     return schema
-  }, [isLoading, streamedDisplayTracker, viewingMessageIndex, activeTrackerData, schema, lastSyncedTracker])
+  }, [
+    isLoading,
+    isResolvingExpressions,
+    streamedDisplayTracker,
+    viewingMessageIndex,
+    activeTrackerData,
+    schema,
+    lastSyncedTracker,
+  ])
 
   const handleSchemaChange = useCallback((next: TrackerResponse) => {
     setSchema(next)

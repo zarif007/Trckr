@@ -72,7 +72,7 @@ export function ProjectFileContent({
 
   return (
     <main className="flex-1 flex flex-col min-w-0 min-h-0">
-      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
+      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80">
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
           <Link href="/dashboard" className="hover:text-foreground transition-colors">
             Dashboard
@@ -88,7 +88,7 @@ export function ProjectFileContent({
           <span className="font-medium text-foreground">{label}</span>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-6 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+      <div className="flex-1 overflow-auto px-4 py-6 flex flex-col items-center justify-center gap-3 text-muted-foreground">
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs">Coming soon. Edit and configuration will be available here.</p>
         <Link

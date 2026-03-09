@@ -5,7 +5,7 @@
 export function DashboardHomeSkeleton() {
   return (
     <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background animate-in fade-in-50 duration-150">
-      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80 backdrop-blur-sm">
+      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <span className="h-7 w-24 rounded-md bg-muted/50 animate-pulse" />
           <span className="h-7 w-24 rounded-md bg-muted/50 animate-pulse" />
@@ -17,7 +17,7 @@ export function DashboardHomeSkeleton() {
         </div>
         <span className="h-3 w-16 rounded bg-muted/40 animate-pulse" />
       </div>
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-4 py-6">
         <div className="flex flex-wrap gap-4 content-start">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
@@ -51,7 +51,7 @@ export function DashboardPageSkeleton({
   return (
     <main className="flex-1 flex flex-col min-w-0 min-h-0 animate-in fade-in-50 duration-150">
       {/* Top bar */}
-      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-4 gap-3 bg-background/80">
+      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80">
         <div className="flex items-center gap-2 min-w-0">
           <span className="h-3 w-12 rounded bg-muted/60" />
           {breadcrumbCount >= 2 && (
@@ -74,7 +74,7 @@ export function DashboardPageSkeleton({
       </div>
 
       {/* Content: flex wrap card placeholders */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto px-4 py-6">
         <div className="flex flex-wrap gap-6 w-full">
           {Array.from({ length: 8 }).map((_, i) => (
             <div

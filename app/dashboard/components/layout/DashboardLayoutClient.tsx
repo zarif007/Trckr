@@ -17,9 +17,8 @@ import {
   Trash2,
   FileText,
   LayoutList,
-  GitBranch,
-  Layers,
 } from 'lucide-react'
+import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -64,7 +63,8 @@ function updateModuleInTree(
 
 /**
  * Renders a single tracker link in the sidebar.
- * List companions (listForSchemaId != null) get a LayoutList icon and slightly different styling.
+ * All trackers (single, multi, version controlled) use the same FileText icon.
+ * List companions (listForSchemaId != null) use LayoutList icon.
  */
 function SidebarTrackerLink({
   tracker,
@@ -75,15 +75,15 @@ function SidebarTrackerLink({
   currentTrackerId: string | null
   indent?: boolean
 }) {
-  const isActive = tracker.id === currentTrackerId
   const isList = tracker.listForSchemaId != null
-  const isMulti = tracker.instance === 'MULTI'
+  const isActive = tracker.id === currentTrackerId
+  const href = isList ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
 
   return (
     <div className={cn('flex items-center min-w-0', indent ? 'pl-3' : 'pl-1.5')}>
       <span className="w-[18px] flex-shrink-0" aria-hidden />
       <Link
-        href={`/tracker/${tracker.id}`}
+        href={href}
         className={cn(
           'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
           isActive
@@ -93,10 +93,6 @@ function SidebarTrackerLink({
       >
         {isList ? (
           <LayoutList className="h-3 w-3 flex-shrink-0 opacity-70" />
-        ) : isMulti ? (
-          <Layers className="h-3 w-3 flex-shrink-0 opacity-70" />
-        ) : tracker.versionControl ? (
-          <GitBranch className="h-3 w-3 flex-shrink-0 opacity-70" />
         ) : (
           <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
         )}
@@ -110,7 +106,7 @@ function SidebarTrackerLink({
 
 /**
  * Renders a tracker (and its .list companion, if any) in the sidebar.
- * Companion is indented under the parent tracker.
+ * Companion appears directly under the parent tracker with aligned icons.
  */
 function SidebarTrackerGroup({
   tracker,
@@ -128,7 +124,6 @@ function SidebarTrackerGroup({
         <SidebarTrackerLink
           tracker={listCompanion}
           currentTrackerId={currentTrackerId}
-          indent
         />
       )}
     </>
@@ -200,14 +195,14 @@ function SidebarModule({
 
   return (
     <div className="min-w-0 pl-1.5">
-      <div className="flex items-center min-w-0">
+      <div className="flex items-center min-w-0 group">
         {hasExpandableContent ? (
           <button
             onClick={(e) => {
               e.preventDefault()
               setExpanded((v) => !v)
             }}
-            className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
+            className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             {expanded ? (
               <ChevronDown className="h-3 w-3" />
@@ -306,11 +301,11 @@ function SidebarProject({
 
   return (
     <div className="min-w-0 pl-1.5">
-      <div className="flex items-center min-w-0">
+      <div className="flex items-center min-w-0 group">
         {hasChildren && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
+            className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
           >
             {expanded ? (
               <ChevronDown className="h-3 w-3" />
@@ -531,8 +526,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     : null
   const currentModuleId =
     pathSegments[3] === 'module' ? pathSegments[4] ?? null : null
+  const isTrackerDetail = pathname.startsWith('/tracker/')
+  const isTrackerList = pathname.startsWith('/tracker-list/')
   const currentTrackerId =
-    pathname.startsWith('/tracker/') && pathSegments[2] ? pathSegments[2] : null
+    (isTrackerDetail || isTrackerList) && pathSegments[2] ? pathSegments[2] : null
 
   const allTrackers = projects.flatMap((p) => [
     ...(p.trackerSchemas ?? []),
@@ -618,187 +615,353 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>,
           document.body,
         )}
-      <div className="flex flex-1 min-h-0">
-        <aside
-          className={cn(
-            'flex-shrink-0 border-r border-border/50 flex flex-col bg-muted/20 transition-[width] duration-200',
-            sidebarCollapsed ? 'w-12' : 'w-52'
-          )}
-        >
-          <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-            <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
-              <div className="flex items-center gap-1 min-w-0">
-                <Link
-                  href="/"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                  aria-label="Go to home"
-                >
-                  <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="text-current"
+      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+        {sidebarCollapsed ? (
+          <>
+            <aside
+              className={cn(
+                'flex-shrink-0 w-12 border-r border-border/50 flex flex-col bg-muted/20 transition-[width] duration-200',
+              )}
+            >
+              <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+                <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1 min-w-0">
+                    <Link
+                      href="/"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                      aria-label="Go to home"
                     >
-                      <path
-                        d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
-                        fill="currentColor"
-                        className="opacity-100"
-                      />
-                      <path
-                        d="M12 12L20 7.5V16.5L12 21V12Z"
-                        fill="currentColor"
-                        className="opacity-70"
-                      />
-                      <path
-                        d="M12 12L4 7.5V16.5L12 21V12Z"
-                        fill="currentColor"
-                        className="opacity-40"
-                      />
-                    </svg>
-                  </span>
-                </Link>
-                <Link
-                  href="/dashboard"
-                  className={cn(
-                    'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
-                    isDashboardHome
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-                  )}
-                >
-                  {sidebarCollapsed ? (
-                    <span className="text-xs font-medium w-6 text-center">D</span>
-                  ) : (
-                    <span className="text-xs truncate">Dashboard</span>
-                  )}
-                </Link>
-              </div>
-            </div>
-            {!sidebarCollapsed && (
-              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
-                <div className="flex items-center gap-1 min-w-0">
-                  <button
-                    type="button"
-                    onClick={() => setProjectSectionOpen((v) => !v)}
-                    className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
-                  >
-                    {projectSectionOpen ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
-                    )}
-                  </button>
-                  <Link
-                    href="/dashboard/projects"
-                    className={cn(
-                      'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
-                      isProjectsPage
-                        ? 'text-primary'
-                        : 'text-muted-foreground/70 hover:text-muted-foreground'
-                    )}
-                  >
-                    Project
-                  </Link>
+                      <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="text-current"
+                        >
+                          <path
+                            d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
+                            fill="currentColor"
+                            className="opacity-100"
+                          />
+                          <path
+                            d="M12 12L20 7.5V16.5L12 21V12Z"
+                            fill="currentColor"
+                            className="opacity-70"
+                          />
+                          <path
+                            d="M12 12L4 7.5V16.5L12 21V12Z"
+                            fill="currentColor"
+                            className="opacity-40"
+                          />
+                        </svg>
+                      </span>
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      className={cn(
+                        'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                        isDashboardHome
+                          ? 'bg-primary/10 text-primary font-medium'
+                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                      )}
+                    >
+                      {sidebarCollapsed ? (
+                        <span className="text-xs font-medium w-6 text-center">D</span>
+                      ) : (
+                        <span className="text-xs truncate">Dashboard</span>
+                      )}
+                    </Link>
+                  </div>
                 </div>
-                {projectSectionOpen &&
-                  projects.map((project) => (
-                    <SidebarProject
-                      key={project.id}
-                      project={project}
-                      currentProjectId={currentProjectId}
-                      currentModuleId={currentModuleId}
-                      currentTrackerId={currentTrackerId}
-                      onContextMenu={openSidebarContextMenu}
-                    />
-                  ))}
-                <div className="flex items-center gap-1 min-w-0 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setRecentSectionOpen((v) => !v)}
-                    className="p-0.5 rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0"
-                  >
-                    {recentSectionOpen ? (
-                      <ChevronDown className="h-3 w-3" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" />
+                {!sidebarCollapsed && (
+                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1 min-w-0 group">
+                      <button
+                        type="button"
+                        onClick={() => setProjectSectionOpen((v) => !v)}
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        {projectSectionOpen ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </button>
+                      <Link
+                        href="/dashboard/projects"
+                        className={cn(
+                          'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                          isProjectsPage
+                            ? 'text-primary'
+                            : 'text-muted-foreground/70 hover:text-muted-foreground'
+                        )}
+                      >
+                        Project
+                      </Link>
+                    </div>
+                    {projectSectionOpen &&
+                      projects.map((project) => (
+                        <SidebarProject
+                          key={project.id}
+                          project={project}
+                          currentProjectId={currentProjectId}
+                          currentModuleId={currentModuleId}
+                          currentTrackerId={currentTrackerId}
+                          onContextMenu={openSidebarContextMenu}
+                        />
+                      ))}
+                    <div className="flex items-center gap-1 min-w-0 mt-2 group">
+                      <button
+                        type="button"
+                        onClick={() => setRecentSectionOpen((v) => !v)}
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        {recentSectionOpen ? (
+                          <ChevronDown className="h-3 w-3" />
+                        ) : (
+                          <ChevronRight className="h-3 w-3" />
+                        )}
+                      </button>
+                      <Link
+                        href="/dashboard/recents"
+                        className={cn(
+                          'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                          isRecentsPage
+                            ? 'text-primary'
+                            : 'text-muted-foreground/70 hover:text-muted-foreground'
+                        )}
+                      >
+                        Recent
+                      </Link>
+                    </div>
+                    {recentSectionOpen && recentTrackers.length > 0 && (
+                      <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
+                        {recentTrackers.map((tracker) => (
+                          <SidebarTrackerLink
+                            key={tracker.id}
+                            tracker={tracker}
+                            currentTrackerId={currentTrackerId}
+                          />
+                        ))}
+                      </div>
                     )}
-                  </button>
-                  <Link
-                    href="/dashboard/recents"
-                    className={cn(
-                      'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
-                      isRecentsPage
-                        ? 'text-primary'
-                        : 'text-muted-foreground/70 hover:text-muted-foreground'
-                    )}
-                  >
-                    Recent
-                  </Link>
-                </div>
-                {recentSectionOpen && recentTrackers.length > 0 && (
-                  <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
-                    {recentTrackers.map((tracker) => (
-                      <SidebarTrackerLink
-                        key={tracker.id}
-                        tracker={tracker}
-                        currentTrackerId={currentTrackerId}
-                      />
-                    ))}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-          <div
-            className={cn(
-              'border-t border-border/50 p-2 bg-background/50',
-              sidebarCollapsed && 'flex flex-col items-center gap-1'
-            )}
-          >
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
-              <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              {!sidebarCollapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    This PC
-                  </p>
-                  <p className="text-[11px] text-foreground/80 tabular-nums truncate">
-                    {projects.length} folders · {totalTrackers} trackers
-                  </p>
-                  {lastActivity && (
-                    <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
-                      Last:{' '}
-                      {new Date(lastActivity.date).toLocaleDateString(
-                        undefined,
-                        { month: 'short', day: 'numeric' }
+              <div
+                className={cn(
+                  'border-t border-border/50 p-2 bg-background/50',
+                  sidebarCollapsed && 'flex flex-col items-center gap-1'
+                )}
+              >
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
+                  <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  {!sidebarCollapsed && (
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                        This PC
+                      </p>
+                      <p className="text-[11px] text-foreground/80 tabular-nums truncate">
+                        {projects.length} folders · {totalTrackers} trackers
+                      </p>
+                      {lastActivity && (
+                        <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                          Last:{' '}
+                          {new Date(lastActivity.date).toLocaleDateString(
+                            undefined,
+                            { month: 'short', day: 'numeric' }
+                          )}
+                        </p>
                       )}
-                    </p>
+                    </div>
                   )}
                 </div>
-              )}
-            </div>
-            {sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(false)}
-                className="p-1 rounded hover:bg-muted/60 text-muted-foreground"
-                aria-label="Expand sidebar"
+                {sidebarCollapsed && (
+                  <button
+                    onClick={() => setSidebarCollapsed(false)}
+                    className="p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                    aria-label="Expand sidebar"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                )}
+                {!sidebarCollapsed && (
+                  <button
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="mt-1 w-full flex justify-end p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                    aria-label="Collapse sidebar"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5 rotate-[270deg]" />
+                  </button>
+                )}
+              </div>
+            </aside>
+            <div className="flex-1 flex flex-col min-w-0 min-h-0">{children}</div>
+          </>
+        ) : (
+          <div className="flex-1 min-h-0 min-w-0 flex flex-col">
+            <Group
+              orientation="horizontal"
+              className="flex-1 min-h-0"
+              id="dashboard-sidebar"
+              style={{ flex: 1, minHeight: 0 }}
+            >
+              <Panel
+                id="dashboard-sidebar-panel"
+                defaultSize="10"
+                minSize="12"
+                maxSize="30"
+                className="flex flex-col min-h-0"
               >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
-            {!sidebarCollapsed && (
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="mt-1 w-full flex justify-end p-1 rounded hover:bg-muted/60 text-muted-foreground"
-                aria-label="Collapse sidebar"
-              >
-                <ChevronDown className="h-3.5 w-3.5 rotate-[270deg]" />
-              </button>
-            )}
+                <aside className="h-full w-full flex flex-col border-r border-border/50 bg-muted/20 min-w-0 overflow-hidden">
+                  <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
+                    <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <Link
+                          href="/"
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                          aria-label="Go to home"
+                        >
+                          <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="text-current"
+                            >
+                              <path d="M12 3L20 7.5L12 12L4 7.5L12 3Z" fill="currentColor" className="opacity-100" />
+                              <path d="M12 12L20 7.5V16.5L12 21V12Z" fill="currentColor" className="opacity-70" />
+                              <path d="M12 12L4 7.5V16.5L12 21V12Z" fill="currentColor" className="opacity-40" />
+                            </svg>
+                          </span>
+                        </Link>
+                        <Link
+                          href="/dashboard"
+                          className={cn(
+                            'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                            isDashboardHome
+                              ? 'bg-primary/10 text-primary font-medium'
+                              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                          )}
+                        >
+                          <span className="text-xs truncate">Dashboard</span>
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-center gap-1 min-w-0 group">
+                        <button
+                          type="button"
+                          onClick={() => setProjectSectionOpen((v) => !v)}
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          {projectSectionOpen ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </button>
+                        <Link
+                          href="/dashboard/projects"
+                          className={cn(
+                            'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                            isProjectsPage
+                              ? 'text-primary'
+                              : 'text-muted-foreground/70 hover:text-muted-foreground',
+                          )}
+                        >
+                          Project
+                        </Link>
+                      </div>
+                      {projectSectionOpen &&
+                        projects.map((project) => (
+                          <SidebarProject
+                            key={project.id}
+                            project={project}
+                            currentProjectId={currentProjectId}
+                            currentModuleId={currentModuleId}
+                            currentTrackerId={currentTrackerId}
+                            onContextMenu={openSidebarContextMenu}
+                          />
+                        ))}
+                      <div className="flex items-center gap-1 min-w-0 mt-2 group">
+                        <button
+                          type="button"
+                          onClick={() => setRecentSectionOpen((v) => !v)}
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          {recentSectionOpen ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </button>
+                        <Link
+                          href="/dashboard/recents"
+                          className={cn(
+                            'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                            isRecentsPage
+                              ? 'text-primary'
+                              : 'text-muted-foreground/70 hover:text-muted-foreground',
+                          )}
+                        >
+                          Recent
+                        </Link>
+                      </div>
+                      {recentSectionOpen && recentTrackers.length > 0 && (
+                        <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
+                          {recentTrackers.map((tracker) => (
+                            <SidebarTrackerLink
+                              key={tracker.id}
+                              tracker={tracker}
+                              currentTrackerId={currentTrackerId}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="border-t border-border/50 p-2 bg-background/50">
+                    <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
+                      <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                          This PC
+                        </p>
+                        <p className="text-[11px] text-foreground/80 tabular-nums truncate">
+                          {projects.length} folders · {totalTrackers} trackers
+                        </p>
+                        {lastActivity && (
+                          <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                            Last:{' '}
+                            {new Date(lastActivity.date).toLocaleDateString(
+                              undefined,
+                              { month: 'short', day: 'numeric' },
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSidebarCollapsed(true)}
+                      className="mt-1 w-full flex justify-end p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                      aria-label="Collapse sidebar"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5 rotate-[270deg]" />
+                    </button>
+                  </div>
+                </aside>
+              </Panel>
+              <Separator
+                className="shrink-0 w-1 bg-border/50 hover:bg-border active:bg-primary/30 transition-colors cursor-col-resize flex items-stretch"
+                style={{ minWidth: 6 }}
+              />
+              <Panel id="dashboard-main-panel" defaultSize="90" minSize="70" className="flex flex-col min-w-0 min-h-0">
+                {children}
+              </Panel>
+            </Group>
           </div>
-        </aside>
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">{children}</div>
+        )}
       </div>
     </div>
   )

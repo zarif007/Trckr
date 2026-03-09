@@ -140,7 +140,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
   return (
     <>
       <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-4 gap-3 bg-background/80 backdrop-blur-sm">
+        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-3 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             {view !== 'recents' && (
               <Button
@@ -200,7 +200,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto px-4 py-6">
           {(view === 'all' || view === 'projects') && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -314,12 +314,14 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 Recent trackers
               </h2>
               <div className="flex flex-col gap-1">
-                {recentTrackers.map((tracker) => (
-                  <Link
-                    key={tracker.id}
-                    href={`/tracker/${tracker.id}`}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
-                  >
+                {recentTrackers.map((tracker) => {
+                  const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+                  return (
+                    <Link
+                      key={tracker.id}
+                      href={href}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                    >
                     <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
                       <FileText className="h-4 w-4 text-muted-foreground" />
                     </div>
@@ -334,7 +336,8 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     </span>
                     <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
-                ))}
+                  )
+                })}
               </div>
             </motion.div>
           )}
@@ -352,12 +355,14 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 <p className="text-sm text-muted-foreground">No trackers yet.</p>
               ) : (
                 <div className="flex flex-col gap-1">
-                  {recentTrackers.map((tracker) => (
-                    <Link
-                      key={tracker.id}
-                      href={`/tracker/${tracker.id}`}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
-                    >
+                  {recentTrackers.map((tracker) => {
+                    const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+                    return (
+                      <Link
+                        key={tracker.id}
+                        href={href}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                      >
                       <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -372,7 +377,8 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       </span>
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Link>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </motion.div>

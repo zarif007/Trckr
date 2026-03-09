@@ -13,6 +13,7 @@ import {
   Search,
   X,
   ChevronRight,
+  Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -82,50 +83,64 @@ function InstanceRow({
 }) {
   const preview = getDataPreview(instance.data)
   const rowCount = Object.values(instance.data).reduce((acc, rows) => acc + rows.length, 0)
+  const authorName = instance.author?.name || instance.author?.email || '—'
 
   return (
-    <div
+    <tr
       className={cn(
-        'group flex items-center gap-3 mx-3 px-3 py-3 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer',
+        'group cursor-pointer border-b border-border/40 hover:bg-muted/40 transition-colors',
         isDeleting && 'opacity-50 pointer-events-none',
       )}
       onClick={() => onOpen(instance.id)}
     >
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-muted/70 flex items-center justify-center text-[11px] font-medium text-muted-foreground tabular-nums">
+      <td className="px-3 py-2 text-[11px] sm:text-xs text-muted-foreground/70 tabular-nums w-[52px] text-right align-middle">
         {index + 1}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-medium text-foreground truncate">
+      </td>
+      <td className="px-3 py-2 align-middle">
+        <div className="text-[12px] sm:text-[13px] font-medium text-foreground truncate">
           {instance.label || `Instance ${index + 1}`}
         </div>
-        <div className="flex items-center gap-1.5 mt-0.5 text-[11px] text-muted-foreground/60">
-          <span className="truncate">{preview}</span>
-          <span className="flex-shrink-0">·</span>
-          <span className="flex-shrink-0 tabular-nums">{rowCount} row{rowCount !== 1 ? 's' : ''}</span>
+        <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+          <span className="truncate max-w-[220px] sm:max-w-[320px]">{preview}</span>
+          <span className="hidden sm:inline-flex flex-shrink-0 text-muted-foreground/40">·</span>
+          <span className="hidden sm:inline-flex flex-shrink-0 tabular-nums">
+            {rowCount} row{rowCount !== 1 ? 's' : ''}
+          </span>
         </div>
-      </div>
-
-      <div className="flex-shrink-0 text-[11px] text-muted-foreground/50 hidden sm:block">
+      </td>
+      <td className="px-3 py-2 text-[11px] sm:text-xs text-muted-foreground/80 tabular-nums align-middle hidden md:table-cell">
+        {rowCount}
+      </td>
+      <td className="px-3 py-2 text-[11px] sm:text-xs text-muted-foreground/80 align-middle hidden lg:table-cell">
+        {instance.branchName || 'main'}
+      </td>
+      <td className="px-3 py-2 text-[11px] sm:text-xs text-muted-foreground/80 align-middle hidden md:table-cell">
+        {authorName}
+      </td>
+      <td className="px-3 py-2 text-[11px] sm:text-xs text-muted-foreground/70 tabular-nums align-middle hidden sm:table-cell">
         {formatRelative(instance.createdAt)}
-      </div>
-
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(instance.id)
-          }}
-          disabled={isDeleting}
-          className="h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
-          title="Delete"
-        >
-          {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-        </button>
-        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
-      </div>
-    </div>
+      </td>
+      <td className="px-3 py-2 text-right align-middle w-[72px]">
+        <div className="flex items-center justify-end gap-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(instance.id)
+            }}
+            disabled={isDeleting}
+            className={cn(
+              'h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground/30 hover:text-destructive hover:bg-destructive/10 transition-colors',
+              isDeleting && 'cursor-wait',
+            )}
+            title="Delete"
+          >
+            {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/30 flex-shrink-0" />
+        </div>
+      </td>
+    </tr>
   )
 }
 
@@ -149,6 +164,10 @@ export function TrackerInstanceListView({
   const [page, setPage] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [showBranchColumn, setShowBranchColumn] = useState(true)
+  const [showAuthorColumn, setShowAuthorColumn] = useState(true)
+  const [showCreatedColumn, setShowCreatedColumn] = useState(true)
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; label: string } | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const PAGE_SIZE = 50
@@ -247,6 +266,21 @@ export function TrackerInstanceListView({
           {instances.length > 0 && (
             <button
               type="button"
+              onClick={() => setSettingsOpen(!settingsOpen)}
+              className={cn(
+                'h-7 w-7 rounded-md flex items-center justify-center transition-colors',
+                settingsOpen
+                  ? 'bg-muted text-foreground'
+                  : 'text-muted-foreground/60 hover:text-foreground hover:bg-muted/50',
+              )}
+              title="List settings"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+            </button>
+          )}
+          {instances.length > 0 && (
+            <button
+              type="button"
               onClick={() => {
                 setSearchOpen(!searchOpen)
                 if (searchOpen) setSearchQuery('')
@@ -305,6 +339,49 @@ export function TrackerInstanceListView({
         </div>
       )}
 
+      {/* Settings panel (collapsible) */}
+      {settingsOpen && (
+        <div className="flex-shrink-0 px-4 py-2 border-b border-border/30 bg-muted/10">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-medium text-muted-foreground/80">List settings</p>
+              <p className="text-[11px] text-muted-foreground/60">
+                Configure which columns are visible in the table.
+              </p>
+            </div>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3 text-[11px] text-muted-foreground">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-3 w-3 rounded border-border/70"
+                checked={showBranchColumn}
+                onChange={(e) => setShowBranchColumn(e.target.checked)}
+              />
+              <span>Branch column</span>
+            </label>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-3 w-3 rounded border-border/70"
+                checked={showAuthorColumn}
+                onChange={(e) => setShowAuthorColumn(e.target.checked)}
+              />
+              <span>Author column</span>
+            </label>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-3 w-3 rounded border-border/70"
+                checked={showCreatedColumn}
+                onChange={(e) => setShowCreatedColumn(e.target.checked)}
+              />
+              <span>Created column</span>
+            </label>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="flex-1 overflow-auto min-h-0">
         {loading && (
@@ -342,7 +419,7 @@ export function TrackerInstanceListView({
         )}
 
         {!loading && !error && instances.length > 0 && (
-          <div className="py-1">
+          <div className="py-2 px-3">
             {filteredInstances.length === 0 && searchQuery && (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
                 <Search className="h-5 w-5 opacity-20" />
@@ -350,19 +427,60 @@ export function TrackerInstanceListView({
               </div>
             )}
 
-            {filteredInstances.map((instance, i) => (
-              <InstanceRow
-                key={instance.id}
-                instance={instance}
-                index={i + page * PAGE_SIZE}
-                onOpen={handleOpenInstance}
-                onDelete={handleRequestDelete}
-                isDeleting={deletingId === instance.id}
-              />
-            ))}
+            {filteredInstances.length > 0 && (
+              <div className="rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-[0_0_0_1px_rgba(15,23,42,0.02)]">
+                <div className="max-h-[calc(100vh-220px)] overflow-auto">
+                  <table className="w-full border-collapse text-[12px] sm:text-xs">
+                    <thead className="bg-muted/60 text-muted-foreground/80">
+                      <tr className="border-b border-border/60">
+                        <th className="px-3 py-2 text-[11px] sm:text-xs font-medium text-right w-[52px] align-middle">
+                          #
+                        </th>
+                        <th className="px-3 py-2 text-left text-[11px] sm:text-xs font-medium align-middle">
+                          Instance
+                        </th>
+                        <th className="px-3 py-2 text-right text-[11px] sm:text-xs font-medium align-middle hidden md:table-cell">
+                          Rows
+                        </th>
+                        {showBranchColumn && (
+                          <th className="px-3 py-2 text-left text-[11px] sm:text-xs font-medium align-middle hidden lg:table-cell">
+                            Branch
+                          </th>
+                        )}
+                        {showAuthorColumn && (
+                          <th className="px-3 py-2 text-left text-[11px] sm:text-xs font-medium align-middle hidden md:table-cell">
+                            Author
+                          </th>
+                        )}
+                        {showCreatedColumn && (
+                          <th className="px-3 py-2 text-left text-[11px] sm:text-xs font-medium align-middle hidden sm:table-cell">
+                            Created
+                          </th>
+                        )}
+                        <th className="px-3 py-2 text-right text-[11px] sm:text-xs font-medium align-middle w-[72px]">
+                          {/* Actions */}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredInstances.map((instance, i) => (
+                        <InstanceRow
+                          key={instance.id}
+                          instance={instance}
+                          index={i + page * PAGE_SIZE}
+                          onOpen={handleOpenInstance}
+                          onDelete={handleRequestDelete}
+                          isDeleting={deletingId === instance.id}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {total > PAGE_SIZE && (
-              <div className="flex items-center justify-center gap-2 px-4 py-4">
+              <div className="flex items-center justify-center gap-2 px-1 py-4">
                 <Button
                   variant="ghost"
                   size="sm"
