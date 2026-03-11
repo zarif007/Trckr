@@ -126,7 +126,7 @@ export function NewTrackerDialog({
         if (onCreated) {
           onCreated(data.id)
         } else {
-          router.push(`/tracker/${data.id}?new=true`)
+          router.push(`/tracker/${data.id}/edit?new=true`)
         }
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Error creating tracker'

@@ -22,7 +22,7 @@ const createTrackerBodySchema = z
  * Body: { name?, schema?, new?, projectId?, moduleId?, instance?, versionControl? }
  * - If new: true, creates a new tracker: use body.schema if valid, else empty schema; no schema required.
  * - Otherwise requires schema.
- * - instance defaults to SINGLE. Multi-instance trackers auto-create a ".list" companion schema.
+ * - instance defaults to SINGLE. Multi-instance trackers are stored as a single tracker schema.
  * - versionControl is only honoured for SINGLE instance (forced false for MULTI).
  */
 export async function POST(request: Request) {

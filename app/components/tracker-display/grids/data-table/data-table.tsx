@@ -43,6 +43,7 @@ import { EntryFormDialog } from './entry-form-dialog'
 import type { StyleOverrides } from '../../types'
 import { resolveTableStyles } from '@/lib/style-utils'
 import type { FieldCalculationRule } from '@/lib/functions/types'
+import type { ReactNode } from 'react'
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
@@ -93,6 +94,10 @@ interface DataTableProps<TData, TValue> {
   pageSizeOptions?: number[]
   /** Initial sort (column id and direction). */
   defaultSort?: { id: string; desc?: boolean }
+  /** Optional custom renderer for the action column cell. */
+  renderRowAction?: (args: { row: TData; rowIndex: number }) => ReactNode
+  /** When false and no custom action is provided, hide the actions column. */
+  showRowDetails?: boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -119,6 +124,8 @@ export function DataTable<TData, TValue>({
   pageSize: pageSizeProp,
   pageSizeOptions,
   defaultSort: defaultSortProp,
+  renderRowAction,
+  showRowDetails = true,
 }: DataTableProps<TData, TValue>) {
   void pageSizeOptions
   const pageSize = pageSizeProp ?? 10
@@ -167,7 +174,9 @@ export function DataTable<TData, TValue>({
   }, [columnVisibility, forcedHidden])
 
   const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
-    () => [
+    () => {
+      const actionColumnEnabled = Boolean(renderRowAction) || showRowDetails
+      return [
       ...(deletable
         ? [
           {
@@ -202,7 +211,8 @@ export function DataTable<TData, TValue>({
         ]
         : []),
       ...columns,
-      {
+      ...(actionColumnEnabled
+        ? [{
         id: 'actions',
         size: 44,
         minSize: 44,
@@ -266,6 +276,14 @@ export function DataTable<TData, TValue>({
             </Dialog>
           ) : null,
         cell: ({ row }) => {
+          if (renderRowAction) {
+            return (
+              <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                {renderRowAction({ row: row.original as TData, rowIndex: row.index })}
+              </div>
+            )
+          }
+          if (!showRowDetails) return null
           return (
             <Button
               variant="ghost"
@@ -278,9 +296,10 @@ export function DataTable<TData, TValue>({
             </Button>
           )
         },
-      } as ColumnDef<TData, TValue>,
-    ],
-    [columns, deletable, editLayoutAble],
+      } as ColumnDef<TData, TValue>] : []),
+    ]
+    },
+    [columns, deletable, editLayoutAble, renderRowAction, showRowDetails],
   )
 
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])

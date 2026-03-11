@@ -128,26 +128,5 @@ export async function createTrackerForUser(params: {
     },
   })
 
-  // For MULTI instance: auto-create the ".list" companion schema
-  if (instance === Instance.MULTI) {
-    const listName = await resolveUniqueTrackerName(
-      `${resolvedName}.list`,
-      project.id,
-      params.moduleId,
-    )
-    await prisma.trackerSchema.create({
-      data: {
-        projectId: project.id,
-        moduleId: params.moduleId ?? null,
-        name: listName,
-        instance: Instance.MULTI,
-        versionControl: false,
-        listForSchemaId: tracker.id,
-        // List companion has the same schema structure as the parent
-        schema: params.schema,
-      },
-    })
-  }
-
   return tracker
 }

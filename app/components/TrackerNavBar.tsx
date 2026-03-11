@@ -93,7 +93,12 @@ export default function TrackerNavBar() {
   const { theme, setTheme } = useTheme()
   const ctx = useTrackerNav()
   const trackerNav = ctx?.trackerNav ?? null
-  const { onSaveTracker, onSaveData, isAgentBuilding } = ctx?.saveState ?? { onSaveTracker: null, onSaveData: null, isAgentBuilding: false }
+  const { onSaveTracker, onSaveData, isAgentBuilding, primaryNavAction } = ctx?.saveState ?? {
+    onSaveTracker: null,
+    onSaveData: null,
+    isAgentBuilding: false,
+    primaryNavAction: null,
+  }
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
   const [savingTracker, setSavingTracker] = useState(false)
   const [savingData, setSavingData] = useState(false)
@@ -139,6 +144,16 @@ export default function TrackerNavBar() {
           </div>
 
           <div className="flex items-center gap-2">
+            {primaryNavAction && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => router.push(primaryNavAction.href)}
+              >
+                {primaryNavAction.label}
+              </Button>
+            )}
             {hasSave && (
               <Popover open={saveMenuOpen} onOpenChange={setSaveMenuOpen}>
                 <PopoverTrigger asChild>

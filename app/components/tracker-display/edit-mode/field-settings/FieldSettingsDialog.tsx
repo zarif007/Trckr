@@ -10,6 +10,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Settings2, ShieldCheck, Sigma, ArrowRight, Wand2, Link2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useFieldSettingsState } from './useFieldSettingsState'
 import type { FieldSettingsDialogProps } from './types'
 import { GeneralTab } from './GeneralTab'
@@ -20,6 +21,7 @@ import { ValidationsTab } from './ValidationsTab'
 import { DynamicOptionsBuilder } from '../dynamic-options'
 
 export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
+  const { defaultTab = 'general', allowedTabs } = props
   const state = useFieldSettingsState(props)
   const {
     open,
@@ -36,6 +38,28 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
     isDynamicField,
     bindingEnabled,
   } = state
+
+  const resolvedAllowedTabs =
+    allowedTabs && allowedTabs.length > 0
+      ? allowedTabs
+      : ([
+          'general',
+          'validations',
+          'calculations',
+          'dependsOn',
+          'bindings',
+          'dynamicOptions',
+        ] as const)
+
+  const initialTab = resolvedAllowedTabs.includes(defaultTab)
+    ? defaultTab
+    : resolvedAllowedTabs[0]
+
+  const [activeTab, setActiveTab] = useState(initialTab)
+
+  useEffect(() => {
+    if (open) setActiveTab(initialTab)
+  }, [open, initialTab, field?.id, gridId])
 
   if (!open || !field || !schema || !props.onSchemaChange) return null
 
@@ -54,32 +78,52 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Tabs defaultValue="general" className="flex flex-col flex-1 overflow-hidden">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) =>
+              setActiveTab(
+                v as
+                  | 'general'
+                  | 'validations'
+                  | 'calculations'
+                  | 'dependsOn'
+                  | 'bindings'
+                  | 'dynamicOptions'
+              )
+            }
+            className="flex flex-col flex-1 overflow-hidden"
+          >
             <div className="shrink-0 border-b border-border/50 px-4 py-2 bg-muted/10">
               <TabsList className="w-full h-8">
-                <TabsTrigger value="general" className="gap-1.5 text-xs">
-                  <Settings2 className="h-3.5 w-3.5" />
-                  <span>General</span>
-                </TabsTrigger>
-                <TabsTrigger value="validations" className="gap-1.5 text-xs">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  <span>Validations</span>
-                  {rules.length > 0 && (
-                    <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
-                      {rules.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="calculations" className="gap-1.5 text-xs">
-                  <Sigma className="h-3.5 w-3.5" />
-                  <span>Calculations</span>
-                  {calculationRule && (
-                    <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
-                      1
-                    </span>
-                  )}
-                </TabsTrigger>
-                {gridId && field && (
+                {resolvedAllowedTabs.includes('general') && (
+                  <TabsTrigger value="general" className="gap-1.5 text-xs">
+                    <Settings2 className="h-3.5 w-3.5" />
+                    <span>General</span>
+                  </TabsTrigger>
+                )}
+                {resolvedAllowedTabs.includes('validations') && (
+                  <TabsTrigger value="validations" className="gap-1.5 text-xs">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span>Validations</span>
+                    {rules.length > 0 && (
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
+                        {rules.length}
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                {resolvedAllowedTabs.includes('calculations') && (
+                  <TabsTrigger value="calculations" className="gap-1.5 text-xs">
+                    <Sigma className="h-3.5 w-3.5" />
+                    <span>Calculations</span>
+                    {calculationRule && (
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                        1
+                      </span>
+                    )}
+                  </TabsTrigger>
+                )}
+                {resolvedAllowedTabs.includes('dependsOn') && gridId && field && (
                   <TabsTrigger value="dependsOn" className="gap-1.5 text-xs">
                     <Link2 className="h-3.5 w-3.5" />
                     <span>Depends on</span>
@@ -90,7 +134,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     )}
                   </TabsTrigger>
                 )}
-                {isBindable && (
+                {resolvedAllowedTabs.includes('bindings') && isBindable && (
                   <TabsTrigger value="bindings" className="gap-1.5 text-xs">
                     <ArrowRight className="h-3.5 w-3.5" />
                     <span>Bindings</span>
@@ -101,7 +145,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     )}
                   </TabsTrigger>
                 )}
-                {isDynamicField && (
+                {resolvedAllowedTabs.includes('dynamicOptions') && isDynamicField && (
                   <TabsTrigger value="dynamicOptions" className="gap-1.5 text-xs">
                     <Wand2 className="h-3.5 w-3.5" />
                     <span>Dynamic</span>
@@ -112,7 +156,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
 
             <div className="flex-1 overflow-y-auto min-h-0">
               <div className="p-4 space-y-4">
-                <TabsContent value="general" className="mt-0 space-y-5">
+                {resolvedAllowedTabs.includes('general') && (
+                  <TabsContent value="general" className="mt-0 space-y-5">
                   <GeneralTab
                     gridId={gridId}
                     label={state.label}
@@ -143,9 +188,10 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     maxLength={state.maxLength}
                     setMaxLength={state.setMaxLength}
                   />
-                </TabsContent>
+                  </TabsContent>
+                )}
 
-                {isBindable && (
+                {resolvedAllowedTabs.includes('bindings') && isBindable && (
                   <TabsContent value="bindings" className="mt-5 space-y-5">
                     <BindingsTab
                       gridId={gridId}
@@ -167,7 +213,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                   </TabsContent>
                 )}
 
-                {isDynamicField && (
+                {resolvedAllowedTabs.includes('dynamicOptions') && isDynamicField && (
                   <TabsContent value="dynamicOptions" className="mt-5 space-y-5">
                     <DynamicOptionsBuilder
                       schema={schema}
@@ -188,7 +234,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                   </TabsContent>
                 )}
 
-                <TabsContent value="calculations" className="mt-5 space-y-5">
+                {resolvedAllowedTabs.includes('calculations') && (
+                  <TabsContent value="calculations" className="mt-5 space-y-5">
                   <CalculationsTab
                     gridId={gridId}
                     schema={schema}
@@ -197,9 +244,10 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     setCalculationRule={state.setCalculationRule}
                     availableFields={state.availableFields}
                   />
-                </TabsContent>
+                  </TabsContent>
+                )}
 
-                {gridId && field && (
+                {resolvedAllowedTabs.includes('dependsOn') && gridId && field && (
                   <TabsContent value="dependsOn" className="mt-5 space-y-5">
                     <DependsOnTab
                       gridId={gridId}
@@ -213,7 +261,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                   </TabsContent>
                 )}
 
-                <TabsContent value="validations" className="mt-5 space-y-5">
+                {resolvedAllowedTabs.includes('validations') && (
+                  <TabsContent value="validations" className="mt-5 space-y-5">
                   <ValidationsTab
                     gridId={gridId}
                     schema={schema}
@@ -228,7 +277,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     showJsonInStructure={state.showJsonInStructure}
                     setShowJsonInStructure={state.setShowJsonInStructure}
                   />
-                </TabsContent>
+                  </TabsContent>
+                )}
               </div>
             </div>
           </Tabs>

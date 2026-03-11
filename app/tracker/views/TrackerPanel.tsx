@@ -31,6 +31,7 @@ interface TrackerPanelProps {
   schema: TrackerResponse
   editMode: boolean
   setEditMode: (v: boolean) => void
+  allowSchemaEditToggle?: boolean
   isChatOpen: boolean
   setIsChatOpen: (v: boolean | ((prev: boolean) => boolean)) => void
   isStreamingTracker: boolean
@@ -60,6 +61,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   schema,
   editMode,
   setEditMode,
+  allowSchemaEditToggle = true,
   isChatOpen,
   setIsChatOpen,
   isStreamingTracker,
@@ -146,53 +148,55 @@ export const TrackerPanel = memo(function TrackerPanel({
       <div
         className={`absolute top-4 z-20 flex flex-wrap items-center justify-end gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-4'}`}
       >
-        <div className={`inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
-          {hideChatToggle ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                className={`p-1.5 rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={!editMode}
-                aria-label="Preview"
-                disabled={isStreamingTracker}
-              >
-                <Eye className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMode(true)}
-                className={`p-1.5 rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={editMode}
-                aria-label="Edit"
-                disabled={isStreamingTracker}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setEditMode(false)}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={!editMode}
-                disabled={isStreamingTracker}
-              >
-                Preview
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditMode(true)}
-                className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
-                aria-pressed={editMode}
-                disabled={isStreamingTracker}
-              >
-                Edit
-              </button>
-            </>
-          )}
-        </div>
+        {allowSchemaEditToggle && (
+          <div className={`inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
+            {hideChatToggle ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(false)}
+                  className={`p-1.5 rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  aria-pressed={!editMode}
+                  aria-label="Preview"
+                  disabled={isStreamingTracker}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(true)}
+                  className={`p-1.5 rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  aria-pressed={editMode}
+                  aria-label="Edit"
+                  disabled={isStreamingTracker}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(false)}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  aria-pressed={!editMode}
+                  disabled={isStreamingTracker}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditMode(true)}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  aria-pressed={editMode}
+                  disabled={isStreamingTracker}
+                >
+                  Edit
+                </button>
+              </>
+            )}
+          </div>
+        )}
         {!hideChatToggle && (
           <Button
             variant="secondary"
@@ -344,11 +348,10 @@ export const TrackerPanel = memo(function TrackerPanel({
       </Dialog>
 
       <div
-        className={`h-full overflow-y-auto ${
-          hideChatToggle
-            ? 'px-1 pt-14 pb-2'
-            : 'px-4 pt-16 pb-6'
-        }`}
+        className={`h-full overflow-y-auto ${hideChatToggle
+          ? 'px-1 pt-14 pb-2'
+          : 'px-4 pt-16 pb-6'
+          }`}
       >
         <TrackerDisplayErrorBoundary key={displayKey}>
           {isStreamingTracker ? (

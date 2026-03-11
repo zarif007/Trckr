@@ -3,10 +3,10 @@
 import React, { use, Suspense, useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { TrackerAIView } from '../page'
-import { TrackerPageSkeleton } from './TrackerPageSkeleton'
-import { TrackerInstanceListView } from '../views/TrackerInstanceListView'
-import type { TrackerResponse, Message } from '../hooks/useTrackerChat'
+import { TrackerAIView } from '../../page'
+import { TrackerPageSkeleton } from '../TrackerPageSkeleton'
+import { TrackerInstanceListView } from '../../views/TrackerInstanceListView'
+import type { TrackerResponse, Message } from '../../hooks/useTrackerChat'
 
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
 
@@ -29,7 +29,6 @@ type TrackerResource = {
   schema: TrackerResponse
 }
 
-/** Merge tracker.name into schema so the view and top bar show the correct name. */
 function schemaWithTrackerName(data: TrackerRecord): TrackerResponse {
   const base = (data.schema ?? {}) as TrackerResponse
   const name = data.name ?? base?.name ?? null
@@ -87,7 +86,7 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
   return p
 }
 
-function TrackerByIdContent({
+function TrackerByIdEditContent({
   id,
   isNew,
   instanceId,
@@ -109,7 +108,6 @@ function TrackerByIdContent({
     messages: [],
   })
 
-  // Load conversation for this tracker once we have the tracker
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -188,7 +186,6 @@ function TrackerByIdContent({
     )
   }
 
-  // If this is a .list companion schema, render the instance list view
   if (state.tracker?.listForSchemaId) {
     return (
       <TrackerInstanceListView
@@ -203,15 +200,16 @@ function TrackerByIdContent({
     <TrackerAIView
       initialSchema={schema}
       onSaveTracker={handleSaveTracker}
-      initialEditMode={false}
-      initialChatOpen={false}
+      initialEditMode={isNew}
+      initialChatOpen={isNew}
       trackerId={id}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       versionControl={state.tracker?.versionControl ?? false}
       initialBranchName={initialBranchName}
       onBranchChange={onBranchChange}
-      pageMode="data"
+      pageMode="schema"
+      primaryNavAction={{ label: 'Open tracker', href: `/tracker/${id}` }}
     />
   )
 }
@@ -246,7 +244,7 @@ class TrackerErrorBoundary extends React.Component<
   }
 }
 
-export default function TrackerByIdPage() {
+export default function TrackerEditByIdPage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -265,7 +263,7 @@ export default function TrackerByIdPage() {
         next.delete('branch')
       }
       const qs = next.toString()
-      router.replace(`/tracker/${id}${qs ? `?${qs}` : ''}`, { scroll: false })
+      router.replace(`/tracker/${id}/edit${qs ? `?${qs}` : ''}`, { scroll: false })
     },
     [id, router, searchParams]
   )
@@ -292,7 +290,7 @@ export default function TrackerByIdPage() {
   return (
     <Suspense fallback={<TrackerPageSkeleton />}>
       <TrackerErrorBoundary onBack={handleBack}>
-        <TrackerByIdContent
+        <TrackerByIdEditContent
           id={id}
           isNew={isNew}
           instanceId={instanceId}

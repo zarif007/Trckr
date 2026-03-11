@@ -17,6 +17,9 @@ import {
   Trash2,
   FileText,
   LayoutList,
+  Link2,
+  ShieldCheck,
+  FunctionSquare,
 } from 'lucide-react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
@@ -34,6 +37,21 @@ import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
   | { kind: 'module'; id: string; label: string }
+  | { kind: 'tracker'; id: string; label: string; trackerHrefs: {
+      trackerPageHref: string
+      schemaEditHref: string
+      listHref: string | null
+      bindingsHref: string
+      validationsHref: string
+      calculationsHref: string
+    }
+  }
+
+function getTrackerDisplayName(name: string | null, isList: boolean): string {
+  if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
+  if (isList && name.endsWith('.list')) return name.slice(0, -5)
+  return name
+}
 
 function moduleContainsActive(
   mod: Module,
@@ -66,39 +84,66 @@ function updateModuleInTree(
  * All trackers (single, multi, version controlled) use the same FileText icon.
  * List companions (listForSchemaId != null) use LayoutList icon.
  */
+function buildTrackerHrefs(tracker: TrackerSchema) {
+  const parentId = tracker.listForSchemaId ?? tracker.id
+  const isList = tracker.listForSchemaId != null
+  return {
+    trackerPageHref: `/tracker/${parentId}`,
+    schemaEditHref: `/tracker/${parentId}/edit`,
+    listHref: isList ? `/tracker-list/${tracker.id}` : (tracker.instance === 'MULTI' ? `/tracker-list/${tracker.id}` : null),
+    bindingsHref: `/tracker/${parentId}/bindings`,
+    validationsHref: `/tracker/${parentId}/validations`,
+    calculationsHref: `/tracker/${parentId}/calculations`,
+  }
+}
+
 function SidebarTrackerLink({
   tracker,
   currentTrackerId,
   indent = false,
+  onContextMenu,
 }: {
   tracker: TrackerSchema
   currentTrackerId: string | null
   indent?: boolean
+  onContextMenu?: (e: React.MouseEvent, item: SidebarContextItem) => void
 }) {
   const isList = tracker.listForSchemaId != null
   const isActive = tracker.id === currentTrackerId
-  const href = isList ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+  const parentTrackerId = isList ? tracker.listForSchemaId : tracker.id
+  const fallbackHref = isList ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+  const dataHref = parentTrackerId ? `/tracker/${parentTrackerId}` : fallbackHref
 
   return (
     <div className={cn('flex items-center min-w-0', indent ? 'pl-3' : 'pl-1.5')}>
-      <span className="w-[18px] flex-shrink-0" aria-hidden />
+      <span className="w-[6px] flex-shrink-0" aria-hidden />
+      <span className="mr-1.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground">
+        {isList ? <LayoutList className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+      </span>
       <Link
-        href={href}
+        href={dataHref}
         className={cn(
-          'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+          'flex items-start gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden group',
           isActive
             ? 'bg-primary/10 text-primary font-medium'
             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
         )}
+        onContextMenu={
+          onContextMenu
+            ? (e) =>
+                onContextMenu(e, {
+                  kind: 'tracker',
+                  id: tracker.id,
+                  label: getTrackerDisplayName(tracker.name, isList),
+                  trackerHrefs: buildTrackerHrefs(tracker),
+                })
+            : undefined
+        }
       >
-        {isList ? (
-          <LayoutList className="h-3 w-3 flex-shrink-0 opacity-70" />
-        ) : (
-          <FileText className="h-3 w-3 flex-shrink-0 opacity-70" />
-        )}
         <span className="text-[11px] truncate flex-1 min-w-0">
-          {tracker.name || (isList ? 'Untitled list' : 'Untitled tracker')}
+          {getTrackerDisplayName(tracker.name, isList)}
         </span>
+        <ChevronRight className="h-3 w-3 mt-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-70" />
       </Link>
     </div>
   )
@@ -112,18 +157,25 @@ function SidebarTrackerGroup({
   tracker,
   listCompanion,
   currentTrackerId,
+  onContextMenu,
 }: {
   tracker: TrackerSchema
   listCompanion?: TrackerSchema
   currentTrackerId: string | null
+  onContextMenu?: (e: React.MouseEvent, item: SidebarContextItem) => void
 }) {
   return (
     <>
-      <SidebarTrackerLink tracker={tracker} currentTrackerId={currentTrackerId} />
+      <SidebarTrackerLink
+        tracker={tracker}
+        currentTrackerId={currentTrackerId}
+        onContextMenu={onContextMenu}
+      />
       {listCompanion && (
         <SidebarTrackerLink
           tracker={listCompanion}
           currentTrackerId={currentTrackerId}
+          onContextMenu={onContextMenu}
         />
       )}
     </>
@@ -194,29 +246,12 @@ function SidebarModule({
   }, [containsActive, hasExpandableContent])
 
   return (
-    <div className="min-w-0 pl-1.5">
-      <div className="flex items-center min-w-0 group">
-        {hasExpandableContent ? (
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              setExpanded((v) => !v)
-            }}
-            className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            {expanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
-          </button>
-        ) : (
-          <span className="w-[18px] flex-shrink-0" aria-hidden />
-        )}
+    <div className="min-w-0">
+      <div className="flex items-start min-w-0 group">
         <Link
           href={`/dashboard/${projectId}/module/${mod.id}`}
           className={cn(
-            'flex items-center gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+            'flex items-start gap-2 pl-2 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isModuleActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -229,19 +264,42 @@ function SidebarModule({
             })
           }
         >
-          <Folder className="h-3 w-3 flex-shrink-0 opacity-70" />
+          <span className="relative h-3 w-3 flex-shrink-0 mt-[2px]">
+            <Folder className="h-3 w-3 opacity-70 transition-opacity duration-150 group-hover:opacity-0" />
+            {hasExpandableContent ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setExpanded((v) => !v)
+                }}
+                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
+                aria-label={expanded ? 'Collapse' : 'Expand'}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            ) : (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
+                aria-hidden
+              >
+                <ChevronRight className="h-3 w-3" />
+              </span>
+            )}
+          </span>
           <span className="text-[11px] truncate flex-1 min-w-0">
             {mod.name || 'Untitled module'}
           </span>
           {(trackers.length > 0 || children.length > 0) && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0 w-8 text-right ml-auto">
               {trackers.length + children.length}
             </span>
           )}
         </Link>
       </div>
       {expanded && hasExpandableContent && (
-        <div className="pl-1.5 mr-1 mt-0.5 flex flex-col gap-0.5 min-w-0">
+        <div className="pl-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
           {children.map((child) => (
             <SidebarModule
               key={child.id}
@@ -259,6 +317,7 @@ function SidebarModule({
               tracker={tracker}
               listCompanion={listCompanion}
               currentTrackerId={currentTrackerId}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>
@@ -300,25 +359,12 @@ function SidebarProject({
     (project.projectFiles?.length ?? 0)
 
   return (
-    <div className="min-w-0 pl-1.5">
-      <div className="flex items-center min-w-0 group">
-        {hasChildren && (
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            {expanded ? (
-              <ChevronDown className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
-          </button>
-        )}
+    <div className="min-w-0">
+      <div className="flex items-start min-w-0 group">
         <Link
           href={`/dashboard/${project.id}`}
           className={cn(
-            'flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors min-w-0 flex-1 overflow-hidden',
-            !hasChildren && 'ml-[18px]',
+            'flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -331,19 +377,42 @@ function SidebarProject({
             })
           }
         >
-          <FolderOpen className="h-4 w-4 flex-shrink-0 opacity-70" />
+          <span className="relative h-4 w-4 flex-shrink-0 mt-[1px]">
+            <FolderOpen className="h-4 w-4 opacity-70 transition-opacity duration-150 group-hover:opacity-0" />
+            {hasChildren ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setExpanded((v) => !v)
+                }}
+                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
+                aria-label={expanded ? 'Collapse' : 'Expand'}
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <span
+                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
+                aria-hidden
+              >
+                <ChevronRight className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </span>
           <span className="text-xs truncate flex-1 min-w-0">
             {project.name || 'Untitled folder'}
           </span>
           {itemCount > 0 && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0">
+            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0 w-8 text-right ml-auto">
               {itemCount}
             </span>
           )}
         </Link>
       </div>
       {expanded && (
-        <div className="pl-1.5 mr-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
+        <div className="pl-1.5 mt-0.5 flex flex-col gap-0.5 min-w-0">
           {project.modules.map((mod) => (
             <SidebarModule
               key={mod.id}
@@ -361,6 +430,7 @@ function SidebarProject({
               tracker={tracker}
               listCompanion={listCompanion}
               currentTrackerId={currentTrackerId}
+              onContextMenu={onContextMenu}
             />
           ))}
         </div>
@@ -586,7 +656,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed z-[100] min-w-[160px] rounded-lg border bg-popover text-popover-foreground shadow-md py-1 animate-in fade-in-0 zoom-in-95"
+            className="fixed z-[100] min-w-[192px] rounded-lg border bg-popover text-popover-foreground shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
             style={{
               left: sidebarContextMenu.x,
               top: sidebarContextMenu.y,
@@ -594,24 +664,93 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             role="menu"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              role="menuitem"
-              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80"
-              onClick={() => handleSidebarRename(sidebarContextMenu.item)}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Rename
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80 text-destructive"
-              onClick={() => handleSidebarDelete(sidebarContextMenu.item)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </button>
+            {sidebarContextMenu.item.kind === 'tracker' ? (() => {
+              const { trackerHrefs: hrefs } = sidebarContextMenu.item
+              const linkCls = 'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
+              const sectionCls = 'px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground select-none'
+              return (
+                <>
+                  <div className="px-3 pb-2 pt-1.5 border-b border-border/60">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[11px] font-medium truncate">{sidebarContextMenu.item.label}</span>
+                        <span className="text-[10px] text-muted-foreground/70">Tracker</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className={sectionCls}>Navigate</div>
+                  <Link href={hrefs.trackerPageHref} className={linkCls} role="menuitem">
+                    <FileText className="h-3.5 w-3.5" /> Open Tracker
+                  </Link>
+                  <Link href={hrefs.schemaEditHref} className={linkCls} role="menuitem">
+                    <Pencil className="h-3.5 w-3.5" /> Edit Schema
+                  </Link>
+                  {hrefs.listHref && (
+                    <Link href={hrefs.listHref} className={linkCls} role="menuitem">
+                      <LayoutList className="h-3.5 w-3.5" /> View List
+                    </Link>
+                  )}
+                  <div className="my-1 mx-2 h-px bg-border/60" />
+                  <div className={sectionCls}>Configure</div>
+                  <Link href={hrefs.bindingsHref} className={linkCls} role="menuitem">
+                    <Link2 className="h-3.5 w-3.5" /> Bindings
+                  </Link>
+                  <Link href={hrefs.validationsHref} className={linkCls} role="menuitem">
+                    <ShieldCheck className="h-3.5 w-3.5" /> Validations
+                  </Link>
+                  <Link href={hrefs.calculationsHref} className={linkCls} role="menuitem">
+                    <FunctionSquare className="h-3.5 w-3.5" /> Calculations
+                  </Link>
+                </>
+              )
+            })() : (
+              <>
+                <div className="px-3 pb-2 pt-1.5 border-b border-border/60">
+                  <div className="flex items-center gap-2 group">
+                    <span className="relative inline-flex h-5 w-5 items-center justify-center text-muted-foreground">
+                      {sidebarContextMenu.item.kind === 'project' ? (
+                        <>
+                          <FolderOpen className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                          <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                        </>
+                      ) : (
+                        <>
+                          <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                          <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                        </>
+                      )}
+                    </span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[11px] font-medium truncate">
+                        {sidebarContextMenu.item.label}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/70">
+                        {sidebarContextMenu.item.kind === 'project' ? 'Project' : 'Module'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80"
+                  onClick={() => handleSidebarRename(sidebarContextMenu.item)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80 text-destructive"
+                  onClick={() => handleSidebarDelete(sidebarContextMenu.item)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+              </>
+            )}
           </div>,
           document.body,
         )}
@@ -624,7 +763,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
+                <div className="flex-shrink-0 flex flex-col gap-0.5 min-w-0">
                   <div className="flex items-center gap-1 min-w-0">
                     <Link
                       href="/"
@@ -679,13 +818,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={() => setProjectSectionOpen((v) => !v)}
-                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                       >
-                        {projectSectionOpen ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
-                        )}
+                        <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                          <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                          <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                        </span>
                       </button>
                       <Link
                         href="/dashboard/projects"
@@ -714,13 +852,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={() => setRecentSectionOpen((v) => !v)}
-                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                       >
-                        {recentSectionOpen ? (
-                          <ChevronDown className="h-3 w-3" />
-                        ) : (
-                          <ChevronRight className="h-3 w-3" />
-                        )}
+                        <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                          <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                          <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                        </span>
                       </button>
                       <Link
                         href="/dashboard/recents"
@@ -741,6 +878,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                             key={tracker.id}
                             tracker={tracker}
                             currentTrackerId={currentTrackerId}
+                            onContextMenu={openSidebarContextMenu}
                           />
                         ))}
                       </div>
@@ -815,7 +953,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               >
                 <aside className="h-full w-full flex flex-col border-r border-border/50 bg-muted/20 min-w-0 overflow-hidden">
                   <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                    <div className="p-2 flex-shrink-0 flex flex-col gap-0.5 min-w-0">
+                    <div className="flex-shrink-0 flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-center gap-1 min-w-0">
                         <Link
                           href="/"
@@ -853,13 +991,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <button
                           type="button"
                           onClick={() => setProjectSectionOpen((v) => !v)}
-                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                         >
-                          {projectSectionOpen ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
+                          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                            <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                            <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                          </span>
                         </button>
                         <Link
                           href="/dashboard/projects"
@@ -888,13 +1025,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <button
                           type="button"
                           onClick={() => setRecentSectionOpen((v) => !v)}
-                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                         >
-                          {recentSectionOpen ? (
-                            <ChevronDown className="h-3 w-3" />
-                          ) : (
-                            <ChevronRight className="h-3 w-3" />
-                          )}
+                          <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                            <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                            <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                          </span>
                         </button>
                         <Link
                           href="/dashboard/recents"
@@ -915,6 +1051,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                               key={tracker.id}
                               tracker={tracker}
                               currentTrackerId={currentTrackerId}
+                              onContextMenu={openSidebarContextMenu}
                             />
                           ))}
                         </div>

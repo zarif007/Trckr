@@ -9,6 +9,12 @@ type ListTrackerRecord = {
   id: string
   name: string | null
   listForSchemaId: string | null
+  instance?: string
+}
+
+function getListDisplayName(name: string | null): string {
+  if (!name) return 'Instances'
+  return name.endsWith('.list') ? name.slice(0, -5) : name
 }
 
 function TrackerListContent({ id }: { id: string }) {
@@ -34,10 +40,6 @@ function TrackerListContent({ id }: { id: string }) {
         }
         const data = (await res.json()) as ListTrackerRecord
         if (!cancelled) {
-          if (!data.listForSchemaId) {
-            setError('This tracker is not a list companion')
-            return
-          }
           setRecord(data)
         }
       } catch {
@@ -79,12 +81,26 @@ function TrackerListContent({ id }: { id: string }) {
     )
   }
 
+  const parentTrackerId =
+    record.listForSchemaId ?? (record.instance === 'MULTI' ? record.id : null)
+
+  if (!parentTrackerId) {
+    return (
+      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
+        <p className="text-muted-foreground text-sm">This tracker does not have an instance list</p>
+        <Button variant="outline" onClick={handleBack}>
+          Back
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen font-sans bg-background text-foreground">
       <TrackerInstanceListView
         listSchemaId={record.id}
-        parentTrackerId={record.listForSchemaId!}
-        listName={record.name ?? 'Instances'}
+        parentTrackerId={parentTrackerId}
+        listName={getListDisplayName(record.name)}
       />
     </div>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect, type MouseEvent } from 'react'
 import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import {
@@ -9,6 +9,7 @@ import {
   FileText,
   Folder,
   ChevronRight,
+  MoreHorizontal,
   Users,
   Settings,
   ScrollText,
@@ -43,6 +44,12 @@ const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
 }
 
 const STALE_TIME_MS = 60 * 1000
+
+function getTrackerDisplayName(name: string | null, isList: boolean): string {
+  if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
+  if (isList && name.endsWith('.list')) return name.slice(0, -5)
+  return name
+}
 
 function updateModuleInTree(
   modules: Module[],
@@ -355,6 +362,11 @@ export function ProjectContent({
 
   const tableRows = useMemo(() => {
     if (!project) return []
+    const listCompanionByParent = new Map(
+      projectLevelTrackers
+        .filter((t) => t.listForSchemaId != null)
+        .map((t) => [t.listForSchemaId as string, t.id]),
+    )
     const fileRows = projectFiles.map((file: ProjectFile) => ({
       kind: 'file' as const,
       id: file.id,
@@ -373,15 +385,31 @@ export function ProjectContent({
       updatedAt: mod.updatedAt,
       href: `/dashboard/${projectId}/module/${mod.id}`,
     }))
-    const trackerRows = projectLevelTrackers.map((tracker) => ({
-      kind: 'tracker' as const,
-      id: tracker.id,
-      label: tracker.name || 'Untitled tracker',
-      sublabel: 'Tracker',
-      icon: FileText,
-      updatedAt: tracker.updatedAt,
-      href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
-    }))
+    const trackerRows = projectLevelTrackers.map((tracker) => {
+      const parentId = tracker.listForSchemaId ?? tracker.id
+      const listHref = tracker.listForSchemaId
+        ? `/tracker-list/${tracker.id}`
+        : tracker.instance === 'MULTI'
+          ? `/tracker-list/${tracker.id}`
+          : (listCompanionByParent.get(tracker.id) ? `/tracker-list/${listCompanionByParent.get(tracker.id)}` : null)
+      return {
+        kind: 'tracker' as const,
+        id: tracker.id,
+        label: getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null),
+        sublabel: 'Tracker',
+        icon: FileText,
+        updatedAt: tracker.updatedAt,
+        href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
+        trackerHrefs: {
+          trackerPageHref: `/tracker/${parentId}`,
+          schemaEditHref: `/tracker/${parentId}/edit`,
+          listHref,
+          bindingsHref: `/tracker/${parentId}/bindings`,
+          validationsHref: `/tracker/${parentId}/validations`,
+          calculationsHref: `/tracker/${parentId}/calculations`,
+        },
+      }
+    })
     return [...fileRows, ...moduleRows, ...trackerRows]
   }, [projectId, project, projectFiles, modules, projectLevelTrackers])
 
@@ -389,7 +417,7 @@ export function ProjectContent({
     async (trackerId: string) => {
       await fetchProjects()
       invalidateProjectAndProjects()
-      router.push(`/tracker/${trackerId}?new=true`)
+      router.push(`/tracker/${trackerId}/edit?new=true`)
     },
     [fetchProjects, invalidateProjectAndProjects, router],
   )
@@ -497,6 +525,7 @@ export function ProjectContent({
                     kind: row.kind,
                     id: row.id,
                     label: row.label,
+                    ...('trackerHrefs' in row ? { trackerHrefs: row.trackerHrefs } : {}),
                   }
                   const isRenamingThis =
                     renaming &&
@@ -506,7 +535,7 @@ export function ProjectContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
-                      className="flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0"
+                      className="relative flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0 group/card"
                     >
                       <button
                         type="button"
@@ -554,6 +583,19 @@ export function ProjectContent({
                           </span>
                         )}
                       </button>
+                      {row.kind === 'tracker' && !isRenamingThis && (
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-muted/80 hover:text-foreground group-hover/card:opacity-100"
+                          aria-label="Tracker actions"
+                          onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                            e.stopPropagation()
+                            openContextMenu(e, contextItem)
+                          }}
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
                   )
                 })}

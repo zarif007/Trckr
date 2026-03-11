@@ -8,14 +8,33 @@ import {
   type MouseEvent,
 } from 'react'
 import { createPortal } from 'react-dom'
-import { Pencil, Trash2 } from 'lucide-react'
+import Link from 'next/link'
+import {
+  FileText,
+  Pencil,
+  Trash2,
+  LayoutList,
+  Link2,
+  ShieldCheck,
+  FunctionSquare,
+} from 'lucide-react'
 
 export type ContextMenuRowKind = 'file' | 'module' | 'tracker' | 'project'
+
+export type TrackerHrefs = {
+  trackerPageHref: string
+  schemaEditHref: string
+  listHref: string | null
+  bindingsHref: string
+  validationsHref: string
+  calculationsHref: string
+}
 
 export type ContextMenuItem = {
   kind: ContextMenuRowKind
   id: string
   label: string
+  trackerHrefs?: TrackerHrefs
 }
 
 export type RenamingState = {
@@ -179,6 +198,13 @@ export function useRenameDeleteContextMenu({
   }
 }
 
+const menuLinkClass =
+  'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
+const menuBtnClass =
+  'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
+const sectionLabelClass =
+  'px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground select-none'
+
 export function RenameDeleteContextMenuPortal({
   contextMenu,
   onStartRename,
@@ -189,32 +215,95 @@ export function RenameDeleteContextMenuPortal({
   onDelete: (item: ContextMenuItem) => void
 }) {
   if (!contextMenu || typeof document === 'undefined') return null
-  return createPortal(
+
+  const { item } = contextMenu
+  const hrefs = item.trackerHrefs
+
+  const menu = (
     <div
-      className="fixed z-[100] min-w-[160px] rounded-lg border bg-popover text-popover-foreground shadow-md py-1 animate-in fade-in-0 zoom-in-95"
+      className="fixed z-[100] min-w-[192px] rounded-lg border bg-popover text-popover-foreground shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
       style={{ left: contextMenu.x, top: contextMenu.y }}
       role="menu"
       onClick={(e) => e.stopPropagation()}
     >
-      <button
-        type="button"
-        role="menuitem"
-        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80"
-        onClick={() => onStartRename(contextMenu.item)}
-      >
-        <Pencil className="h-3.5 w-3.5" />
-        Rename
-      </button>
-      <button
-        type="button"
-        role="menuitem"
-        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80 text-destructive"
-        onClick={() => onDelete(contextMenu.item)}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-        Delete
-      </button>
-    </div>,
-    document.body,
+      {hrefs ? (
+        <>
+          <div className={sectionLabelClass}>Navigate</div>
+          <Link href={hrefs.trackerPageHref} className={menuLinkClass} role="menuitem">
+            <FileText className="h-3.5 w-3.5" />
+            Open Tracker
+          </Link>
+          <Link href={hrefs.schemaEditHref} className={menuLinkClass} role="menuitem">
+            <Pencil className="h-3.5 w-3.5" />
+            Edit Schema
+          </Link>
+          {hrefs.listHref && (
+            <Link href={hrefs.listHref} className={menuLinkClass} role="menuitem">
+              <LayoutList className="h-3.5 w-3.5" />
+              View List
+            </Link>
+          )}
+
+          <div className="my-1 mx-2 h-px bg-border/60" />
+          <div className={sectionLabelClass}>Configure</div>
+          <Link href={hrefs.bindingsHref} className={menuLinkClass} role="menuitem">
+            <Link2 className="h-3.5 w-3.5" />
+            Bindings
+          </Link>
+          <Link href={hrefs.validationsHref} className={menuLinkClass} role="menuitem">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Validations
+          </Link>
+          <Link href={hrefs.calculationsHref} className={menuLinkClass} role="menuitem">
+            <FunctionSquare className="h-3.5 w-3.5" />
+            Calculations
+          </Link>
+
+          <div className="my-1 mx-2 h-px bg-border/60" />
+          <div className={sectionLabelClass}>Manage</div>
+          <button
+            type="button"
+            role="menuitem"
+            className={menuBtnClass}
+            onClick={() => onStartRename(item)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rename
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${menuBtnClass} text-destructive`}
+            onClick={() => onDelete(item)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            role="menuitem"
+            className={menuBtnClass}
+            onClick={() => onStartRename(item)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rename
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={`${menuBtnClass} text-destructive`}
+            onClick={() => onDelete(item)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </>
+      )}
+    </div>
   )
+
+  return createPortal(menu, document.body)
 }

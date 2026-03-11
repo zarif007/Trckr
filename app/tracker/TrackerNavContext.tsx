@@ -18,6 +18,7 @@ export type TrackerSaveState = {
   onSaveTracker: (() => void) | null
   onSaveData: (() => void) | null
   isAgentBuilding: boolean
+  primaryNavAction: { label: string; href: string } | null
 }
 
 const TrackerNavContext = createContext<{
@@ -31,6 +32,7 @@ const initialSaveState: TrackerSaveState = {
   onSaveTracker: null,
   onSaveData: null,
   isAgentBuilding: false,
+  primaryNavAction: null,
 }
 
 export function TrackerNavProvider({ children }: { children: ReactNode }) {

@@ -32,6 +32,10 @@ export interface TrackerEditorViewProps {
   initialBranchName?: string | null
   /** Called when user switches branch so URL can be updated */
   onBranchChange?: (branchName: string) => void
+  /** Controls which capabilities are exposed in the page */
+  pageMode?: 'full' | 'data' | 'schema'
+  /** Optional header navigation button */
+  primaryNavAction?: { label: string; href: string } | null
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
@@ -46,7 +50,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     versionControl = false,
     initialBranchName,
     onBranchChange,
+    pageMode = 'full',
+    primaryNavAction = null,
   } = props
+  const isDataPage = pageMode === 'data'
+  const isSchemaPage = pageMode === 'schema'
+  const canEditSchema = !isDataPage
+  const allowSaveTracker = !isDataPage
+  const allowSaveData = !isSchemaPage
   const {
     input,
     setInput,
@@ -82,7 +93,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const isDesktop = useIsDesktop()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [leftWidth, setLeftWidth] = useState<number | null>(null)
-  const [editMode, setEditMode] = useState(initialEditMode)
+  const [editMode, setEditMode] = useState(initialEditMode && canEditSchema)
   const [isChatOpen, setIsChatOpen] = useState(initialChatOpen)
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
@@ -98,6 +109,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }
   const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(null)
   const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
+
+  useEffect(() => {
+    if (!canEditSchema && editMode) {
+      setEditMode(false)
+    }
+  }, [canEditSchema, editMode])
 
   // --- Version Control state ---
   const [vcBranches, setVcBranches] = useState<BranchRecord[]>([])
@@ -144,7 +161,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
   const setSaveState = trackerNavCtx?.setSaveState ?? null
-  const saveDataRef = useRef<() => void>(() => {})
+  const saveDataRef = useRef<() => void>(() => { })
   const setTrackerNavRef = useRef(setTrackerNav)
   setTrackerNavRef.current = setTrackerNav
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
@@ -259,21 +276,22 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       throw new Error(data.error ?? 'Failed to save tracker')
     }
     const data = (await res.json()) as { id: string }
-    router.push(`/tracker/${data.id}?new=true`)
+    router.push(`/tracker/${data.id}/edit?new=true`)
   }, [schema, trackerName, router, onSaveTracker])
 
   useEffect(() => {
     if (!setSaveState) return
     setSaveState({
-      onSaveTracker: handleSaveTracker,
-      onSaveData: () => saveDataRef.current?.(),
+      onSaveTracker: allowSaveTracker ? handleSaveTracker : null,
+      onSaveData: allowSaveData ? () => saveDataRef.current?.() : null,
       isAgentBuilding: isLoading,
+      primaryNavAction,
     })
-  }, [setSaveState, handleSaveTracker, isLoading])
+  }, [setSaveState, handleSaveTracker, isLoading, allowSaveTracker, allowSaveData, primaryNavAction])
 
   useEffect(() => {
     if (!setSaveState) return
-    return () => setSaveState({ onSaveTracker: null, onSaveData: null, isAgentBuilding: false })
+    return () => setSaveState({ onSaveTracker: null, onSaveData: null, isAgentBuilding: false, primaryNavAction: null })
   }, [setSaveState])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
@@ -531,13 +549,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               schema={effectiveDisplaySchema}
               editMode={editMode}
               setEditMode={setEditMode}
+              allowSchemaEditToggle={canEditSchema}
               isChatOpen={isChatOpen}
               setIsChatOpen={setIsChatOpen}
               isStreamingTracker={isStreamingTracker}
               trackerDataRef={trackerDataRef}
-              handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
-              undo={editMode ? undoable.undo : undefined}
-              canUndo={editMode ? undoable.canUndo : false}
+              handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
+              undo={canEditSchema && editMode ? undoable.undo : undefined}
+              canUndo={canEditSchema && editMode ? undoable.canUndo : false}
               leftWidth={leftWidth}
               fullWidth
               hideChatToggle
@@ -573,13 +592,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           schema={effectiveDisplaySchema}
           editMode={editMode}
           setEditMode={setEditMode}
+          allowSchemaEditToggle={canEditSchema}
           isChatOpen={isChatOpen}
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
           trackerDataRef={trackerDataRef}
-          handleSchemaChange={editMode ? undoable.onSchemaChange : undefined}
-          undo={editMode ? undoable.undo : undefined}
-          canUndo={editMode ? undoable.canUndo : false}
+          handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
+          undo={canEditSchema && editMode ? undoable.undo : undefined}
+          canUndo={canEditSchema && editMode ? undoable.canUndo : false}
           leftWidth={leftWidth}
           onShareClick={handleShareClick}
           trackerName={trackerName}

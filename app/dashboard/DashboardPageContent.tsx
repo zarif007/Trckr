@@ -31,6 +31,12 @@ import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkelet
 
 export type DashboardView = 'all' | 'projects' | 'recents'
 
+function getTrackerDisplayName(name: string | null, isList: boolean): string {
+  if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
+  if (isList && name.endsWith('.list')) return name.slice(0, -5)
+  return name
+}
+
 export function DashboardPageContent({ view = 'all' }: { view?: DashboardView }) {
   const router = useRouter()
   const { projects, projectsLoading, fetchProjects } = useDashboard()
@@ -105,7 +111,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
       })
       if (!res.ok) throw new Error('Failed to create tracker')
       const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}?new=true`)
+      router.push(`/tracker/${data.id}/edit?new=true`)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error creating tracker')
     } finally {
@@ -326,7 +332,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       <FileText className="h-4 w-4 text-muted-foreground" />
                     </div>
                     <span className="text-sm font-medium truncate flex-1 min-w-0">
-                      {tracker.name || 'Untitled tracker'}
+                      {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
                     </span>
                     <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
                       {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
@@ -367,7 +373,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                         <FileText className="h-4 w-4 text-muted-foreground" />
                       </div>
                       <span className="text-sm font-medium truncate flex-1 min-w-0">
-                        {tracker.name || 'Untitled tracker'}
+                        {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
                       </span>
                       <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
                         {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
