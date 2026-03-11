@@ -4,7 +4,7 @@
  */
 export function DashboardHomeSkeleton() {
   return (
-    <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background animate-in fade-in-50 duration-150">
+    <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-background animate-in fade-in-50 duration-150">
       <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80 backdrop-blur-sm">
         <div className="flex items-center gap-2">
           <span className="h-7 w-24 rounded-md bg-muted/50 animate-pulse" />

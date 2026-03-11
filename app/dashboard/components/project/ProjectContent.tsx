@@ -7,6 +7,7 @@ import {
   X,
   FilePlus,
   FileText,
+  LayoutList,
   Folder,
   ChevronRight,
   MoreHorizontal,
@@ -44,6 +45,9 @@ const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
 }
 
 const STALE_TIME_MS = 60 * 1000
+const TILE_ICON_SHELL =
+  'w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
+const TILE_ICON = 'h-7 w-7 text-foreground/75 transition-colors group-hover:text-primary'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -259,16 +263,16 @@ export function ProjectContent({
         return () => {
           const insertAt = mod.parentId
             ? (prev: Project) => ({
-                ...prev,
-                modules: updateModuleInTree(prev.modules, mod.parentId!, (m) => ({
-                  ...m,
-                  children: [...m.children, mod],
-                })),
-              })
+              ...prev,
+              modules: updateModuleInTree(prev.modules, mod.parentId!, (m) => ({
+                ...m,
+                children: [...m.children, mod],
+              })),
+            })
             : (prev: Project) => ({
-                ...prev,
-                modules: [...prev.modules, mod],
-              })
+              ...prev,
+              modules: [...prev.modules, mod],
+            })
           queryClient.setQueryData<Project>(
             dashboardQueryKeys.project(projectId),
             (prev) => (prev ? insertAt(prev) : prev),
@@ -284,11 +288,11 @@ export function ProjectContent({
         queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
           prev
             ? {
-                ...prev,
-                trackerSchemas: prev.trackerSchemas.filter(
-                  (t) => t.id !== item.id,
-                ),
-              }
+              ...prev,
+              trackerSchemas: prev.trackerSchemas.filter(
+                (t) => t.id !== item.id,
+              ),
+            }
             : prev,
         )
         setProjects((prev) =>
@@ -296,20 +300,20 @@ export function ProjectContent({
             p.id !== projectId
               ? p
               : {
-                  ...p,
-                  trackerSchemas: p.trackerSchemas.filter(
-                    (t) => t.id !== item.id,
-                  ),
-                },
+                ...p,
+                trackerSchemas: p.trackerSchemas.filter(
+                  (t) => t.id !== item.id,
+                ),
+              },
           ),
         )
         return () => {
           queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
             prev
               ? {
-                  ...prev,
-                  trackerSchemas: [...prev.trackerSchemas, tracker],
-                }
+                ...prev,
+                trackerSchemas: [...prev.trackerSchemas, tracker],
+              }
               : prev,
           )
           setProjects((prev) =>
@@ -317,9 +321,9 @@ export function ProjectContent({
               p.id !== projectId
                 ? p
                 : {
-                    ...p,
-                    trackerSchemas: [...p.trackerSchemas, tracker],
-                  },
+                  ...p,
+                  trackerSchemas: [...p.trackerSchemas, tracker],
+                },
             ),
           )
         }
@@ -387,6 +391,7 @@ export function ProjectContent({
     }))
     const trackerRows = projectLevelTrackers.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
+      const isListView = tracker.listForSchemaId != null
       const listHref = tracker.listForSchemaId
         ? `/tracker-list/${tracker.id}`
         : tracker.instance === 'MULTI'
@@ -397,7 +402,8 @@ export function ProjectContent({
         id: tracker.id,
         label: getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null),
         sublabel: 'Tracker',
-        icon: FileText,
+        icon: isListView ? LayoutList : FileText,
+        trackerView: isListView ? 'list' as const : 'detail' as const,
         updatedAt: tracker.updatedAt,
         href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
         trackerHrefs: {
@@ -492,8 +498,8 @@ export function ProjectContent({
           <div className="h-full min-h-0">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-                <div className="w-14 h-14 rounded-xl bg-muted/30 flex items-center justify-center border border-dashed border-border/30">
-                  <FileText className="h-7 w-7 opacity-40" />
+                <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-dashed border-border/35">
+                  <FileText className="h-8 w-8 opacity-45" />
                 </div>
                 <p className="text-xs font-medium">This folder is empty</p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -536,7 +542,7 @@ export function ProjectContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
-                      className="relative flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0 group/card"
+                      className="relative flex flex-col items-center gap-3 w-[7rem] flex-shrink-0 group/card"
                     >
                       <button
                         type="button"
@@ -564,10 +570,22 @@ export function ProjectContent({
                             ? (e) => openContextMenu(e, contextItem)
                             : undefined
                         }
-                        className="group flex flex-col items-center gap-2.5 rounded-xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
+                        className="group flex flex-col items-center gap-3 rounded-2xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center flex-shrink-0 group-hover:bg-muted transition-colors">
-                          <Icon className="h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div
+                          className={`${TILE_ICON_SHELL} ${
+                            'trackerView' in row && row.trackerView === 'list'
+                              ? 'border-primary/35 bg-primary/8'
+                              : ''
+                          }`}
+                        >
+                          <Icon
+                            className={`${TILE_ICON} ${
+                              'trackerView' in row && row.trackerView === 'list'
+                                ? 'text-primary/80'
+                                : ''
+                            }`}
+                          />
                         </div>
                         {isRenamingThis ? (
                           <Input
@@ -579,7 +597,7 @@ export function ProjectContent({
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="text-sm font-medium text-center leading-tight truncate w-full">
+                          <span className="text-sm font-semibold text-center leading-tight truncate w-full">
                             {row.label}
                           </span>
                         )}

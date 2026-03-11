@@ -8,6 +8,7 @@ import {
   X,
   FilePlus,
   FileText,
+  LayoutList,
   Folder,
   ChevronRight,
   MoreHorizontal,
@@ -42,6 +43,9 @@ const MODULE_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
 const ALL_FILE_TYPES: ProjectFileType[] = ['TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS']
 
 const STALE_TIME_MS = 60 * 1000
+const TILE_ICON_SHELL =
+  'w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
+const TILE_ICON = 'h-7 w-7 text-foreground/75 transition-colors group-hover:text-primary'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -128,7 +132,7 @@ export function ModuleContent({
   }, [queryClient, moduleId, projectId])
 
   // Legacy stub: creation is handled by NewModuleButton; kept so stale closures (e.g. HMR) don’t throw
-  const handleCreateSubmodule = useCallback(() => {}, [])
+  const handleCreateSubmodule = useCallback(() => { }, [])
 
   const onRename = useCallback(
     async (kind: ContextMenuItem['kind'], id: string, newName: string) => {
@@ -192,11 +196,11 @@ export function ModuleContent({
             queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
               prev
                 ? {
-                    ...prev,
-                    children: prev.children.map((m) =>
-                      m.id === id ? { ...m, name } : m,
-                    ),
-                  }
+                  ...prev,
+                  children: prev.children.map((m) =>
+                    m.id === id ? { ...m, name } : m,
+                  ),
+                }
                 : prev,
             )
           }
@@ -205,20 +209,20 @@ export function ModuleContent({
               p.id !== projectId
                 ? p
                 : {
-                    ...p,
-                    modules: updateModuleInTree(p.modules, id, (m) => ({ ...m, name })),
-                  },
+                  ...p,
+                  modules: updateModuleInTree(p.modules, id, (m) => ({ ...m, name })),
+                },
             ),
           )
         } else if (kind === 'tracker' && mod) {
           queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
             prev
               ? {
-                  ...prev,
-                  trackerSchemas: prev.trackerSchemas.map((t) =>
-                    t.id === id ? { ...t, name } : t,
-                  ),
-                }
+                ...prev,
+                trackerSchemas: prev.trackerSchemas.map((t) =>
+                  t.id === id ? { ...t, name } : t,
+                ),
+              }
               : prev,
           )
           setProjects((prev) =>
@@ -226,14 +230,14 @@ export function ModuleContent({
               p.id !== projectId
                 ? p
                 : {
-                    ...p,
-                    modules: updateModuleInTree(p.modules, moduleId, (m) => ({
-                      ...m,
-                      trackerSchemas: m.trackerSchemas.map((t) =>
-                        t.id === id ? { ...t, name } : t,
-                      ),
-                    })),
-                  },
+                  ...p,
+                  modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                    ...m,
+                    trackerSchemas: m.trackerSchemas.map((t) =>
+                      t.id === id ? { ...t, name } : t,
+                    ),
+                  })),
+                },
             ),
           )
         }
@@ -263,9 +267,9 @@ export function ModuleContent({
           queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
             prev
               ? {
-                  ...prev,
-                  children: prev.children.filter((m) => m.id !== item.id),
-                }
+                ...prev,
+                children: prev.children.filter((m) => m.id !== item.id),
+              }
               : prev,
           )
           setProjects((prev) =>
@@ -284,14 +288,14 @@ export function ModuleContent({
                 p.id !== projectId
                   ? p
                   : {
-                      ...p,
-                      modules: deleted.parentId
-                        ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
-                            ...m,
-                            children: [...m.children, deleted],
-                          }))
-                        : [...p.modules, deleted],
-                    },
+                    ...p,
+                    modules: deleted.parentId
+                      ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
+                        ...m,
+                        children: [...m.children, deleted],
+                      }))
+                      : [...p.modules, deleted],
+                  },
               ),
             )
             router.replace(`/dashboard/${projectId}/module/${item.id}`)
@@ -304,14 +308,14 @@ export function ModuleContent({
                 p.id !== projectId
                   ? p
                   : {
-                      ...p,
-                      modules: deleted.parentId
-                        ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
-                            ...m,
-                            children: [...m.children, deleted],
-                          }))
-                        : [...p.modules, deleted],
-                    },
+                    ...p,
+                    modules: deleted.parentId
+                      ? updateModuleInTree(p.modules, deleted.parentId, (m) => ({
+                        ...m,
+                        children: [...m.children, deleted],
+                      }))
+                      : [...p.modules, deleted],
+                  },
               ),
             )
           }
@@ -323,11 +327,11 @@ export function ModuleContent({
         queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
           prev
             ? {
-                ...prev,
-                trackerSchemas: prev.trackerSchemas.filter(
-                  (t) => t.id !== item.id,
-                ),
-              }
+              ...prev,
+              trackerSchemas: prev.trackerSchemas.filter(
+                (t) => t.id !== item.id,
+              ),
+            }
             : prev,
         )
         setProjects((prev) =>
@@ -335,23 +339,23 @@ export function ModuleContent({
             p.id !== projectId
               ? p
               : {
-                  ...p,
-                  modules: updateModuleInTree(p.modules, moduleId, (m) => ({
-                    ...m,
-                    trackerSchemas: m.trackerSchemas.filter(
-                      (t) => t.id !== item.id,
-                    ),
-                  })),
-                },
+                ...p,
+                modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                  ...m,
+                  trackerSchemas: m.trackerSchemas.filter(
+                    (t) => t.id !== item.id,
+                  ),
+                })),
+              },
           ),
         )
         return () => {
           queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
             prev
               ? {
-                  ...prev,
-                  trackerSchemas: [...prev.trackerSchemas, tracker],
-                }
+                ...prev,
+                trackerSchemas: [...prev.trackerSchemas, tracker],
+              }
               : prev,
           )
           setProjects((prev) =>
@@ -359,12 +363,12 @@ export function ModuleContent({
               p.id !== projectId
                 ? p
                 : {
-                    ...p,
-                    modules: updateModuleInTree(p.modules, moduleId, (m) => ({
-                      ...m,
-                      trackerSchemas: [...m.trackerSchemas, tracker],
-                    })),
-                  },
+                  ...p,
+                  modules: updateModuleInTree(p.modules, moduleId, (m) => ({
+                    ...m,
+                    trackerSchemas: [...m.trackerSchemas, tracker],
+                  })),
+                },
             ),
           )
         }
@@ -432,6 +436,7 @@ export function ModuleContent({
     }))
     const trackerRows = trackerSchemas.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
+      const isListView = tracker.listForSchemaId != null
       const listHref = tracker.listForSchemaId
         ? `/tracker-list/${tracker.id}`
         : tracker.instance === 'MULTI'
@@ -442,7 +447,8 @@ export function ModuleContent({
         id: tracker.id,
         label: getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null),
         sublabel: 'Tracker',
-        icon: FileText,
+        icon: isListView ? LayoutList : FileText,
+        trackerView: isListView ? 'list' as const : 'detail' as const,
         updatedAt: tracker.updatedAt,
         href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
         trackerHrefs: {
@@ -617,8 +623,8 @@ export function ModuleContent({
           <div className="h-full min-h-0">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-                <div className="w-14 h-14 rounded-xl bg-muted/30 flex items-center justify-center border border-dashed border-border/30">
-                  <FileText className="h-7 w-7 opacity-40" />
+                <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-dashed border-border/35">
+                  <FileText className="h-8 w-8 opacity-45" />
                 </div>
                 <p className="text-xs font-medium">This module is empty</p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
@@ -667,7 +673,7 @@ export function ModuleContent({
                           ? `file-${row.id}`
                           : `${row.kind}-${row.id}`
                       }
-                      className="relative flex flex-col items-center gap-2.5 w-[6.5rem] flex-shrink-0 group/card"
+                      className="relative flex flex-col items-center gap-3 w-[7rem] flex-shrink-0 group/card"
                     >
                       <button
                         type="button"
@@ -695,10 +701,22 @@ export function ModuleContent({
                             ? (e) => openContextMenu(e, contextItem)
                             : undefined
                         }
-                        className="group flex flex-col items-center gap-2.5 rounded-xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
+                        className="group flex flex-col items-center gap-3 rounded-2xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
                       >
-                        <div className="w-12 h-12 rounded-2xl bg-muted/50 flex items-center justify-center flex-shrink-0 group-hover:bg-muted transition-colors">
-                          <Icon className="h-6 w-6 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div
+                          className={`${TILE_ICON_SHELL} ${
+                            'trackerView' in row && row.trackerView === 'list'
+                              ? 'border-primary/35 bg-primary/8'
+                              : ''
+                          }`}
+                        >
+                          <Icon
+                            className={`${TILE_ICON} ${
+                              'trackerView' in row && row.trackerView === 'list'
+                                ? 'text-primary/80'
+                                : ''
+                            }`}
+                          />
                         </div>
                         {isRenamingThis ? (
                           <Input
@@ -710,7 +728,7 @@ export function ModuleContent({
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="text-sm font-medium text-center leading-tight truncate w-full">
+                          <span className="text-sm font-semibold text-center leading-tight truncate w-full">
                             {row.label}
                           </span>
                         )}

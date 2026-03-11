@@ -40,7 +40,8 @@ import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
   | { kind: 'module'; id: string; label: string }
-  | { kind: 'tracker'; id: string; label: string; trackerHrefs: {
+  | {
+    kind: 'tracker'; id: string; label: string; trackerHrefs: {
       trackerPageHref: string
       schemaEditHref: string
       listHref: string | null
@@ -135,12 +136,12 @@ function SidebarTrackerLink({
         onContextMenu={
           onContextMenu
             ? (e) =>
-                onContextMenu(e, {
-                  kind: 'tracker',
-                  id: tracker.id,
-                  label: getTrackerDisplayName(tracker.name, isList),
-                  trackerHrefs: buildTrackerHrefs(tracker),
-                })
+              onContextMenu(e, {
+                kind: 'tracker',
+                id: tracker.id,
+                label: getTrackerDisplayName(tracker.name, isList),
+                trackerHrefs: buildTrackerHrefs(tracker),
+              })
             : undefined
         }
       >

@@ -12,6 +12,7 @@ import {
   ExternalLink,
   LayoutGrid,
   List,
+  LayoutList,
   FileText,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -30,6 +31,13 @@ import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
 
 export type DashboardView = 'all' | 'projects' | 'recents'
+
+const DASH_GRID_ICON_SHELL =
+  'relative w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
+const DASH_GRID_ICON = 'h-7 w-7 text-foreground/75 transition-all duration-200 group-hover:text-primary'
+const DASH_LIST_ICON_SHELL =
+  'w-11 h-11 rounded-xl bg-muted/45 border border-border/40 flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-primary/35 group-hover:bg-primary/8'
+const DASH_LIST_ICON = 'h-5 w-5 text-foreground/75 transition-colors group-hover:text-primary'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -145,7 +153,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
 
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-gradient-to-b from-background via-background/95 to-background">
+      <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-background">
         <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-3 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             {view !== 'recents' && (
@@ -208,106 +216,109 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
 
         <div className="flex-1 overflow-auto px-4 py-6">
           {(view === 'all' || view === 'projects') && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.15 }}
-            className={cn(
-              view === 'projects' && 'h-full',
-              viewMode === 'grid'
-                ? 'flex flex-wrap gap-4 content-start'
-                : 'flex flex-col gap-1'
-            )}
-          >
-            {viewMode === 'grid' ? (
-              <>
-                {projects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/dashboard/${project.id}`}
-                    className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className={cn(
+                view === 'projects' && 'h-full',
+                viewMode === 'grid'
+                  ? 'flex flex-wrap gap-4 content-start'
+                  : 'flex flex-col gap-1'
+              )}
+            >
+              {viewMode === 'grid' ? (
+                <>
+                  {projects.map((project) => (
+                    <Link
+                      key={project.id}
+                      href={`/dashboard/${project.id}`}
+                      className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
                     >
-                      <div className="relative w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center border border-border/30 group-hover:border-primary/20 transition-colors">
-                        <FolderOpen className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors group-hover:scale-105" />
-                        {project.trackerSchemas.length > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
-                            {project.trackerSchemas.length}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-medium text-center truncate w-full">
-                        {project.name || 'Untitled'}
-                      </span>
-                    </motion.div>
-                  </Link>
-                ))}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)] flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
-                  onClick={handleOpenCreateProject}
-                >
-                  <div className="w-12 h-12 rounded-xl flex items-center justify-center">
-                    {creating ? (
-                      <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
-                    ) : (
-                      <FolderPlus className="h-6 w-6 text-muted-foreground/60" />
-                    )}
-                  </div>
-                  <span className="text-[11px] font-medium text-muted-foreground">
-                    New Project
-                  </span>
-                </motion.div>
-              </>
-            ) : (
-              <>
-                {projects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/dashboard/${project.id}`}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+                      >
+                        <div className={DASH_GRID_ICON_SHELL}>
+                          <FolderOpen className={DASH_GRID_ICON} />
+                          {project.trackerSchemas.length > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
+                              {project.trackerSchemas.length}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-center truncate w-full">
+                          {project.name || 'Untitled'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {project.trackerSchemas.length} trackers
+                        </span>
+                      </motion.div>
+                    </Link>
+                  ))}
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)] flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
+                    onClick={handleOpenCreateProject}
                   >
-                    <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                      <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                    <div className="w-14 h-14 rounded-2xl border border-dashed border-border/50 bg-muted/25 flex items-center justify-center">
+                      {creating ? (
+                        <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
+                      ) : (
+                        <FolderPlus className="h-7 w-7 text-muted-foreground/70" />
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block">
-                        {project.name || 'Untitled project'}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        {project.trackerSchemas.length} trackers
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {new Date(project.updatedAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      New Project
                     </span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
-                ))}
-                <button
-                  onClick={handleOpenCreateProject}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"
-                >
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
-                    {creating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FolderPlus className="h-4 w-4" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium">New Project</span>
-                </button>
-              </>
-            )}
-          </motion.div>
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  {projects.map((project) => (
+                    <Link
+                      key={project.id}
+                      href={`/dashboard/${project.id}`}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate block">
+                          {project.name || 'Untitled project'}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {project.trackerSchemas.length} trackers
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {new Date(project.updatedAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
+                    <div className={DASH_LIST_ICON_SHELL}>
+                      <FolderOpen className={DASH_LIST_ICON} />
+                    </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  ))}
+                  <button
+                    onClick={handleOpenCreateProject}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"
+                  >
+                    <div className="w-11 h-11 rounded-xl border border-dashed border-border/45 bg-muted/25 flex items-center justify-center flex-shrink-0">
+                      {creating ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <FolderPlus className="h-5 w-5" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium">New Project</span>
+                  </button>
+                </>
+              )}
+            </motion.div>
           )}
           {view === 'all' && recentTrackers.length > 0 && (
             <motion.div
@@ -321,6 +332,8 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               </h2>
               <div className="flex flex-col gap-1">
                 {recentTrackers.map((tracker) => {
+                  const isListView = tracker.listForSchemaId != null
+                  const TrackerIcon = isListView ? LayoutList : FileText
                   const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
                   return (
                     <Link
@@ -328,20 +341,23 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       href={href}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
                     >
-                    <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <span className="text-sm font-medium truncate flex-1 min-w-0">
-                      {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                      {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold truncate block">
+                          {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          Updated{' '}
+                          {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                      </div>
+                      <div className={`${DASH_LIST_ICON_SHELL} ${isListView ? 'border-primary/35 bg-primary/8' : ''}`}>
+                        <TrackerIcon className={`${DASH_LIST_ICON} ${isListView ? 'text-primary/80' : ''}`} />
+                      </div>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
                   )
                 })}
               </div>
@@ -362,6 +378,8 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               ) : (
                 <div className="flex flex-col gap-1">
                   {recentTrackers.map((tracker) => {
+                    const isListView = tracker.listForSchemaId != null
+                    const TrackerIcon = isListView ? LayoutList : FileText
                     const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
                     return (
                       <Link
@@ -369,20 +387,23 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                         href={href}
                         className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
                       >
-                      <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm font-medium truncate flex-1 min-w-0">
-                        {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground tabular-nums flex-shrink-0">
-                        {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-semibold truncate block">
+                            {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            Updated{' '}
+                            {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                        <div className={`${DASH_LIST_ICON_SHELL} ${isListView ? 'border-primary/35 bg-primary/8' : ''}`}>
+                          <TrackerIcon className={`${DASH_LIST_ICON} ${isListView ? 'text-primary/80' : ''}`} />
+                        </div>
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
                     )
                   })}
                 </div>
