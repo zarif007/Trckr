@@ -113,7 +113,7 @@ export function KanbanCard({
           <div key={field.id} className="mb-2 last:mb-0">
             <p className={`${labelFontSize} text-muted-foreground font-medium`}>{field.label}</p>
             <div className={`${valueFontSize} ${valueTextColor}`}>
-              <TrackerCell value={card[field.id]} type={field.dataType} options={options} />
+              <TrackerCell value={card[field.id]} type={field.dataType} options={options} config={fieldMetadata?.[field.id]?.config} />
             </div>
           </div>
         )

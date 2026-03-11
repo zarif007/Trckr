@@ -47,8 +47,8 @@ export const RULE_TYPE_LABELS: Record<FieldValidationRule['type'], string> = {
   expr: 'Custom expression',
 }
 
-export const NUMERIC_TYPES: TrackerFieldType[] = ['number', 'currency', 'percentage']
-export const TEXT_TYPES: TrackerFieldType[] = ['string', 'text', 'link']
+export const NUMERIC_TYPES: TrackerFieldType[] = ['number', 'currency', 'percentage', 'rating']
+export const TEXT_TYPES: TrackerFieldType[] = ['string', 'text', 'link', 'email', 'phone', 'url']
 
 export const defaultExpr: ExprNode = { op: 'const', value: true }
 export const defaultCalculationExpr: ExprNode = { op: 'const', value: 0 }

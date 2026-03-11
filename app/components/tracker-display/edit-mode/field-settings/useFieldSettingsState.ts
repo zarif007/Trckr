@@ -53,6 +53,15 @@ export function useFieldSettingsState({
   const [max, setMax] = useState('')
   const [minLength, setMinLength] = useState('')
   const [maxLength, setMaxLength] = useState('')
+  const [numberDecimalPlaces, setNumberDecimalPlaces] = useState('')
+  const [numberStep, setNumberStep] = useState('')
+  const [dateFormat, setDateFormat] = useState<'iso' | 'us' | 'eu' | 'long'>('long')
+  const [ratingMax, setRatingMax] = useState('')
+  const [ratingAllowHalf, setRatingAllowHalf] = useState(false)
+  const [personAllowMultiple, setPersonAllowMultiple] = useState(false)
+  const [filesMaxCount, setFilesMaxCount] = useState('')
+  const [filesMaxSizeMb, setFilesMaxSizeMb] = useState('')
+  const [statusOptionsText, setStatusOptionsText] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
   const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
   const [dependsOnRules, setDependsOnRules] = useState<DependsOnRuleForTarget[]>([])
@@ -201,6 +210,22 @@ export function useFieldSettingsState({
     setMax(field.config?.max != null ? String(field.config.max) : '')
     setMinLength(field.config?.minLength != null ? String(field.config.minLength) : '')
     setMaxLength(field.config?.maxLength != null ? String(field.config.maxLength) : '')
+    setNumberDecimalPlaces(
+      field.config?.numberDecimalPlaces != null ? String(field.config.numberDecimalPlaces) : ''
+    )
+    setNumberStep(field.config?.numberStep != null ? String(field.config.numberStep) : '')
+    const savedDateFormat = field.config?.dateFormat
+    setDateFormat(
+      savedDateFormat === 'iso' || savedDateFormat === 'us' || savedDateFormat === 'eu' || savedDateFormat === 'long'
+        ? savedDateFormat
+        : 'long'
+    )
+    setRatingMax(field.config?.ratingMax != null ? String(field.config.ratingMax) : '')
+    setRatingAllowHalf(Boolean(field.config?.ratingAllowHalf))
+    setPersonAllowMultiple(Boolean(field.config?.personAllowMultiple))
+    setFilesMaxCount(field.config?.filesMaxCount != null ? String(field.config.filesMaxCount) : '')
+    setFilesMaxSizeMb(field.config?.filesMaxSizeMb != null ? String(field.config.filesMaxSizeMb) : '')
+    setStatusOptionsText(Array.isArray(field.config?.statusOptions) ? field.config.statusOptions.join('\n') : '')
 
     const validationKey = gridId ? `${gridId}.${field.id}` : ''
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
@@ -378,7 +403,20 @@ export function useFieldSettingsState({
       max: toNumberOrUndefined(max),
       minLength: toNumberOrUndefined(minLength),
       maxLength: toNumberOrUndefined(maxLength),
+      numberDecimalPlaces: toNumberOrUndefined(numberDecimalPlaces),
+      numberStep: toNumberOrUndefined(numberStep),
+      dateFormat,
+      ratingMax: toNumberOrUndefined(ratingMax),
+      ratingAllowHalf,
+      personAllowMultiple,
+      filesMaxCount: toNumberOrUndefined(filesMaxCount),
+      filesMaxSizeMb: toNumberOrUndefined(filesMaxSizeMb),
     }
+    const normalizedStatusOptions = statusOptionsText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    nextConfig.statusOptions = normalizedStatusOptions.length > 0 ? normalizedStatusOptions : undefined
 
     const trimmedDefault = defaultValue.trim()
     if (trimmedDefault === '') {
@@ -390,7 +428,7 @@ export function useFieldSettingsState({
         } else {
           nextConfig.defaultValue = undefined
         }
-      } else if (['number', 'currency', 'percentage'].includes(dataType)) {
+      } else if (['number', 'currency', 'percentage', 'rating'].includes(dataType)) {
         const n = Number(trimmedDefault)
         nextConfig.defaultValue = Number.isFinite(n) ? n : undefined
       } else {
@@ -529,6 +567,15 @@ export function useFieldSettingsState({
     max,
     minLength,
     maxLength,
+    numberDecimalPlaces,
+    numberStep,
+    dateFormat,
+    ratingMax,
+    ratingAllowHalf,
+    personAllowMultiple,
+    filesMaxCount,
+    filesMaxSizeMb,
+    statusOptionsText,
     rules,
     calculationRule,
     dependsOnRules,
@@ -544,11 +591,11 @@ export function useFieldSettingsState({
   ])
 
   const isNumeric = useMemo(
-    () => ['number', 'currency', 'percentage'].includes(dataType),
+    () => ['number', 'currency', 'percentage', 'rating'].includes(dataType),
     [dataType]
   )
   const isText = useMemo(
-    () => ['string', 'text', 'link'].includes(dataType),
+    () => ['string', 'text', 'link', 'email', 'phone', 'url'].includes(dataType),
     [dataType]
   )
   const disableSave =
@@ -588,6 +635,24 @@ export function useFieldSettingsState({
     setMinLength,
     maxLength,
     setMaxLength,
+    numberDecimalPlaces,
+    setNumberDecimalPlaces,
+    numberStep,
+    setNumberStep,
+    dateFormat,
+    setDateFormat,
+    ratingMax,
+    setRatingMax,
+    ratingAllowHalf,
+    setRatingAllowHalf,
+    personAllowMultiple,
+    setPersonAllowMultiple,
+    filesMaxCount,
+    setFilesMaxCount,
+    filesMaxSizeMb,
+    setFilesMaxSizeMb,
+    statusOptionsText,
+    setStatusOptionsText,
     rules,
     setRules,
     updateRule,

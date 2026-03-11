@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import type { ColumnDef } from '@tanstack/react-table'
-import { ArrowLeft, FileText, Pencil, Plus, Save, Settings2 } from 'lucide-react'
+import { ArrowLeft, FileText, Pencil, Plus, Save, Search, Settings2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FieldSettingsDialog } from '@/app/components/tracker-display/edit-mode/field-settings'
-import { DataTable } from '@/app/components/tracker-display/grids/data-table/data-table'
 import type {
   TrackerDisplayProps,
   TrackerField,
@@ -84,6 +83,8 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
   )
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [addSelection, setAddSelection] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<EditableTarget | null>(null)
 
   useEffect(() => {
     if (!id) {
@@ -195,56 +196,62 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
 
   const title = pageTitle(mode)
   const configuredCount = configuredTargets.length
+  const normalizedQuery = query.trim().toLowerCase()
+  const filteredConfiguredTargets = useMemo(() => {
+    if (!normalizedQuery) return configuredTargets
+    return configuredTargets.filter((target) => {
+      const haystack = `${target.fieldLabel} ${target.gridName} ${target.dataType}`.toLowerCase()
+      return haystack.includes(normalizedQuery)
+    })
+  }, [configuredTargets, normalizedQuery])
 
-  const rows = useMemo(
-    () =>
-      configuredTargets.map((target) => ({
-        id: target.key,
-        field: target.fieldLabel,
-        grid: target.gridName,
-        configured: target.count,
-        target,
-      })),
-    [configuredTargets],
-  )
+  const groupedConfiguredTargets = useMemo(() => {
+    const map = new Map<string, EditableTarget[]>()
+    for (const target of filteredConfiguredTargets) {
+      const items = map.get(target.gridName) ?? []
+      items.push(target)
+      map.set(target.gridName, items)
+    }
+    return Array.from(map.entries()).map(([gridName, items]) => ({ gridName, items }))
+  }, [filteredConfiguredTargets])
 
-  const columns = useMemo<ColumnDef<(typeof rows)[number]>[]>(
-    () => [
-      {
-        accessorKey: 'field',
-        header: 'Field',
-        cell: ({ row }) => (
-          <div className="flex flex-col py-0.5">
-            <span className="font-medium text-foreground">{row.original.field}</span>
-            <span className="text-[11px] capitalize text-muted-foreground">
-              {row.original.target.dataType.replace(/_/g, ' ')}
-            </span>
-          </div>
-        ),
-      },
-      {
-        accessorKey: 'grid',
-        header: 'Grid',
-        cell: ({ row }) => (
-          <span className="inline-flex items-center rounded-md border border-border/60 bg-muted/35 px-2 py-1 text-xs text-muted-foreground">
-            {row.original.grid}
-          </span>
-        ),
-      },
-      {
-        accessorKey: 'configured',
-        header: modeCountLabel(mode),
-        cell: ({ row }) => (
-          <Badge
-            variant={row.original.configured > 0 ? 'secondary' : 'outline'}
-            className="font-semibold tabular-nums"
-          >
-            {row.original.configured}
-          </Badge>
-        ),
-      },
-    ],
-    [mode],
+  const handleRemoveTarget = useCallback(
+    (target: EditableTarget) => {
+      if (!schema) return
+      const key = target.key
+      let nextSchema: TrackerDisplayProps = schema
+
+      if (mode === 'bindings') {
+        const nextBindings = { ...(schema.bindings ?? {}) }
+        delete nextBindings[key]
+        nextSchema = {
+          ...schema,
+          bindings: Object.keys(nextBindings).length > 0 ? nextBindings : undefined,
+        }
+      } else if (mode === 'validations') {
+        const nextValidations = { ...(schema.validations ?? {}) }
+        delete nextValidations[key]
+        nextSchema = {
+          ...schema,
+          validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
+        }
+      } else {
+        const nextCalculations = { ...(schema.calculations ?? {}) }
+        delete nextCalculations[key]
+        nextSchema = {
+          ...schema,
+          calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
+        }
+      }
+
+      setSchema(nextSchema)
+      setDirty(true)
+      setDeleteTarget(null)
+      if (selected?.fieldId === target.fieldId && selected.gridId === target.gridId) {
+        setSelected(null)
+      }
+    },
+    [mode, schema, selected],
   )
 
   if (loading) {
@@ -311,63 +318,108 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold">{title} Workspace</h1>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="tabular-nums text-[11px]">
-              {configuredCount} configured
-            </Badge>
-            <Badge variant="outline" className="tabular-nums text-[11px]">
-              {availableTargets.length} available
-            </Badge>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-xs"
-              onClick={() => {
-                setAddSelection(availableTargets[0]?.key ?? null)
-                setAddDialogOpen(true)
-              }}
-              disabled={availableTargets.length === 0}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add another
-            </Button>
+        <div className="mb-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold">{title} Workspace</h1>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="tabular-nums text-[11px]">
+                {configuredCount} configured
+              </Badge>
+              <Badge variant="outline" className="tabular-nums text-[11px]">
+                {availableTargets.length} available
+              </Badge>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => {
+                  setAddSelection(availableTargets[0]?.key ?? null)
+                  setAddDialogOpen(true)
+                }}
+                disabled={availableTargets.length === 0}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add another
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/80" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search ${title.toLowerCase()} by field, grid, or type`}
+              className="h-9 pl-8 text-sm"
+            />
           </div>
         </div>
-        {rows.length === 0 ? (
-          <div className="rounded-lg border border-border/60 px-3 py-10 text-center text-sm text-muted-foreground">
-            No configured {title.toLowerCase()} yet. Use <span className="font-medium">Add another</span> to start.
-          </div>
+        {filteredConfiguredTargets.length === 0 ? (
+          configuredCount === 0 ? (
+            <div className="rounded-lg border border-border/60 px-3 py-10 text-center text-sm text-muted-foreground">
+              No configured {title.toLowerCase()} yet. Use <span className="font-medium">Add another</span> to start.
+            </div>
+          ) : (
+            <div className="rounded-lg border border-border/60 px-3 py-10 text-center text-sm text-muted-foreground">
+              No matches for &ldquo;{query.trim()}&rdquo;. Try a different search.
+            </div>
+          )
         ) : (
-          <div className="rounded-xl border border-border/60 bg-card/35 p-3 shadow-sm">
-            <DataTable
-              columns={columns}
-              data={rows}
-              addable={false}
-              deletable={false}
-              editable={false}
-              editLayoutAble={false}
-              showRowDetails={false}
-              renderRowAction={({ row }) => (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 min-w-16 text-xs"
-                  onClick={() =>
-                    setSelected({ fieldId: row.target.fieldId, gridId: row.target.gridId })
-                  }
-                >
-                  Edit
-                </Button>
-              )}
-              styleOverrides={{
-                density: 'comfortable',
-                headerStyle: 'muted',
-                borderStyle: 'strong',
-                stripedRows: true,
-              }}
-            />
+          <div className="space-y-4">
+            {groupedConfiguredTargets.map((group) => (
+              <section key={group.gridName} className="overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/60 bg-muted/25 px-4 py-2.5">
+                  <h2 className="truncate text-sm font-semibold text-foreground">{group.gridName}</h2>
+                  <Badge variant="outline" className="text-[11px] tabular-nums">
+                    {group.items.length} configured
+                  </Badge>
+                </div>
+                <div className="divide-y divide-border/60">
+                  {group.items.map((target) => (
+                    <div
+                      key={target.key}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/20"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {target.fieldLabel}
+                          </p>
+                          <Badge variant="secondary" className="text-[11px] tabular-nums">
+                            {target.count} {modeCountLabel(mode).toLowerCase()}
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                          <span className="capitalize">{target.dataType.replace(/_/g, ' ')}</span>
+                          <span>•</span>
+                          <span className="truncate">{target.key}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 min-w-20 text-xs"
+                          onClick={() =>
+                            setSelected({ fieldId: target.fieldId, gridId: target.gridId })
+                          }
+                        >
+                          Configure
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove ${target.fieldLabel}`}
+                          onClick={() => setDeleteTarget(target)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </main>
@@ -425,6 +477,49 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
               disabled={!addSelection}
             >
               Open editor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-[460px]">
+          <DialogHeader>
+            <DialogTitle>Remove {title.slice(0, -1)}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              This removes the configured {title.toLowerCase()} for this field. You can add it
+              again later.
+            </p>
+            {deleteTarget && (
+              <div className="rounded-md border border-border/60 bg-muted/25 px-3 py-2 text-xs">
+                <div>
+                  <span className="font-medium text-foreground">Field:</span> {deleteTarget.fieldLabel}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">Grid:</span> {deleteTarget.gridName}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (!deleteTarget) return
+                handleRemoveTarget(deleteTarget)
+              }}
+            >
+              Remove
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -187,6 +187,24 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     setMinLength={state.setMinLength}
                     maxLength={state.maxLength}
                     setMaxLength={state.setMaxLength}
+                    numberDecimalPlaces={state.numberDecimalPlaces}
+                    setNumberDecimalPlaces={state.setNumberDecimalPlaces}
+                    numberStep={state.numberStep}
+                    setNumberStep={state.setNumberStep}
+                    dateFormat={state.dateFormat}
+                    setDateFormat={state.setDateFormat}
+                    ratingMax={state.ratingMax}
+                    setRatingMax={state.setRatingMax}
+                    ratingAllowHalf={state.ratingAllowHalf}
+                    setRatingAllowHalf={state.setRatingAllowHalf}
+                    personAllowMultiple={state.personAllowMultiple}
+                    setPersonAllowMultiple={state.setPersonAllowMultiple}
+                    filesMaxCount={state.filesMaxCount}
+                    setFilesMaxCount={state.setFilesMaxCount}
+                    filesMaxSizeMb={state.filesMaxSizeMb}
+                    setFilesMaxSizeMb={state.setFilesMaxSizeMb}
+                    statusOptionsText={state.statusOptionsText}
+                    setStatusOptionsText={state.setStatusOptionsText}
                   />
                   </TabsContent>
                 )}

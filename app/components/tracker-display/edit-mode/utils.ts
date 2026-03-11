@@ -11,42 +11,21 @@ import type {
   TrackerGrid,
   TrackerTab,
 } from '../types'
+import {
+  CREATABLE_TRACKER_FIELD_TYPES,
+  FIELD_TYPE_GROUPS,
+  FIELD_TYPE_LABELS as TRACKER_FIELD_TYPE_LABELS,
+  FIELD_TYPE_ORDER,
+} from '@/lib/tracker-field-types'
 
 /** All field types that can be created from the Add Field dialog. Includes simple types and option-based (options configured later). */
-export const CREATABLE_FIELD_TYPES: TrackerFieldType[] = [
-  'string',
-  'number',
-  'date',
-  'boolean',
-  'text',
-  'link',
-  'currency',
-  'percentage',
-  'options',
-  'multiselect',
-  'dynamic_select',
-  'dynamic_multiselect',
-]
+export const CREATABLE_FIELD_TYPES: TrackerFieldType[] = [...CREATABLE_TRACKER_FIELD_TYPES]
 
 /** Max columns per row for div (form) grids. */
 export const DIV_GRID_MAX_COLS = 12
 
 /** Human-readable labels for each field type. (field_mappings is internal to Bindings grid.) */
-export const FIELD_TYPE_LABELS: Record<TrackerFieldType, string> = {
-  string: 'Short text',
-  number: 'Number',
-  date: 'Date',
-  boolean: 'Checkbox',
-  text: 'Long text',
-  link: 'Link',
-  currency: 'Currency',
-  percentage: 'Percentage',
-  options: 'Single select',
-  multiselect: 'Multi select',
-  dynamic_select: 'Dynamic single select',
-  dynamic_multiselect: 'Dynamic multi select',
-  field_mappings: 'Fields mapping',
-}
+export const FIELD_TYPE_LABELS: Record<TrackerFieldType, string> = TRACKER_FIELD_TYPE_LABELS
 
 /** @deprecated Use getCreatableFieldTypes() or getCreatableFieldTypesWithLabels() instead. */
 export const SIMPLE_FIELD_TYPES: TrackerFieldType[] = CREATABLE_FIELD_TYPES
@@ -121,32 +100,11 @@ export interface FieldTypeOption {
 
 /** Returns all creatable field types with human-readable labels, optionally grouped. */
 export function getCreatableFieldTypesWithLabels(): FieldTypeOption[] {
-  const groups: Record<string, TrackerFieldType[]> = {
-    Text: ['string', 'text', 'link'],
-    Numbers: ['number', 'currency', 'percentage'],
-    'Date & time': ['date'],
-    Choice: ['options', 'multiselect', 'dynamic_select', 'dynamic_multiselect'],
-    Other: ['boolean'],
-  }
-  const order: TrackerFieldType[] = [
-    'string',
-    'text',
-    'link',
-    'number',
-    'currency',
-    'percentage',
-    'date',
-    'options',
-    'multiselect',
-    'dynamic_select',
-    'dynamic_multiselect',
-    'boolean',
-  ]
-  return order.map((value) => ({
+  return FIELD_TYPE_ORDER.map((value) => ({
     value,
     label: FIELD_TYPE_LABELS[value],
-    group: Object.entries(groups).find(([, types]) => types.includes(value))?.[0],
-  }))
+    group: Object.entries(FIELD_TYPE_GROUPS).find(([, types]) => types.includes(value))?.[0],
+  })).filter((option) => CREATABLE_FIELD_TYPES.includes(option.value))
 }
 
 // --- Tab / section / grid block editing ---

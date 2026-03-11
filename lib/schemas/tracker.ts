@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options/user-functions/schema'
+import { TRACKER_FIELD_TYPES } from '@/lib/tracker-field-types'
 
 const tabId = () =>
   z
@@ -65,20 +66,7 @@ export const gridViewSchema = z
   .passthrough()
 
 const fieldDataTypeEnum = z
-  .enum([
-    'string',
-    'number',
-    'date',
-    'options',
-    'multiselect',
-    'dynamic_select',
-    'dynamic_multiselect',
-    'boolean',
-    'text',
-    'link',
-    'currency',
-    'percentage',
-  ])
+  .enum(TRACKER_FIELD_TYPES)
   .catch('string')
 
 const renderAsEnum = z

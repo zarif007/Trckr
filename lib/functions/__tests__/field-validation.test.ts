@@ -69,4 +69,42 @@ describe('field validation compiled plans', () => {
     })
     expect(result).toBeNull()
   })
+
+  it('validates new notion-like field types', () => {
+    expect(
+      getValidationError({
+        fieldId: 'profile.email',
+        fieldType: 'email',
+        value: 'not-an-email',
+        config: { isRequired: false },
+      })
+    ).toBe('Enter a valid email address')
+
+    expect(
+      getValidationError({
+        fieldId: 'profile.website',
+        fieldType: 'url',
+        value: 'foo',
+        config: { isRequired: false },
+      })
+    ).toBe('Enter a valid URL')
+
+    expect(
+      getValidationError({
+        fieldId: 'tasks.status',
+        fieldType: 'status',
+        value: 'In review',
+        config: { statusOptions: ['Todo', 'Done'] },
+      })
+    ).toBe('Value must match a configured status option')
+
+    expect(
+      getValidationError({
+        fieldId: 'tasks.rating',
+        fieldType: 'rating',
+        value: 4.7,
+        config: { ratingMax: 5, numberStep: 0.5 },
+      })
+    ).toBe('Rating must use increments of 0.5')
+  })
 })

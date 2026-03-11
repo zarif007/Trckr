@@ -55,6 +55,14 @@ export interface ValidationInput {
     max?: number
     minLength?: number
     maxLength?: number
+    numberDecimalPlaces?: number
+    numberStep?: number
+    ratingMax?: number
+    ratingAllowHalf?: boolean
+    personAllowMultiple?: boolean
+    filesMaxCount?: number
+    filesMaxSizeMb?: number
+    statusOptions?: string[]
   } | null
   /** Custom validation rules */
   rules?: FieldValidationRule[]
@@ -135,8 +143,8 @@ export function clearValidationCache(): void {
 // Constants & Utilities
 // ============================================================================
 
-const STRING_TYPES = new Set(['string', 'text', 'link'])
-const NUMBER_TYPES = new Set(['number', 'currency', 'percentage'])
+const STRING_TYPES = new Set(['string', 'text', 'link', 'email', 'phone', 'url'])
+const NUMBER_TYPES = new Set(['number', 'currency', 'percentage', 'rating'])
 
 const isEmpty = (v: unknown) =>
   v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0)
@@ -145,6 +153,17 @@ const parseNumber = (value: unknown): number => {
   if (typeof value === 'number') return value
   if (typeof value === 'string' && value.trim() !== '') return Number(value)
   return Number.NaN
+}
+
+const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+const isValidPhone = (value: string): boolean => /^[+\d\s().-]{7,20}$/.test(value)
+const isValidUrl = (value: string): boolean => {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 const defaultMessage = (rule: FieldValidationRule): string => {
@@ -182,6 +201,14 @@ function getConfigSignature(config?: ValidationInput['config']): string {
     typeof config.max === 'number' ? String(config.max) : '',
     typeof config.minLength === 'number' ? String(config.minLength) : '',
     typeof config.maxLength === 'number' ? String(config.maxLength) : '',
+    typeof config.numberDecimalPlaces === 'number' ? String(config.numberDecimalPlaces) : '',
+    typeof config.numberStep === 'number' ? String(config.numberStep) : '',
+    typeof config.ratingMax === 'number' ? String(config.ratingMax) : '',
+    config.ratingAllowHalf === true ? '1' : '0',
+    config.personAllowMultiple === true ? '1' : '0',
+    typeof config.filesMaxCount === 'number' ? String(config.filesMaxCount) : '',
+    typeof config.filesMaxSizeMb === 'number' ? String(config.filesMaxSizeMb) : '',
+    Array.isArray(config.statusOptions) ? JSON.stringify(config.statusOptions) : '',
   ].join('|')
 }
 
@@ -362,6 +389,50 @@ export function getValidationErrorFromCompiled({
     if (!isEmpty(value)) {
       const n = parseNumber(value)
       if (Number.isNaN(n)) return 'Enter a valid number'
+    }
+  }
+
+  if (plan.fieldType === 'email' && !isEmpty(value)) {
+    if (!isValidEmail(String(value).trim())) return 'Enter a valid email address'
+  }
+
+  if (plan.fieldType === 'phone' && !isEmpty(value)) {
+    if (!isValidPhone(String(value).trim())) return 'Enter a valid phone number'
+  }
+
+  if ((plan.fieldType === 'url' || plan.fieldType === 'link') && !isEmpty(value)) {
+    if (!isValidUrl(String(value).trim())) return 'Enter a valid URL'
+  }
+
+  if (plan.fieldType === 'status' && !isEmpty(value) && Array.isArray(config?.statusOptions) && config.statusOptions.length > 0) {
+    if (!config.statusOptions.includes(String(value))) return 'Value must match a configured status option'
+  }
+
+  if (plan.fieldType === 'rating' && !isEmpty(value)) {
+    const rating = parseNumber(value)
+    if (Number.isNaN(rating)) return 'Enter a valid rating'
+    const maxRating = typeof config?.ratingMax === 'number' ? config.ratingMax : 5
+    if (rating < 0 || rating > maxRating) return `Rating must be between 0 and ${maxRating}`
+    const step = typeof config?.numberStep === 'number' ? config.numberStep : (config?.ratingAllowHalf ? 0.5 : 1)
+    if (step > 0) {
+      const normalized = rating / step
+      if (Math.abs(normalized - Math.round(normalized)) > 1e-9) return `Rating must use increments of ${step}`
+    }
+  }
+
+  if (plan.fieldType === 'person' && !isEmpty(value)) {
+    if (config?.personAllowMultiple) {
+      if (!Array.isArray(value)) return 'Value must be a list of people'
+      if (value.some((entry) => typeof entry !== 'string' || entry.trim() === '')) return 'Each person must be a non-empty string'
+    } else if (typeof value !== 'string' || value.trim() === '') {
+      return 'Value must be a person name'
+    }
+  }
+
+  if (plan.fieldType === 'files' && !isEmpty(value)) {
+    if (!Array.isArray(value)) return 'Value must be a list of files'
+    if (typeof config?.filesMaxCount === 'number' && value.length > config.filesMaxCount) {
+      return `No more than ${config.filesMaxCount} files allowed`
     }
   }
 

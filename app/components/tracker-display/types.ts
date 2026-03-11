@@ -1,17 +1,5 @@
-export type TrackerFieldType =
-  | 'string'
-  | 'number'
-  | 'date'
-  | 'options'
-  | 'multiselect'
-  | 'dynamic_select'
-  | 'dynamic_multiselect'
-  | 'field_mappings'
-  | 'boolean'
-  | 'text'
-  | 'link'
-  | 'currency'
-  | 'percentage'
+import type { TrackerFieldType } from '@/lib/tracker-field-types'
+export type { TrackerFieldType } from '@/lib/tracker-field-types'
 
 /** Tab config: isHidden, etc. */
 export type TrackerTabConfig = {
@@ -102,6 +90,15 @@ export type TrackerFieldConfig = {
   max?: number
   minLength?: number
   maxLength?: number
+  numberDecimalPlaces?: number
+  numberStep?: number
+  dateFormat?: 'iso' | 'us' | 'eu' | 'long'
+  ratingMax?: number
+  ratingAllowHalf?: boolean
+  personAllowMultiple?: boolean
+  filesMaxCount?: number
+  filesMaxSizeMb?: number
+  statusOptions?: string[]
   [key: string]: unknown
 }
 

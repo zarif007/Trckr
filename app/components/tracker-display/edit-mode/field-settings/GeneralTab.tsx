@@ -46,6 +46,24 @@ export interface GeneralTabProps {
   setMinLength: (v: string) => void
   maxLength: string
   setMaxLength: (v: string) => void
+  numberDecimalPlaces: string
+  setNumberDecimalPlaces: (v: string) => void
+  numberStep: string
+  setNumberStep: (v: string) => void
+  dateFormat: 'iso' | 'us' | 'eu' | 'long'
+  setDateFormat: (v: 'iso' | 'us' | 'eu' | 'long') => void
+  ratingMax: string
+  setRatingMax: (v: string) => void
+  ratingAllowHalf: boolean
+  setRatingAllowHalf: (v: boolean) => void
+  personAllowMultiple: boolean
+  setPersonAllowMultiple: (v: boolean) => void
+  filesMaxCount: string
+  setFilesMaxCount: (v: string) => void
+  filesMaxSizeMb: string
+  setFilesMaxSizeMb: (v: string) => void
+  statusOptionsText: string
+  setStatusOptionsText: (v: string) => void
 }
 
 export function GeneralTab({
@@ -77,6 +95,24 @@ export function GeneralTab({
   setMinLength,
   maxLength,
   setMaxLength,
+  numberDecimalPlaces,
+  setNumberDecimalPlaces,
+  numberStep,
+  setNumberStep,
+  dateFormat,
+  setDateFormat,
+  ratingMax,
+  setRatingMax,
+  ratingAllowHalf,
+  setRatingAllowHalf,
+  personAllowMultiple,
+  setPersonAllowMultiple,
+  filesMaxCount,
+  setFilesMaxCount,
+  filesMaxSizeMb,
+  setFilesMaxSizeMb,
+  statusOptionsText,
+  setStatusOptionsText,
 }: GeneralTabProps) {
   return (
     <div className="space-y-4">
@@ -224,6 +260,12 @@ export function GeneralTab({
                 placeholder={
                   dataType === 'boolean'
                     ? 'true, false, or leave blank'
+                    : dataType === 'email'
+                      ? 'e.g. jane@example.com'
+                      : dataType === 'phone'
+                        ? 'e.g. +1 555 123 4567'
+                        : dataType === 'url' || dataType === 'link'
+                          ? 'e.g. https://example.com'
                     : isNumeric
                       ? 'Enter a number or leave blank'
                       : 'Leave blank for no default'
@@ -356,6 +398,184 @@ export function GeneralTab({
                   />
                 </FieldWrapper>
               </div>
+            </div>
+          )}
+
+          {isNumeric && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="field-settings-decimals"
+                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                >
+                  Decimal places
+                </label>
+                <FieldWrapper>
+                  <Input
+                    id="field-settings-decimals"
+                    type="number"
+                    min={0}
+                    value={numberDecimalPlaces}
+                    onChange={(e) => setNumberDecimalPlaces(e.target.value)}
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="field-settings-step"
+                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                >
+                  Step
+                </label>
+                <FieldWrapper>
+                  <Input
+                    id="field-settings-step"
+                    type="number"
+                    min={0}
+                    value={numberStep}
+                    onChange={(e) => setNumberStep(e.target.value)}
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
+              </div>
+            </div>
+          )}
+
+          {dataType === 'date' && (
+            <div className="space-y-2 max-w-xs">
+              <label
+                htmlFor="field-settings-date-format"
+                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+              >
+                Date format
+              </label>
+              <FieldWrapper>
+                <Select
+                  value={dateFormat}
+                  onValueChange={(v) => setDateFormat(v as 'iso' | 'us' | 'eu' | 'long')}
+                >
+                  <SelectTrigger id="field-settings-date-format" className={FIELD_FORM_INPUT_CLASS}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="long">Long (Jan 31, 2026)</SelectItem>
+                    <SelectItem value="us">US (01/31/2026)</SelectItem>
+                    <SelectItem value="eu">EU (31/01/2026)</SelectItem>
+                    <SelectItem value="iso">ISO (2026-01-31)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldWrapper>
+            </div>
+          )}
+
+          {dataType === 'rating' && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  htmlFor="field-settings-rating-max"
+                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                >
+                  Max rating
+                </label>
+                <FieldWrapper>
+                  <Input
+                    id="field-settings-rating-max"
+                    type="number"
+                    min={1}
+                    value={ratingMax}
+                    onChange={(e) => setRatingMax(e.target.value)}
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
+              </div>
+              <div className="space-y-1.5 self-end pb-1">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="field-settings-rating-half"
+                    checked={ratingAllowHalf}
+                    onCheckedChange={(v) => setRatingAllowHalf(Boolean(v))}
+                  />
+                  <label htmlFor="field-settings-rating-half" className="text-sm font-medium cursor-pointer">
+                    Allow half steps
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {dataType === 'person' && (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="field-settings-person-multi"
+                  checked={personAllowMultiple}
+                  onCheckedChange={(v) => setPersonAllowMultiple(Boolean(v))}
+                />
+                <label htmlFor="field-settings-person-multi" className="text-sm font-medium cursor-pointer">
+                  Allow multiple people
+                </label>
+              </div>
+            </div>
+          )}
+
+          {dataType === 'files' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label
+                  htmlFor="field-settings-files-max-count"
+                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                >
+                  Max files
+                </label>
+                <FieldWrapper>
+                  <Input
+                    id="field-settings-files-max-count"
+                    type="number"
+                    min={1}
+                    value={filesMaxCount}
+                    onChange={(e) => setFilesMaxCount(e.target.value)}
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
+              </div>
+              <div className="space-y-2">
+                <label
+                  htmlFor="field-settings-files-max-size"
+                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+                >
+                  Max size (MB)
+                </label>
+                <FieldWrapper>
+                  <Input
+                    id="field-settings-files-max-size"
+                    type="number"
+                    min={1}
+                    value={filesMaxSizeMb}
+                    onChange={(e) => setFilesMaxSizeMb(e.target.value)}
+                    className={FIELD_FORM_INPUT_CLASS}
+                  />
+                </FieldWrapper>
+              </div>
+            </div>
+          )}
+
+          {dataType === 'status' && (
+            <div className="space-y-2">
+              <label
+                htmlFor="field-settings-status-options"
+                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+              >
+                Status options (one per line)
+              </label>
+              <FieldWrapper>
+                <textarea
+                  id="field-settings-status-options"
+                  value={statusOptionsText}
+                  onChange={(e) => setStatusOptionsText(e.target.value)}
+                  className={`${FIELD_FORM_INPUT_CLASS} min-h-[96px]`}
+                />
+              </FieldWrapper>
             </div>
           )}
         </CardContent>

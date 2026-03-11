@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { SearchableSelect } from '@/components/ui/select'
 import { Calendar } from '@/components/ui/calendar'
@@ -143,6 +144,10 @@ export function DataTableInput({
 
   const config = _config ?? undefined
   const isDisabled = disabled ?? config?.isDisabled ?? false
+  const statusOptions = (config?.statusOptions ?? [])
+    .map((label) => String(label).trim())
+    .filter(Boolean)
+    .map((label) => ({ value: label, label }))
 
   switch (type) {
     case 'string':
@@ -198,7 +203,14 @@ export function DataTableInput({
               disabled={isDisabled}
             >
               {value ? (
-                format(new Date(value), 'PPP')
+                (() => {
+                  const dateValue = new Date(value)
+                  if (Number.isNaN(dateValue.getTime())) return String(value)
+                  if (config?.dateFormat === 'iso') return format(dateValue, 'yyyy-MM-dd')
+                  if (config?.dateFormat === 'us') return format(dateValue, 'MM/dd/yyyy')
+                  if (config?.dateFormat === 'eu') return format(dateValue, 'dd/MM/yyyy')
+                  return format(dateValue, 'PPP')
+                })()
               ) : (
                 <span className="text-muted-foreground">Pick a date</span>
               )}
@@ -227,8 +239,7 @@ export function DataTableInput({
       )
     case 'text':
       return (
-        <Input
-          type="text"
+        <Textarea
           value={localStringValue}
           onChange={(e) => {
             const v = e.target.value
@@ -248,7 +259,7 @@ export function DataTableInput({
               setTimeout(() => onChange(nextValue), 0)
             }
           }}
-          className={cn(inlineInputClass, className)}
+          className={cn(inlineInputClass, 'min-h-[64px] py-1', className)}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />
@@ -438,6 +449,94 @@ export function DataTableInput({
       )
     }
     case 'link':
+    case 'url':
+      return (
+        <Input
+          type={type === 'url' ? 'url' : 'text'}
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(inlineInputClass, className)}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+        />
+      )
+    case 'email':
+      return (
+        <Input
+          type="email"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(inlineInputClass, className)}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+        />
+      )
+    case 'phone':
+      return (
+        <Input
+          type="tel"
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(inlineInputClass, className)}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+        />
+      )
+    case 'status': {
+      const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
+      return (
+        <SearchableSelect
+          options={statusOptions.length > 0 ? statusOptions : selectOptions}
+          value={selectValue}
+          onValueChange={(v) => onChange(v === '__empty__' ? '' : v)}
+          placeholder=""
+          searchPlaceholder=""
+          className={cn(
+            inlineInputClass,
+            className,
+            "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
+          )}
+          disabled={isDisabled}
+        />
+      )
+    }
+    case 'rating': {
+      const maxRating = typeof config?.ratingMax === 'number' ? config.ratingMax : (typeof config?.max === 'number' ? config.max : 5)
+      const minRating = typeof config?.min === 'number' ? config.min : 0
+      const step =
+        typeof config?.numberStep === 'number'
+          ? config.numberStep
+          : (config?.ratingAllowHalf ? 0.5 : 1)
+      return (
+        <Input
+          type="number"
+          min={minRating}
+          max={maxRating}
+          step={step}
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn(inlineInputClass, className)}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+        />
+      )
+    }
+    case 'person': {
+      if (config?.personAllowMultiple) {
+        const current = Array.isArray(value)
+          ? value.map((v) => String(v))
+          : String(value ?? '').split(',').map((v) => v.trim()).filter(Boolean)
+        return (
+          <MultiSelect
+            options={options ?? []}
+            value={current}
+            onChange={onChange}
+            isInline={!formField}
+            className={formField ? cn(className, 'w-full text-left shadow-none dark:bg-transparent') : cn(inlineInputClass, className)}
+            disabled={isDisabled}
+          />
+        )
+      }
       return (
         <Input
           type="text"
@@ -448,6 +547,29 @@ export function DataTableInput({
           disabled={isDisabled}
         />
       )
+    }
+    case 'files': {
+      const textValue = Array.isArray(value)
+        ? value.map((entry) => String(entry)).join('\n')
+        : String(value ?? '')
+      return (
+        <Textarea
+          value={textValue}
+          onChange={(e) =>
+            onChange(
+              e.target.value
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+            )
+          }
+          className={cn(inlineInputClass, 'min-h-[64px] py-1', className)}
+          autoFocus={autoFocus}
+          disabled={isDisabled}
+          placeholder="One file URL or name per line"
+        />
+      )
+    }
     case 'currency':
     case 'percentage':
       return (

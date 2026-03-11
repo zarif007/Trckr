@@ -454,6 +454,7 @@ function TrackerTableGridInner({
               value={value}
               type={field.dataType}
               options={fieldOptionsMap.get(field.id)}
+              config={field.config}
             />
           )
         },

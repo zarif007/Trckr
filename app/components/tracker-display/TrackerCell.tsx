@@ -1,11 +1,19 @@
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TrackerFieldType, TrackerOption } from './types'
+import { format } from 'date-fns'
+
+type DisplayFieldConfig = {
+  dateFormat?: 'iso' | 'us' | 'eu' | 'long'
+  numberDecimalPlaces?: number
+  ratingMax?: number
+}
 
 interface TrackerCellProps {
   value: unknown
   type: TrackerFieldType
   options?: TrackerOption[]
+  config?: DisplayFieldConfig
 }
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
@@ -13,7 +21,7 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 })
 
-export function TrackerCell({ value, type, options }: TrackerCellProps) {
+export function TrackerCell({ value, type, options, config }: TrackerCellProps) {
   if (value === null || value === undefined) return <span>-</span>
 
   const optionLabelByKey = new Map<string, string>()
@@ -36,6 +44,7 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
     case 'options':
       return <Badge variant="secondary">{getLabel(String(value))}</Badge>
     case 'multiselect':
+    case 'person':
       return (
         <div className="flex flex-wrap gap-1">
           {Array.isArray(value) && value.length > 0 ? (
@@ -50,8 +59,20 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
         </div>
       )
     case 'date':
-      return <span>{new Date(String(value)).toLocaleDateString()}</span>
+      return (
+        <span>
+          {(() => {
+            const dateValue = new Date(String(value))
+            if (Number.isNaN(dateValue.getTime())) return String(value)
+            if (config?.dateFormat === 'iso') return format(dateValue, 'yyyy-MM-dd')
+            if (config?.dateFormat === 'us') return format(dateValue, 'MM/dd/yyyy')
+            if (config?.dateFormat === 'eu') return format(dateValue, 'dd/MM/yyyy')
+            return format(dateValue, 'MMM d, yyyy')
+          })()}
+        </span>
+      )
     case 'link':
+    case 'url':
       return (
         <a
           href={String(value)}
@@ -62,12 +83,28 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
           {String(value)}
         </a>
       )
+    case 'email':
+      return (
+        <a href={`mailto:${String(value)}`} className="text-blue-500 hover:underline">
+          {String(value)}
+        </a>
+      )
+    case 'phone':
+      return (
+        <a href={`tel:${String(value)}`} className="text-blue-500 hover:underline">
+          {String(value)}
+        </a>
+      )
     case 'currency':
       const currencyValue = Number(value)
       return (
         <span>
           {!isNaN(currencyValue)
-            ? currencyFormatter.format(currencyValue)
+            ? currencyFormatter.format(
+              typeof config?.numberDecimalPlaces === 'number'
+                ? Number(currencyValue.toFixed(config.numberDecimalPlaces))
+                : currencyValue
+            )
             : String(value)}
         </span>
       )
@@ -75,9 +112,19 @@ export function TrackerCell({ value, type, options }: TrackerCellProps) {
       const percentValue = Number(value)
       return (
         <span>
-          {!isNaN(percentValue) ? `${percentValue}%` : String(value)}
+          {!isNaN(percentValue)
+            ? `${typeof config?.numberDecimalPlaces === 'number' ? percentValue.toFixed(config.numberDecimalPlaces) : percentValue}%`
+            : String(value)}
         </span>
       )
+    case 'status':
+      return <Badge>{String(value)}</Badge>
+    case 'rating':
+      return <span>{String(value)} / {config?.ratingMax ?? 5}</span>
+    case 'files': {
+      const files = Array.isArray(value) ? value : [value]
+      return <span>{files.length} file{files.length === 1 ? '' : 's'}</span>
+    }
     default:
       return <span>{String(value)}</span>
   }
