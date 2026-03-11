@@ -22,12 +22,13 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FieldSettingsDialog } from '@/app/components/tracker-display/edit-mode/field-settings'
+import { getEffectiveDependsOn } from '@/lib/depends-on'
 import type {
   TrackerDisplayProps,
   TrackerField,
 } from '@/app/components/tracker-display/types'
 
-type WorkspaceMode = 'bindings' | 'validations' | 'calculations'
+type WorkspaceMode = 'bindings' | 'validations' | 'calculations' | 'dependsOn'
 
 type TrackerRecord = {
   id: string
@@ -48,6 +49,7 @@ type EditableTarget = {
 function pageTitle(mode: WorkspaceMode): string {
   if (mode === 'bindings') return 'Bindings'
   if (mode === 'validations') return 'Validations'
+  if (mode === 'dependsOn') return 'Depends On'
   return 'Calculations'
 }
 
@@ -58,13 +60,21 @@ function isBindable(field: TrackerField): boolean {
 function modeTab(mode: WorkspaceMode) {
   if (mode === 'bindings') return 'bindings' as const
   if (mode === 'validations') return 'validations' as const
+  if (mode === 'dependsOn') return 'dependsOn' as const
   return 'calculations' as const
 }
 
 function modeCountLabel(mode: WorkspaceMode) {
   if (mode === 'bindings') return 'Links'
-  if (mode === 'validations') return 'Rules'
+  if (mode === 'validations' || mode === 'dependsOn') return 'Rules'
   return 'Formulas'
+}
+
+function modeSingularTitle(mode: WorkspaceMode) {
+  if (mode === 'bindings') return 'Binding'
+  if (mode === 'validations') return 'Validation'
+  if (mode === 'dependsOn') return 'Depends-on rule'
+  return 'Calculation'
 }
 
 export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
@@ -78,6 +88,7 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
   const [schema, setSchema] = useState<TrackerDisplayProps | null>(null)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [selected, setSelected] = useState<{ fieldId: string; gridId: string } | null>(
     null,
   )
@@ -127,6 +138,8 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
     const validations = schema.validations ?? {}
     const calculations = schema.calculations ?? {}
     const bindings = schema.bindings ?? {}
+    const dependsOnByTarget = schema.dependsOnByTarget ?? {}
+    const effectiveDependsOn = getEffectiveDependsOn(schema)
 
     const seen = new Set<string>()
     const rows: EditableTarget[] = []
@@ -145,6 +158,9 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
             : 0
           : mode === 'validations'
             ? (validations[key]?.length ?? 0)
+            : mode === 'dependsOn'
+              ? (dependsOnByTarget[key]?.length ??
+                effectiveDependsOn.filter((rule) => rule.targets?.includes(key)).length)
             : calculations[key]
               ? 1
               : 0
@@ -171,28 +187,39 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
     [targets],
   )
 
-  const onSchemaChange = useCallback((next: TrackerDisplayProps) => {
-    setSchema(next)
-    setDirty(true)
-  }, [])
-
-  const handleSave = useCallback(async () => {
-    if (!id || !schema) return
+  const persistSchema = useCallback(async (nextSchema?: TrackerDisplayProps) => {
+    if (!id) return
+    const schemaToSave = nextSchema ?? schema
+    if (!schemaToSave) return
     setSaving(true)
+    setSaveError(null)
     try {
       const res = await fetch(`/api/trackers/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, schema }),
+        body: JSON.stringify({ name, schema: schemaToSave }),
       })
       if (!res.ok) throw new Error('Failed to save tracker')
       setDirty(false)
     } catch {
-      setError('Failed to save tracker')
+      setSaveError('Failed to save tracker')
     } finally {
       setSaving(false)
     }
   }, [id, name, schema])
+
+  const onSchemaChange = useCallback(
+    (next: TrackerDisplayProps) => {
+      setSchema(next)
+      setDirty(true)
+      void persistSchema(next)
+    },
+    [persistSchema],
+  )
+
+  const handleSave = useCallback(async () => {
+    await persistSchema()
+  }, [persistSchema])
 
   const title = pageTitle(mode)
   const configuredCount = configuredTargets.length
@@ -235,6 +262,25 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
           ...schema,
           validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
         }
+      } else if (mode === 'dependsOn') {
+        const nextDependsOnByTarget = { ...(schema.dependsOnByTarget ?? {}) }
+        delete nextDependsOnByTarget[key]
+        const nextDependsOn = Array.isArray(schema.dependsOn)
+          ? schema.dependsOn
+              .map((rule) => ({
+                ...rule,
+                targets: Array.isArray(rule.targets)
+                  ? rule.targets.filter((target) => target !== key)
+                  : [],
+              }))
+              .filter((rule) => (rule.targets?.length ?? 0) > 0)
+          : undefined
+        nextSchema = {
+          ...schema,
+          dependsOnByTarget:
+            Object.keys(nextDependsOnByTarget).length > 0 ? nextDependsOnByTarget : undefined,
+          dependsOn: nextDependsOn && nextDependsOn.length > 0 ? nextDependsOn : undefined,
+        }
       } else {
         const nextCalculations = { ...(schema.calculations ?? {}) }
         delete nextCalculations[key]
@@ -246,12 +292,13 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
 
       setSchema(nextSchema)
       setDirty(true)
+      void persistSchema(nextSchema)
       setDeleteTarget(null)
       if (selected?.fieldId === target.fieldId && selected.gridId === target.gridId) {
         setSelected(null)
       }
     },
-    [mode, schema, selected],
+    [mode, persistSchema, schema, selected],
   )
 
   if (loading) {
@@ -319,6 +366,11 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
 
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-5 space-y-3">
+          {saveError && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {saveError}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-semibold">{title} Workspace</h1>
             <div className="flex items-center gap-2">
@@ -490,7 +542,7 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
       >
         <DialogContent className="sm:max-w-[460px]">
           <DialogHeader>
-            <DialogTitle>Remove {title.slice(0, -1)}</DialogTitle>
+            <DialogTitle>Remove {modeSingularTitle(mode)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 text-sm">
             <p className="text-muted-foreground">

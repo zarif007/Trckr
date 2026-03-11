@@ -17,6 +17,7 @@ import {
   Link2,
   ShieldCheck,
   FunctionSquare,
+  GitBranch,
 } from 'lucide-react'
 
 export type ContextMenuRowKind = 'file' | 'module' | 'tracker' | 'project'
@@ -28,6 +29,7 @@ export type TrackerHrefs = {
   bindingsHref: string
   validationsHref: string
   calculationsHref: string
+  dependsOnHref: string
 }
 
 export type ContextMenuItem = {
@@ -257,6 +259,10 @@ export function RenameDeleteContextMenuPortal({
           <Link href={hrefs.calculationsHref} className={menuLinkClass} role="menuitem">
             <FunctionSquare className="h-3.5 w-3.5" />
             Calculations
+          </Link>
+          <Link href={hrefs.dependsOnHref} className={menuLinkClass} role="menuitem">
+            <GitBranch className="h-3.5 w-3.5" />
+            Depends On
           </Link>
 
           <div className="my-1 mx-2 h-px bg-border/60" />

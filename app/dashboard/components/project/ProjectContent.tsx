@@ -407,6 +407,7 @@ export function ProjectContent({
           bindingsHref: `/tracker/${parentId}/bindings`,
           validationsHref: `/tracker/${parentId}/validations`,
           calculationsHref: `/tracker/${parentId}/calculations`,
+          dependsOnHref: `/tracker/${parentId}/depends-on`,
         },
       }
     })

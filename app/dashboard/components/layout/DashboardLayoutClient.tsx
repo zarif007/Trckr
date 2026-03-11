@@ -20,6 +20,7 @@ import {
   Link2,
   ShieldCheck,
   FunctionSquare,
+  GitBranch,
 } from 'lucide-react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,7 @@ type SidebarContextItem =
       bindingsHref: string
       validationsHref: string
       calculationsHref: string
+      dependsOnHref: string
     }
   }
 
@@ -94,6 +96,7 @@ function buildTrackerHrefs(tracker: TrackerSchema) {
     bindingsHref: `/tracker/${parentId}/bindings`,
     validationsHref: `/tracker/${parentId}/validations`,
     calculationsHref: `/tracker/${parentId}/calculations`,
+    dependsOnHref: `/tracker/${parentId}/depends-on`,
   }
 }
 
@@ -701,6 +704,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   </Link>
                   <Link href={hrefs.calculationsHref} className={linkCls} role="menuitem">
                     <FunctionSquare className="h-3.5 w-3.5" /> Calculations
+                  </Link>
+                  <Link href={hrefs.dependsOnHref} className={linkCls} role="menuitem">
+                    <GitBranch className="h-3.5 w-3.5" /> Depends On
                   </Link>
                 </>
               )
