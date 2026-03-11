@@ -103,6 +103,7 @@ export default function TrackerNavBar() {
   const [savingTracker, setSavingTracker] = useState(false)
   const [savingData, setSavingData] = useState(false)
   const hasSave = Boolean(onSaveTracker || onSaveData)
+  const hasBothSaveOptions = Boolean(onSaveTracker && onSaveData)
 
   useEffect(() => setThemeMounted(true), [])
   useEffect(() => {
@@ -154,7 +155,38 @@ export default function TrackerNavBar() {
                 {primaryNavAction.label}
               </Button>
             )}
-            {hasSave && (
+            {hasSave && !hasBothSaveOptions && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                disabled={isAgentBuilding || savingTracker || savingData}
+                onClick={async () => {
+                  if (onSaveTracker) {
+                    setSavingTracker(true)
+                    try {
+                      await onSaveTracker()
+                    } finally {
+                      setSavingTracker(false)
+                    }
+                    return
+                  }
+                  if (onSaveData) {
+                    setSavingData(true)
+                    try {
+                      await Promise.resolve(onSaveData())
+                    } finally {
+                      setSavingData(false)
+                    }
+                  }
+                }}
+                aria-label={onSaveTracker ? 'Save tracker' : 'Save data'}
+              >
+                <Save className="h-3.5 w-3.5" />
+                Save
+              </Button>
+            )}
+            {hasBothSaveOptions && (
               <Popover open={saveMenuOpen} onOpenChange={setSaveMenuOpen}>
                 <PopoverTrigger asChild>
                   <Button

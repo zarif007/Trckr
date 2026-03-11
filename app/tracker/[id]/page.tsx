@@ -27,6 +27,7 @@ type ConversationState = {
 type TrackerResource = {
   tracker: TrackerRecord
   schema: TrackerResponse
+  latestGridData: Record<string, Array<Record<string, unknown>>> | null
 }
 
 /** Merge tracker.name into schema so the view and top bar show the correct name. */
@@ -50,8 +51,15 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
   if (p) return p
 
   p = (async () => {
-    let tracker: TrackerRecord
-    let schema: TrackerResponse
+    const latestGridDataPromise = fetch(`/api/trackers/${id}/data?limit=1`)
+      .then(async (res) => {
+        if (!res.ok) return null
+        const payload = (await res.json()) as {
+          items?: Array<{ data?: Record<string, Array<Record<string, unknown>>> | null }>
+        }
+        return payload.items?.[0]?.data ?? null
+      })
+      .catch(() => null)
 
     let fromStorage: TrackerRecord | null = null
     if (typeof sessionStorage !== 'undefined') {
@@ -66,6 +74,8 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
       }
     }
 
+    let tracker: TrackerRecord
+    let schema: TrackerResponse
     if (fromStorage) {
       tracker = fromStorage
       schema = schemaWithTrackerName(tracker)
@@ -80,7 +90,8 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
       schema = schemaWithTrackerName(tracker)
     }
 
-    return { tracker, schema }
+    const latestGridData = await latestGridDataPromise
+    return { tracker, schema, latestGridData }
   })()
 
   trackerCache.set(key, p)
@@ -160,6 +171,7 @@ function TrackerByIdContent({
       const next: TrackerResource = {
         tracker: data,
         schema: schemaWithTrackerName(data),
+        latestGridData: state.latestGridData,
       }
       setState(next)
       const key = `${id}::${instanceId ?? ''}`
@@ -202,6 +214,7 @@ function TrackerByIdContent({
   return (
     <TrackerAIView
       initialSchema={schema}
+      initialGridData={state.latestGridData}
       onSaveTracker={handleSaveTracker}
       initialEditMode={false}
       initialChatOpen={false}

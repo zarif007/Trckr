@@ -8,6 +8,8 @@ import { createPortal } from 'react-dom'
 import {
   Loader2,
   Monitor,
+  Menu,
+  X,
   FolderOpen,
   Folder,
   HardDrive,
@@ -118,15 +120,14 @@ function SidebarTrackerLink({
   const dataHref = parentTrackerId ? `/tracker/${parentTrackerId}` : fallbackHref
 
   return (
-    <div className={cn('flex items-center min-w-0', indent ? 'pl-3' : 'pl-1.5')}>
-      <span className="w-[6px] flex-shrink-0" aria-hidden />
-      <span className="mr-1.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground">
-        {isList ? <LayoutList className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+    <div className={cn('flex items-center gap-1.5 min-w-0', indent && 'pl-1.5')}>
+      <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
+        {isList ? <LayoutList className="h-[18px] w-[18px]" /> : <FileText className="h-[18px] w-[18px]" />}
       </span>
       <Link
         href={dataHref}
         className={cn(
-          'flex items-start gap-2 pl-1.5 pr-2 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden group',
+          'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden group/item',
           isActive
             ? 'bg-primary/10 text-primary font-medium'
             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -143,10 +144,10 @@ function SidebarTrackerLink({
             : undefined
         }
       >
-        <span className="text-[11px] truncate flex-1 min-w-0">
+        <span className="text-sm leading-5 truncate flex-1 min-w-0">
           {getTrackerDisplayName(tracker.name, isList)}
         </span>
-        <ChevronRight className="h-3 w-3 mt-[2px] opacity-0 transition-opacity duration-150 group-hover:opacity-70" />
+        <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity duration-150 group-hover/item:opacity-70" />
       </Link>
     </div>
   )
@@ -250,11 +251,35 @@ function SidebarModule({
 
   return (
     <div className="min-w-0">
-      <div className="flex items-start min-w-0 group">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="group/icon relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
+          <Folder className="h-[18px] w-[18px] opacity-75 transition-opacity duration-150 group-hover/icon:opacity-0" />
+          {hasExpandableContent ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setExpanded((v) => !v)
+              }}
+              className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/icon:opacity-80"
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+            >
+              <ChevronRight className={cn('h-4 w-4 transition-transform', expanded && 'rotate-90')} />
+            </button>
+          ) : (
+            <span
+              className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/icon:opacity-70"
+              aria-hidden
+            >
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          )}
+        </span>
         <Link
           href={`/dashboard/${projectId}/module/${mod.id}`}
           className={cn(
-            'flex items-start gap-2 pl-2 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
+            'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isModuleActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -267,35 +292,11 @@ function SidebarModule({
             })
           }
         >
-          <span className="relative h-3 w-3 flex-shrink-0 mt-[2px]">
-            <Folder className="h-3 w-3 opacity-70 transition-opacity duration-150 group-hover:opacity-0" />
-            {hasExpandableContent ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setExpanded((v) => !v)
-                }}
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
-                aria-label={expanded ? 'Collapse' : 'Expand'}
-              >
-                <ChevronRight className="h-3 w-3" />
-              </button>
-            ) : (
-              <span
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
-                aria-hidden
-              >
-                <ChevronRight className="h-3 w-3" />
-              </span>
-            )}
-          </span>
-          <span className="text-[11px] truncate flex-1 min-w-0">
+          <span className="text-sm leading-5 truncate flex-1 min-w-0">
             {mod.name || 'Untitled module'}
           </span>
           {(trackers.length > 0 || children.length > 0) && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0 w-8 text-right ml-auto">
+            <span className="text-xs text-muted-foreground/60 tabular-nums flex-shrink-0 w-9 text-right ml-auto">
               {trackers.length + children.length}
             </span>
           )}
@@ -363,11 +364,35 @@ function SidebarProject({
 
   return (
     <div className="min-w-0">
-      <div className="flex items-start min-w-0 group">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className="group/icon relative inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
+          <FolderOpen className="h-[18px] w-[18px] opacity-75 transition-opacity duration-150 group-hover/icon:opacity-0" />
+          {hasChildren ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setExpanded((v) => !v)
+              }}
+              className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/icon:opacity-80"
+              aria-label={expanded ? 'Collapse' : 'Expand'}
+            >
+              <ChevronRight className={cn('h-4 w-4 transition-transform', expanded && 'rotate-90')} />
+            </button>
+          ) : (
+            <span
+              className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-150 group-hover/icon:opacity-70"
+              aria-hidden
+            >
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          )}
+        </span>
         <Link
           href={`/dashboard/${project.id}`}
           className={cn(
-            'flex items-start gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors min-w-0 flex-1 overflow-hidden',
+            'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isActive
               ? 'bg-primary/10 text-primary font-medium'
               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -380,35 +405,11 @@ function SidebarProject({
             })
           }
         >
-          <span className="relative h-4 w-4 flex-shrink-0 mt-[1px]">
-            <FolderOpen className="h-4 w-4 opacity-70 transition-opacity duration-150 group-hover:opacity-0" />
-            {hasChildren ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  setExpanded((v) => !v)
-                }}
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
-                aria-label={expanded ? 'Collapse' : 'Expand'}
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <span
-                className="absolute inset-0 flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-70 transition-opacity"
-                aria-hidden
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </span>
-            )}
-          </span>
-          <span className="text-xs truncate flex-1 min-w-0">
+          <span className="text-sm leading-5 truncate flex-1 min-w-0">
             {project.name || 'Untitled folder'}
           </span>
           {itemCount > 0 && (
-            <span className="text-[10px] text-muted-foreground/60 tabular-nums flex-shrink-0 w-8 text-right ml-auto">
+            <span className="text-xs text-muted-foreground/60 tabular-nums flex-shrink-0 w-9 text-right ml-auto">
               {itemCount}
             </span>
           )}
@@ -618,6 +619,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const [projectSectionOpen, setProjectSectionOpen] = useState(true)
   const [recentSectionOpen, setRecentSectionOpen] = useState(true)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    setMobileSidebarOpen(false)
+  }, [pathname])
 
   const isProjectsPage = pathname === '/dashboard/projects'
   const isRecentsPage = pathname === '/dashboard/recents'
@@ -760,7 +766,172 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>,
           document.body,
         )}
-      <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setMobileSidebarOpen(true)}
+        className="md:hidden fixed top-3 left-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-md border border-border/60 bg-background/90 text-muted-foreground shadow-sm backdrop-blur transition-colors hover:text-foreground hover:bg-background"
+        aria-label="Open sidebar"
+      >
+        <Menu className="h-4 w-4" />
+      </button>
+      <div
+        className={cn(
+          'md:hidden fixed inset-0 z-40 transition-opacity duration-200',
+          mobileSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
+        )}
+        aria-hidden={!mobileSidebarOpen}
+      >
+        <button
+          type="button"
+          onClick={() => setMobileSidebarOpen(false)}
+          className="absolute inset-0 bg-background/50 backdrop-blur-[1px]"
+          aria-label="Close sidebar"
+        />
+        <aside
+          className={cn(
+            'absolute left-0 top-0 h-full w-[min(88vw,340px)] border-r border-border/60 bg-background transition-transform duration-200',
+            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          )}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Sidebar navigation"
+        >
+          <div className="flex h-full flex-col min-h-0 min-w-0">
+            <div className="flex items-center justify-between border-b border-border/50 px-2 py-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+                Navigation
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                aria-label="Close sidebar"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-shrink-0 flex items-center gap-1 p-2 min-w-0">
+              <Link
+                href="/"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                aria-label="Go to home"
+              >
+                <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="text-current"
+                  >
+                    <path d="M12 3L20 7.5L12 12L4 7.5L12 3Z" fill="currentColor" className="opacity-100" />
+                    <path d="M12 12L20 7.5V16.5L12 21V12Z" fill="currentColor" className="opacity-70" />
+                    <path d="M12 12L4 7.5V16.5L12 21V12Z" fill="currentColor" className="opacity-40" />
+                  </svg>
+                </span>
+              </Link>
+              <Link
+                href="/dashboard"
+                className={cn(
+                  'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                  isDashboardHome
+                    ? 'bg-primary/10 text-primary font-medium'
+                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                )}
+              >
+                <span className="text-sm truncate">Dashboard</span>
+              </Link>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-1 flex flex-col gap-0.5 min-w-0">
+              <div className="flex items-center gap-1 min-w-0 group">
+                <button
+                  type="button"
+                  onClick={() => setProjectSectionOpen((v) => !v)}
+                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                >
+                  <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                    <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                    <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                  </span>
+                </button>
+                <Link
+                  href="/dashboard/projects"
+                  className={cn(
+                    'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
+                    isProjectsPage
+                      ? 'text-primary'
+                      : 'text-muted-foreground/70 hover:text-muted-foreground',
+                  )}
+                >
+                  Projects
+                </Link>
+              </div>
+              {projectSectionOpen &&
+                projects.map((project) => (
+                  <SidebarProject
+                    key={project.id}
+                    project={project}
+                    currentProjectId={currentProjectId}
+                    currentModuleId={currentModuleId}
+                    currentTrackerId={currentTrackerId}
+                    onContextMenu={openSidebarContextMenu}
+                  />
+                ))}
+              <div className="flex items-center gap-1 min-w-0 mt-2 group">
+                <button
+                  type="button"
+                  onClick={() => setRecentSectionOpen((v) => !v)}
+                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                >
+                  <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                    <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
+                    <ChevronRight className="absolute h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-90" />
+                  </span>
+                </button>
+                <Link
+                  href="/dashboard/recents"
+                  className={cn(
+                    'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
+                    isRecentsPage
+                      ? 'text-primary'
+                      : 'text-muted-foreground/70 hover:text-muted-foreground',
+                  )}
+                >
+                  Recent
+                </Link>
+              </div>
+              {recentSectionOpen && recentTrackers.length > 0 && (
+                <div className="flex flex-col gap-0.5 min-w-0 pl-1.5">
+                  {recentTrackers.map((tracker) => (
+                    <SidebarTrackerLink
+                      key={tracker.id}
+                      tracker={tracker}
+                      currentTrackerId={currentTrackerId}
+                      onContextMenu={openSidebarContextMenu}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="border-t border-border/50 p-2 bg-background/50">
+              <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted/30">
+                <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    This PC
+                  </p>
+                  <p className="text-xs text-foreground/80 tabular-nums truncate">
+                    {projects.length} folders · {totalTrackers} trackers
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+      <div className="md:hidden flex-1 min-h-0 min-w-0 flex flex-col">
+        {children}
+      </div>
+      <div className="hidden md:flex flex-1 min-h-0 min-w-0 overflow-hidden">
         {sidebarCollapsed ? (
           <>
             <aside
@@ -834,13 +1005,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <Link
                         href="/dashboard/projects"
                         className={cn(
-                          'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                          'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                           isProjectsPage
                             ? 'text-primary'
                             : 'text-muted-foreground/70 hover:text-muted-foreground'
                         )}
                       >
-                        Project
+                        Projects
                       </Link>
                     </div>
                     {projectSectionOpen &&
@@ -868,7 +1039,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <Link
                         href="/dashboard/recents"
                         className={cn(
-                          'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                          'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                           isRecentsPage
                             ? 'text-primary'
                             : 'text-muted-foreground/70 hover:text-muted-foreground'
@@ -902,14 +1073,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   {!sidebarCollapsed && (
                     <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
                         This PC
                       </p>
-                      <p className="text-[11px] text-foreground/80 tabular-nums truncate">
+                      <p className="text-xs text-foreground/80 tabular-nums truncate">
                         {projects.length} folders · {totalTrackers} trackers
                       </p>
                       {lastActivity && (
-                        <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                        <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
                           Last:{' '}
                           {new Date(lastActivity.date).toLocaleDateString(
                             undefined,
@@ -988,7 +1159,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                           )}
                         >
-                          <span className="text-xs truncate">Dashboard</span>
+                          <span className="text-sm truncate">Dashboard</span>
                         </Link>
                       </div>
                     </div>
@@ -1007,13 +1178,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <Link
                           href="/dashboard/projects"
                           className={cn(
-                            'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                            'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                             isProjectsPage
                               ? 'text-primary'
                               : 'text-muted-foreground/70 hover:text-muted-foreground',
                           )}
                         >
-                          Project
+                          Projects
                         </Link>
                       </div>
                       {projectSectionOpen &&
@@ -1041,7 +1212,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <Link
                           href="/dashboard/recents"
                           className={cn(
-                            'flex-1 min-w-0 py-1.5 text-[10px] font-semibold uppercase tracking-wider rounded-md truncate',
+                            'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                             isRecentsPage
                               ? 'text-primary'
                               : 'text-muted-foreground/70 hover:text-muted-foreground',
@@ -1068,14 +1239,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
                       <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
                           This PC
                         </p>
-                        <p className="text-[11px] text-foreground/80 tabular-nums truncate">
+                        <p className="text-xs text-foreground/80 tabular-nums truncate">
                           {projects.length} folders · {totalTrackers} trackers
                         </p>
                         {lastActivity && (
-                          <p className="text-[10px] text-muted-foreground/60 truncate mt-0.5">
+                          <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
                             Last:{' '}
                             {new Date(lastActivity.date).toLocaleDateString(
                               undefined,

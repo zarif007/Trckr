@@ -90,15 +90,11 @@ function TrackerByIdEditContent({
   id,
   isNew,
   instanceId,
-  initialBranchName,
-  onBranchChange,
   onBack,
 }: {
   id: string
   isNew: boolean
   instanceId: string | null
-  initialBranchName: string | null
-  onBranchChange: (branchName: string) => void
   onBack: () => void
 }) {
   const initial = use(getTrackerResource(id, instanceId))
@@ -200,15 +196,13 @@ function TrackerByIdEditContent({
     <TrackerAIView
       initialSchema={schema}
       onSaveTracker={handleSaveTracker}
-      initialEditMode={isNew}
+      initialEditMode
       initialChatOpen={isNew}
       trackerId={id}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
-      versionControl={state.tracker?.versionControl ?? false}
-      initialBranchName={initialBranchName}
-      onBranchChange={onBranchChange}
       pageMode="schema"
+      showPanelUtilities={false}
       primaryNavAction={{ label: 'Open tracker', href: `/tracker/${id}` }}
     />
   )
@@ -251,22 +245,6 @@ export default function TrackerEditByIdPage() {
   const id = typeof params.id === 'string' ? params.id : null
   const isNew = searchParams.get('new') === 'true'
   const instanceId = searchParams.get('instanceId')
-  const branchFromUrl = searchParams.get('branch')
-
-  const handleBranchChange = useCallback(
-    (branchName: string) => {
-      if (!id) return
-      const next = new URLSearchParams(searchParams.toString())
-      if (branchName) {
-        next.set('branch', branchName)
-      } else {
-        next.delete('branch')
-      }
-      const qs = next.toString()
-      router.replace(`/tracker/${id}/edit${qs ? `?${qs}` : ''}`, { scroll: false })
-    },
-    [id, router, searchParams]
-  )
 
   const handleBack = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -294,8 +272,6 @@ export default function TrackerEditByIdPage() {
           id={id}
           isNew={isNew}
           instanceId={instanceId}
-          initialBranchName={branchFromUrl}
-          onBranchChange={handleBranchChange}
           onBack={handleBack}
         />
       </TrackerErrorBoundary>

@@ -55,6 +55,7 @@ interface TrackerPanelProps {
   onVcBranchSwitch?: (branch: BranchRecord) => void
   onVcBranchCreated?: (branch: BranchRecord) => void
   onVcMergedToMain?: (updatedMain: BranchRecord) => void
+  showDebugActions?: boolean
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -83,6 +84,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   onVcBranchSwitch,
   onVcBranchCreated,
   onVcMergedToMain,
+  showDebugActions = true,
 }: TrackerPanelProps) {
   const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
@@ -220,7 +222,7 @@ export const TrackerPanel = memo(function TrackerPanel({
             <span className="hidden sm:inline">{vcCurrentBranch?.branchName ?? 'Branches'}</span>
           </Button>
         )}
-        {hideChatToggle ? (
+        {hideChatToggle && showDebugActions && (
           <Popover open={moreOpen} onOpenChange={setMoreOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -291,7 +293,8 @@ export const TrackerPanel = memo(function TrackerPanel({
               </div>
             </PopoverContent>
           </Popover>
-        ) : (
+        )}
+        {!hideChatToggle && showDebugActions && (
           <>
             <Button
               variant="outline"

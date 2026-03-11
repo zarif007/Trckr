@@ -20,6 +20,7 @@ const MIN_RIGHT_PX = 360
 
 export interface TrackerEditorViewProps {
   initialSchema?: TrackerResponse
+  initialGridData?: GridDataSnapshot | null
   onSaveTracker?: (schema: TrackerResponse) => Promise<void>
   initialEditMode?: boolean
   initialChatOpen?: boolean
@@ -36,11 +37,14 @@ export interface TrackerEditorViewProps {
   pageMode?: 'full' | 'data' | 'schema'
   /** Optional header navigation button */
   primaryNavAction?: { label: string; href: string } | null
+  /** Show debug/share utilities in tracker panel controls */
+  showPanelUtilities?: boolean
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const {
     initialSchema,
+    initialGridData = null,
     onSaveTracker,
     initialEditMode = true,
     initialChatOpen = true,
@@ -52,6 +56,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     onBranchChange,
     pageMode = 'full',
     primaryNavAction = null,
+    showPanelUtilities = true,
   } = props
   const isDataPage = pageMode === 'data'
   const isSchemaPage = pageMode === 'schema'
@@ -565,13 +570,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               isViewingHistoricalVersion={isViewingHistoricalVersion}
               onReturnToLatest={handleReturnToLatest}
               trackerId={trackerId ?? undefined}
-              initialGridData={loadedSnapshot?.data ?? null}
+              initialGridData={loadedSnapshot?.data ?? initialGridData}
               versionControl={versionControl}
               vcCurrentBranch={vcCurrentBranch}
               vcBranches={vcBranches}
               onVcBranchSwitch={handleVcBranchSwitch}
               onVcBranchCreated={handleVcBranchCreated}
               onVcMergedToMain={handleVcMergedToMain}
+              showDebugActions={showPanelUtilities}
             />
           </TabsContent>
           <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
@@ -606,13 +612,14 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           isViewingHistoricalVersion={isViewingHistoricalVersion}
           onReturnToLatest={handleReturnToLatest}
           trackerId={trackerId ?? undefined}
-          initialGridData={loadedSnapshot?.data ?? null}
+          initialGridData={loadedSnapshot?.data ?? initialGridData}
           versionControl={versionControl}
           vcCurrentBranch={vcCurrentBranch}
           vcBranches={vcBranches}
           onVcBranchSwitch={handleVcBranchSwitch}
           onVcBranchCreated={handleVcBranchCreated}
           onVcMergedToMain={handleVcMergedToMain}
+          showDebugActions={showPanelUtilities}
         />
 
         {isChatOpen && (
