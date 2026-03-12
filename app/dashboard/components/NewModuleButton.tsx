@@ -73,7 +73,7 @@ export function NewModuleButton({
         invalidate()
         await fetchProjects()
         setOpen(false)
-        router.push(`/dashboard/${projectId}/module/${mod.id}`)
+        router.push(`/project/${projectId}/module/${mod.id}`)
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Error creating module'
         onError?.(message)

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect, type MouseEvent } from 'react'
 import Link from 'next/link'
-import { useRouter, useParams } from 'next/navigation'
+import { usePathname, useRouter, useParams } from 'next/navigation'
 import {
   X,
   FilePlus,
@@ -86,6 +86,7 @@ export function ProjectContent({
   initialProject: Project
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const params = useParams()
   const projectId = params.projectId as string
   const queryClient = useQueryClient()
@@ -242,7 +243,8 @@ export function ProjectContent({
         return () => {
           queryClient.setQueryData(dashboardQueryKeys.project(item.id), deleted)
           setProjects((prev) => [...prev, deleted])
-          router.replace(`/dashboard/${item.id}`)
+          const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+          router.replace(`${base}/${item.id}`)
         }
       }
       if (item.kind === 'module' && project) {
@@ -329,7 +331,7 @@ export function ProjectContent({
         }
       }
     },
-    [project, projectId, queryClient, setProjects, router],
+    [project, projectId, queryClient, setProjects, router, pathname],
   )
 
   useEffect(() => {
@@ -371,6 +373,7 @@ export function ProjectContent({
         .filter((t) => t.listForSchemaId != null)
         .map((t) => [t.listForSchemaId as string, t.id]),
     )
+    const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
     const fileRows = projectFiles.map((file: ProjectFile) => ({
       kind: 'file' as const,
       id: file.id,
@@ -378,7 +381,7 @@ export function ProjectContent({
       sublabel: '',
       icon: PROJECT_FILE_ICONS[file.type],
       updatedAt: file.updatedAt,
-      href: `/dashboard/${projectId}/file/${file.id}`,
+      href: `${base}/${projectId}/file/${file.id}`,
     }))
     const moduleRows = modules.map((mod) => ({
       kind: 'module' as const,
@@ -387,7 +390,7 @@ export function ProjectContent({
       sublabel: `${mod.trackerSchemas.length} tracker${mod.trackerSchemas.length !== 1 ? 's' : ''}`,
       icon: Folder,
       updatedAt: mod.updatedAt,
-      href: `/dashboard/${projectId}/module/${mod.id}`,
+      href: `${base}/${projectId}/module/${mod.id}`,
     }))
     const trackerRows = projectLevelTrackers.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
@@ -418,7 +421,7 @@ export function ProjectContent({
       }
     })
     return [...fileRows, ...moduleRows, ...trackerRows]
-  }, [projectId, project, projectFiles, modules, projectLevelTrackers])
+  }, [pathname, projectId, project, projectFiles, modules, projectLevelTrackers])
 
   const handleTrackerCreated = useCallback(
     async (trackerId: string) => {

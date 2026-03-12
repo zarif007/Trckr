@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect, type MouseEvent } from 'react'
 import Link from 'next/link'
-import { useRouter, useParams } from 'next/navigation'
+import { usePathname, useRouter, useParams } from 'next/navigation'
 import {
   Loader2,
   X,
@@ -88,6 +88,7 @@ export function ModuleContent({
   initialBreadcrumb?: { id: string; name: string }[]
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const params = useParams()
   const projectId = params.projectId as string
   const moduleId = params.moduleId as string
@@ -113,9 +114,10 @@ export function ModuleContent({
 
   useEffect(() => {
     if (isError && (error as Error)?.message === 'Not found') {
-      router.replace(`/dashboard/${projectId}`)
+      const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+      router.replace(`${base}/${projectId}`)
     }
-  }, [isError, error, router, projectId])
+  }, [isError, error, router, projectId, pathname])
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [addingConfig, setAddingConfig] = useState(false)
@@ -167,7 +169,8 @@ export function ModuleContent({
         invalidateModuleAndProjects()
         await fetchProjects()
         if (item.id === moduleId) {
-          router.replace(`/dashboard/${projectId}`)
+          const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+          router.replace(`${base}/${projectId}`)
         }
       } else if (item.kind === 'tracker') {
         const res = await fetch(`/api/trackers/${item.id}`, { method: 'DELETE' })
@@ -262,7 +265,8 @@ export function ModuleContent({
             ),
           )
           queryClient.removeQueries({ queryKey: dashboardQueryKeys.module(item.id) })
-          router.replace(`/dashboard/${projectId}`)
+          const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+          router.replace(`${base}/${projectId}`)
         } else {
           queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
             prev
@@ -298,7 +302,8 @@ export function ModuleContent({
                   },
               ),
             )
-            router.replace(`/dashboard/${projectId}/module/${item.id}`)
+            const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+            router.replace(`${base}/${projectId}/module/${item.id}`)
           } else {
             queryClient.setQueryData<Module>(dashboardQueryKeys.module(moduleId), (prev) =>
               prev ? { ...prev, children: [...prev.children, deleted] } : prev,
@@ -416,6 +421,7 @@ export function ModuleContent({
         .filter((t) => t.listForSchemaId != null)
         .map((t) => [t.listForSchemaId as string, t.id]),
     )
+    const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
     const fileRows = moduleFiles.map((file: ModuleFile) => ({
       kind: 'file' as const,
       id: file.id,
@@ -423,7 +429,7 @@ export function ModuleContent({
       sublabel: 'Override',
       icon: MODULE_FILE_ICONS[file.type],
       updatedAt: file.updatedAt,
-      href: `/dashboard/${projectId}/module/${moduleId}/file/${file.id}`,
+      href: `${base}/${projectId}/module/${moduleId}/file/${file.id}`,
     }))
     const moduleRows = childModules.map((child) => ({
       kind: 'module' as const,
@@ -432,7 +438,7 @@ export function ModuleContent({
       sublabel: `${child.trackerSchemas.length} tracker${child.trackerSchemas.length !== 1 ? 's' : ''}`,
       icon: Folder,
       updatedAt: child.updatedAt,
-      href: `/dashboard/${projectId}/module/${child.id}`,
+      href: `${base}/${projectId}/module/${child.id}`,
     }))
     const trackerRows = trackerSchemas.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
@@ -463,7 +469,7 @@ export function ModuleContent({
       }
     })
     return [...fileRows, ...moduleRows, ...trackerRows]
-  }, [projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
+  }, [pathname, projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
 
   const handleTrackerCreated = useCallback(
     async (trackerId: string) => {
@@ -520,7 +526,7 @@ export function ModuleContent({
             </Link>
             <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
             <Link
-              href={`/dashboard/${projectId}`}
+              href={pathname.startsWith('/project/') ? `/project/${projectId}` : `/dashboard/${projectId}`}
               className="hover:text-foreground transition-colors flex-shrink-0"
             >
               {projectName || 'Untitled folder'}
@@ -531,7 +537,7 @@ export function ModuleContent({
                   <span key={item.id} className="flex items-center gap-2 flex-shrink-0">
                     <ChevronRight className="h-3 w-3 opacity-50" />
                     <Link
-                      href={`/dashboard/${projectId}/module/${item.id}`}
+                      href={pathname.startsWith('/project/') ? `/project/${projectId}/module/${item.id}` : `/dashboard/${projectId}/module/${item.id}`}
                       className="hover:text-foreground transition-colors"
                     >
                       {item.name}

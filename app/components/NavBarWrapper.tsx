@@ -11,8 +11,9 @@ export default function NavBarWrapper() {
   const pathname = usePathname()
   const isTrackerPage = pathname?.startsWith('/tracker') ?? false
   const isDashboardPage = pathname?.startsWith('/dashboard') ?? false
+  const isProjectPage = pathname?.startsWith('/project') ?? false
 
-  if (isTrackerPage || isDashboardPage) {
+  if (isTrackerPage || isDashboardPage || isProjectPage) {
     return null
   }
 

@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { usePathname, useParams, useRouter } from 'next/navigation'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -25,6 +25,7 @@ export function ProjectFileContent({
 }) {
   const params = useParams()
   const router = useRouter()
+  const pathname = usePathname()
   const projectId = params.projectId as string
 
   const { data: project, isLoading, isError, error } = useQuery({
@@ -51,9 +52,10 @@ export function ProjectFileContent({
 
   useEffect(() => {
     if (fileNotFound) {
-      router.replace(`/dashboard/${projectId}`)
+      const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
+      router.replace(`${base}/${projectId}`)
     }
-  }, [fileNotFound, router, projectId])
+  }, [fileNotFound, router, projectId, pathname])
 
   if (isLoading && !project) {
     return (
@@ -79,7 +81,7 @@ export function ProjectFileContent({
           </Link>
           <ChevronRight className="h-3 w-3 opacity-50" />
           <Link
-            href={`/dashboard/${projectId}`}
+            href={pathname.startsWith('/project/') ? `/project/${projectId}` : `/dashboard/${projectId}`}
             className="hover:text-foreground transition-colors"
           >
             Project
@@ -92,7 +94,7 @@ export function ProjectFileContent({
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs">Coming soon. Edit and configuration will be available here.</p>
         <Link
-          href={`/dashboard/${projectId}`}
+          href={pathname.startsWith('/project/') ? `/project/${projectId}` : `/dashboard/${projectId}`}
           className="text-xs text-primary hover:underline"
         >
           Back to project

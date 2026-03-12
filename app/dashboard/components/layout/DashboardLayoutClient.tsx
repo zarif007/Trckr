@@ -279,7 +279,7 @@ function SidebarModule({
           )}
         </span>
         <Link
-          href={`/dashboard/${projectId}/module/${mod.id}`}
+          href={`/project/${projectId}/module/${mod.id}`}
           className={cn(
             'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isModuleActive
@@ -392,7 +392,7 @@ function SidebarProject({
           )}
         </span>
         <Link
-          href={`/dashboard/${project.id}`}
+          href={`/project/${project.id}`}
           className={cn(
             'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden',
             isActive
@@ -538,8 +538,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     async (item: SidebarContextItem) => {
       setSidebarContextMenu(null)
       const pathSegments = pathname.split('/')
-      const currentProjectId =
-        pathname.startsWith('/dashboard/') ? pathSegments[2] ?? null : null
+      const inProjectSection =
+        pathname.startsWith('/dashboard/') || pathname.startsWith('/project/')
+      const currentProjectId = inProjectSection ? pathSegments[2] ?? null : null
       const currentModuleId =
         pathSegments[3] === 'module' ? pathSegments[4] ?? null : null
 
@@ -566,7 +567,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             currentProjectId === pathSegments[2] &&
             currentModuleId === item.id
           ) {
-            router.replace(`/dashboard/${currentProjectId}`)
+            const base =
+              pathname.startsWith('/project/') ? '/project' : '/dashboard'
+            router.replace(`${base}/${currentProjectId}`)
           }
         }
       } catch {
@@ -597,9 +600,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         )[0]
       : null
   const pathSegments = pathname.split('/')
-  const currentProjectId = pathname.startsWith('/dashboard/')
-    ? pathSegments[2] ?? null
-    : null
+  const inProjectSection =
+    pathname.startsWith('/dashboard/') || pathname.startsWith('/project/')
+  const currentProjectId = inProjectSection ? pathSegments[2] ?? null : null
   const currentModuleId =
     pathSegments[3] === 'module' ? pathSegments[4] ?? null : null
   const isTrackerDetail = pathname.startsWith('/tracker/')

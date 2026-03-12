@@ -209,9 +209,9 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               {viewMode === 'grid' ? (
                 <>
                   {projects.map((project) => (
-                    <Link
+                  <Link
                       key={project.id}
-                      href={`/dashboard/${project.id}`}
+                      href={`/project/${project.id}`}
                       className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
                     >
                       <motion.div
@@ -257,9 +257,9 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               ) : (
                 <>
                   {projects.map((project) => (
-                    <Link
+                  <Link
                       key={project.id}
-                      href={`/dashboard/${project.id}`}
+                      href={`/project/${project.id}`}
                       className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
                     >
                       <div className="flex-1 min-w-0">
@@ -276,9 +276,9 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                           day: 'numeric',
                         })}
                       </span>
-                    <div className={DASH_LIST_ICON_SHELL}>
-                      <FolderOpen className={DASH_LIST_ICON} />
-                    </div>
+                      <div className={DASH_LIST_ICON_SHELL}>
+                        <FolderOpen className={DASH_LIST_ICON} />
+                      </div>
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </Link>
                   ))}
