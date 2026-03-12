@@ -29,6 +29,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
+import { NewTrackerDialog } from './components/NewTrackerDialog'
 
 export type DashboardView = 'all' | 'projects' | 'recents'
 
@@ -106,27 +107,6 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
     [handleCreateProject],
   )
 
-  const handleCreateTracker = async (projectId?: string) => {
-    setCreating(true)
-    setError(null)
-    try {
-      const body: { new: true; projectId?: string } = { new: true }
-      if (projectId?.trim()) body.projectId = projectId.trim()
-      const res = await fetch('/api/trackers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-      if (!res.ok) throw new Error('Failed to create tracker')
-      const data = (await res.json()) as { id: string }
-      router.push(`/tracker/${data.id}/edit?new=true`)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error creating tracker')
-    } finally {
-      setCreating(false)
-    }
-  }
-
   const totalTrackers = projects.reduce(
     (acc, p) =>
       acc +
@@ -168,20 +148,19 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 New Project
               </Button>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
-              onClick={() => handleCreateTracker()}
-              disabled={creating}
-            >
-              {creating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <FilePlus className="h-3.5 w-3.5" />
-              )}
-              New Tracker
-            </Button>
+            <NewTrackerDialog
+              trigger={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                >
+                  <FilePlus className="h-3.5 w-3.5" />
+                  New Tracker
+                </Button>
+              }
+              onError={setError}
+            />
             {view !== 'recents' && (
               <>
                 <div className="w-px h-4 bg-border/60" />
