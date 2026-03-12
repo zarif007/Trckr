@@ -61,6 +61,7 @@ export interface TrackerKanbanGridProps {
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
+  readOnly?: boolean
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   onDeleteEntries?: (rowIndices: number[]) => void
@@ -80,15 +81,17 @@ function TrackerKanbanGridInner({
   dependsOn,
   gridData = {},
   gridDataForThisGrid,
+  readOnly = false,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerKanbanGridProps) {
-  const addable = (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false && onAddEntry != null
-  const editable = grid.config?.isRowEditAble !== false
-  const deleteable = (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false && onDeleteEntries != null
+  const addable = !readOnly && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false && onAddEntry != null
+  const editable = !readOnly && grid.config?.isRowEditAble !== false
+  const deleteable = !readOnly && (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false && onDeleteEntries != null
+  const canDrag = editable && onUpdate != null
   const thisGridRows = useMemo(
     () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
     [gridDataForThisGrid, gridData, grid.id]
@@ -296,95 +299,90 @@ function TrackerKanbanGridInner({
     )
   }
 
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="w-full space-y-4">
-        {addable && (
-          <>
-            <div className="flex justify-end gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setShowAddDialog(true)}
-                className="font-medium"
-              >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Add Entry
-              </Button>
-            </div>
+  const content = (
+    <div className="w-full space-y-4">
+      {addable && (
+        <>
+          <div className="flex justify-end gap-2">
+            <Button
+              size="sm"
+              variant="default"
+              onClick={() => setShowAddDialog(true)}
+              className="font-medium"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Entry
+            </Button>
+          </div>
 
-            <EntryFormDialog
-              open={showAddDialog}
-              onOpenChange={setShowAddDialog}
-              title="Add New Entry"
-              submitLabel="Add Entry"
-              fieldMetadata={fieldMetadata}
-              fieldOrder={fieldOrder}
-              initialValues={
-                groupByFieldId && groups.length > 0
-                  ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
-                  : {}
-              }
-              onSave={(values) => {
-                onAddEntry(values)
-                setShowAddDialog(false)
-              }}
-              onSaveAnother={(values) => onAddEntry(values)}
-              getBindingUpdates={getBindingUpdates}
-              getFieldOverrides={(values, fieldId) =>
-                resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
-              }
-              gridId={grid.id}
-              calculations={calculations}
-            />
-          </>
-        )}
-
-        {editable && (
           <EntryFormDialog
-            open={editRowIndex !== null}
-            onOpenChange={(open) => !open && setEditRowIndex(null)}
-            title="Row Details"
-            submitLabel="Update Entry"
+            open={showAddDialog}
+            onOpenChange={setShowAddDialog}
+            title="Add New Entry"
+            submitLabel="Add Entry"
             fieldMetadata={fieldMetadata}
             fieldOrder={fieldOrder}
-            initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
-            onSave={handleEditSave}
+            initialValues={
+              groupByFieldId && groups.length > 0
+                ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
+                : {}
+            }
+            onSave={(values) => {
+              onAddEntry(values)
+              setShowAddDialog(false)
+            }}
+            onSaveAnother={(values) => onAddEntry(values)}
             getBindingUpdates={getBindingUpdates}
             getFieldOverrides={(values, fieldId) =>
-              resolveDependsOnOverrides(
-                dependsOnForGrid,
-                fullGridData,
-                grid.id,
-                editRowIndex ?? 0,
-                values
-              )[fieldId]
+              resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
             }
             gridId={grid.id}
             calculations={calculations}
           />
-        )}
+        </>
+      )}
 
-        <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-          {groups.map((group) => {
-            const cardsInGroup = groupedCards.get(group.id) ?? []
+      {editable && (
+        <EntryFormDialog
+          open={editRowIndex !== null}
+          onOpenChange={(open) => !open && setEditRowIndex(null)}
+          title="Row Details"
+          submitLabel="Update Entry"
+          fieldMetadata={fieldMetadata}
+          fieldOrder={fieldOrder}
+          initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
+          onSave={handleEditSave}
+          getBindingUpdates={getBindingUpdates}
+          getFieldOverrides={(values, fieldId) =>
+            resolveDependsOnOverrides(
+              dependsOnForGrid,
+              fullGridData,
+              grid.id,
+              editRowIndex ?? 0,
+              values
+            )[fieldId]
+          }
+          gridId={grid.id}
+          calculations={calculations}
+        />
+      )}
 
-            return (
-              <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
-                <div className="bg-muted/70 rounded-md p-4 mb-4">
-                  <h3 className="font-semibold text-foreground flex items-center justify-between">
-                    {group.label}
-                    <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
-                      {cardsInGroup.length}
-                    </span>
-                  </h3>
-                </div>
-                <div className="space-y-3 min-h-[100px] flex flex-col">
+      <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+        {groups.map((group) => {
+          const cardsInGroup = groupedCards.get(group.id) ?? []
+
+          return (
+            <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
+              <div className="bg-muted/70 rounded-md p-4 mb-4">
+                <h3 className="font-semibold text-foreground flex items-center justify-between">
+                  {group.label}
+                  <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
+                    {cardsInGroup.length}
+                  </span>
+                </h3>
+              </div>
+              <div className="space-y-3 min-h-[100px] flex flex-col">
+                {canDrag ? (
                   <SortableContext
                     id={group.id}
                     items={cardsInGroup.map((c) => `${(c as Record<string, unknown> & { _originalIdx: number })._originalIdx}-${group.id}`)}
@@ -420,13 +418,42 @@ function TrackerKanbanGridInner({
                       </>
                     )}
                   </SortableContext>
-                </div>
+                ) : cardsInGroup.length === 0 ? (
+                  <div className="text-xs text-muted-foreground/70 px-2 py-2">No entries</div>
+                ) : (
+                  cardsInGroup.map((card) => (
+                    <KanbanCard
+                      key={`${group.id}-${card._originalIdx ?? 'row'}`}
+                      card={card}
+                      cardFields={cardFieldsDisplay}
+                      gridId={grid.id}
+                      gridData={gridDataForKanban}
+                      dependsOn={dependsOnForGrid}
+                      fieldMetadata={fieldMetadata}
+                      styles={cardStyles}
+                    />
+                  ))
+                )}
               </div>
-            )
-          })}
-        </div>
+            </div>
+          )
+        })}
       </div>
+    </div>
+  )
 
+  if (!canDrag) {
+    return content
+  }
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      {content}
       <DragOverlay
         dropAnimation={{
           sideEffects: defaultDropAnimationSideEffects({

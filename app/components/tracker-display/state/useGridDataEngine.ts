@@ -18,6 +18,7 @@ interface GridDataEngineInput {
 interface GridDataEngineOutput {
   gridData: Record<string, Array<Record<string, unknown>>>
   gridDataRef: React.MutableRefObject<Record<string, Array<Record<string, unknown>>>>
+  editVersion: number
   handleUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   handleAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
   handleDeleteEntries: (gridId: string, rowIndices: number[]) => void
@@ -53,6 +54,7 @@ export function useGridDataEngine({
   const [localGridData, setLocalGridData] = useState<Record<string, Array<Record<string, unknown>>>>(
     () => ({})
   )
+  const [editVersion, setEditVersion] = useState(0)
 
   const baseGridData = seedGridData
 
@@ -86,6 +88,7 @@ export function useGridDataEngine({
 
   const handleUpdate = useCallback(
     (gridId: string, rowIndex: number, columnId: string, value: unknown) => {
+      setEditVersion((v) => v + 1)
       const calculationKey = `${gridId}.${columnId}`
       const isCalculatedField = !!calculations?.[calculationKey]
 
@@ -139,6 +142,7 @@ export function useGridDataEngine({
 
   const handleAddEntry = useCallback(
     (gridId: string, newRow: Record<string, unknown>) => {
+      setEditVersion((v) => v + 1)
       setLocalGridData((prev) => {
         const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
@@ -182,6 +186,7 @@ export function useGridDataEngine({
 
   const handleDeleteEntries = useCallback(
     (gridId: string, rowIndices: number[]) => {
+      setEditVersion((v) => v + 1)
       setLocalGridData((prev) => {
         const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
@@ -215,6 +220,7 @@ export function useGridDataEngine({
   return {
     gridData,
     gridDataRef,
+    editVersion,
     handleUpdate,
     handleAddEntry,
     handleDeleteEntries,

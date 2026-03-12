@@ -14,6 +14,9 @@ import { useIsDesktop } from '../hooks/useMediaQuery'
 import { TrackerPanel, type GridDataSnapshot } from './TrackerPanel'
 import { TrackerChatPanel } from './TrackerChatPanel'
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
+import { useAutoSaveTrackerData } from '../hooks/useAutoSaveTrackerData'
+import type { TrackerFormAction } from '@/app/components/tracker-display/types'
+import { useAutoSave } from '@/app/hooks/useAutoSave'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
@@ -25,6 +28,14 @@ export interface TrackerEditorViewProps {
   initialEditMode?: boolean
   initialChatOpen?: boolean
   trackerId?: string | null
+  /** Tracker instance type (SINGLE or MULTI). */
+  instanceType?: 'SINGLE' | 'MULTI'
+  /** Current tracker instance id (MULTI only). */
+  instanceId?: string | null
+  /** Auto-save enabled for eligible trackers. */
+  autoSave?: boolean
+  /** Initial form status tag (if available). */
+  initialFormStatus?: string | null
   initialConversationId?: string | null
   initialMessages?: Message[]
   /** Whether this tracker has version control enabled */
@@ -39,6 +50,8 @@ export interface TrackerEditorViewProps {
   primaryNavAction?: { label: string; href: string } | null
   /** Show debug/share utilities in tracker panel controls */
   showPanelUtilities?: boolean
+  /** Enable auto-save for schema (edit view) */
+  schemaAutoSave?: boolean
 }
 
 export function TrackerAIView(props: TrackerEditorViewProps = {}) {
@@ -49,6 +62,10 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     initialEditMode = true,
     initialChatOpen = true,
     trackerId,
+    instanceType = 'SINGLE',
+    instanceId = null,
+    autoSave = true,
+    initialFormStatus = null,
     initialConversationId,
     initialMessages,
     versionControl = false,
@@ -57,6 +74,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     pageMode = 'full',
     primaryNavAction = null,
     showPanelUtilities = true,
+    schemaAutoSave = false,
   } = props
   const isDataPage = pageMode === 'data'
   const isSchemaPage = pageMode === 'schema'
@@ -96,6 +114,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   })
 
   const isDesktop = useIsDesktop()
+  const router = useRouter()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [leftWidth, setLeftWidth] = useState<number | null>(null)
   const [editMode, setEditMode] = useState(initialEditMode && canEditSchema)
@@ -111,9 +130,28 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     label: string | null
     data: GridDataSnapshot
     updatedAt?: string
+    formStatus?: string | null
   }
   const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(null)
+  const [currentFormStatus, setCurrentFormStatus] = useState<string | null>(initialFormStatus)
+  const [formActionSaving, setFormActionSaving] = useState(false)
+  const [formActionError, setFormActionError] = useState<string | null>(null)
+  const formStatusRef = useRef<string | null>(initialFormStatus)
+  const instanceIdRef = useRef<string | null>(instanceId)
+  useEffect(() => {
+    formStatusRef.current = currentFormStatus
+  }, [currentFormStatus])
+  useEffect(() => {
+    setCurrentFormStatus(initialFormStatus ?? null)
+  }, [initialFormStatus])
+  useEffect(() => {
+    instanceIdRef.current = instanceId
+  }, [instanceId])
   const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
+  useEffect(() => {
+    if (!loadedSnapshot) return
+    setCurrentFormStatus(loadedSnapshot.formStatus ?? null)
+  }, [loadedSnapshot])
 
   useEffect(() => {
     if (!canEditSchema && editMode) {
@@ -151,6 +189,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               label: selected.label ?? selected.branchName,
               data: selected.data as GridDataSnapshot,
               updatedAt: selected.updatedAt,
+              formStatus: (selected as BranchRecord & { formStatus?: string | null }).formStatus ?? null,
             })
           }
         }
@@ -163,44 +202,247 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [versionControl, trackerId, initialBranchName])
 
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
+  const formActions = useMemo<TrackerFormAction[]>(
+    () => (Array.isArray(schema?.formActions) ? schema.formActions : []),
+    [schema]
+  )
+  const activeFormAction = useMemo(
+    () =>
+      formActions.find(
+        (action) =>
+          action.statusTag.trim().toLowerCase() === (currentFormStatus ?? '').trim().toLowerCase()
+      ) ?? null,
+    [formActions, currentFormStatus]
+  )
+  const draftFormAction = useMemo(
+    () =>
+      formActions.find(
+        (action) => action.statusTag.trim().toLowerCase() === 'draft'
+      ) ?? null,
+    [formActions]
+  )
+  const isReadOnly = activeFormAction ? !activeFormAction.isEditable : false
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
   const setSaveState = trackerNavCtx?.setSaveState ?? null
-  const saveDataRef = useRef<() => void>(() => { })
+  const saveDataRef = useRef<() => Promise<void>>(async () => { })
   const setTrackerNavRef = useRef(setTrackerNav)
   setTrackerNavRef.current = setTrackerNav
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
+  const [dataSaveStatus, setDataSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [dataSaveError, setDataSaveError] = useState<string | null>(null)
+  const saveStatusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [schemaSaveStatus, setSchemaSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [schemaSaveError, setSchemaSaveError] = useState<string | null>(null)
 
-  const handleDirectSave = useCallback(async () => {
-    if (!trackerId) return
-    const data = trackerDataRef.current?.() ?? {}
-    try {
-      const res = await fetch(`/api/trackers/${trackerId}/data`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
-      if (res.ok) {
-        const saved = await res.json()
+  const setSavedWithTimeout = useCallback(() => {
+    setDataSaveStatus('saved')
+    setDataSaveError(null)
+    if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+    saveStatusResetTimerRef.current = setTimeout(() => {
+      saveStatusResetTimerRef.current = null
+      setDataSaveStatus('idle')
+    }, 1500)
+  }, [])
+  const setFormStatus = useCallback((status: string | null) => {
+    formStatusRef.current = status
+    setCurrentFormStatus(status)
+  }, [])
+
+  const saveTrackerData = useCallback(
+    async (options: { formStatus?: string | null; data?: GridDataSnapshot } = {}) => {
+      if (!trackerId) return
+      const data = options.data ?? (trackerDataRef.current?.() ?? {})
+      const nextFormStatus =
+        options.formStatus !== undefined ? options.formStatus : formStatusRef.current
+      const payload: Record<string, unknown> = { data }
+      if (nextFormStatus !== undefined) payload.formStatus = nextFormStatus
+
+      const handleResponse = async (res: Response) => {
+        const saved = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          const msg =
+            typeof saved?.error === 'string' ? saved.error : `Failed to save (${res.status})`
+          throw new Error(msg)
+        }
         if (saved?.id && saved?.data) {
           setLoadedSnapshot({
             id: saved.id,
             label: saved.label ?? null,
             data: saved.data as GridDataSnapshot,
             updatedAt: saved.updatedAt,
+            formStatus: saved.formStatus ?? null,
           })
         }
+        return saved
       }
-    } catch {
-      // silent — nav bar handles display
-    }
-  }, [trackerId, trackerDataRef])
 
-  const onRegisterSaveData = useCallback((fn: () => void) => {
-    if (!versionControl) {
-      saveDataRef.current = fn
+      if (versionControl) {
+        const currentBranch = vcCurrentBranchRef.current
+        if (currentBranch) {
+          const res = await fetch(`/api/trackers/${trackerId}/branches/${currentBranch.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          const updated = await handleResponse(res)
+          if (updated?.id) {
+            setVcBranches((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+            setVcCurrentBranch(updated)
+          }
+          return updated
+        }
+        const res = await fetch(`/api/trackers/${trackerId}/data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, branchName: 'main', label: 'main' }),
+        })
+        const created = await handleResponse(res)
+        if (created?.id) {
+          setVcBranches([created])
+          setVcCurrentBranch(created)
+        }
+        return created
+      }
+
+      if (instanceType === 'MULTI') {
+        const currentId = instanceIdRef.current
+        if (currentId && currentId !== 'new') {
+          const res = await fetch(`/api/trackers/${trackerId}/data/${currentId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
+          return handleResponse(res)
+        }
+        const res = await fetch(`/api/trackers/${trackerId}/data`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const saved = await handleResponse(res)
+        if (saved?.id) {
+          instanceIdRef.current = saved.id
+          router.replace(`/tracker/${trackerId}?instanceId=${saved.id}`, { scroll: false })
+        }
+        return saved
+      }
+
+      const res = await fetch(`/api/trackers/${trackerId}/data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      return handleResponse(res)
+    },
+    [trackerId, trackerDataRef, versionControl, instanceType, router]
+  )
+
+  const allowAutoSave =
+    autoSave &&
+    instanceType === 'SINGLE' &&
+    !versionControl &&
+    pageMode === 'data' &&
+    !isReadOnly
+
+  const allowSchemaAutoSave = schemaAutoSave && pageMode === 'schema' && Boolean(onSaveTracker)
+
+  const { scheduleSave } = useAutoSaveTrackerData({
+    enabled: allowAutoSave,
+    getData: () => trackerDataRef.current?.() ?? {},
+    save: async (data) => {
+      await saveTrackerData({ data })
+    },
+    debounceMs: 2000,
+    idleMs: 2000,
+    onStateChange: (state, error) => {
+      if (state === 'saving') {
+        if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+        saveStatusResetTimerRef.current = null
+        setDataSaveError(null)
+        setDataSaveStatus('saving')
+        return
+      }
+      if (state === 'idle') {
+        setSavedWithTimeout()
+        return
+      }
+      if (state === 'error') {
+        if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+        saveStatusResetTimerRef.current = null
+        setDataSaveStatus('error')
+        setDataSaveError(error?.message ?? 'Failed to auto-save')
+      }
+    },
+  })
+
+  const { scheduleSave: scheduleSchemaSave } = useAutoSave<TrackerResponse>({
+    enabled: allowSchemaAutoSave,
+    getData: () => schemaRef.current,
+    save: async (nextSchema) => {
+      if (!onSaveTracker) return
+      await onSaveTracker(nextSchema)
+    },
+    debounceMs: 1000,
+    idleMs: 1500,
+    onStateChange: (state, error) => {
+      if (state === 'saving') {
+        if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+        saveStatusResetTimerRef.current = null
+        setSchemaSaveError(null)
+        setSchemaSaveStatus('saving')
+        return
+      }
+      if (state === 'idle') {
+        setSchemaSaveStatus('saved')
+        setSchemaSaveError(null)
+        if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+        saveStatusResetTimerRef.current = setTimeout(() => {
+          saveStatusResetTimerRef.current = null
+          setSchemaSaveStatus('idle')
+        }, 1500)
+        return
+      }
+      if (state === 'error') {
+        if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
+        saveStatusResetTimerRef.current = null
+        setSchemaSaveStatus('error')
+        setSchemaSaveError(error?.message ?? 'Failed to auto-save tracker')
+      }
+    },
+  })
+
+  const handleGridDataChange = useCallback(() => {
+    if (!allowAutoSave) return
+    if (draftFormAction) {
+      const isDraft =
+        (formStatusRef.current ?? '').trim().toLowerCase() === 'draft'
+      if (!isDraft) {
+        setFormStatus(draftFormAction.statusTag)
+      }
     }
-  }, [versionControl])
+    scheduleSave()
+  }, [allowAutoSave, draftFormAction, scheduleSave, setFormStatus])
+
+  const handleFormActionSelect = useCallback(
+    async (action: TrackerFormAction) => {
+      if (!trackerId) return
+      setFormActionSaving(true)
+      setFormActionError(null)
+      const prevStatus = formStatusRef.current
+      setFormStatus(action.statusTag)
+      try {
+        await saveTrackerData({ formStatus: action.statusTag })
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to update status'
+        setFormActionError(msg)
+        setFormStatus(prevStatus ?? null)
+      } finally {
+        setFormActionSaving(false)
+      }
+    },
+    [saveTrackerData, setFormStatus, trackerId]
+  )
 
   useEffect(() => {
     if (activeTrackerData && viewingMessageIndex === null) {
@@ -234,10 +476,16 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     lastSyncedTracker,
   ])
 
-  const handleSchemaChange = useCallback((next: TrackerResponse) => {
-    setSchema(next)
-    setActiveTrackerData(next)
-  }, [setActiveTrackerData])
+  const handleSchemaChange = useCallback(
+    (next: TrackerResponse) => {
+      setSchema(next)
+      setActiveTrackerData(next)
+      if (allowSchemaAutoSave) {
+        scheduleSchemaSave()
+      }
+    },
+    [setActiveTrackerData, allowSchemaAutoSave, scheduleSchemaSave]
+  )
 
   const schemaRef = useRef(schema)
   useEffect(() => {
@@ -259,8 +507,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   useEffect(() => {
     return () => setTrackerNavRef.current?.(null)
   }, [])
-
-  const router = useRouter()
 
   const handleSaveTracker = useCallback(async () => {
     if (onSaveTracker) {
@@ -286,17 +532,55 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   useEffect(() => {
     if (!setSaveState) return
+    const showManualSaveData = allowSaveData && !allowAutoSave && !allowSchemaAutoSave
+    const exposeManualTrackerSave = allowSaveTracker && !allowSchemaAutoSave
+    const autosaveEnabledForNav = allowAutoSave || allowSchemaAutoSave
+    const navDataSaveStatus = allowAutoSave
+      ? dataSaveStatus
+      : allowSchemaAutoSave
+        ? schemaSaveStatus
+        : 'idle'
+    const navDataSaveError = allowAutoSave
+      ? dataSaveError
+      : allowSchemaAutoSave
+        ? schemaSaveError
+        : null
     setSaveState({
-      onSaveTracker: allowSaveTracker ? handleSaveTracker : null,
-      onSaveData: allowSaveData ? () => saveDataRef.current?.() : null,
+      onSaveTracker: exposeManualTrackerSave ? handleSaveTracker : null,
+      onSaveData: showManualSaveData ? () => saveDataRef.current() : null,
       isAgentBuilding: isLoading,
       primaryNavAction,
+      autosaveEnabled: autosaveEnabledForNav,
+      dataSaveStatus: navDataSaveStatus,
+      dataSaveError: navDataSaveError,
     })
-  }, [setSaveState, handleSaveTracker, isLoading, allowSaveTracker, allowSaveData, primaryNavAction])
+  }, [
+    setSaveState,
+    handleSaveTracker,
+    isLoading,
+    allowSaveTracker,
+    allowSaveData,
+    allowAutoSave,
+    allowSchemaAutoSave,
+    primaryNavAction,
+    dataSaveStatus,
+    dataSaveError,
+    schemaSaveStatus,
+    schemaSaveError,
+  ])
 
   useEffect(() => {
     if (!setSaveState) return
-    return () => setSaveState({ onSaveTracker: null, onSaveData: null, isAgentBuilding: false, primaryNavAction: null })
+    return () =>
+      setSaveState({
+        onSaveTracker: null,
+        onSaveData: null,
+        isAgentBuilding: false,
+        primaryNavAction: null,
+        autosaveEnabled: false,
+        dataSaveStatus: 'idle',
+        dataSaveError: null,
+      })
   }, [setSaveState])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
@@ -326,6 +610,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           label: branch.label ?? branch.branchName,
           data: branch.data as GridDataSnapshot,
           updatedAt: branch.updatedAt,
+          formStatus: (branch as BranchRecord & { formStatus?: string | null }).formStatus ?? null,
         }
         setLoadedSnapshot(snapshot)
       }
@@ -348,63 +633,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     handleVcBranchSwitch(updatedMain)
   }, [handleVcBranchSwitch])
 
-  /**
-   * Save current grid data to the current VC branch.
-   * Creates main branch on first save if none exists.
-   */
-  const handleVcSaveData = useCallback(async () => {
-    if (!trackerId) return
-    const data = trackerDataRef.current?.() ?? {}
-    const currentBranch = vcCurrentBranchRef.current
-
-    if (currentBranch) {
-      // Update existing branch
-      const res = await fetch(`/api/trackers/${trackerId}/branches/${currentBranch.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      })
-      if (res.ok) {
-        const updated = (await res.json()) as BranchRecord
-        setVcBranches((prev) => prev.map((b) => b.id === updated.id ? updated : b))
-        setVcCurrentBranch(updated)
-        const snapshot: LoadedSnapshot = {
-          id: updated.id,
-          label: updated.label ?? updated.branchName,
-          data: updated.data as GridDataSnapshot,
-          updatedAt: updated.updatedAt,
-        }
-        setLoadedSnapshot(snapshot)
-      }
-    } else {
-      // Create initial main branch
-      const res = await fetch(`/api/trackers/${trackerId}/data`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data, branchName: 'main', label: 'main' }),
-      })
-      if (res.ok) {
-        const newBranch = (await res.json()) as BranchRecord
-        setVcBranches([newBranch])
-        setVcCurrentBranch(newBranch)
-        const snapshot: LoadedSnapshot = {
-          id: newBranch.id,
-          label: newBranch.label ?? newBranch.branchName,
-          data: newBranch.data as GridDataSnapshot,
-          updatedAt: newBranch.updatedAt,
-        }
-        setLoadedSnapshot(snapshot)
-      }
+  useEffect(() => {
+    saveDataRef.current = () => {
+      return saveTrackerData().then(() => undefined)
     }
-  }, [trackerId, trackerDataRef])
+  }, [saveTrackerData])
 
   useEffect(() => {
-    if (versionControl) {
-      saveDataRef.current = handleVcSaveData
-    } else {
-      saveDataRef.current = handleDirectSave
+    return () => {
+      if (saveStatusResetTimerRef.current) clearTimeout(saveStatusResetTimerRef.current)
     }
-  }, [versionControl, handleVcSaveData, handleDirectSave])
+  }, [])
 
   const handleShareClick = useCallback(() => setShareDialogOpen(true), [])
 
@@ -559,6 +798,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               setIsChatOpen={setIsChatOpen}
               isStreamingTracker={isStreamingTracker}
               trackerDataRef={trackerDataRef}
+              onGridDataChange={handleGridDataChange}
               handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
               undo={canEditSchema && editMode ? undoable.undo : undefined}
               canUndo={canEditSchema && editMode ? undoable.canUndo : false}
@@ -571,6 +811,13 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               onReturnToLatest={handleReturnToLatest}
               trackerId={trackerId ?? undefined}
               initialGridData={loadedSnapshot?.data ?? initialGridData}
+              readOnly={isReadOnly}
+              formActions={formActions}
+              currentFormStatus={currentFormStatus}
+              onFormActionSelect={handleFormActionSelect}
+              formActionSaving={formActionSaving}
+              formActionError={formActionError}
+              showFormActions={pageMode === 'data'}
               versionControl={versionControl}
               vcCurrentBranch={vcCurrentBranch}
               vcBranches={vcBranches}
@@ -603,6 +850,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
           trackerDataRef={trackerDataRef}
+          onGridDataChange={handleGridDataChange}
           handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
           undo={canEditSchema && editMode ? undoable.undo : undefined}
           canUndo={canEditSchema && editMode ? undoable.canUndo : false}
@@ -613,6 +861,13 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           onReturnToLatest={handleReturnToLatest}
           trackerId={trackerId ?? undefined}
           initialGridData={loadedSnapshot?.data ?? initialGridData}
+          readOnly={isReadOnly}
+          formActions={formActions}
+          currentFormStatus={currentFormStatus}
+          onFormActionSelect={handleFormActionSelect}
+          formActionSaving={formActionSaving}
+          formActionError={formActionError}
+          showFormActions={pageMode === 'data'}
           versionControl={versionControl}
           vcCurrentBranch={vcCurrentBranch}
           vcBranches={vcBranches}

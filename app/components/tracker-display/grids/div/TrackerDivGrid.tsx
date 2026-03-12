@@ -52,6 +52,7 @@ function TrackerDivGridInner({
   gridData = {},
   gridDataRef,
   gridDataForThisGrid,
+  readOnly = false,
   onUpdate,
   onCrossGridUpdate,
   onAddEntryToGrid,
@@ -88,6 +89,7 @@ function TrackerDivGridInner({
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
+  const isGridReadOnly = readOnly || grid.config?.isRowEditAble === false
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>()
     fields.forEach((field) => map.set(field.id, field))
@@ -575,6 +577,7 @@ function TrackerDivGridInner({
 
   const openAddOption = useCallback(
     (fieldId: string, currentValue?: unknown) => {
+      if (isGridReadOnly) return
       const config = addOptionConfigByFieldId.get(fieldId)
       if (!config) return
       setAddOptionContext({
@@ -587,7 +590,7 @@ function TrackerDivGridInner({
       })
       setAddOptionOpen(true)
     },
-    [addOptionConfigByFieldId]
+    [addOptionConfigByFieldId, isGridReadOnly]
   )
 
   const fieldOverrides = useMemo(
@@ -637,6 +640,7 @@ function TrackerDivGridInner({
     const valueString =
       typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value)
     const isDisabled =
+      isGridReadOnly ||
       !!effectiveConfig?.isDisabled ||
       (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
 

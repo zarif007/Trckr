@@ -112,6 +112,13 @@ export type TrackerField = {
   config?: TrackerFieldConfig
 }
 
+export type TrackerFormAction = {
+  id: string
+  label: string
+  statusTag: string
+  isEditable: boolean
+}
+
 export type TrackerLayoutNode = {
   gridId: string
   fieldId: string
@@ -148,6 +155,7 @@ export type { DependsOnRule, DependsOnRules, FieldOverride } from '@/lib/depends
 
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
 import type { DependsOnRules } from '@/lib/depends-on'
+import type { GridDataSnapshot } from '@/lib/tracker-data'
 
 /** Grid data map: grid id -> array of row objects. Used in refs to avoid TSX >> parsing. */
 export type GridDataRecord = Record<string, Array<Record<string, unknown>>>
@@ -159,6 +167,8 @@ export interface TrackerDisplayProps {
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]
+  /** Optional form actions for status buttons in data mode. */
+  formActions?: TrackerFormAction[]
   layoutNodes?: TrackerLayoutNode[]
   /** Field validations keyed by "gridId.fieldId" (like bindings). */
   validations?: Record<string, FieldValidationRule[]>
@@ -178,6 +188,10 @@ export interface TrackerDisplayProps {
   dynamicOptions?: DynamicOptionsDefinitions
   /** Optional ref the display will set to a getter that returns current grid data (values only). */
   getDataRef?: React.MutableRefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
+  /** Emits when grid data changes due to user edits. */
+  onGridDataChange?: (data: GridDataSnapshot) => void
+  /** When true, data inputs are read-only in view mode. */
+  readOnly?: boolean
   /** When true, layout is editable (add/remove/reorder columns and fields). */
   editMode?: boolean
   /** Called when schema is changed in edit mode. Pass updated full schema. */

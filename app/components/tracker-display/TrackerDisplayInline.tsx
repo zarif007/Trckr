@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, type CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { Plus, Trash2, GripVertical } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import {
@@ -108,6 +108,7 @@ export function TrackerDisplayInline({
   sections,
   grids,
   fields,
+  formActions,
   layoutNodes = [],
   bindings = {},
   validations,
@@ -118,6 +119,8 @@ export function TrackerDisplayInline({
   getDataRef,
   dependsOn,
   dependsOnByTarget,
+  onGridDataChange,
+  readOnly,
   editMode,
   onSchemaChange,
   undo,
@@ -131,6 +134,7 @@ export function TrackerDisplayInline({
   const {
     gridData,
     gridDataRef,
+    editVersion,
     handleUpdate,
     handleAddEntry,
     handleDeleteEntries,
@@ -151,12 +155,34 @@ export function TrackerDisplayInline({
     getDataRef.current = () => gridData
   }, [gridData, getDataRef])
 
+  const lastNotifiedVersionRef = useRef(0)
+  useEffect(() => {
+    if (!onGridDataChange) return
+    if (editVersion === 0) return
+    if (editVersion <= lastNotifiedVersionRef.current) return
+    lastNotifiedVersionRef.current = editVersion
+    onGridDataChange(gridData)
+  }, [editVersion, gridData, onGridDataChange])
+
   const editModeSchema = useMemo(
     () =>
       editMode
-        ? { tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions }
+        ? {
+          tabs,
+          sections,
+          grids,
+          fields,
+          formActions,
+          layoutNodes,
+          bindings,
+          validations,
+          calculations,
+          styles,
+          dependsOn,
+          dynamicOptions,
+        }
         : undefined,
-    [editMode, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions]
+    [editMode, tabs, sections, grids, fields, formActions, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions]
   )
   const { handleAddTab, handleRemoveTab, handleRenameTab, handleTabDragEnd } = useSchemaTabActions({
     tabs,
@@ -255,6 +281,7 @@ export function TrackerDisplayInline({
             dependsOn={effectiveDependsOn}
             gridData={gridData}
             gridDataRef={gridDataRef}
+            readOnly={readOnly}
             onUpdate={handleUpdate}
             onAddEntry={handleAddEntry}
             onDeleteEntries={handleDeleteEntries}

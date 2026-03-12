@@ -26,6 +26,7 @@ export { useSectionGridActions } from './useSectionGridActions'
 export { AddColumnOrFieldDialog, BlockCommandInput, BlockWrapper, ColumnHeaderEdit, FieldRowEdit } from './block-editor'
 export type { BlockCommandInputProps, BlockCommandItem } from './block-editor'
 export { FieldSettingsDialog } from './field-settings'
+export { FormActionsDialog } from './form-actions/FormActionsDialog'
 export {
   SortableColumnHeaderEdit,
   SortableFieldRowEdit,

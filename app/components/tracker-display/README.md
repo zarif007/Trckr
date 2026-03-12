@@ -119,6 +119,18 @@ tracker-display/
 - **TrackerTabContent**  
   For one tab: if edit layout, renders `BlockEditor`; otherwise renders a wrapper with `TAB_CONTENT_INNER` (space-y-6) and a list of section groups. Each group is a div with `SECTION_GROUP_ROOT` containing `TrackerSection`. Uses `TAB_CONTENT_ROOT` for the `TabsContent` class.
 
+---
+
+### 4. Form Actions + Read-Only
+
+Tracker schemas may include optional `formActions` (button label + status tag + editable flag). The parent can:
+
+- Render a button stack from `formActions` (e.g. Draft, Submitted).
+- Pass `readOnly` to `TrackerDisplay` to lock data inputs (table/kanban/div).
+- Listen to `onGridDataChange` to trigger auto-save logic outside the display.
+
+`TrackerDisplay` never persists data; it only emits changes and respects `readOnly`.
+
 **Reuse:** Use `TrackerTabContent` when you have tabs and want per-tab section list + edit mode. Use `TrackerSection` when you need a single section (e.g. embedded in another flow).
 
 ---

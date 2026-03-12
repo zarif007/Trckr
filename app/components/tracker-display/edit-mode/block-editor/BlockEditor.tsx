@@ -141,8 +141,15 @@ export function BlockEditor({
   const actions = useSectionGridActions(schema, onSchemaChange)
 
   // --- Add field from block level ---
-  const [addFieldTargetGridId, setAddFieldTargetGridId] = useState<string | null>(null)
-  const fieldLayoutActions = useLayoutActions(addFieldTargetGridId ?? '', schema, onSchemaChange)
+  const [addFieldDialogState, setAddFieldDialogState] = useState<{
+    gridId: string
+    baseSchema: NonNullable<typeof schema>
+  } | null>(null)
+  const fieldLayoutActions = useLayoutActions(
+    addFieldDialogState?.gridId ?? '',
+    addFieldDialogState?.baseSchema ?? schema,
+    onSchemaChange
+  )
 
   // --- Inline add-block inserter (opened by plus button on a block) ---
   const [insertInserterAfterBlockIndex, setInsertInserterAfterBlockIndex] = useState<number | null>(null)
@@ -302,10 +309,8 @@ export function BlockEditor({
         flatBlocks,
         schema
       )
-      if (nextSchema !== schema) {
-        onSchemaChange(nextSchema)
-      }
-      setAddFieldTargetGridId(gridId)
+      // Do not mutate schema yet; only apply once the user confirms.
+      setAddFieldDialogState({ gridId, baseSchema: nextSchema })
     },
     [tab.id, flatBlocks, schema, onSchemaChange]
   )
@@ -313,7 +318,7 @@ export function BlockEditor({
   const handleAddFieldConfirm = useCallback(
     (result: AddColumnOrFieldResult) => {
       fieldLayoutActions.add(result)
-      setAddFieldTargetGridId(null)
+      setAddFieldDialogState(null)
     },
     [fieldLayoutActions]
   )
@@ -482,19 +487,19 @@ export function BlockEditor({
           </div>
 
           {/* Add-field dialog (opened from slash command → Field) */}
-          {addFieldTargetGridId && (
+          {addFieldDialogState && (
             <AddColumnOrFieldDialog
               open
               onOpenChange={(open) => {
-                if (!open) setAddFieldTargetGridId(null)
+                if (!open) setAddFieldDialogState(null)
               }}
               variant="field"
               existingFieldIds={
-                layoutNodes
-                  .filter((n) => n.gridId === addFieldTargetGridId)
+                (addFieldDialogState.baseSchema.layoutNodes ?? [])
+                  .filter((n) => n.gridId === addFieldDialogState.gridId)
                   .map((n) => n.fieldId)
               }
-              allFields={fields}
+              allFields={addFieldDialogState.baseSchema.fields ?? fields}
               onConfirm={handleAddFieldConfirm}
             />
           )}

@@ -16,6 +16,7 @@ type TrackerRecord = {
   schema: unknown
   instance?: string
   versionControl?: boolean
+  autoSave?: boolean
   listForSchemaId?: string | null
 }
 
@@ -133,7 +134,7 @@ function TrackerByIdEditContent({
     return () => {
       cancelled = true
     }
-  }, [id, state.tracker])
+  }, [id])
 
   const handleSaveTracker = useCallback(
     async (schema: TrackerResponse) => {
@@ -151,13 +152,16 @@ function TrackerByIdEditContent({
         throw new Error(data.error ?? 'Failed to save tracker')
       }
       const data = await res.json()
-      const next: TrackerResource = {
-        tracker: data,
-        schema: schemaWithTrackerName(data),
-      }
-      setState(next)
       const key = `${id}::${instanceId ?? ''}`
-      trackerCache.set(key, Promise.resolve(next))
+      // Keep save behavior silent in edit mode: persist to server/cache
+      // without updating parent page state, which can feel like a refresh.
+      trackerCache.set(
+        key,
+        Promise.resolve({
+          tracker: data,
+          schema: schemaWithTrackerName(data),
+        })
+      )
     },
     [id, instanceId, state.tracker?.name]
   )
@@ -204,6 +208,7 @@ function TrackerByIdEditContent({
       pageMode="schema"
       showPanelUtilities={false}
       primaryNavAction={{ label: 'Open tracker', href: `/tracker/${id}` }}
+      schemaAutoSave
     />
   )
 }

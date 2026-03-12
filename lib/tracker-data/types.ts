@@ -11,6 +11,8 @@ export type GridDataSnapshot = Record<
 export interface CreateTrackerDataBody {
   /** Optional label (e.g. "March 5", "Backup before migration"). */
   label?: string
+  /** Optional form status tag (e.g. Draft, Submitted). */
+  formStatus?: string | null
   /** Full grid data snapshot. Required. */
   data: GridDataSnapshot
   /** Branch name for VC mode (default: "main"). */
@@ -24,5 +26,6 @@ export interface CreateTrackerDataBody {
 /** Body for updating an existing TrackerData snapshot. */
 export interface UpdateTrackerDataBody {
   label?: string
+  formStatus?: string | null
   data?: GridDataSnapshot
 }

@@ -16,6 +16,7 @@ export interface BranchInfo {
   id: string
   branchName: string
   label?: string | null
+  formStatus?: string | null
   author?: { name?: string | null; email?: string | null } | null
   createdAt?: string
   updatedAt?: string

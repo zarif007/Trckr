@@ -27,6 +27,7 @@ export function createEmptyTrackerSchema(options?: {
     sections: [],
     grids: [],
     fields: [],
+    formActions: [],
     layoutNodes: [],
     bindings: {},
     validations: {},

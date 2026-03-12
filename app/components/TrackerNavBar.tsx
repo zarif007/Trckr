@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
 import { ArrowLeft, ChevronDown, Database, Layout, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TeamMembersDialog } from './teams'
 import { useTrackerNav } from '@/app/tracker/TrackerNavContext'
@@ -93,17 +94,55 @@ export default function TrackerNavBar() {
   const { theme, setTheme } = useTheme()
   const ctx = useTrackerNav()
   const trackerNav = ctx?.trackerNav ?? null
-  const { onSaveTracker, onSaveData, isAgentBuilding, primaryNavAction } = ctx?.saveState ?? {
+  const {
+    onSaveTracker,
+    onSaveData,
+    isAgentBuilding,
+    primaryNavAction,
+    autosaveEnabled,
+    dataSaveStatus,
+    dataSaveError,
+  } = ctx?.saveState ?? {
     onSaveTracker: null,
     onSaveData: null,
     isAgentBuilding: false,
     primaryNavAction: null,
+    autosaveEnabled: false,
+    dataSaveStatus: 'idle' as const,
+    dataSaveError: null as string | null,
   }
   const [saveMenuOpen, setSaveMenuOpen] = useState(false)
   const [savingTracker, setSavingTracker] = useState(false)
   const [savingData, setSavingData] = useState(false)
+  const [manualSaveHintVisible, setManualSaveHintVisible] = useState(false)
+  const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const hasSave = Boolean(onSaveTracker || onSaveData)
   const hasBothSaveOptions = Boolean(onSaveTracker && onSaveData)
+  const showAutosaveBadge =
+    autosaveEnabled && (dataSaveStatus === 'saving' || dataSaveStatus === 'saved' || dataSaveStatus === 'error')
+
+  const autosaveBadgeLabel =
+    dataSaveStatus === 'saving'
+      ? 'Saving'
+      : dataSaveStatus === 'saved'
+        ? 'Up to date'
+        : dataSaveStatus === 'error'
+          ? 'Save failed'
+          : ''
+
+  const autosaveBadgeClassName =
+    dataSaveStatus === 'saving'
+      ? 'border-amber-500/60 bg-amber-500/12 text-amber-800 dark:text-amber-200'
+      : dataSaveStatus === 'saved'
+        ? 'border-emerald-500/60 bg-emerald-500/12 text-emerald-800 dark:text-emerald-200'
+        : 'border-destructive/60 bg-destructive/10 text-destructive'
+
+  const autosaveDotClassName =
+    dataSaveStatus === 'saving'
+      ? 'bg-amber-500 shadow-[0_0_0_3px_rgba(245,158,11,0.25)] animate-pulse'
+      : dataSaveStatus === 'saved'
+        ? 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.25)]'
+        : 'bg-destructive shadow-[0_0_0_3px_rgba(239,68,68,0.25)]'
 
   useEffect(() => setThemeMounted(true), [])
   useEffect(() => {
@@ -111,11 +150,36 @@ export default function TrackerNavBar() {
       document.documentElement.setAttribute('data-theme', theme)
     }
   }, [themeMounted, theme])
+  useEffect(() => {
+    return () => {
+      if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
+    }
+  }, [])
 
   const openMembers = () => {
     setAccountOpen(false)
     setMembersOpen(true)
   }
+
+  const showManualSaveHint = useCallback(() => {
+    if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
+    setManualSaveHintVisible(true)
+    saveHintTimerRef.current = setTimeout(() => {
+      saveHintTimerRef.current = null
+      setManualSaveHintVisible(false)
+    }, 1800)
+  }, [])
+
+  const runSaveData = useCallback(async () => {
+    if (!onSaveData) return
+    setSavingData(true)
+    try {
+      await Promise.resolve(onSaveData())
+      if (!autosaveEnabled) showManualSaveHint()
+    } finally {
+      setSavingData(false)
+    }
+  }, [onSaveData, autosaveEnabled, showManualSaveHint])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border/40 bg-background/90 backdrop-blur-md">
@@ -144,7 +208,7 @@ export default function TrackerNavBar() {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="relative flex items-center gap-2">
             {primaryNavAction && (
               <Button
                 variant="outline"
@@ -154,6 +218,26 @@ export default function TrackerNavBar() {
               >
                 {primaryNavAction.label}
               </Button>
+            )}
+            {showAutosaveBadge && (
+              <Badge
+                variant="outline"
+                className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium shadow-sm backdrop-blur-sm ${autosaveBadgeClassName}`}
+                title={
+                  dataSaveStatus === 'error'
+                    ? dataSaveError ?? 'Failed to save'
+                    : 'Changes are saved automatically'
+                }
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full transition-all duration-200 ${autosaveDotClassName}`}
+                  aria-hidden="true"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-wide opacity-80">
+                  {autosaveBadgeLabel}
+                  {dataSaveStatus === 'saving' ? '…' : ''}
+                </span>
+              </Badge>
             )}
             {hasSave && !hasBothSaveOptions && (
               <Button
@@ -172,12 +256,7 @@ export default function TrackerNavBar() {
                     return
                   }
                   if (onSaveData) {
-                    setSavingData(true)
-                    try {
-                      await Promise.resolve(onSaveData())
-                    } finally {
-                      setSavingData(false)
-                    }
+                    await runSaveData()
                   }
                 }}
                 aria-label={onSaveTracker ? 'Save tracker' : 'Save data'}
@@ -235,13 +314,8 @@ export default function TrackerNavBar() {
                       className="h-8 w-full justify-start gap-2 px-2 font-normal text-foreground hover:bg-muted"
                       disabled={savingData}
                       onClick={async () => {
-                        setSavingData(true)
-                        try {
-                          await Promise.resolve(onSaveData())
-                          setSaveMenuOpen(false)
-                        } finally {
-                          setSavingData(false)
-                        }
+                        await runSaveData()
+                        setSaveMenuOpen(false)
                       }}
                     >
                       <Database className="h-3.5 w-3.5 shrink-0" />
@@ -253,6 +327,15 @@ export default function TrackerNavBar() {
                   )}
                 </PopoverContent>
               </Popover>
+            )}
+            {manualSaveHintVisible && (
+              <div
+                className="absolute right-0 top-full mt-1.5 rounded-md border border-emerald-500/40 bg-background/95 px-2.5 py-1 text-[11px] font-medium text-emerald-700 shadow-sm dark:text-emerald-300"
+                role="status"
+                aria-live="polite"
+              >
+                Data saved
+              </div>
             )}
             <Popover open={accountOpen} onOpenChange={setAccountOpen}>
               <PopoverTrigger asChild>

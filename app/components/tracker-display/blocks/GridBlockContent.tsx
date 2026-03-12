@@ -30,6 +30,7 @@ export interface GridBlockContentProps {
   dependsOn?: DependsOnRules
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
+  readOnly?: boolean
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
@@ -58,6 +59,7 @@ export function GridBlockContent({
   dependsOn,
   gridData,
   gridDataRef,
+  readOnly,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -101,6 +103,7 @@ export function GridBlockContent({
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridData?.[grid.id] ?? []}
+          readOnly={readOnly}
           onUpdate={onUpdate}
           onAddEntry={onAddEntry}
           onDeleteEntries={onDeleteEntries}
@@ -149,6 +152,7 @@ export function GridBlockContent({
                 gridData={gridData}
                 gridDataRef={gridDataRef}
                 gridDataForThisGrid={gridData?.[grid.id] ?? []}
+                readOnly={readOnly}
                 onUpdate={onUpdate}
                 onAddEntry={onAddEntry}
                 onDeleteEntries={onDeleteEntries}

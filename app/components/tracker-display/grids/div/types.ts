@@ -37,6 +37,7 @@ export interface TrackerDivGridProps {
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
+  readOnly?: boolean
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onCrossGridUpdate?: (gridId: string, rowIndex: number, fieldId: string, value: unknown) => void
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void

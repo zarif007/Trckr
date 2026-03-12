@@ -7,6 +7,7 @@ const createBranchBodySchema = z.object({
   branchName: z.string().min(1),
   basedOnId: z.string(),
   label: z.string().optional(),
+  formStatus: z.string().nullable().optional(),
 })
 
 /**
@@ -88,12 +89,15 @@ export async function POST(
     where: { id: body.basedOnId, trackerSchemaId: trackerId },
   })
   if (!basedOn) return notFound('Base branch not found')
+  const nextFormStatus =
+    body.formStatus !== undefined ? body.formStatus : (basedOn.formStatus ?? null)
 
   const newBranch = await prisma.trackerData.create({
     data: {
       trackerSchemaId: trackerId,
       branchName: body.branchName,
       label: body.label ?? null,
+      formStatus: typeof nextFormStatus === 'string' ? nextFormStatus : null,
       data: basedOn.data ?? {},
       authorId: authResult.user.id,
       basedOnId: body.basedOnId,

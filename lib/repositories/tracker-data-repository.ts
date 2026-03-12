@@ -21,6 +21,7 @@ export async function createTrackerSnapshotForUser(
   userId: string,
   body: {
     label?: string
+    formStatus?: string | null
     data: GridDataSnapshot
     branchName?: string
     basedOnId?: string
@@ -37,7 +38,7 @@ export async function getTrackerSnapshotForUser(snapshotId: string, userId: stri
 export async function updateTrackerSnapshotForUser(
   snapshotId: string,
   userId: string,
-  body: { label?: string; data?: GridDataSnapshot },
+  body: { label?: string; formStatus?: string | null; data?: GridDataSnapshot },
 ) {
   return updateTrackerData(snapshotId, userId, body)
 }
@@ -50,6 +51,7 @@ export async function upsertCurrentDataForUser(
   trackerId: string,
   userId: string,
   data: GridDataSnapshot,
+  formStatus?: string | null,
 ) {
-  return upsertCurrentData(trackerId, userId, data as object)
+  return upsertCurrentData(trackerId, userId, data as object, formStatus)
 }

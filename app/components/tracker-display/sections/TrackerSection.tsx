@@ -30,6 +30,7 @@ export interface TrackerSectionProps {
   dependsOn?: DependsOnRules
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
+  readOnly?: boolean
   onUpdate?: (
     gridId: string,
     rowIndex: number,
@@ -55,6 +56,7 @@ export function TrackerSection({
   dependsOn,
   gridData,
   gridDataRef,
+  readOnly,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -91,6 +93,7 @@ export function TrackerSection({
                   dependsOn={dependsOn}
                   gridData={gridData}
                   gridDataRef={gridDataRef}
+                  readOnly={readOnly}
                   onUpdate={onUpdate}
                   onAddEntry={onAddEntry}
                   onDeleteEntries={onDeleteEntries}

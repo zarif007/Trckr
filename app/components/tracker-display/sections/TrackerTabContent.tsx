@@ -31,6 +31,7 @@ export interface TrackerTabContentProps {
   dependsOn?: DependsOnRules
   gridData: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
+  readOnly?: boolean
   onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries: (gridId: string, rowIndices: number[]) => void
@@ -55,6 +56,7 @@ function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabC
     prev.calculations !== next.calculations ||
     prev.styles !== next.styles ||
     prev.dependsOn !== next.dependsOn ||
+    prev.readOnly !== next.readOnly ||
     prev.onUpdate !== next.onUpdate ||
     prev.onAddEntry !== next.onAddEntry ||
     prev.onDeleteEntries !== next.onDeleteEntries
@@ -81,6 +83,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   dependsOn,
   gridData,
   gridDataRef,
+  readOnly,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -132,25 +135,26 @@ export const TrackerTabContent = memo(function TrackerTabContent({
       <div className={TAB_CONTENT_INNER}>
         {tabSections.map((section) => (
           <div key={section.id} className={SECTION_GROUP_ROOT}>
-            <TrackerSection
-              tabId={tab.id}
-              section={section}
-              grids={section.grids}
-              allGrids={grids}
-              allFields={fields}
-              fields={fields}
-              layoutNodes={layoutNodes}
-              bindings={bindings}
-              validations={validations}
-              calculations={calculations}
-              styles={styles}
-              dependsOn={dependsOn}
-              gridData={gridData}
-              gridDataRef={gridDataRef}
-              onUpdate={onUpdate}
-              onAddEntry={onAddEntry}
-              onDeleteEntries={onDeleteEntries}
-            />
+          <TrackerSection
+            tabId={tab.id}
+            section={section}
+            grids={section.grids}
+            allGrids={grids}
+            allFields={fields}
+            fields={fields}
+            layoutNodes={layoutNodes}
+            bindings={bindings}
+            validations={validations}
+            calculations={calculations}
+            styles={styles}
+            dependsOn={dependsOn}
+            gridData={gridData}
+            gridDataRef={gridDataRef}
+            readOnly={readOnly}
+            onUpdate={onUpdate}
+            onAddEntry={onAddEntry}
+            onDeleteEntries={onDeleteEntries}
+          />
           </div>
         ))}
       </div>

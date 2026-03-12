@@ -16,6 +16,7 @@ type TrackerRecord = {
   schema: unknown
   instance?: string
   versionControl?: boolean
+  autoSave?: boolean
   listForSchemaId?: string | null
 }
 
@@ -27,7 +28,13 @@ type ConversationState = {
 type TrackerResource = {
   tracker: TrackerRecord
   schema: TrackerResponse
-  latestGridData: Record<string, Array<Record<string, unknown>>> | null
+  latestSnapshot: {
+    id: string
+    label: string | null
+    data: Record<string, Array<Record<string, unknown>>>
+    updatedAt?: string
+    formStatus?: string | null
+  } | null
 }
 
 /** Merge tracker.name into schema so the view and top bar show the correct name. */
@@ -51,15 +58,48 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
   if (p) return p
 
   p = (async () => {
-    const latestGridDataPromise = fetch(`/api/trackers/${id}/data?limit=1`)
-      .then(async (res) => {
+    const latestSnapshotPromise = (async () => {
+      if (instanceId && instanceId !== 'new') {
+        const res = await fetch(`/api/trackers/${id}/data/${instanceId}`)
         if (!res.ok) return null
-        const payload = (await res.json()) as {
-          items?: Array<{ data?: Record<string, Array<Record<string, unknown>>> | null }>
+        const row = (await res.json()) as {
+          id?: string
+          label?: string | null
+          data?: Record<string, Array<Record<string, unknown>>> | null
+          updatedAt?: string
+          formStatus?: string | null
         }
-        return payload.items?.[0]?.data ?? null
-      })
-      .catch(() => null)
+        if (!row?.id || !row?.data) return null
+        return {
+          id: row.id,
+          label: row.label ?? null,
+          data: row.data,
+          updatedAt: row.updatedAt,
+          formStatus: row.formStatus ?? null,
+        }
+      }
+      if (instanceId === 'new') return null
+      const res = await fetch(`/api/trackers/${id}/data?limit=1`)
+      if (!res.ok) return null
+      const payload = (await res.json()) as {
+        items?: Array<{
+          id?: string
+          label?: string | null
+          data?: Record<string, Array<Record<string, unknown>>> | null
+          updatedAt?: string
+          formStatus?: string | null
+        }>
+      }
+      const row = payload.items?.[0]
+      if (!row?.id || !row?.data) return null
+      return {
+        id: row.id,
+        label: row.label ?? null,
+        data: row.data,
+        updatedAt: row.updatedAt,
+        formStatus: row.formStatus ?? null,
+      }
+    })().catch(() => null)
 
     let fromStorage: TrackerRecord | null = null
     if (typeof sessionStorage !== 'undefined') {
@@ -90,8 +130,8 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
       schema = schemaWithTrackerName(tracker)
     }
 
-    const latestGridData = await latestGridDataPromise
-    return { tracker, schema, latestGridData }
+    const latestSnapshot = await latestSnapshotPromise
+    return { tracker, schema, latestSnapshot }
   })()
 
   trackerCache.set(key, p)
@@ -171,7 +211,7 @@ function TrackerByIdContent({
       const next: TrackerResource = {
         tracker: data,
         schema: schemaWithTrackerName(data),
-        latestGridData: state.latestGridData,
+        latestSnapshot: state.latestSnapshot,
       }
       setState(next)
       const key = `${id}::${instanceId ?? ''}`
@@ -214,11 +254,15 @@ function TrackerByIdContent({
   return (
     <TrackerAIView
       initialSchema={schema}
-      initialGridData={state.latestGridData}
+      initialGridData={state.latestSnapshot?.data ?? null}
+      initialFormStatus={state.latestSnapshot?.formStatus ?? null}
       onSaveTracker={handleSaveTracker}
       initialEditMode={false}
       initialChatOpen={false}
       trackerId={id}
+      instanceType={state.tracker?.instance === 'MULTI' ? 'MULTI' : 'SINGLE'}
+      instanceId={instanceId}
+      autoSave={state.tracker?.autoSave ?? true}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       versionControl={state.tracker?.versionControl ?? false}

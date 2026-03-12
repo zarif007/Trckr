@@ -14,6 +14,7 @@ import {
 const createTrackerDataBodySchema = z
   .object({
     label: z.string().optional(),
+    formStatus: z.string().nullable().optional(),
     data: z.unknown().optional(),
     branchName: z.string().optional(),
     basedOnId: z.string().optional(),
@@ -90,6 +91,7 @@ export async function POST(
       trackerId,
       authResult.user.id,
       body.data as Record<string, Array<Record<string, unknown>>>,
+      body.formStatus,
     )
     if (!result) return notFound('Tracker not found')
     return jsonOk(result)
@@ -97,6 +99,7 @@ export async function POST(
 
   const created = await createTrackerSnapshotForUser(trackerId, authResult.user.id, {
     label: body.label,
+    formStatus: body.formStatus,
     data: body.data,
     branchName: body.branchName,
     basedOnId: body.basedOnId,

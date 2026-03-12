@@ -157,6 +157,7 @@ model TrackerSchema {
   name             String?
   instance         Instance     @default(SINGLE)
   versionControl   Boolean      @default(false)
+  autoSave         Boolean      @default(true)
   /// If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance only)
   listForSchemaId  String?      @unique
   schema           Json
@@ -179,6 +180,7 @@ model TrackerData {
   id               String        @id @default(cuid())
   trackerSchemaId  String
   label            String?
+  formStatus       String?
   data             Json
   /// Branch name for version-controlled trackers (default "main")
   branchName       String        @default("main")

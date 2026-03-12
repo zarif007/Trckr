@@ -35,6 +35,7 @@ export type {
   TrackerSection,
   TrackerGrid,
   TrackerField,
+  TrackerFormAction,
   TrackerLayoutNode,
   TrackerBindings,
   FieldCalculationRule,

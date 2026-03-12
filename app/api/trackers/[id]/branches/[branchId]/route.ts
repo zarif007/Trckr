@@ -7,6 +7,7 @@ import { validateGridDataSnapshot } from '@/lib/tracker-data'
 const updateBranchBodySchema = z.object({
   data: z.unknown().optional(),
   label: z.string().optional(),
+  formStatus: z.string().nullable().optional(),
 })
 
 /**
@@ -75,7 +76,7 @@ export async function PATCH(
   if (!branch) return notFound('Branch not found')
   if (branch.isMerged) return badRequest('Cannot update a merged branch')
 
-  const updateData: { data?: object; label?: string | null } = {}
+  const updateData: { data?: object; label?: string | null; formStatus?: string | null } = {}
   if (body.data !== undefined) {
     if (!validateGridDataSnapshot(body.data)) {
       return badRequest('Invalid data: must be an object with array-of-objects values')
@@ -84,6 +85,9 @@ export async function PATCH(
   }
   if (body.label !== undefined) {
     updateData.label = typeof body.label === 'string' && body.label.trim() ? body.label.trim() : null
+  }
+  if (body.formStatus !== undefined) {
+    updateData.formStatus = typeof body.formStatus === 'string' ? body.formStatus : null
   }
 
   if (Object.keys(updateData).length === 0) return jsonOk(branch)

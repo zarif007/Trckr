@@ -56,6 +56,7 @@ export function NewTrackerDialog({
   const [name, setName] = useState('')
   const [instance, setInstance] = useState<InstanceType>('SINGLE')
   const [versionControl, setVersionControl] = useState(false)
+  const [autoSave, setAutoSave] = useState(true)
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -64,6 +65,7 @@ export function NewTrackerDialog({
     setName('')
     setInstance('SINGLE')
     setVersionControl(false)
+    setAutoSave(true)
     setError(null)
     setCreating(false)
   }, [])
@@ -82,7 +84,12 @@ export function NewTrackerDialog({
 
   const handleInstanceChange = useCallback((val: InstanceType) => {
     setInstance(val)
-    if (val === 'MULTI') setVersionControl(false)
+    if (val === 'MULTI') {
+      setVersionControl(false)
+      setAutoSave(false)
+    } else {
+      setAutoSave(true)
+    }
   }, [])
 
   const handleSubmit = useCallback(
@@ -104,6 +111,7 @@ export function NewTrackerDialog({
           name: trimmedName,
           instance,
           versionControl: instance === 'SINGLE' ? versionControl : false,
+          autoSave: instance === 'SINGLE' && !versionControl ? autoSave : false,
         }
         if (projectId) body.projectId = projectId
         if (moduleId) body.moduleId = moduleId
@@ -136,7 +144,7 @@ export function NewTrackerDialog({
         setCreating(false)
       }
     },
-    [name, instance, versionControl, projectId, moduleId, router, onCreated, onError, reset],
+    [name, instance, versionControl, autoSave, projectId, moduleId, router, onCreated, onError, reset],
   )
 
   return (
@@ -236,7 +244,14 @@ export function NewTrackerDialog({
               type="button"
               role="switch"
               aria-checked={versionControl && instance === 'SINGLE'}
-              onClick={() => instance === 'SINGLE' && setVersionControl((v) => !v)}
+              onClick={() => {
+                if (instance !== 'SINGLE') return
+                setVersionControl((v) => {
+                  const next = !v
+                  if (next) setAutoSave(false)
+                  return next
+                })
+              }}
               disabled={creating || instance === 'MULTI'}
               className={cn(
                 'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-all duration-150 w-full',
@@ -284,6 +299,63 @@ export function NewTrackerDialog({
                 </p>
               </div>
             </div>
+          </fieldset>
+
+          {/* Auto Save */}
+          <fieldset
+            className={cn(
+              'flex flex-col gap-1.5 transition-all duration-200',
+              (instance === 'MULTI' || versionControl) && 'opacity-40 pointer-events-none',
+            )}
+            disabled={instance === 'MULTI' || versionControl}
+          >
+            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
+              <FileText className="h-3 w-3" />
+              Auto Save
+            </legend>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoSave && instance === 'SINGLE' && !versionControl}
+              onClick={() => {
+                if (instance !== 'SINGLE' || versionControl) return
+                setAutoSave((v) => !v)
+              }}
+              disabled={creating || instance === 'MULTI' || versionControl}
+              className={cn(
+                'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-all duration-150 w-full',
+                autoSave && instance === 'SINGLE' && !versionControl
+                  ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
+                  : 'border-border bg-muted/20 hover:bg-muted/50',
+              )}
+            >
+              <div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">
+                  {autoSave && instance === 'SINGLE' && !versionControl ? 'Enabled' : 'Disabled'}
+                </div>
+                <div className="text-[10px] text-muted-foreground leading-snug">
+                  {instance === 'MULTI'
+                    ? 'Not available for Multi-instance trackers.'
+                    : versionControl
+                      ? 'Disabled when version control is enabled.'
+                      : 'Automatically save changes as you edit.'}
+                </div>
+              </div>
+              <div
+                aria-hidden="true"
+                className={cn(
+                  'flex-shrink-0 ml-4 w-9 h-5 rounded-full transition-colors duration-200 relative',
+                  autoSave && instance === 'SINGLE' && !versionControl ? 'bg-primary' : 'bg-muted-foreground/30',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
+                    autoSave && instance === 'SINGLE' && !versionControl ? 'translate-x-4' : 'translate-x-0.5',
+                  )}
+                />
+              </div>
+            </button>
           </fieldset>
 
           {/* Error */}

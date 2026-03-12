@@ -1,8 +1,9 @@
 'use client'
 
 import { memo, useCallback, useState } from 'react'
-import { Bot, Database, Eye, GitBranch, History, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
+import { Bot, Database, Eye, GitBranch, History, Layout, MoreHorizontal, Pencil, Share2, Tag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
@@ -18,10 +19,12 @@ import { TrackerDisplay, TrackerDisplayErrorBoundary } from '@/app/components/tr
 import {
   EditModeUndoButton,
   useUndoKeyboardShortcut,
+  FormActionsDialog,
 } from '@/app/components/tracker-display/edit-mode'
 import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
+import type { TrackerFormAction } from '@/app/components/tracker-display/types'
 
 const DEFAULT_LEFT_RATIO = 0.75
 
@@ -36,6 +39,7 @@ interface TrackerPanelProps {
   setIsChatOpen: (v: boolean | ((prev: boolean) => boolean)) => void
   isStreamingTracker: boolean
   trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
+  onGridDataChange?: (data: GridDataSnapshot) => void
   handleSchemaChange?: (next: TrackerResponse) => void
   undo?: () => void
   canUndo?: boolean
@@ -48,6 +52,13 @@ interface TrackerPanelProps {
   onReturnToLatest?: () => void
   trackerId?: string | null
   initialGridData?: GridDataSnapshot | null
+  readOnly?: boolean
+  formActions?: TrackerFormAction[]
+  currentFormStatus?: string | null
+  onFormActionSelect?: (action: TrackerFormAction) => void
+  formActionSaving?: boolean
+  formActionError?: string | null
+  showFormActions?: boolean
   /** Version control props — only relevant when versionControl === true */
   versionControl?: boolean
   vcCurrentBranch?: BranchRecord | null
@@ -67,6 +78,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   setIsChatOpen,
   isStreamingTracker,
   trackerDataRef,
+  onGridDataChange,
   handleSchemaChange,
   undo,
   canUndo,
@@ -78,6 +90,13 @@ export const TrackerPanel = memo(function TrackerPanel({
   onReturnToLatest,
   trackerId,
   initialGridData,
+  readOnly,
+  formActions,
+  currentFormStatus,
+  onFormActionSelect,
+  formActionSaving = false,
+  formActionError,
+  showFormActions = false,
   versionControl,
   vcCurrentBranch,
   vcBranches,
@@ -91,6 +110,12 @@ export const TrackerPanel = memo(function TrackerPanel({
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const [vcDrawerOpen, setVcDrawerOpen] = useState(false)
+  const [formActionsOpen, setFormActionsOpen] = useState(false)
+
+  const actions = formActions ?? []
+  const activeAction = actions.find((action) =>
+    action.statusTag.trim().toLowerCase() === (currentFormStatus ?? '').trim().toLowerCase()
+  )
 
   useUndoKeyboardShortcut(editMode, canUndo ?? false, undo)
 
@@ -143,6 +168,47 @@ export const TrackerPanel = memo(function TrackerPanel({
               >
                 Return to latest
               </Button>
+            )}
+          </div>
+        </div>
+      )}
+      {showFormActions && actions.length > 0 && (
+        <div
+          className={`absolute z-20 left-4 ${isViewingHistoricalVersion ? 'top-14' : 'top-4'} max-w-[calc(100%-2rem)]`}
+        >
+          <div className="flex flex-col gap-2 rounded-md border border-border/60 bg-background/90 p-2 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <span>Status</span>
+              <Badge variant="secondary" className="text-[10px]">
+                {currentFormStatus?.trim() || 'None'}
+              </Badge>
+              {activeAction && !activeAction.isEditable && (
+                <Badge variant="outline" className="text-[10px]">
+                  Read-only
+                </Badge>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {actions.map((action) => {
+                const isActive =
+                  action.statusTag.trim().toLowerCase() ===
+                  (currentFormStatus ?? '').trim().toLowerCase()
+                return (
+                  <Button
+                    key={action.id}
+                    variant={isActive ? 'default' : 'outline'}
+                    size="sm"
+                    className="h-7 px-2.5 text-xs"
+                    disabled={formActionSaving || isStreamingTracker}
+                    onClick={() => onFormActionSelect?.(action)}
+                  >
+                    {action.label}
+                  </Button>
+                )
+              })}
+            </div>
+            {formActionError && (
+              <p className="text-[11px] text-destructive">{formActionError}</p>
             )}
           </div>
         </div>
@@ -220,6 +286,18 @@ export const TrackerPanel = memo(function TrackerPanel({
           >
             <GitBranch className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{vcCurrentBranch?.branchName ?? 'Branches'}</span>
+          </Button>
+        )}
+        {editMode && handleSchemaChange && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs shrink-0"
+            onClick={() => setFormActionsOpen(true)}
+            aria-label="Configure form actions"
+          >
+            <Tag className="h-3.5 w-3.5" />
+            Form actions
           </Button>
         )}
         {hideChatToggle && showDebugActions && (
@@ -350,6 +428,16 @@ export const TrackerPanel = memo(function TrackerPanel({
         </DialogContent>
       </Dialog>
 
+      <FormActionsDialog
+        open={formActionsOpen}
+        onOpenChange={setFormActionsOpen}
+        actions={actions}
+        onSave={(next) => {
+          if (!handleSchemaChange) return
+          handleSchemaChange({ ...schema, formActions: next })
+        }}
+      />
+
       <div
         className={`h-full overflow-y-auto ${hideChatToggle
           ? 'px-1 pt-14 pb-2'
@@ -385,6 +473,8 @@ export const TrackerPanel = memo(function TrackerPanel({
               dynamicOptions={(schema.dynamicOptions || {}) as TrackerResponse['dynamicOptions']}
               getDataRef={trackerDataRef}
               initialGridData={initialGridData ?? undefined}
+              onGridDataChange={onGridDataChange}
+              readOnly={readOnly}
             />
           ) : (
             <TrackerDisplay
@@ -392,6 +482,7 @@ export const TrackerPanel = memo(function TrackerPanel({
               sections={schema.sections}
               grids={schema.grids}
               fields={schema.fields}
+              formActions={schema.formActions}
               layoutNodes={schema.layoutNodes}
               bindings={schema.bindings}
               validations={schema.validations}
@@ -402,6 +493,8 @@ export const TrackerPanel = memo(function TrackerPanel({
               dynamicOptions={schema.dynamicOptions}
               getDataRef={trackerDataRef}
               initialGridData={initialGridData ?? undefined}
+              onGridDataChange={onGridDataChange}
+              readOnly={readOnly}
               editMode={editMode}
               onSchemaChange={editMode ? handleSchemaChange : undefined}
               undo={undo}

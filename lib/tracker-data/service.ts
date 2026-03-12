@@ -25,6 +25,7 @@ export async function createTrackerData(
     data: {
       trackerSchemaId,
       label: typeof body.label === 'string' && body.label.trim() ? body.label.trim() : null,
+      formStatus: typeof body.formStatus === 'string' ? body.formStatus : body.formStatus ?? null,
       data: body.data as object,
       branchName: body.branchName ?? 'main',
       authorId: body.authorId ?? null,
@@ -94,12 +95,18 @@ export async function updateTrackerData(
   })
   if (!row || row.trackerSchema.project.userId !== userId) return null
 
-  const updateData: { label?: string | null; data?: object } = {}
+  const updateData: { label?: string | null; formStatus?: string | null; data?: object } = {}
   if (body.label !== undefined) {
     updateData.label =
       typeof body.label === 'string' && body.label.trim()
         ? body.label.trim()
         : null
+  }
+  if (body.formStatus !== undefined) {
+    updateData.formStatus =
+      typeof body.formStatus === 'string'
+        ? body.formStatus
+        : body.formStatus ?? null
   }
   if (body.data !== undefined) {
     updateData.data = body.data as object
@@ -122,6 +129,7 @@ export async function upsertCurrentData(
   trackerSchemaId: string,
   userId: string,
   data: object,
+  formStatus?: string | null,
 ) {
   const tracker = await prisma.trackerSchema.findFirst({
     where: {
@@ -139,7 +147,11 @@ export async function upsertCurrentData(
   if (existing) {
     return prisma.trackerData.update({
       where: { id: existing.id },
-      data: { data, authorId: userId },
+      data: {
+        data,
+        authorId: userId,
+        ...(formStatus !== undefined ? { formStatus: typeof formStatus === 'string' ? formStatus : null } : {}),
+      },
       include: authorInclude,
     })
   }
@@ -150,6 +162,7 @@ export async function upsertCurrentData(
       data,
       branchName: 'main',
       authorId: userId,
+      ...(formStatus !== undefined ? { formStatus: typeof formStatus === 'string' ? formStatus : null } : {}),
     },
     include: authorInclude,
   })

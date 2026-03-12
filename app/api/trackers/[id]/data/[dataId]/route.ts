@@ -14,6 +14,7 @@ import type { GridDataSnapshot } from '@/lib/tracker-data'
 const patchTrackerDataBodySchema = z
   .object({
     label: z.string().optional(),
+    formStatus: z.string().nullable().optional(),
     data: z.unknown().optional(),
   })
   .passthrough()
@@ -66,8 +67,9 @@ export async function PATCH(
     return badRequest('Invalid data: must be an object with array-of-objects values')
   }
 
-  const updateBody: { label?: string; data?: GridDataSnapshot } = {}
+  const updateBody: { label?: string; formStatus?: string | null; data?: GridDataSnapshot } = {}
   if (body.label !== undefined) updateBody.label = body.label
+  if (body.formStatus !== undefined) updateBody.formStatus = body.formStatus
   if (body.data !== undefined) updateBody.data = body.data as GridDataSnapshot
 
   const updated = await updateTrackerSnapshotForUser(snapshotId, authResult.user.id, updateBody)

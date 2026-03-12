@@ -94,6 +94,7 @@ export async function createTrackerForUser(params: {
   moduleId?: string
   instance?: 'SINGLE' | 'MULTI'
   versionControl?: boolean
+  autoSave?: boolean
 }) {
   const project = await resolveTargetProjectForTrackerCreate(params.userId, params.projectId)
 
@@ -110,6 +111,8 @@ export async function createTrackerForUser(params: {
   const instance = params.instance === 'MULTI' ? Instance.MULTI : Instance.SINGLE
   // Version control is only supported for single-instance trackers
   const versionControl = instance === Instance.SINGLE ? (params.versionControl ?? false) : false
+  // Auto-save is only supported for single-instance trackers without version control
+  const autoSave = instance === Instance.SINGLE && !versionControl ? (params.autoSave ?? true) : false
 
   const resolvedName = await resolveUniqueTrackerName(
     params.name,
@@ -124,6 +127,7 @@ export async function createTrackerForUser(params: {
       name: resolvedName,
       instance,
       versionControl,
+      autoSave,
       schema: params.schema,
     },
   })

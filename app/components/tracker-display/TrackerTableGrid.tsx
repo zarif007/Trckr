@@ -44,6 +44,7 @@ interface TrackerTableGridProps {
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
+  readOnly?: boolean
   onUpdate?: (rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (newRow: Record<string, unknown>) => void
   /** Add a row to any grid (e.g. options grid). Used for "Add option" in select/multiselect. */
@@ -67,6 +68,7 @@ function TrackerTableGridInner({
   dependsOn,
   gridData = {},
   gridDataForThisGrid,
+  readOnly = false,
   onUpdate,
   onAddEntry,
   onAddEntryToGrid,
@@ -543,9 +545,17 @@ function TrackerTableGridInner({
         gridId={grid.id}
         calculations={calculations}
         gridData={fullGridData}
-        addable={onAddEntry != null && (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false}
-        editable={grid.config?.isRowEditAble !== false}
-        deletable={onDeleteEntries != null && (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false}
+        addable={
+          !readOnly &&
+          onAddEntry != null &&
+          (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false
+        }
+        editable={!readOnly && grid.config?.isRowEditAble !== false}
+        deletable={
+          !readOnly &&
+          onDeleteEntries != null &&
+          (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false
+        }
         editLayoutAble={grid.config?.isEditAble !== false}
         pageSize={grid.config?.pageSize}
         pageSizeOptions={grid.config?.pageSizeOptions}

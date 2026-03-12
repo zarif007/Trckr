@@ -13,6 +13,7 @@ const createTrackerBodySchema = z
     moduleId: z.string().optional(),
     instance: z.enum(['SINGLE', 'MULTI']).optional(),
     versionControl: z.boolean().optional(),
+    autoSave: z.boolean().optional(),
   })
   .passthrough()
 
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
   const instance = body.instance === 'MULTI' ? 'MULTI' : 'SINGLE'
   // Version control is only for single-instance trackers
   const versionControl = instance === 'SINGLE' ? (body.versionControl ?? false) : false
+  // Auto-save is only for single-instance trackers without version control
+  const autoSave = instance === 'SINGLE' && !versionControl ? (body.autoSave ?? true) : false
 
   const tracker = await createTrackerForUser({
     userId: authResult.user.id,
@@ -66,6 +69,7 @@ export async function POST(request: Request) {
     moduleId: typeof body.moduleId === 'string' ? body.moduleId.trim() : undefined,
     instance,
     versionControl,
+    autoSave,
   })
 
   return jsonOk(tracker)

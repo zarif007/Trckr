@@ -33,6 +33,7 @@ export interface GridViewContentProps {
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: RefObject<GridDataRecord> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
+  readOnly?: boolean
   onUpdate?: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
@@ -56,6 +57,7 @@ export function GridViewContent({
   gridData,
   gridDataRef,
   gridDataForThisGrid,
+  readOnly,
   onUpdate,
   onAddEntry,
   onDeleteEntries,
@@ -72,20 +74,20 @@ export function GridViewContent({
 
   const updateCell = useMemo(
     () =>
-      onUpdate
+      onUpdate && !readOnly
         ? (rowIndex: number, columnId: string, value: unknown) =>
           onUpdate(gridId, rowIndex, columnId, value)
         : undefined,
-    [onUpdate, gridId]
+    [onUpdate, gridId, readOnly]
   )
   const addEntry = useMemo(
-    () => (onAddEntry ? (newRow: Record<string, unknown>) => onAddEntry(gridId, newRow) : undefined),
-    [onAddEntry, gridId]
+    () => (onAddEntry && !readOnly ? (newRow: Record<string, unknown>) => onAddEntry(gridId, newRow) : undefined),
+    [onAddEntry, gridId, readOnly]
   )
   const deleteEntries = useMemo(
     () =>
-      onDeleteEntries ? (rowIndices: number[]) => onDeleteEntries(gridId, rowIndices) : undefined,
-    [onDeleteEntries, gridId]
+      onDeleteEntries && !readOnly ? (rowIndices: number[]) => onDeleteEntries(gridId, rowIndices) : undefined,
+    [onDeleteEntries, gridId, readOnly]
   )
 
   switch (view.type) {
@@ -106,6 +108,7 @@ export function GridViewContent({
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
+          readOnly={readOnly}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
           onAddEntry={addEntry}
@@ -129,6 +132,7 @@ export function GridViewContent({
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
+          readOnly={readOnly}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
           onAddEntry={addEntry}
@@ -152,6 +156,7 @@ export function GridViewContent({
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}
           trackerContext={trackerContext}
+          readOnly={readOnly}
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
           onAddEntryToGrid={onAddEntry}

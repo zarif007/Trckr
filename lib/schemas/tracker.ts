@@ -288,6 +288,20 @@ export const trackerSchema = z
 
     bindings: bindingsSchema,
 
+    formActions: z
+      .array(
+        z
+          .object({
+            id: z.string(),
+            label: z.string(),
+            statusTag: z.string(),
+            isEditable: z.boolean(),
+          })
+          .passthrough()
+      )
+      .default([])
+      .describe('Optional form action buttons for data mode status control.'),
+
     styles: stylesSchema,
     dynamicOptions: dynamicOptionsDefinitionsSchema.optional(),
   })

@@ -16,9 +16,17 @@ export type TrackerNavState = {
 
 export type TrackerSaveState = {
   onSaveTracker: (() => void) | null
-  onSaveData: (() => void) | null
+  onSaveData: (() => void | Promise<void>) | null
   isAgentBuilding: boolean
   primaryNavAction: { label: string; href: string } | null
+  /**
+   * Save feedback for tracker data actions shown in the top nav.
+   * - `autosaveEnabled` toggles autosave status badge visibility.
+   * - `dataSaveStatus` tracks current save lifecycle state.
+   */
+  autosaveEnabled: boolean
+  dataSaveStatus: 'idle' | 'saving' | 'saved' | 'error'
+  dataSaveError: string | null
 }
 
 const TrackerNavContext = createContext<{
@@ -33,6 +41,9 @@ const initialSaveState: TrackerSaveState = {
   onSaveData: null,
   isAgentBuilding: false,
   primaryNavAction: null,
+  autosaveEnabled: false,
+  dataSaveStatus: 'idle',
+  dataSaveError: null,
 }
 
 export function TrackerNavProvider({ children }: { children: ReactNode }) {
