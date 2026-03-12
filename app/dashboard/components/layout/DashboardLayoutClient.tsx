@@ -36,6 +36,7 @@ import {
   type TrackerSchema,
 } from '../../dashboard-context'
 import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
+import { ClaiProvider } from '../clai'
 
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
@@ -1292,7 +1293,9 @@ export function DashboardLayoutClient({
   return (
     <QueryClientProviderWrapper>
       <DashboardProvider initialProjects={initialProjects}>
-        <DashboardShell>{children}</DashboardShell>
+        <ClaiProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </ClaiProvider>
       </DashboardProvider>
     </QueryClientProviderWrapper>
   )
