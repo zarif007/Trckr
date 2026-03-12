@@ -7,6 +7,13 @@ import type { TrackerDisplayProps } from '../types'
 
 /** Default tab name for the initial empty tab. */
 export const DEFAULT_FIRST_TAB_NAME = 'Overview'
+export const DEFAULT_FORM_ACTION_ID = 'default_save_action'
+export const DEFAULT_FORM_ACTION = {
+  id: DEFAULT_FORM_ACTION_ID,
+  label: 'Save',
+  statusTag: 'Saved',
+  isEditable: true,
+} as const
 
 /** Default placeId for the first tab. */
 export const DEFAULT_FIRST_TAB_PLACE_ID = 0
@@ -27,7 +34,7 @@ export function createEmptyTrackerSchema(options?: {
     sections: [],
     grids: [],
     fields: [],
-    formActions: [],
+    formActions: [DEFAULT_FORM_ACTION],
     layoutNodes: [],
     bindings: {},
     validations: {},

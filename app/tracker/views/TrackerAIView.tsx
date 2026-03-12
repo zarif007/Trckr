@@ -7,7 +7,10 @@ import { ShareTrackerDialog } from '@/app/components/teams'
 import {
   useUndoableSchemaChange,
 } from '@/app/components/tracker-display/edit-mode'
-import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
+import {
+  DEFAULT_FORM_ACTION,
+  INITIAL_TRACKER_SCHEMA,
+} from '@/app/components/tracker-display/tracker-editor'
 import { useTrackerNav } from '../TrackerNavContext'
 import { useTrackerChat, type Message, type TrackerResponse } from '../hooks/useTrackerChat'
 import { useIsDesktop } from '../hooks/useMediaQuery'
@@ -20,6 +23,42 @@ import { useAutoSave } from '@/app/hooks/useAutoSave'
 
 const MIN_LEFT_PX = 320
 const MIN_RIGHT_PX = 360
+const DRAFT_STATUS_TAG = 'Draft'
+
+function normalizeFormActions(actions: TrackerFormAction[] | null | undefined): TrackerFormAction[] {
+  const list = Array.isArray(actions) ? actions : []
+  const trimmed = list.map((action, index) => {
+    const label = typeof action?.label === 'string' ? action.label.trim() : ''
+    const statusTag = typeof action?.statusTag === 'string' ? action.statusTag.trim() : ''
+    return {
+      id:
+        typeof action?.id === 'string' && action.id.trim().length > 0
+          ? action.id
+          : `form_action_${index}`,
+      label,
+      statusTag,
+      isEditable: action?.isEditable === true,
+    }
+  })
+  const firstFromInput = trimmed[0]
+  const first: TrackerFormAction = {
+    id: firstFromInput?.id || DEFAULT_FORM_ACTION.id,
+    label: firstFromInput?.label || DEFAULT_FORM_ACTION.label,
+    statusTag: firstFromInput?.statusTag || DEFAULT_FORM_ACTION.statusTag,
+    isEditable: true,
+  }
+  const rest = trimmed
+    .slice(1)
+    .filter((action) => action.label.length > 0 && action.statusTag.length > 0)
+  return [first, ...rest]
+}
+
+function normalizeTrackerSchema(next: TrackerResponse): TrackerResponse {
+  return {
+    ...next,
+    formActions: normalizeFormActions(next.formActions),
+  }
+}
 
 export interface TrackerEditorViewProps {
   initialSchema?: TrackerResponse
@@ -122,7 +161,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [schema, setSchema] = useState<TrackerResponse>(
-    () => (initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse
+    () => normalizeTrackerSchema((initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse)
   )
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
   type LoadedSnapshot = {
@@ -203,7 +242,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
   const formActions = useMemo<TrackerFormAction[]>(
-    () => (Array.isArray(schema?.formActions) ? schema.formActions : []),
+    () => normalizeFormActions(schema?.formActions),
     [schema]
   )
   const activeFormAction = useMemo(
@@ -214,13 +253,32 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       ) ?? null,
     [formActions, currentFormStatus]
   )
-  const draftFormAction = useMemo(
+  const currentStatusNormalized = (currentFormStatus ?? '').trim().toLowerCase()
+  const activeActionIndex = useMemo(
     () =>
-      formActions.find(
-        (action) => action.statusTag.trim().toLowerCase() === 'draft'
-      ) ?? null,
-    [formActions]
+      formActions.findIndex(
+        (action) => action.statusTag.trim().toLowerCase() === currentStatusNormalized
+      ),
+    [formActions, currentStatusNormalized]
   )
+  const nextActionIndex = useMemo(() => {
+    if (formActions.length === 0) return -1
+    if (activeActionIndex < 0) return 0
+    const next = activeActionIndex + 1
+    return next < formActions.length ? next : -1
+  }, [formActions, activeActionIndex])
+  const visibleFormActions = useMemo(
+    () => (nextActionIndex >= 0 ? [formActions[nextActionIndex]] : []),
+    [formActions, nextActionIndex]
+  )
+  const effectiveCurrentFormStatus = useMemo(
+    () => currentFormStatus?.trim() || DRAFT_STATUS_TAG,
+    [currentFormStatus]
+  )
+  const previousFormStatus = useMemo(() => {
+    if (nextActionIndex <= 0) return DRAFT_STATUS_TAG
+    return formActions[nextActionIndex - 1]?.statusTag || DRAFT_STATUS_TAG
+  }, [formActions, nextActionIndex])
   const isReadOnly = activeFormAction ? !activeFormAction.isEditable : false
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
@@ -414,15 +472,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const handleGridDataChange = useCallback(() => {
     if (!allowAutoSave) return
-    if (draftFormAction) {
-      const isDraft =
-        (formStatusRef.current ?? '').trim().toLowerCase() === 'draft'
-      if (!isDraft) {
-        setFormStatus(draftFormAction.statusTag)
-      }
+    const isDraft = (formStatusRef.current ?? '').trim().toLowerCase() === DRAFT_STATUS_TAG.toLowerCase()
+    if (!isDraft) {
+      setFormStatus(DRAFT_STATUS_TAG)
     }
     scheduleSave()
-  }, [allowAutoSave, draftFormAction, scheduleSave, setFormStatus])
+  }, [allowAutoSave, scheduleSave, setFormStatus])
 
   const handleFormActionSelect = useCallback(
     async (action: TrackerFormAction) => {
@@ -449,7 +504,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       if (lastSyncedTrackerRef.current !== activeTrackerData) {
         lastSyncedTrackerRef.current = activeTrackerData
         setLastSyncedTracker(activeTrackerData)
-        setSchema(activeTrackerData)
+        setSchema(normalizeTrackerSchema(activeTrackerData))
       }
     }
   }, [activeTrackerData, viewingMessageIndex])
@@ -478,8 +533,9 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const handleSchemaChange = useCallback(
     (next: TrackerResponse) => {
-      setSchema(next)
-      setActiveTrackerData(next)
+      const normalizedNext = normalizeTrackerSchema(next)
+      setSchema(normalizedNext)
+      setActiveTrackerData(normalizedNext)
       if (allowSchemaAutoSave) {
         scheduleSchemaSave()
       }
@@ -495,6 +551,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const stableOnTrackerNameChange = useCallback((name: string) => {
     handleSchemaChange({ ...schemaRef.current, name })
   }, [handleSchemaChange])
+  const handleFormActionsChange = useCallback(
+    (actions: TrackerFormAction[]) => {
+      handleSchemaChange({
+        ...schemaRef.current,
+        formActions: normalizeFormActions(actions),
+      })
+    },
+    [handleSchemaChange]
+  )
 
   useEffect(() => {
     if (!setTrackerNav) return
@@ -553,6 +618,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       autosaveEnabled: autosaveEnabledForNav,
       dataSaveStatus: navDataSaveStatus,
       dataSaveError: navDataSaveError,
+      formActions: isDataPage || (canEditSchema && editMode) ? formActions : [],
+      currentFormStatus: isDataPage ? effectiveCurrentFormStatus : null,
+      previousFormStatus: isDataPage ? previousFormStatus : null,
+      visibleFormActions: isDataPage ? visibleFormActions : [],
+      formActionSaving: isDataPage ? formActionSaving : false,
+      formActionError: isDataPage ? formActionError : null,
+      canConfigureFormActions: canEditSchema && editMode,
+      onFormActionsChange: canEditSchema && editMode ? handleFormActionsChange : null,
+      onFormActionSelect: isDataPage ? handleFormActionSelect : null,
     })
   }, [
     setSaveState,
@@ -567,6 +641,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     dataSaveError,
     schemaSaveStatus,
     schemaSaveError,
+    formActions,
+    effectiveCurrentFormStatus,
+    previousFormStatus,
+    visibleFormActions,
+    formActionSaving,
+    formActionError,
+    canEditSchema,
+    editMode,
+    handleFormActionsChange,
+    isDataPage,
+    handleFormActionSelect,
   ])
 
   useEffect(() => {
@@ -580,13 +665,22 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         autosaveEnabled: false,
         dataSaveStatus: 'idle',
         dataSaveError: null,
+        formActions: [],
+        currentFormStatus: null,
+        previousFormStatus: null,
+        visibleFormActions: [],
+        formActionSaving: false,
+        formActionError: null,
+        canConfigureFormActions: false,
+        onFormActionsChange: null,
+        onFormActionSelect: null,
       })
   }, [setSaveState])
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 
   const handleViewHistoricalTracker = useCallback((trackerData: TrackerResponse, messageIndex: number) => {
-    setSchema(trackerData)
+    setSchema(normalizeTrackerSchema(trackerData))
     setViewingMessageIndex(messageIndex)
     setEditMode(false)
     setMobileTab('preview')
@@ -596,7 +690,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     setViewingMessageIndex(null)
     if (activeTrackerData) {
       setLastSyncedTracker(activeTrackerData)
-      setSchema(activeTrackerData)
+      setSchema(normalizeTrackerSchema(activeTrackerData))
     }
   }, [activeTrackerData])
 
@@ -812,12 +906,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
               trackerId={trackerId ?? undefined}
               initialGridData={loadedSnapshot?.data ?? initialGridData}
               readOnly={isReadOnly}
-              formActions={formActions}
-              currentFormStatus={currentFormStatus}
-              onFormActionSelect={handleFormActionSelect}
-              formActionSaving={formActionSaving}
-              formActionError={formActionError}
-              showFormActions={pageMode === 'data'}
               versionControl={versionControl}
               vcCurrentBranch={vcCurrentBranch}
               vcBranches={vcBranches}
@@ -862,12 +950,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
           trackerId={trackerId ?? undefined}
           initialGridData={loadedSnapshot?.data ?? initialGridData}
           readOnly={isReadOnly}
-          formActions={formActions}
-          currentFormStatus={currentFormStatus}
-          onFormActionSelect={handleFormActionSelect}
-          formActionSaving={formActionSaving}
-          formActionError={formActionError}
-          showFormActions={pageMode === 'data'}
           versionControl={versionControl}
           vcCurrentBranch={vcCurrentBranch}
           vcBranches={vcBranches}

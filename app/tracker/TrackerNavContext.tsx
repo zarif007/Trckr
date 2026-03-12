@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import type { TrackerFormAction } from '@/app/components/tracker-display/types'
 
 export type TrackerNavState = {
   name: string
@@ -27,6 +28,15 @@ export type TrackerSaveState = {
   autosaveEnabled: boolean
   dataSaveStatus: 'idle' | 'saving' | 'saved' | 'error'
   dataSaveError: string | null
+  formActions: TrackerFormAction[]
+  currentFormStatus: string | null
+  previousFormStatus: string | null
+  visibleFormActions: TrackerFormAction[]
+  formActionSaving: boolean
+  formActionError: string | null
+  canConfigureFormActions: boolean
+  onFormActionsChange: ((actions: TrackerFormAction[]) => void) | null
+  onFormActionSelect: ((action: TrackerFormAction) => void | Promise<void>) | null
 }
 
 const TrackerNavContext = createContext<{
@@ -44,6 +54,15 @@ const initialSaveState: TrackerSaveState = {
   autosaveEnabled: false,
   dataSaveStatus: 'idle',
   dataSaveError: null,
+  formActions: [],
+  currentFormStatus: null,
+  previousFormStatus: null,
+  visibleFormActions: [],
+  formActionSaving: false,
+  formActionError: null,
+  canConfigureFormActions: false,
+  onFormActionsChange: null,
+  onFormActionSelect: null,
 }
 
 export function TrackerNavProvider({ children }: { children: ReactNode }) {

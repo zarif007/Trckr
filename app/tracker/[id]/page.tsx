@@ -58,49 +58,6 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
   if (p) return p
 
   p = (async () => {
-    const latestSnapshotPromise = (async () => {
-      if (instanceId && instanceId !== 'new') {
-        const res = await fetch(`/api/trackers/${id}/data/${instanceId}`)
-        if (!res.ok) return null
-        const row = (await res.json()) as {
-          id?: string
-          label?: string | null
-          data?: Record<string, Array<Record<string, unknown>>> | null
-          updatedAt?: string
-          formStatus?: string | null
-        }
-        if (!row?.id || !row?.data) return null
-        return {
-          id: row.id,
-          label: row.label ?? null,
-          data: row.data,
-          updatedAt: row.updatedAt,
-          formStatus: row.formStatus ?? null,
-        }
-      }
-      if (instanceId === 'new') return null
-      const res = await fetch(`/api/trackers/${id}/data?limit=1`)
-      if (!res.ok) return null
-      const payload = (await res.json()) as {
-        items?: Array<{
-          id?: string
-          label?: string | null
-          data?: Record<string, Array<Record<string, unknown>>> | null
-          updatedAt?: string
-          formStatus?: string | null
-        }>
-      }
-      const row = payload.items?.[0]
-      if (!row?.id || !row?.data) return null
-      return {
-        id: row.id,
-        label: row.label ?? null,
-        data: row.data,
-        updatedAt: row.updatedAt,
-        formStatus: row.formStatus ?? null,
-      }
-    })().catch(() => null)
-
     let fromStorage: TrackerRecord | null = null
     if (typeof sessionStorage !== 'undefined') {
       const raw = sessionStorage.getItem(STORAGE_KEY_PREFIX + id)
@@ -130,7 +87,52 @@ function getTrackerResource(id: string, instanceId: string | null): Promise<Trac
       schema = schemaWithTrackerName(tracker)
     }
 
-    const latestSnapshot = await latestSnapshotPromise
+    const latestSnapshot = await (async () => {
+      if (instanceId && instanceId !== 'new') {
+        const res = await fetch(`/api/trackers/${id}/data/${instanceId}`)
+        if (!res.ok) return null
+        const row = (await res.json()) as {
+          id?: string
+          label?: string | null
+          data?: Record<string, Array<Record<string, unknown>>> | null
+          updatedAt?: string
+          formStatus?: string | null
+        }
+        if (!row?.id || !row?.data) return null
+        return {
+          id: row.id,
+          label: row.label ?? null,
+          data: row.data,
+          updatedAt: row.updatedAt,
+          formStatus: row.formStatus ?? null,
+        }
+      }
+      // For MULTI trackers, opening the tracker without an explicit instance
+      // should start from a fresh draft. Existing instances are opened only
+      // when a concrete instanceId is selected.
+      if (tracker.instance === 'MULTI' || instanceId === 'new') return null
+      const res = await fetch(`/api/trackers/${id}/data?limit=1`)
+      if (!res.ok) return null
+      const payload = (await res.json()) as {
+        items?: Array<{
+          id?: string
+          label?: string | null
+          data?: Record<string, Array<Record<string, unknown>>> | null
+          updatedAt?: string
+          formStatus?: string | null
+        }>
+      }
+      const row = payload.items?.[0]
+      if (!row?.id || !row?.data) return null
+      return {
+        id: row.id,
+        label: row.label ?? null,
+        data: row.data,
+        updatedAt: row.updatedAt,
+        formStatus: row.formStatus ?? null,
+      }
+    })().catch(() => null)
+
     return { tracker, schema, latestSnapshot }
   })()
 

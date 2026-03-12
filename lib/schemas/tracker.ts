@@ -293,13 +293,16 @@ export const trackerSchema = z
         z
           .object({
             id: z.string(),
-            label: z.string(),
-            statusTag: z.string(),
+            label: z.string().trim().min(1),
+            statusTag: z.string().trim().min(1),
             isEditable: z.boolean(),
           })
           .passthrough()
       )
-      .default([])
+      .min(1)
+      .default([
+        { id: 'default_save_action', label: 'Save', statusTag: 'Saved', isEditable: true },
+      ])
       .describe('Optional form action buttons for data mode status control.'),
 
     styles: stylesSchema,

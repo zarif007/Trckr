@@ -1,17 +1,38 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { ArrowLeft, ChevronDown, Database, Layout, LogOut, Moon, MoreHorizontal, Save, Sun, Users } from 'lucide-react'
+import { ArrowLeft, LogOut, Moon, MoreHorizontal, Plus, Sun, Trash2, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { TeamMembersDialog } from './teams'
 import { useTrackerNav } from '@/app/tracker/TrackerNavContext'
+import type { TrackerFormAction } from '@/app/components/tracker-display/types'
 
 const DEFAULT_TRACKER_NAME = 'Untitled tracker'
+const DRAFT_STATUS_TAG = 'Draft'
+const DEFAULT_ACTION_LABEL = 'Save'
+const DEFAULT_ACTION_STATUS_TAG = 'Saved'
+
+function createActionId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `action_${Date.now()}_${Math.random().toString(16).slice(2)}`
+}
 
 function TrackerNameEdit({
   name,
@@ -102,6 +123,13 @@ export default function TrackerNavBar() {
     autosaveEnabled,
     dataSaveStatus,
     dataSaveError,
+    formActions,
+    currentFormStatus,
+    formActionSaving,
+    formActionError,
+    canConfigureFormActions,
+    onFormActionsChange,
+    onFormActionSelect,
   } = ctx?.saveState ?? {
     onSaveTracker: null,
     onSaveData: null,
@@ -110,14 +138,56 @@ export default function TrackerNavBar() {
     autosaveEnabled: false,
     dataSaveStatus: 'idle' as const,
     dataSaveError: null as string | null,
+    formActions: [] as TrackerFormAction[],
+    currentFormStatus: null as string | null,
+    formActionSaving: false,
+    formActionError: null as string | null,
+    canConfigureFormActions: false,
+    onFormActionsChange: null as ((actions: TrackerFormAction[]) => void) | null,
+    onFormActionSelect: null as ((action: TrackerFormAction) => void | Promise<void>) | null,
   }
-  const [saveMenuOpen, setSaveMenuOpen] = useState(false)
+  const [actionsConfigOpen, setActionsConfigOpen] = useState(false)
+  const [actionsDraft, setActionsDraft] = useState<TrackerFormAction[]>([])
   const [savingTracker, setSavingTracker] = useState(false)
   const [savingData, setSavingData] = useState(false)
   const [manualSaveHintVisible, setManualSaveHintVisible] = useState(false)
   const saveHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hasSave = Boolean(onSaveTracker || onSaveData)
-  const hasBothSaveOptions = Boolean(onSaveTracker && onSaveData)
+  const hasLegacySave = Boolean(onSaveTracker || onSaveData)
+  const normalizedCurrentStatus = (currentFormStatus ?? '').trim().toLowerCase()
+  const activeActionIndex = useMemo(
+    () =>
+      formActions.findIndex(
+        (action) => action.statusTag.trim().toLowerCase() === normalizedCurrentStatus
+      ),
+    [formActions, normalizedCurrentStatus]
+  )
+  const nextAction = useMemo(() => {
+    if (!onFormActionSelect || formActions.length === 0) return null
+    if (activeActionIndex < 0) return formActions[0] ?? null
+    const nextIndex = activeActionIndex + 1
+    return nextIndex < formActions.length ? formActions[nextIndex] : null
+  }, [onFormActionSelect, formActions, activeActionIndex])
+  const nextActionIndex = useMemo(() => {
+    if (!nextAction) return -1
+    return formActions.findIndex((action) => action.id === nextAction.id)
+  }, [formActions, nextAction])
+  const visibleStatusTag =
+    nextActionIndex <= 0
+      ? DRAFT_STATUS_TAG
+      : formActions[nextActionIndex - 1]?.statusTag.trim() || DRAFT_STATUS_TAG
+  const hasInvalidActionDraft = useMemo(
+    () =>
+      actionsDraft.length === 0 ||
+      actionsDraft.some((action) => !action.label.trim() || !action.statusTag.trim()),
+    [actionsDraft]
+  )
+  const actionDraftValidationMessage = useMemo(() => {
+    if (actionsDraft.length === 0) return 'Add at least one action.'
+    if (actionsDraft.some((action) => !action.label.trim() || !action.statusTag.trim())) {
+      return 'Each action needs both a button name and status tag.'
+    }
+    return null
+  }, [actionsDraft])
   const showAutosaveBadge =
     autosaveEnabled && (dataSaveStatus === 'saving' || dataSaveStatus === 'saved' || dataSaveStatus === 'error')
 
@@ -155,6 +225,22 @@ export default function TrackerNavBar() {
       if (saveHintTimerRef.current) clearTimeout(saveHintTimerRef.current)
     }
   }, [])
+  useEffect(() => {
+    if (actionsConfigOpen) {
+      if (formActions.length > 0) {
+        setActionsDraft(formActions)
+        return
+      }
+      setActionsDraft([
+        {
+          id: createActionId(),
+          label: DEFAULT_ACTION_LABEL,
+          statusTag: DEFAULT_ACTION_STATUS_TAG,
+          isEditable: true,
+        },
+      ])
+    }
+  }, [actionsConfigOpen, formActions])
 
   const openMembers = () => {
     setAccountOpen(false)
@@ -180,6 +266,30 @@ export default function TrackerNavBar() {
       setSavingData(false)
     }
   }, [onSaveData, autosaveEnabled, showManualSaveHint])
+  const updateDraftAction = useCallback((id: string, patch: Partial<TrackerFormAction>) => {
+    setActionsDraft((prev) => prev.map((action) => (action.id === id ? { ...action, ...patch } : action)))
+  }, [])
+  const removeDraftAction = useCallback((id: string) => {
+    setActionsDraft((prev) => prev.filter((action) => action.id !== id))
+  }, [])
+  const addDraftAction = useCallback(() => {
+    setActionsDraft((prev) => [
+      ...prev,
+      { id: createActionId(), label: '', statusTag: '', isEditable: true },
+    ])
+  }, [])
+  const saveActionDraft = useCallback(() => {
+    if (!onFormActionsChange) return
+    const normalized = actionsDraft.map((action, index) => ({
+      ...action,
+      label: action.label.trim(),
+      statusTag: action.statusTag.trim(),
+      isEditable: index === 0 ? true : action.isEditable,
+    }))
+    if (normalized.length === 0) return
+    onFormActionsChange(normalized)
+    setActionsConfigOpen(false)
+  }, [actionsDraft, onFormActionsChange])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 h-12 border-b border-border/40 bg-background/90 backdrop-blur-md">
@@ -239,7 +349,125 @@ export default function TrackerNavBar() {
                 </span>
               </Badge>
             )}
-            {hasSave && !hasBothSaveOptions && (
+            {nextAction && onFormActionSelect && (
+              <div className="relative flex items-center gap-1.5">
+                <Badge variant="secondary" className="h-7 px-2 text-[11px]">
+                  {visibleStatusTag}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs"
+                  disabled={isAgentBuilding || formActionSaving || !onFormActionSelect}
+                  onClick={() => {
+                    onFormActionSelect?.(nextAction)
+                  }}
+                  aria-label={`Run action ${nextAction.label}`}
+                >
+                  {nextAction.label}
+                </Button>
+                {formActionError && (
+                  <p className="absolute left-0 top-full mt-1 text-[11px] text-destructive whitespace-nowrap">
+                    {formActionError}
+                  </p>
+                )}
+              </div>
+            )}
+            {canConfigureFormActions && onFormActionsChange && (
+              <Dialog open={actionsConfigOpen} onOpenChange={setActionsConfigOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs">
+                    Actions
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[min(96vw,760px)] p-0 gap-0">
+                  <DialogHeader className="px-6 pb-1 pt-6">
+                    <DialogTitle className="text-sm">Form actions</DialogTitle>
+                    <DialogDescription className="text-[12px] leading-relaxed">
+                      Actions run in sequence and are applied automatically in the background when users click them.
+                      Configure each row with a button label, next status, and whether fields stay editable after apply.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="px-6 pb-6">
+                    <div className="mt-3 hidden px-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_38px] sm:gap-2">
+                      <span>Button name</span>
+                      <span>Status tag</span>
+                      <span>Editable</span>
+                      <span className="sr-only">Remove</span>
+                    </div>
+                    <div className="mt-2 max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+                      {actionsDraft.map((action, index) => (
+                        <div
+                          key={action.id}
+                          className="rounded-lg border border-border/60 bg-muted/[0.15] p-2.5"
+                        >
+                          <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_38px]">
+                            <Input
+                              value={action.label}
+                              onChange={(e) => updateDraftAction(action.id, { label: e.target.value })}
+                              placeholder="Button name"
+                              className="h-8 text-xs"
+                            />
+                            <Input
+                              value={action.statusTag}
+                              onChange={(e) => updateDraftAction(action.id, { statusTag: e.target.value })}
+                              placeholder="Status tag"
+                              className="h-8 text-xs"
+                            />
+                            <label className="flex h-8 items-center gap-1.5 rounded-md border border-border/60 px-2 text-[11px] text-muted-foreground">
+                              <Checkbox
+                                checked={index === 0 ? true : action.isEditable}
+                                onCheckedChange={(checked) => {
+                                  if (index === 0) return
+                                  updateDraftAction(action.id, { isEditable: checked === true })
+                                }}
+                                disabled={index === 0}
+                              />
+                              Editable
+                            </label>
+                            <div className="flex justify-end">
+                              {index > 0 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeDraftAction(action.id)}
+                                  aria-label="Remove action"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={addDraftAction}>
+                        <Plus className="h-3.5 w-3.5" />
+                        Add action
+                      </Button>
+                      <p className="text-[11px] text-muted-foreground">
+                        First action is mandatory, non-removable, and always editable.
+                      </p>
+                    </div>
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <p className="text-[11px] text-destructive">{actionDraftValidationMessage ?? ''}</p>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setActionsConfigOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" onClick={saveActionDraft} disabled={hasInvalidActionDraft}>
+                          Save actions
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {!nextAction && hasLegacySave && !onFormActionSelect && (
               <Button
                 variant="outline"
                 size="sm"
@@ -261,72 +489,8 @@ export default function TrackerNavBar() {
                 }}
                 aria-label={onSaveTracker ? 'Save tracker' : 'Save data'}
               >
-                <Save className="h-3.5 w-3.5" />
                 Save
               </Button>
-            )}
-            {hasBothSaveOptions && (
-              <Popover open={saveMenuOpen} onOpenChange={setSaveMenuOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 gap-1.5 text-xs"
-                    disabled={isAgentBuilding || savingTracker || savingData}
-                    aria-label="Save — tracker or data"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    Save
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-56 p-1.5" sideOffset={6}>
-                  <p className="px-2 py-1.5 text-[11px] text-muted-foreground border-b border-border/60 mb-1">
-                    What do you want to save?
-                  </p>
-                  {onSaveTracker && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-full justify-start gap-2 px-2 font-normal text-foreground hover:bg-muted"
-                      disabled={savingTracker}
-                      onClick={async () => {
-                        setSavingTracker(true)
-                        try {
-                          await onSaveTracker()
-                          setSaveMenuOpen(false)
-                        } finally {
-                          setSavingTracker(false)
-                        }
-                      }}
-                    >
-                      <Layout className="h-3.5 w-3.5 shrink-0" />
-                      <span className="flex flex-col items-start">
-                        <span>Save tracker</span>
-                        <span className="text-[10px] font-normal text-muted-foreground">Name and structure</span>
-                      </span>
-                    </Button>
-                  )}
-                  {onSaveData && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-full justify-start gap-2 px-2 font-normal text-foreground hover:bg-muted"
-                      disabled={savingData}
-                      onClick={async () => {
-                        await runSaveData()
-                        setSaveMenuOpen(false)
-                      }}
-                    >
-                      <Database className="h-3.5 w-3.5 shrink-0" />
-                      <span className="flex flex-col items-start">
-                        <span>Save data</span>
-                        <span className="text-[10px] font-normal text-muted-foreground">Current grid as snapshot</span>
-                      </span>
-                    </Button>
-                  )}
-                </PopoverContent>
-              </Popover>
             )}
             {manualSaveHintVisible && (
               <div
