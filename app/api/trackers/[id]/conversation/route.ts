@@ -1,16 +1,24 @@
-import { Role } from '@prisma/client'
+import { ConversationMode, Role } from '@prisma/client'
 import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { prisma } from '@/lib/db'
 import { ensureConversationForTracker } from '@/lib/repositories'
 
+function parseMode(raw: string | null): ConversationMode | undefined {
+  if (!raw) return undefined
+  const upper = raw.toUpperCase()
+  if (upper === 'BUILDER') return ConversationMode.BUILDER
+  if (upper === 'ANALYST') return ConversationMode.ANALYST
+  return undefined
+}
+
 /**
- * GET /api/trackers/[id]/conversation
- * Returns the conversation and messages for this tracker (one conversation per tracker).
+ * GET /api/trackers/[id]/conversation?mode=BUILDER|ANALYST
+ * Returns the conversation and messages for this tracker filtered by mode.
  * 404 if no conversation exists yet.
  */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuthenticatedUser()
@@ -20,6 +28,9 @@ export async function GET(
   const trackerId = requireParam(id, 'tracker id')
   if (!trackerId) return badRequest('Missing tracker id')
 
+  const url = new URL(request.url)
+  const mode = parseMode(url.searchParams.get('mode'))
+
   const tracker = await prisma.trackerSchema.findFirst({
     where: {
       id: trackerId,
@@ -27,6 +38,7 @@ export async function GET(
     },
     include: {
       conversations: {
+        where: mode != null ? { mode } : undefined,
         orderBy: { createdAt: 'desc' },
         take: 1,
         include: {
@@ -66,6 +78,7 @@ export async function GET(
     conversation: {
       id: conversation.id,
       title: conversation.title,
+      mode: conversation.mode,
       createdAt: conversation.createdAt,
     },
     messages,
@@ -75,9 +88,10 @@ export async function GET(
 /**
  * POST /api/trackers/[id]/conversation
  * Ensure a conversation exists for this tracker (create if none). Returns the conversation.
+ * Body (optional): { mode: 'BUILDER' | 'ANALYST' }
  */
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuthenticatedUser()
@@ -87,12 +101,22 @@ export async function POST(
   const trackerId = requireParam(id, 'tracker id')
   if (!trackerId) return badRequest('Missing tracker id')
 
-  const conversation = await ensureConversationForTracker(trackerId, authResult.user.id)
+  let mode: ConversationMode = ConversationMode.BUILDER
+  try {
+    const body = await request.json()
+    const parsed = parseMode(body?.mode)
+    if (parsed) mode = parsed
+  } catch {
+    // no body or invalid JSON – use default
+  }
+
+  const conversation = await ensureConversationForTracker(trackerId, authResult.user.id, mode)
   if (!conversation) return notFound('Tracker not found')
 
   return jsonOk({
     id: conversation.id,
     title: conversation.title,
+    mode: conversation.mode,
     createdAt: conversation.createdAt,
   })
 }

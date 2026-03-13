@@ -13,6 +13,7 @@ import {
 } from '@/app/components/tracker-display/tracker-editor'
 import { useTrackerNav } from '../TrackerNavContext'
 import { useTrackerChat, type Message, type TrackerResponse } from '../hooks/useTrackerChat'
+import { useAnalystChat } from '../hooks/useAnalystChat'
 import { useIsDesktop } from '../hooks/useMediaQuery'
 import { TrackerPanel, type GridDataSnapshot } from './TrackerPanel'
 import { TrackerChatPanel } from './TrackerChatPanel'
@@ -126,6 +127,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     isFocused,
     setIsFocused,
     messages,
+    setMessages,
     handleSubmit,
     handleContinue,
     applySuggestion,
@@ -148,8 +150,16 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
-    conversationId: initialConversationId ?? undefined,
-    initialMessages,
+    conversationId: isDataPage ? undefined : (initialConversationId ?? undefined),
+    initialMessages: isDataPage ? undefined : initialMessages,
+  })
+
+  const analyst = useAnalystChat({
+    trackerId: trackerId ?? undefined,
+    conversationId: isDataPage ? (initialConversationId ?? undefined) : undefined,
+    initialMessages: isDataPage ? initialMessages : undefined,
+    trackerSchema: (initialSchema ?? activeTrackerData) as TrackerResponse | null,
+    trackerDataRef,
   })
 
   const isDesktop = useIsDesktop()
@@ -160,6 +170,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const [isChatOpen, setIsChatOpen] = useState(initialChatOpen)
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  type ChatWindow = { id: string; title: string }
+  const [builderChatWindows, setBuilderChatWindows] = useState<ChatWindow[]>([
+    { id: 'builder-1', title: 'Chat 1' },
+  ])
+  const [activeBuilderWindowId, setActiveBuilderWindowId] = useState<string>('builder-1')
+  const [analystChatWindows, setAnalystChatWindows] = useState<ChatWindow[]>([
+    { id: 'analyst-1', title: 'Chat 1' },
+  ])
+  const [activeAnalystWindowId, setActiveAnalystWindowId] = useState<string>('analyst-1')
   const [schema, setSchema] = useState<TrackerResponse>(
     () => normalizeTrackerSchema((initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse)
   )
@@ -292,6 +311,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const saveStatusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [schemaSaveStatus, setSchemaSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [schemaSaveError, setSchemaSaveError] = useState<string | null>(null)
+  const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({
+    'builder-1': { messages },
+  })
+  const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({
+    'analyst-1': { messages: analyst.messages },
+  })
 
   const setSavedWithTimeout = useCallback(() => {
     setDataSaveStatus('saved')
@@ -498,6 +523,76 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     },
     [saveTrackerData, setFormStatus, trackerId]
   )
+
+  // --- Multi-window chat state (builder) ---
+  useEffect(() => {
+    builderWindowStateRef.current = {
+      ...builderWindowStateRef.current,
+      [activeBuilderWindowId]: {
+        ...(builderWindowStateRef.current[activeBuilderWindowId] ?? {}),
+        messages,
+      },
+    }
+  }, [messages, activeBuilderWindowId])
+
+  const handleBuilderWindowSelect = useCallback(
+    (id: string) => {
+      setActiveBuilderWindowId(id)
+      const cached = builderWindowStateRef.current[id]
+      if (cached) {
+        setMessages(cached.messages)
+      } else {
+        setMessages([])
+      }
+    },
+    [setMessages],
+  )
+
+  const handleBuilderWindowCreate = useCallback(() => {
+    setBuilderChatWindows((prev) => {
+      const index = prev.length + 1
+      const id = `builder-${index}`
+      builderWindowStateRef.current[id] = { messages: [] }
+      setActiveBuilderWindowId(id)
+      setMessages([])
+      return [...prev, { id, title: `Chat ${index}` }]
+    })
+  }, [setMessages])
+
+  // --- Multi-window chat state (analyst) ---
+  useEffect(() => {
+    analystWindowStateRef.current = {
+      ...analystWindowStateRef.current,
+      [activeAnalystWindowId]: {
+        ...(analystWindowStateRef.current[activeAnalystWindowId] ?? {}),
+        messages: analyst.messages,
+      },
+    }
+  }, [analyst.messages, activeAnalystWindowId])
+
+  const handleAnalystWindowSelect = useCallback(
+    (id: string) => {
+      setActiveAnalystWindowId(id)
+      const cached = analystWindowStateRef.current[id]
+      if (cached) {
+        analyst.setMessages(cached.messages)
+      } else {
+        analyst.setMessages([])
+      }
+    },
+    [analyst],
+  )
+
+  const handleAnalystWindowCreate = useCallback(() => {
+    setAnalystChatWindows((prev) => {
+      const index = prev.length + 1
+      const id = `analyst-${index}`
+      analystWindowStateRef.current[id] = { messages: [] }
+      setActiveAnalystWindowId(id)
+      analyst.setMessages([])
+      return [...prev, { id, title: `Chat ${index}` }]
+    })
+  }, [analyst])
 
   useEffect(() => {
     if (activeTrackerData && viewingMessageIndex === null) {
@@ -835,39 +930,72 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [isLoading, isResolvingExpressions])
 
   const chatStatusPanelProps = {
-    isLoading,
-    validationErrors,
-    error,
-    generationErrorMessage,
-    resumingAfterError,
-    onContinue: handleContinue,
-    messagesLength: messages.length,
-    hasGeneratedTracker,
-    hasAnyAssistantResponse,
+    isLoading: isDataPage ? analyst.isLoading : isLoading,
+    validationErrors: isDataPage ? [] : validationErrors,
+    error: isDataPage ? analyst.error : error,
+    generationErrorMessage: isDataPage ? null : generationErrorMessage,
+    resumingAfterError: isDataPage ? false : resumingAfterError,
+    onContinue: isDataPage ? undefined : handleContinue,
+    messagesLength: isDataPage ? analyst.messages.length : messages.length,
+    hasGeneratedTracker: isDataPage ? false : hasGeneratedTracker,
+    hasAnyAssistantResponse: isDataPage
+      ? analyst.messages.some((m) => m.role === 'assistant')
+      : hasAnyAssistantResponse,
   }
 
-  const chatPanelProps = {
-    showStatusPanel,
-    statusPanelProps: chatStatusPanelProps,
-    input,
-    setInput,
-    isFocused,
-    setIsFocused,
-    handleSubmit: handleSubmitWithReset,
-    applySuggestion,
-    isLoading,
-    isChatEmpty,
-    textareaRef,
-    messages,
-    setMessageThinkingOpen,
-    messagesEndRef,
-    object,
-    onViewTracker: handleViewHistoricalTracker,
-    activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
-    toolCalls,
-    isResolvingExpressions,
-    mode: (isDataPage ? 'data' : 'schema') as 'schema' | 'data',
-  }
+  const chatPanelProps = isDataPage
+    ? {
+        showStatusPanel: Boolean(analyst.error),
+        statusPanelProps: chatStatusPanelProps,
+        input: analyst.input,
+        setInput: analyst.setInput,
+        isFocused: analyst.isFocused,
+        setIsFocused: analyst.setIsFocused,
+        handleSubmit: analyst.handleSubmit,
+        applySuggestion: analyst.applySuggestion,
+        isLoading: analyst.isLoading,
+        isChatEmpty: analyst.isChatEmpty,
+        textareaRef: analyst.textareaRef,
+        messages: analyst.messages,
+        setMessageThinkingOpen: analyst.setMessageThinkingOpen,
+        messagesEndRef: analyst.messagesEndRef,
+        object: analyst.object,
+        onViewTracker: undefined,
+        activeTrackerMessageIndex: undefined,
+        toolCalls: undefined,
+        isResolvingExpressions: false,
+        mode: 'data' as const,
+        conversationWindows: analystChatWindows,
+        activeConversationId: activeAnalystWindowId,
+        onSelectConversation: handleAnalystWindowSelect,
+        onCreateConversation: handleAnalystWindowCreate,
+      }
+    : {
+        showStatusPanel,
+        statusPanelProps: chatStatusPanelProps,
+        input,
+        setInput,
+        isFocused,
+        setIsFocused,
+        handleSubmit: handleSubmitWithReset,
+        applySuggestion,
+        isLoading,
+        isChatEmpty,
+        textareaRef,
+        messages,
+        setMessageThinkingOpen,
+        messagesEndRef,
+        object,
+        onViewTracker: handleViewHistoricalTracker,
+        activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
+        toolCalls,
+        isResolvingExpressions,
+        mode: 'schema' as const,
+        conversationWindows: builderChatWindows,
+        activeConversationId: activeBuilderWindowId,
+        onSelectConversation: handleBuilderWindowSelect,
+        onCreateConversation: handleBuilderWindowCreate,
+      }
 
   const mobileLayout = (
     <div

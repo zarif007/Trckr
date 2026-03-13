@@ -8,6 +8,9 @@ CREATE TYPE "Role" AS ENUM ('USER', 'ASSISTANT');
 CREATE TYPE "ProjectFileType" AS ENUM ('TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS');
 
 -- CreateEnum
+CREATE TYPE "ConversationMode" AS ENUM ('BUILDER', 'ANALYST');
+
+-- CreateEnum
 CREATE TYPE "ToolCallStatus" AS ENUM ('pending', 'running', 'done', 'error');
 
 -- CreateTable
@@ -153,6 +156,7 @@ CREATE TABLE "Conversation" (
     "id" TEXT NOT NULL,
     "trackerSchemaId" TEXT NOT NULL,
     "title" TEXT,
+    "mode" "ConversationMode" NOT NULL DEFAULT 'BUILDER',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

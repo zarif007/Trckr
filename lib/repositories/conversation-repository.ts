@@ -1,4 +1,4 @@
-import { Role, ToolCallStatus } from '@prisma/client'
+import { ConversationMode, Role, ToolCallStatus } from '@prisma/client'
 import { prisma } from '@/lib/db'
 
 export type ToolCallInsert = {
@@ -14,10 +14,12 @@ export async function findLatestConversationForTracker(
   trackerId: string,
   userId: string,
   includeMessages: boolean,
+  mode?: ConversationMode,
 ) {
   return prisma.conversation.findFirst({
     where: {
       trackerSchemaId: trackerId,
+      ...(mode != null && { mode }),
       trackerSchema: {
         project: { userId },
       },
@@ -32,10 +34,12 @@ export async function findLatestConversationForTracker(
 export async function findLatestConversationForTrackerWithMessages(
   trackerId: string,
   userId: string,
+  mode?: ConversationMode,
 ) {
   return prisma.conversation.findFirst({
     where: {
       trackerSchemaId: trackerId,
+      ...(mode != null && { mode }),
       trackerSchema: {
         project: { userId },
       },
@@ -47,7 +51,11 @@ export async function findLatestConversationForTrackerWithMessages(
   })
 }
 
-export async function ensureConversationForTracker(trackerId: string, userId: string) {
+export async function ensureConversationForTracker(
+  trackerId: string,
+  userId: string,
+  mode: ConversationMode = ConversationMode.BUILDER,
+) {
   const tracker = await prisma.trackerSchema.findFirst({
     where: {
       id: trackerId,
@@ -57,11 +65,11 @@ export async function ensureConversationForTracker(trackerId: string, userId: st
   })
   if (!tracker) return null
 
-  const latest = await findLatestConversationForTracker(trackerId, userId, false)
+  const latest = await findLatestConversationForTracker(trackerId, userId, false, mode)
   if (latest) return latest
 
   return prisma.conversation.create({
-    data: { trackerSchemaId: trackerId },
+    data: { trackerSchemaId: trackerId, mode },
   })
 }
 

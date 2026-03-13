@@ -93,6 +93,11 @@ enum ProjectFileType {
   CONNECTIONS
 }
 
+enum ConversationMode {
+  BUILDER
+  ANALYST
+}
+
 model Project {
   id             String        @id @default(cuid())
   userId         String
@@ -203,12 +208,13 @@ model TrackerData {
 }
 
 model Conversation {
-  id               String        @id @default(cuid())
+  id               String           @id @default(cuid())
   trackerSchemaId  String
   title            String?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  trackerSchema    TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+  mode             ConversationMode @default(BUILDER)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  trackerSchema    TrackerSchema    @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
   messages         Message[]
 
   @@index([trackerSchemaId])

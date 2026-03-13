@@ -1,3 +1,5 @@
+export type ConversationMode = 'BUILDER' | 'ANALYST'
+
 export interface ToolCallPayload {
   purpose: 'validation' | 'calculation'
   fieldPath: string
@@ -15,8 +17,15 @@ export interface PersistMessagePayload {
   toolCalls?: ToolCallPayload[]
 }
 
-export async function ensureConversation(trackerId: string): Promise<string> {
-  const res = await fetch(`/api/trackers/${trackerId}/conversation`, { method: 'POST' })
+export async function ensureConversation(
+  trackerId: string,
+  mode: ConversationMode = 'BUILDER',
+): Promise<string> {
+  const res = await fetch(`/api/trackers/${trackerId}/conversation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+  })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.error ?? 'Failed to create conversation')

@@ -9,7 +9,7 @@ export interface TrackerStatusPanelProps {
   error: Error | undefined
   generationErrorMessage: string | null
   resumingAfterError: boolean
-  onContinue: () => void
+  onContinue?: () => void
   messagesLength: number
   hasGeneratedTracker: boolean
   hasAnyAssistantResponse: boolean

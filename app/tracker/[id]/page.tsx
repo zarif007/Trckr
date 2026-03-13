@@ -168,7 +168,7 @@ function TrackerByIdContent({
     let cancelled = false
     async function fetchConversation() {
       try {
-        const res = await fetch(`/api/trackers/${id}/conversation`)
+        const res = await fetch(`/api/trackers/${id}/conversation?mode=ANALYST`)
         if (res.status === 404) {
           if (!cancelled) setConversation({ conversationId: null, messages: [] })
           return
