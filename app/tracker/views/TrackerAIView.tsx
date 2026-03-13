@@ -505,9 +505,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         lastSyncedTrackerRef.current = activeTrackerData
         setLastSyncedTracker(activeTrackerData)
         setSchema(normalizeTrackerSchema(activeTrackerData))
+        if (allowSchemaAutoSave) {
+          scheduleSchemaSave()
+        }
       }
     }
-  }, [activeTrackerData, viewingMessageIndex])
+  }, [activeTrackerData, viewingMessageIndex, allowSchemaAutoSave, scheduleSchemaSave])
 
   const effectiveDisplaySchema = useMemo(() => {
     const isTrackerBusy = isLoading || isResolvingExpressions
