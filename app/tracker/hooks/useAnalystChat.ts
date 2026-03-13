@@ -20,7 +20,7 @@ export interface UseAnalystChatOptions {
 export function useAnalystChat(options: UseAnalystChatOptions = {}) {
   const {
     trackerId,
-    conversationId: initialConversationId,
+    conversationId: conversationIdProp,
     initialMessages,
     trackerSchema,
     trackerDataRef,
@@ -30,20 +30,23 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => initialMessages ?? [])
   const [conversationId, setConversationId] = useState<string | null>(
-    initialConversationId ?? null,
+    conversationIdProp ?? null,
   )
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesRef = useRef<Message[]>([])
-  const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
+  const conversationIdRef = useRef<string | null>(conversationIdProp ?? null)
 
   useEffect(() => {
     conversationIdRef.current = conversationId
   }, [conversationId])
+  // Controlled conversationId: when parent passes conversationId (e.g. active tab), sync internal state
   useEffect(() => {
-    if (initialConversationId) setConversationId(initialConversationId)
-  }, [initialConversationId])
+    if (conversationIdProp !== undefined) {
+      setConversationId(conversationIdProp ?? null)
+    }
+  }, [conversationIdProp])
 
   const hasHydratedRef = useRef(false)
   useEffect(() => {

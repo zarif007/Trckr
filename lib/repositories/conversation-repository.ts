@@ -51,6 +51,64 @@ export async function findLatestConversationForTrackerWithMessages(
   })
 }
 
+export async function listConversationsForTracker(
+  trackerId: string,
+  userId: string,
+  mode?: ConversationMode,
+) {
+  return prisma.conversation.findMany({
+    where: {
+      trackerSchemaId: trackerId,
+      ...(mode != null && { mode }),
+      trackerSchema: {
+        project: { userId },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      title: true,
+      mode: true,
+      createdAt: true,
+    },
+  })
+}
+
+export async function createConversation(
+  trackerId: string,
+  userId: string,
+  mode: ConversationMode = ConversationMode.BUILDER,
+  title?: string | null,
+) {
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: {
+      id: trackerId,
+      project: { userId },
+    },
+    select: { id: true },
+  })
+  if (!tracker) return null
+
+  const count = await prisma.conversation.count({
+    where: {
+      trackerSchemaId: trackerId,
+      mode,
+      trackerSchema: {
+        project: { userId },
+      },
+    },
+  })
+  const resolvedTitle = title ?? `Chat ${count + 1}`
+
+  return prisma.conversation.create({
+    data: {
+      trackerSchemaId: trackerId,
+      mode,
+      title: resolvedTitle,
+    },
+  })
+}
+
 export async function ensureConversationForTracker(
   trackerId: string,
   userId: string,
@@ -84,6 +142,23 @@ export async function userOwnsConversation(conversationId: string, userId: strin
     select: { id: true },
   })
   return !!conversation
+}
+
+export async function findConversationWithMessages(conversationId: string, userId: string) {
+  return prisma.conversation.findFirst({
+    where: {
+      id: conversationId,
+      trackerSchema: {
+        project: { userId },
+      },
+    },
+    include: {
+      messages: {
+        orderBy: { createdAt: 'asc' },
+        include: { toolCalls: true },
+      },
+    },
+  })
 }
 
 type ManagerData = {

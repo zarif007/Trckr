@@ -17,6 +17,87 @@ export interface PersistMessagePayload {
   toolCalls?: ToolCallPayload[]
 }
 
+export interface ConversationListItem {
+  id: string
+  title: string | null
+  mode: ConversationMode
+  createdAt: string
+}
+
+export async function listConversations(
+  trackerId: string,
+  mode?: ConversationMode,
+): Promise<ConversationListItem[]> {
+  const params = new URLSearchParams()
+  if (mode) params.set('mode', mode)
+  const qs = params.toString()
+  const url = `/api/trackers/${trackerId}/conversations${qs ? `?${qs}` : ''}`
+  const res = await fetch(url)
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to list conversations')
+  }
+  const data = (await res.json()) as { conversations: ConversationListItem[] }
+  return data.conversations ?? []
+}
+
+export interface CreateConversationResult {
+  id: string
+  title: string | null
+  mode: ConversationMode
+  createdAt: string
+}
+
+export async function createConversation(
+  trackerId: string,
+  mode: ConversationMode = 'BUILDER',
+  title?: string | null,
+): Promise<CreateConversationResult> {
+  const res = await fetch(`/api/trackers/${trackerId}/conversation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode, createNew: true, ...(title != null && { title }) }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.error ?? 'Failed to create conversation')
+  }
+  return res.json() as Promise<CreateConversationResult>
+}
+
+export interface ConversationWithMessages {
+  conversation: { id: string; title: string | null; mode: ConversationMode; createdAt: string }
+  messages: Array<{
+    id: string
+    role: 'user' | 'assistant'
+    content: string
+    trackerData?: unknown
+    managerData?: unknown
+    createdAt: string
+    toolCalls?: Array<{
+      id: string
+      purpose: string
+      fieldPath: string
+      description: string
+      status: string
+      error?: string
+      result?: unknown
+    }>
+  }>
+}
+
+export async function getConversation(
+  trackerId: string,
+  conversationId: string,
+  mode?: ConversationMode,
+): Promise<ConversationWithMessages | null> {
+  const params = new URLSearchParams({ conversationId })
+  if (mode) params.set('mode', mode)
+  const res = await fetch(`/api/trackers/${trackerId}/conversation?${params.toString()}`)
+  if (res.status === 404 || !res.ok) return null
+  return res.json() as Promise<ConversationWithMessages>
+}
+
 export async function ensureConversation(
   trackerId: string,
   mode: ConversationMode = 'BUILDER',

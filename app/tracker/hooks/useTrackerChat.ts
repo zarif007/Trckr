@@ -44,7 +44,7 @@ export interface UseTrackerChatOptions {
   initialTracker?: TrackerResponse | null
   /** Tracker (schema) id when viewing an existing tracker; enables persisting conversation to DB. */
   trackerId?: string | null
-  /** Existing conversation id (from DB) for this tracker; when set, messages are persisted. */
+  /** Conversation id (from DB). When set, messages are persisted. Pass from parent to control active conversation (e.g. tab switch). */
   conversationId?: string | null
   /** Messages loaded from DB for this tracker; used to hydrate chat on open. */
   initialMessages?: Message[]
@@ -60,11 +60,11 @@ function sanitizeManagerData(
 }
 
 export function useTrackerChat(options: UseTrackerChatOptions = {}) {
-  const { initialTracker = null, trackerId, conversationId: initialConversationId, initialMessages } = options
+  const { initialTracker = null, trackerId, conversationId: conversationIdProp, initialMessages } = options
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => initialMessages ?? [])
-  const [conversationId, setConversationId] = useState<string | null>(initialConversationId ?? null)
+  const [conversationId, setConversationId] = useState<string | null>(conversationIdProp ?? null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
@@ -82,16 +82,19 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
   const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
-  const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
+  const conversationIdRef = useRef<string | null>(conversationIdProp ?? null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const submitRef = useRef<(input: any) => void>(() => { })
 
   useEffect(() => {
     conversationIdRef.current = conversationId
   }, [conversationId])
+  // Controlled conversationId: when parent passes conversationId (e.g. active tab), sync internal state
   useEffect(() => {
-    if (initialConversationId) setConversationId(initialConversationId)
-  }, [initialConversationId])
+    if (conversationIdProp !== undefined) {
+      setConversationId(conversationIdProp ?? null)
+    }
+  }, [conversationIdProp])
   // Hydrate messages once when conversation loads from DB (e.g. after opening a tracker)
   const hasHydratedRef = useRef(false)
   useEffect(() => {

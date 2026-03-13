@@ -2,99 +2,33 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ShareTrackerDialog } from '@/app/components/teams'
-import {
-  useUndoableSchemaChange,
-} from '@/app/components/tracker-display/edit-mode'
-import {
-  DEFAULT_FORM_ACTION,
-  INITIAL_TRACKER_SCHEMA,
-} from '@/app/components/tracker-display/tracker-editor'
-import { useTrackerNav } from '../TrackerNavContext'
-import { useTrackerChat, type Message, type TrackerResponse } from '../hooks/useTrackerChat'
-import { useAnalystChat } from '../hooks/useAnalystChat'
-import { useIsDesktop } from '../hooks/useMediaQuery'
-import { TrackerPanel, type GridDataSnapshot } from './TrackerPanel'
-import { TrackerChatPanel } from './TrackerChatPanel'
+import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
+import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
-import { useAutoSaveTrackerData } from '../hooks/useAutoSaveTrackerData'
-import type { TrackerFormAction } from '@/app/components/tracker-display/types'
+import { useTrackerNav } from '../../TrackerNavContext'
+import { useTrackerChat, type Message, type TrackerResponse } from '../../hooks/useTrackerChat'
+import { useAnalystChat } from '../../hooks/useAnalystChat'
+import { useIsDesktop } from '../../hooks/useMediaQuery'
+import { useAutoSaveTrackerData } from '../../hooks/useAutoSaveTrackerData'
+import {
+  createConversation,
+  getConversation,
+  listConversations,
+} from '../../hooks/conversation'
 import { useAutoSave } from '@/app/hooks/useAutoSave'
+import type { TrackerFormAction } from '@/app/components/tracker-display/types'
+import type { GridDataSnapshot } from '../TrackerPanel'
+import { normalizeFormActions, normalizeTrackerSchema } from './normalize'
+import {
+  DRAFT_STATUS_TAG,
+  MIN_LEFT_PX,
+  MIN_RIGHT_PX,
+  type ChatWindow,
+  type LoadedSnapshot,
+  type TrackerEditorViewProps,
+} from './types'
 
-const MIN_LEFT_PX = 320
-const MIN_RIGHT_PX = 360
-const DRAFT_STATUS_TAG = 'Draft'
-
-function normalizeFormActions(actions: TrackerFormAction[] | null | undefined): TrackerFormAction[] {
-  const list = Array.isArray(actions) ? actions : []
-  const trimmed = list.map((action, index) => {
-    const label = typeof action?.label === 'string' ? action.label.trim() : ''
-    const statusTag = typeof action?.statusTag === 'string' ? action.statusTag.trim() : ''
-    return {
-      id:
-        typeof action?.id === 'string' && action.id.trim().length > 0
-          ? action.id
-          : `form_action_${index}`,
-      label,
-      statusTag,
-      isEditable: action?.isEditable === true,
-    }
-  })
-  const firstFromInput = trimmed[0]
-  const first: TrackerFormAction = {
-    id: firstFromInput?.id || DEFAULT_FORM_ACTION.id,
-    label: firstFromInput?.label || DEFAULT_FORM_ACTION.label,
-    statusTag: firstFromInput?.statusTag || DEFAULT_FORM_ACTION.statusTag,
-    isEditable: true,
-  }
-  const rest = trimmed
-    .slice(1)
-    .filter((action) => action.label.length > 0 && action.statusTag.length > 0)
-  return [first, ...rest]
-}
-
-function normalizeTrackerSchema(next: TrackerResponse): TrackerResponse {
-  return {
-    ...next,
-    formActions: normalizeFormActions(next.formActions),
-  }
-}
-
-export interface TrackerEditorViewProps {
-  initialSchema?: TrackerResponse
-  initialGridData?: GridDataSnapshot | null
-  onSaveTracker?: (schema: TrackerResponse) => Promise<void>
-  initialEditMode?: boolean
-  initialChatOpen?: boolean
-  trackerId?: string | null
-  /** Tracker instance type (SINGLE or MULTI). */
-  instanceType?: 'SINGLE' | 'MULTI'
-  /** Current tracker instance id (MULTI only). */
-  instanceId?: string | null
-  /** Auto-save enabled for eligible trackers. */
-  autoSave?: boolean
-  /** Initial form status tag (if available). */
-  initialFormStatus?: string | null
-  initialConversationId?: string | null
-  initialMessages?: Message[]
-  /** Whether this tracker has version control enabled */
-  versionControl?: boolean
-  /** Initial branch name from URL (?branch=...) */
-  initialBranchName?: string | null
-  /** Called when user switches branch so URL can be updated */
-  onBranchChange?: (branchName: string) => void
-  /** Controls which capabilities are exposed in the page */
-  pageMode?: 'full' | 'data' | 'schema'
-  /** Optional header navigation button */
-  primaryNavAction?: { label: string; href: string } | null
-  /** Show debug/share utilities in tracker panel controls */
-  showPanelUtilities?: boolean
-  /** Enable auto-save for schema (edit view) */
-  schemaAutoSave?: boolean
-}
-
-export function TrackerAIView(props: TrackerEditorViewProps = {}) {
+export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const {
     initialSchema,
     initialGridData = null,
@@ -116,11 +50,29 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     showPanelUtilities = true,
     schemaAutoSave = false,
   } = props
+
   const isDataPage = pageMode === 'data'
-  const isSchemaPage = pageMode === 'schema'
   const canEditSchema = !isDataPage
   const allowSaveTracker = !isDataPage
-  const allowSaveData = !isSchemaPage
+  const allowSaveData = pageMode !== 'schema'
+
+  const [builderChatWindows, setBuilderChatWindows] = useState<ChatWindow[]>(() =>
+    trackerId && initialConversationId && !isDataPage
+      ? [{ id: initialConversationId, title: 'New chat' }]
+      : [{ id: 'builder-1', title: 'Chat 1' }]
+  )
+  const [activeBuilderWindowId, setActiveBuilderWindowId] = useState<string>(() =>
+    trackerId && initialConversationId && !isDataPage ? initialConversationId : 'builder-1'
+  )
+  const [analystChatWindows, setAnalystChatWindows] = useState<ChatWindow[]>(() =>
+    trackerId && initialConversationId && isDataPage
+      ? [{ id: initialConversationId, title: 'New chat' }]
+      : [{ id: 'analyst-1', title: 'Chat 1' }]
+  )
+  const [activeAnalystWindowId, setActiveAnalystWindowId] = useState<string>(() =>
+    trackerId && initialConversationId && isDataPage ? initialConversationId : 'analyst-1'
+  )
+
   const {
     input,
     setInput,
@@ -150,13 +102,13 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
-    conversationId: isDataPage ? undefined : (initialConversationId ?? undefined),
+    conversationId: isDataPage ? undefined : (activeBuilderWindowId || initialConversationId) ?? undefined,
     initialMessages: isDataPage ? undefined : initialMessages,
   })
 
   const analyst = useAnalystChat({
     trackerId: trackerId ?? undefined,
-    conversationId: isDataPage ? (initialConversationId ?? undefined) : undefined,
+    conversationId: isDataPage ? (activeAnalystWindowId || initialConversationId) ?? undefined : undefined,
     initialMessages: isDataPage ? initialMessages : undefined,
     trackerSchema: (initialSchema ?? activeTrackerData) as TrackerResponse | null,
     trackerDataRef,
@@ -170,32 +122,32 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   const [isChatOpen, setIsChatOpen] = useState(initialChatOpen)
   const [mobileTab, setMobileTab] = useState<'preview' | 'chat'>('preview')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
-  type ChatWindow = { id: string; title: string }
-  const [builderChatWindows, setBuilderChatWindows] = useState<ChatWindow[]>([
-    { id: 'builder-1', title: 'Chat 1' },
-  ])
-  const [activeBuilderWindowId, setActiveBuilderWindowId] = useState<string>('builder-1')
-  const [analystChatWindows, setAnalystChatWindows] = useState<ChatWindow[]>([
-    { id: 'analyst-1', title: 'Chat 1' },
-  ])
-  const [activeAnalystWindowId, setActiveAnalystWindowId] = useState<string>('analyst-1')
   const [schema, setSchema] = useState<TrackerResponse>(
     () => normalizeTrackerSchema((initialSchema ?? INITIAL_TRACKER_SCHEMA) as TrackerResponse)
   )
   const [viewingMessageIndex, setViewingMessageIndex] = useState<number | null>(null)
-  type LoadedSnapshot = {
-    id: string
-    label: string | null
-    data: GridDataSnapshot
-    updatedAt?: string
-    formStatus?: string | null
-  }
   const [loadedSnapshot, setLoadedSnapshot] = useState<LoadedSnapshot | null>(null)
   const [currentFormStatus, setCurrentFormStatus] = useState<string | null>(initialFormStatus)
   const [formActionSaving, setFormActionSaving] = useState(false)
   const [formActionError, setFormActionError] = useState<string | null>(null)
   const formStatusRef = useRef<string | null>(initialFormStatus)
   const instanceIdRef = useRef<string | null>(instanceId)
+  const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
+  const trackerNavCtx = useTrackerNav()
+  const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
+  const setSaveState = trackerNavCtx?.setSaveState ?? null
+  const saveDataRef = useRef<() => Promise<void>>(async () => {})
+  const setTrackerNavRef = useRef(setTrackerNav)
+  setTrackerNavRef.current = setTrackerNav
+  const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
+  const [dataSaveStatus, setDataSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [dataSaveError, setDataSaveError] = useState<string | null>(null)
+  const saveStatusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [schemaSaveStatus, setSchemaSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [schemaSaveError, setSchemaSaveError] = useState<string | null>(null)
+  const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
+  const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
+
   useEffect(() => {
     formStatusRef.current = currentFormStatus
   }, [currentFormStatus])
@@ -205,25 +157,19 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   useEffect(() => {
     instanceIdRef.current = instanceId
   }, [instanceId])
-  const [lastSyncedTracker, setLastSyncedTracker] = useState<TrackerResponse | null>(null)
   useEffect(() => {
     if (!loadedSnapshot) return
     setCurrentFormStatus(loadedSnapshot.formStatus ?? null)
   }, [loadedSnapshot])
-
   useEffect(() => {
-    if (!canEditSchema && editMode) {
-      setEditMode(false)
-    }
+    if (!canEditSchema && editMode) setEditMode(false)
   }, [canEditSchema, editMode])
 
-  // --- Version Control state ---
   const [vcBranches, setVcBranches] = useState<BranchRecord[]>([])
   const [vcCurrentBranch, setVcCurrentBranch] = useState<BranchRecord | null>(null)
   const vcCurrentBranchRef = useRef<BranchRecord | null>(null)
   vcCurrentBranchRef.current = vcCurrentBranch
 
-  // Fetch branches when version control is enabled
   useEffect(() => {
     if (!versionControl || !trackerId) return
     let cancelled = false
@@ -235,7 +181,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         if (cancelled) return
         const branches: BranchRecord[] = data.branches ?? []
         setVcBranches(branches)
-        // Prefer branch from URL, else default to main
         const selected =
           (initialBranchName && branches.find((b) => b.branchName === initialBranchName && !b.isMerged)) ??
           branches.find((b) => b.branchName === 'main' && !b.isMerged)
@@ -256,11 +201,71 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       }
     }
     fetchBranches()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [versionControl, trackerId, initialBranchName])
 
+  useEffect(() => {
+    if (!trackerId || isDataPage) return
+    const trackerIdStr = trackerId
+    let cancelled = false
+    async function load() {
+      try {
+        const list = await listConversations(trackerIdStr, 'BUILDER')
+        if (cancelled) return
+        if (list.length === 0) {
+          const created = await createConversation(trackerIdStr, 'BUILDER')
+          if (cancelled) return
+          setBuilderChatWindows([{ id: created.id, title: created.title ?? 'New chat' }])
+          setActiveBuilderWindowId(created.id)
+        } else {
+          setBuilderChatWindows(list.map((c) => ({ id: c.id, title: c.title ?? 'New chat' })))
+          const hasInitial = initialConversationId && list.some((c) => c.id === initialConversationId)
+          if (hasInitial && initialConversationId) setActiveBuilderWindowId(initialConversationId)
+          else setActiveBuilderWindowId((prev) => (list.some((c) => c.id === prev) ? prev : list[0].id))
+        }
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [trackerId, isDataPage, initialConversationId])
+
+  useEffect(() => {
+    if (!trackerId || !isDataPage) return
+    const trackerIdStr = trackerId
+    let cancelled = false
+    async function load() {
+      try {
+        const list = await listConversations(trackerIdStr, 'ANALYST')
+        if (cancelled) return
+        if (list.length === 0) {
+          const created = await createConversation(trackerIdStr, 'ANALYST')
+          if (cancelled) return
+          setAnalystChatWindows([{ id: created.id, title: created.title ?? 'New chat' }])
+          setActiveAnalystWindowId(created.id)
+        } else {
+          setAnalystChatWindows(list.map((c) => ({ id: c.id, title: c.title ?? 'New chat' })))
+          const hasInitial = initialConversationId && list.some((c) => c.id === initialConversationId)
+          if (hasInitial && initialConversationId) setActiveAnalystWindowId(initialConversationId)
+          else setActiveAnalystWindowId((prev) => (list.some((c) => c.id === prev) ? prev : list[0].id))
+        }
+      } catch {
+        // ignore
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [trackerId, isDataPage, initialConversationId])
+
   const trackerName = schema?.name ?? schema?.tabs?.[0]?.name ?? 'Untitled tracker'
-  const formActions = useMemo<TrackerFormAction[]>(
+  const formActions = useMemo(
     () => normalizeFormActions(schema?.formActions),
     [schema]
   )
@@ -299,24 +304,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     return formActions[nextActionIndex - 1]?.statusTag || DRAFT_STATUS_TAG
   }, [formActions, nextActionIndex])
   const isReadOnly = activeFormAction ? !activeFormAction.isEditable : false
-  const trackerNavCtx = useTrackerNav()
-  const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
-  const setSaveState = trackerNavCtx?.setSaveState ?? null
-  const saveDataRef = useRef<() => Promise<void>>(async () => { })
-  const setTrackerNavRef = useRef(setTrackerNav)
-  setTrackerNavRef.current = setTrackerNav
-  const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
-  const [dataSaveStatus, setDataSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [dataSaveError, setDataSaveError] = useState<string | null>(null)
-  const saveStatusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [schemaSaveStatus, setSchemaSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [schemaSaveError, setSchemaSaveError] = useState<string | null>(null)
-  const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({
-    'builder-1': { messages },
-  })
-  const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({
-    'analyst-1': { messages: analyst.messages },
-  })
 
   const setSavedWithTimeout = useCallback(() => {
     setDataSaveStatus('saved')
@@ -427,7 +414,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     !versionControl &&
     pageMode === 'data' &&
     !isReadOnly
-
   const allowSchemaAutoSave = schemaAutoSave && pageMode === 'schema' && Boolean(onSaveTracker)
 
   const { scheduleSave } = useAutoSaveTrackerData({
@@ -458,6 +444,11 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       }
     },
   })
+
+  const schemaRef = useRef(schema)
+  useEffect(() => {
+    schemaRef.current = schema
+  }, [schema])
 
   const { scheduleSave: scheduleSchemaSave } = useAutoSave<TrackerResponse>({
     enabled: allowSchemaAutoSave,
@@ -497,10 +488,9 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const handleGridDataChange = useCallback(() => {
     if (!allowAutoSave) return
-    const isDraft = (formStatusRef.current ?? '').trim().toLowerCase() === DRAFT_STATUS_TAG.toLowerCase()
-    if (!isDraft) {
-      setFormStatus(DRAFT_STATUS_TAG)
-    }
+    const isDraft =
+      (formStatusRef.current ?? '').trim().toLowerCase() === DRAFT_STATUS_TAG.toLowerCase()
+    if (!isDraft) setFormStatus(DRAFT_STATUS_TAG)
     scheduleSave()
   }, [allowAutoSave, scheduleSave, setFormStatus])
 
@@ -524,7 +514,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     [saveTrackerData, setFormStatus, trackerId]
   )
 
-  // --- Multi-window chat state (builder) ---
   useEffect(() => {
     builderWindowStateRef.current = {
       ...builderWindowStateRef.current,
@@ -536,30 +525,69 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [messages, activeBuilderWindowId])
 
   const handleBuilderWindowSelect = useCallback(
-    (id: string) => {
+    async (id: string) => {
       setActiveBuilderWindowId(id)
       const cached = builderWindowStateRef.current[id]
       if (cached) {
         setMessages(cached.messages)
-      } else {
-        setMessages([])
+        return
       }
+      if (trackerId) {
+        try {
+          const data = await getConversation(trackerId, id, 'BUILDER')
+          if (data?.messages) {
+            const msgs: Message[] = data.messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+              trackerData: m.trackerData as TrackerResponse | undefined,
+              managerData: m.managerData as Message['managerData'],
+            }))
+            builderWindowStateRef.current[id] = { messages: msgs }
+            setMessages(msgs)
+            return
+          }
+        } catch {
+          // ignore
+        }
+      }
+      setMessages([])
     },
-    [setMessages],
+    [setMessages, trackerId]
   )
 
-  const handleBuilderWindowCreate = useCallback(() => {
-    setBuilderChatWindows((prev) => {
-      const index = prev.length + 1
-      const id = `builder-${index}`
-      builderWindowStateRef.current[id] = { messages: [] }
-      setActiveBuilderWindowId(id)
-      setMessages([])
-      return [...prev, { id, title: `Chat ${index}` }]
-    })
-  }, [setMessages])
+  const handleBuilderWindowCreate = useCallback(async () => {
+    if (trackerId) {
+      try {
+        const created = await createConversation(trackerId, 'BUILDER')
+        setBuilderChatWindows((prev) => [
+          ...prev,
+          { id: created.id, title: created.title ?? 'New chat' },
+        ])
+        builderWindowStateRef.current[created.id] = { messages: [] }
+        setActiveBuilderWindowId(created.id)
+        setMessages([])
+      } catch {
+        setBuilderChatWindows((prev) => {
+          const index = prev.length + 1
+          const id = `builder-${index}`
+          builderWindowStateRef.current[id] = { messages: [] }
+          setActiveBuilderWindowId(id)
+          setMessages([])
+          return [...prev, { id, title: `Chat ${index}` }]
+        })
+      }
+    } else {
+      setBuilderChatWindows((prev) => {
+        const index = prev.length + 1
+        const id = `builder-${index}`
+        builderWindowStateRef.current[id] = { messages: [] }
+        setActiveBuilderWindowId(id)
+        setMessages([])
+        return [...prev, { id, title: `Chat ${index}` }]
+      })
+    }
+  }, [setMessages, trackerId])
 
-  // --- Multi-window chat state (analyst) ---
   useEffect(() => {
     analystWindowStateRef.current = {
       ...analystWindowStateRef.current,
@@ -571,28 +599,66 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [analyst.messages, activeAnalystWindowId])
 
   const handleAnalystWindowSelect = useCallback(
-    (id: string) => {
+    async (id: string) => {
       setActiveAnalystWindowId(id)
       const cached = analystWindowStateRef.current[id]
       if (cached) {
         analyst.setMessages(cached.messages)
-      } else {
-        analyst.setMessages([])
+        return
       }
+      if (trackerId) {
+        try {
+          const data = await getConversation(trackerId, id, 'ANALYST')
+          if (data?.messages) {
+            const msgs: Message[] = data.messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            }))
+            analystWindowStateRef.current[id] = { messages: msgs }
+            analyst.setMessages(msgs)
+            return
+          }
+        } catch {
+          // ignore
+        }
+      }
+      analyst.setMessages([])
     },
-    [analyst],
+    [analyst, trackerId]
   )
 
-  const handleAnalystWindowCreate = useCallback(() => {
-    setAnalystChatWindows((prev) => {
-      const index = prev.length + 1
-      const id = `analyst-${index}`
-      analystWindowStateRef.current[id] = { messages: [] }
-      setActiveAnalystWindowId(id)
-      analyst.setMessages([])
-      return [...prev, { id, title: `Chat ${index}` }]
-    })
-  }, [analyst])
+  const handleAnalystWindowCreate = useCallback(async () => {
+    if (trackerId) {
+      try {
+        const created = await createConversation(trackerId, 'ANALYST')
+        setAnalystChatWindows((prev) => [
+          ...prev,
+          { id: created.id, title: created.title ?? 'New chat' },
+        ])
+        analystWindowStateRef.current[created.id] = { messages: [] }
+        setActiveAnalystWindowId(created.id)
+        analyst.setMessages([])
+      } catch {
+        setAnalystChatWindows((prev) => {
+          const index = prev.length + 1
+          const id = `analyst-${index}`
+          analystWindowStateRef.current[id] = { messages: [] }
+          setActiveAnalystWindowId(id)
+          analyst.setMessages([])
+          return [...prev, { id, title: `Chat ${index}` }]
+        })
+      }
+    } else {
+      setAnalystChatWindows((prev) => {
+        const index = prev.length + 1
+        const id = `analyst-${index}`
+        analystWindowStateRef.current[id] = { messages: [] }
+        setActiveAnalystWindowId(id)
+        analyst.setMessages([])
+        return [...prev, { id, title: `Chat ${index}` }]
+      })
+    }
+  }, [analyst, trackerId])
 
   useEffect(() => {
     if (activeTrackerData && viewingMessageIndex === null) {
@@ -600,24 +666,16 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         lastSyncedTrackerRef.current = activeTrackerData
         setLastSyncedTracker(activeTrackerData)
         setSchema(normalizeTrackerSchema(activeTrackerData))
-        if (allowSchemaAutoSave) {
-          scheduleSchemaSave()
-        }
+        if (allowSchemaAutoSave) scheduleSchemaSave()
       }
     }
   }, [activeTrackerData, viewingMessageIndex, allowSchemaAutoSave, scheduleSchemaSave])
 
   const effectiveDisplaySchema = useMemo(() => {
     const isTrackerBusy = isLoading || isResolvingExpressions
-    if (isTrackerBusy && streamedDisplayTracker) {
-      return streamedDisplayTracker
-    }
-    if (viewingMessageIndex !== null) {
-      return schema
-    }
-    if (activeTrackerData && lastSyncedTracker !== activeTrackerData) {
-      return activeTrackerData
-    }
+    if (isTrackerBusy && streamedDisplayTracker) return streamedDisplayTracker
+    if (viewingMessageIndex !== null) return schema
+    if (activeTrackerData && lastSyncedTracker !== activeTrackerData) return activeTrackerData
     return schema
   }, [
     isLoading,
@@ -634,21 +692,17 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
       const normalizedNext = normalizeTrackerSchema(next)
       setSchema(normalizedNext)
       setActiveTrackerData(normalizedNext)
-      if (allowSchemaAutoSave) {
-        scheduleSchemaSave()
-      }
+      if (allowSchemaAutoSave) scheduleSchemaSave()
     },
     [setActiveTrackerData, allowSchemaAutoSave, scheduleSchemaSave]
   )
 
-  const schemaRef = useRef(schema)
-  useEffect(() => {
-    schemaRef.current = schema
-  }, [schema])
-
-  const stableOnTrackerNameChange = useCallback((name: string) => {
-    handleSchemaChange({ ...schemaRef.current, name })
-  }, [handleSchemaChange])
+  const stableOnTrackerNameChange = useCallback(
+    (name: string) => {
+      handleSchemaChange({ ...schemaRef.current, name })
+    },
+    [handleSchemaChange]
+  )
   const handleFormActionsChange = useCallback(
     (actions: TrackerFormAction[]) => {
       handleSchemaChange({
@@ -661,10 +715,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   useEffect(() => {
     if (!setTrackerNav) return
-    setTrackerNav({
-      name: trackerName,
-      onNameChange: stableOnTrackerNameChange,
-    })
+    setTrackerNav({ name: trackerName, onNameChange: stableOnTrackerNameChange })
   }, [setTrackerNav, trackerName, stableOnTrackerNameChange])
 
   useEffect(() => {
@@ -679,11 +730,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     const res = await fetch('/api/trackers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        new: true,
-        name: trackerName,
-        schema,
-      }),
+      body: JSON.stringify({ new: true, name: trackerName, schema }),
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
@@ -777,12 +824,15 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const undoable = useUndoableSchemaChange(schema, handleSchemaChange)
 
-  const handleViewHistoricalTracker = useCallback((trackerData: TrackerResponse, messageIndex: number) => {
-    setSchema(normalizeTrackerSchema(trackerData))
-    setViewingMessageIndex(messageIndex)
-    setEditMode(false)
-    setMobileTab('preview')
-  }, [])
+  const handleViewHistoricalTracker = useCallback(
+    (trackerData: TrackerResponse, messageIndex: number) => {
+      setSchema(normalizeTrackerSchema(trackerData))
+      setViewingMessageIndex(messageIndex)
+      setEditMode(false)
+      setMobileTab('preview')
+    },
+    []
+  )
 
   const handleReturnToLatest = useCallback(() => {
     setViewingMessageIndex(null)
@@ -792,7 +842,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     }
   }, [activeTrackerData])
 
-  // --- Version Control callbacks ---
   const handleVcBranchSwitch = useCallback(
     (branch: BranchRecord) => {
       setVcCurrentBranch(branch)
@@ -811,24 +860,30 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     [onBranchChange]
   )
 
-  const handleVcBranchCreated = useCallback((branch: BranchRecord) => {
-    setVcBranches((prev) => [branch, ...prev])
-    handleVcBranchSwitch(branch)
-  }, [handleVcBranchSwitch])
+  const handleVcBranchCreated = useCallback(
+    (branch: BranchRecord) => {
+      setVcBranches((prev) => [branch, ...prev])
+      handleVcBranchSwitch(branch)
+    },
+    [handleVcBranchSwitch]
+  )
 
-  const handleVcMergedToMain = useCallback((updatedMain: BranchRecord) => {
-    setVcBranches((prev) => prev.map((b) => {
-      if (b.branchName === 'main' && !b.isMerged) return updatedMain
-      if (b.id === vcCurrentBranchRef.current?.id) return { ...b, isMerged: true }
-      return b
-    }))
-    handleVcBranchSwitch(updatedMain)
-  }, [handleVcBranchSwitch])
+  const handleVcMergedToMain = useCallback(
+    (updatedMain: BranchRecord) => {
+      setVcBranches((prev) =>
+        prev.map((b) => {
+          if (b.branchName === 'main' && !b.isMerged) return updatedMain
+          if (b.id === vcCurrentBranchRef.current?.id) return { ...b, isMerged: true }
+          return b
+        })
+      )
+      handleVcBranchSwitch(updatedMain)
+    },
+    [handleVcBranchSwitch]
+  )
 
   useEffect(() => {
-    saveDataRef.current = () => {
-      return saveTrackerData().then(() => undefined)
-    }
+    saveDataRef.current = () => saveTrackerData().then(() => undefined)
   }, [saveTrackerData])
 
   useEffect(() => {
@@ -845,15 +900,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [handleSubmit])
 
   useEffect(() => {
-    if (isDesktop && mobileTab === 'chat') {
-      setIsChatOpen(true)
-    }
+    if (isDesktop && mobileTab === 'chat') setIsChatOpen(true)
   }, [isDesktop, mobileTab])
 
   useEffect(() => {
     const container = containerRef.current
     if (!container || !isChatOpen || !isDesktop) return
-
     const clampWidth = () => {
       const rect = container.getBoundingClientRect()
       const fallback = Math.round(rect.width * 0.75)
@@ -863,7 +915,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         return Math.max(MIN_LEFT_PX, Math.min(current, maxLeft))
       })
     }
-
     clampWidth()
     window.addEventListener('resize', clampWidth)
     return () => window.removeEventListener('resize', clampWidth)
@@ -873,22 +924,18 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     event.preventDefault()
     const container = containerRef.current
     if (!container) return
-
     const rect = container.getBoundingClientRect()
     const maxLeft = Math.max(MIN_LEFT_PX, rect.width - MIN_RIGHT_PX)
-
     const handleMove = (moveEvent: PointerEvent) => {
       const next = moveEvent.clientX - rect.left
       const clamped = Math.max(MIN_LEFT_PX, Math.min(next, maxLeft))
       setLeftWidth(clamped)
     }
-
     const handleUp = () => {
       document.body.style.cursor = ''
       window.removeEventListener('pointermove', handleMove)
       window.removeEventListener('pointerup', handleUp)
     }
-
     document.body.style.cursor = 'col-resize'
     window.addEventListener('pointermove', handleMove)
     window.addEventListener('pointerup', handleUp)
@@ -898,16 +945,12 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     () => messages.some((message) => Boolean(message.trackerData)),
     [messages]
   )
-
   const lastTrackerMessageIndex = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].trackerData) {
-        return i
-      }
+      if (messages[i].trackerData) return i
     }
     return null
   }, [messages])
-
   const isViewingHistoricalVersion = useMemo(() => {
     if (viewingMessageIndex === null) return false
     if (lastTrackerMessageIndex === null) return false
@@ -916,7 +959,6 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
   const hasAnyAssistantResponse = messages.some((m) => m.role === 'assistant')
-
   const showStatusPanel =
     Boolean(error) ||
     Boolean(generationErrorMessage) ||
@@ -924,9 +966,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     (!isLoading && messages.length > 0 && !hasGeneratedTracker && hasAnyAssistantResponse)
 
   useEffect(() => {
-    if (isLoading || isResolvingExpressions) {
-      setEditMode(false)
-    }
+    if (isLoading || isResolvingExpressions) setEditMode(false)
   }, [isLoading, isResolvingExpressions])
 
   const chatStatusPanelProps = {
@@ -997,131 +1037,44 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
         onCreateConversation: handleBuilderWindowCreate,
       }
 
-  const mobileLayout = (
-    <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-12 md:pt-14 md:hidden"
-      aria-hidden={isDesktop}
-    >
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        <Tabs
-          value={mobileTab}
-          onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
-          className="flex-1 min-h-0 flex flex-col gap-0"
-        >
-          <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
-            <TabsList className="w-full grid grid-cols-2">
-              <TabsTrigger value="preview">Preview</TabsTrigger>
-              <TabsTrigger value="chat">Chat</TabsTrigger>
-            </TabsList>
-          </div>
-          <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
-            <TrackerPanel
-              schema={effectiveDisplaySchema}
-              editMode={editMode}
-              setEditMode={setEditMode}
-              allowSchemaEditToggle={canEditSchema}
-              isChatOpen={isChatOpen}
-              setIsChatOpen={setIsChatOpen}
-              isStreamingTracker={isStreamingTracker}
-              trackerDataRef={trackerDataRef}
-              onGridDataChange={handleGridDataChange}
-              handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
-              undo={canEditSchema && editMode ? undoable.undo : undefined}
-              canUndo={canEditSchema && editMode ? undoable.canUndo : false}
-              leftWidth={leftWidth}
-              fullWidth
-              hideChatToggle
-              onShareClick={handleShareClick}
-              trackerName={trackerName}
-              isViewingHistoricalVersion={isViewingHistoricalVersion}
-              onReturnToLatest={handleReturnToLatest}
-              trackerId={trackerId ?? undefined}
-              initialGridData={loadedSnapshot?.data ?? initialGridData}
-              readOnly={isReadOnly}
-              versionControl={versionControl}
-              vcCurrentBranch={vcCurrentBranch}
-              vcBranches={vcBranches}
-              onVcBranchSwitch={handleVcBranchSwitch}
-              onVcBranchCreated={handleVcBranchCreated}
-              onVcMergedToMain={handleVcMergedToMain}
-              showDebugActions={showPanelUtilities}
-            />
-          </TabsContent>
-          <TabsContent value="chat" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
-            <TrackerChatPanel {...chatPanelProps} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  )
-
-  const desktopLayout = (
-    <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-14 hidden md:flex"
-      aria-hidden={!isDesktop}
-    >
-      <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
-        <TrackerPanel
-          schema={effectiveDisplaySchema}
-          editMode={editMode}
-          setEditMode={setEditMode}
-          allowSchemaEditToggle={canEditSchema}
-          isChatOpen={isChatOpen}
-          setIsChatOpen={setIsChatOpen}
-          isStreamingTracker={isStreamingTracker}
-          trackerDataRef={trackerDataRef}
-          onGridDataChange={handleGridDataChange}
-          handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}
-          undo={canEditSchema && editMode ? undoable.undo : undefined}
-          canUndo={canEditSchema && editMode ? undoable.canUndo : false}
-          leftWidth={leftWidth}
-          onShareClick={handleShareClick}
-          trackerName={trackerName}
-          isViewingHistoricalVersion={isViewingHistoricalVersion}
-          onReturnToLatest={handleReturnToLatest}
-          trackerId={trackerId ?? undefined}
-          initialGridData={loadedSnapshot?.data ?? initialGridData}
-          readOnly={isReadOnly}
-          versionControl={versionControl}
-          vcCurrentBranch={vcCurrentBranch}
-          vcBranches={vcBranches}
-          onVcBranchSwitch={handleVcBranchSwitch}
-          onVcBranchCreated={handleVcBranchCreated}
-          onVcMergedToMain={handleVcMergedToMain}
-          showDebugActions={showPanelUtilities}
-        />
-
-        {isChatOpen && (
-          <>
-            <div
-              className="w-px shrink-0 cursor-col-resize bg-border/50 hover:bg-border transition-colors"
-              onPointerDown={handlePointerDown}
-              role="separator"
-              aria-orientation="vertical"
-              aria-label="Resize panels"
-            />
-
-            <section className="flex-1 min-w-[360px] flex flex-col overflow-hidden">
-              <TrackerChatPanel {...chatPanelProps} />
-            </section>
-          </>
-        )}
-      </div>
-    </div>
-  )
-
-  return (
-    <>
-      {mobileLayout}
-      {desktopLayout}
-      <ShareTrackerDialog
-        open={shareDialogOpen}
-        onOpenChange={setShareDialogOpen}
-        trackerName={trackerName}
-        onShare={(teamId, defaultRole) => {
-          console.info('Share tracker with team', teamId, defaultRole)
-        }}
-      />
-    </>
-  )
+  return {
+    // Layout
+    isDesktop,
+    containerRef,
+    mobileTab,
+    setMobileTab,
+    leftWidth,
+    editMode,
+    setEditMode,
+    isChatOpen,
+    setIsChatOpen,
+    handlePointerDown,
+    // Share
+    shareDialogOpen,
+    setShareDialogOpen,
+    trackerName,
+    handleShareClick,
+    // Panel
+    effectiveDisplaySchema,
+    canEditSchema,
+    isStreamingTracker,
+    trackerDataRef,
+    handleGridDataChange,
+    undoable,
+    isViewingHistoricalVersion,
+    handleReturnToLatest,
+    trackerId,
+    loadedSnapshot,
+    initialGridData,
+    isReadOnly,
+    versionControl,
+    vcCurrentBranch,
+    vcBranches,
+    handleVcBranchSwitch,
+    handleVcBranchCreated,
+    handleVcMergedToMain,
+    showPanelUtilities,
+    // Chat
+    chatPanelProps,
+  }
 }
