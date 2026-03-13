@@ -64,10 +64,10 @@ export function FlowBuilderLayout({
 
       {/* Main Content: Palette + Canvas */}
       <div className="flex gap-4 min-h-0 flex-1">
-        {/* Palette Sidebar */}
+        {/* Palette Sidebar — scrollable when content exceeds viewport */}
         <div
           className={cn(
-            'shrink-0 flex flex-col gap-3 overflow-y-auto rounded-lg border border-border/40 bg-muted/30 p-3',
+            'shrink-0 flex flex-col gap-3 overflow-y-auto rounded-lg border border-border/40 bg-muted/30 p-3 max-h-[70vh]',
             paletteClassName ?? 'w-[160px]'
           )}
         >

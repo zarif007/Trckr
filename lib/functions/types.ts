@@ -96,6 +96,16 @@ export type ExprNode =
   | { op: 'not'; arg: ExprNode }
   | { op: 'if'; cond: ExprNode; then: ExprNode; else: ExprNode }
   | { op: 'regex'; value: ExprNode; pattern: string; flags?: string }
+  // Math functions
+  | { op: 'abs' | 'round' | 'floor' | 'ceil'; arg: ExprNode }
+  | { op: 'mod' | 'pow'; left: ExprNode; right: ExprNode }
+  | { op: 'min' | 'max'; args: ExprNode[] }
+  | { op: 'clamp'; value: ExprNode; min: ExprNode; max: ExprNode }
+  // String functions
+  | { op: 'length' | 'trim' | 'toUpper' | 'toLower'; arg: ExprNode }
+  | { op: 'includes'; left: ExprNode; right: ExprNode }
+  | { op: 'concat'; args: ExprNode[] }
+  | { op: 'slice'; value: ExprNode; start: ExprNode; end: ExprNode }
 
 // ============================================================================
 // Validation & Calculation Rules

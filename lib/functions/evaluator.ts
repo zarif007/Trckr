@@ -310,6 +310,95 @@ export function evaluateExpr(expr: ExprNode, ctx: FunctionContext): unknown {
         return false
       }
     }
+    // Math function ops
+    case 'abs': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return Number.NaN
+      return Math.abs(toNumber(evaluateExpr(normalizedExpr.arg, ctx)))
+    }
+    case 'round': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return Number.NaN
+      return Math.round(toNumber(evaluateExpr(normalizedExpr.arg, ctx)))
+    }
+    case 'floor': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return Number.NaN
+      return Math.floor(toNumber(evaluateExpr(normalizedExpr.arg, ctx)))
+    }
+    case 'ceil': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return Number.NaN
+      return Math.ceil(toNumber(evaluateExpr(normalizedExpr.arg, ctx)))
+    }
+    case 'mod': {
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
+      if (!pair) return Number.NaN
+      const left = toNumber(evaluateExpr(pair.left, ctx))
+      const right = toNumber(evaluateExpr(pair.right, ctx))
+      return right === 0 ? Number.NaN : left % right
+    }
+    case 'pow': {
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
+      if (!pair) return Number.NaN
+      const base = toNumber(evaluateExpr(pair.left, ctx))
+      const exp = toNumber(evaluateExpr(pair.right, ctx))
+      return Math.pow(base, exp)
+    }
+    case 'min': {
+      const args = getVariadicOperands(normalizedExpr as Record<string, unknown>)
+      if (!args || args.length === 0) return Number.NaN
+      return Math.min(...args.map((a) => toNumber(evaluateExpr(a, ctx))))
+    }
+    case 'max': {
+      const args = getVariadicOperands(normalizedExpr as Record<string, unknown>)
+      if (!args || args.length === 0) return Number.NaN
+      return Math.max(...args.map((a) => toNumber(evaluateExpr(a, ctx))))
+    }
+    case 'clamp': {
+      const clampNode = normalizedExpr as Extract<ExprNode, { op: 'clamp' }>
+      if (!isExprNodeLike(clampNode.value) || !isExprNodeLike(clampNode.min) || !isExprNodeLike(clampNode.max)) return Number.NaN
+      const v = toNumber(evaluateExpr(clampNode.value, ctx))
+      const lo = toNumber(evaluateExpr(clampNode.min, ctx))
+      const hi = toNumber(evaluateExpr(clampNode.max, ctx))
+      return Math.min(Math.max(v, lo), hi)
+    }
+    // String function ops
+    case 'length': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return 0
+      const s = evaluateExpr(normalizedExpr.arg, ctx)
+      if (typeof s === 'string') return s.length
+      if (Array.isArray(s)) return s.length
+      return s == null ? 0 : String(s).length
+    }
+    case 'trim': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return ''
+      return String(evaluateExpr(normalizedExpr.arg, ctx) ?? '').trim()
+    }
+    case 'toUpper': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return ''
+      return String(evaluateExpr(normalizedExpr.arg, ctx) ?? '').toUpperCase()
+    }
+    case 'toLower': {
+      if (!isExprNodeLike(normalizedExpr.arg)) return ''
+      return String(evaluateExpr(normalizedExpr.arg, ctx) ?? '').toLowerCase()
+    }
+    case 'includes': {
+      const pair = getBinaryOperands(normalizedExpr as Record<string, unknown>)
+      if (!pair) return false
+      const haystack = String(evaluateExpr(pair.left, ctx) ?? '')
+      const needle = String(evaluateExpr(pair.right, ctx) ?? '')
+      return haystack.includes(needle)
+    }
+    case 'concat': {
+      const args = getVariadicOperands(normalizedExpr as Record<string, unknown>)
+      if (!args || args.length === 0) return ''
+      return args.map((a) => String(evaluateExpr(a, ctx) ?? '')).join('')
+    }
+    case 'slice': {
+      const sliceNode = normalizedExpr as Extract<ExprNode, { op: 'slice' }>
+      if (!isExprNodeLike(sliceNode.value) || !isExprNodeLike(sliceNode.start) || !isExprNodeLike(sliceNode.end)) return ''
+      const str = String(evaluateExpr(sliceNode.value, ctx) ?? '')
+      const start = toNumber(evaluateExpr(sliceNode.start, ctx))
+      const end = toNumber(evaluateExpr(sliceNode.end, ctx))
+      return str.slice(start, end)
+    }
     default:
       return undefined
   }

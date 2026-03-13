@@ -43,7 +43,7 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
     sourceFieldId: z.string(),
   })
 
-  const variadic = (op: 'add' | 'mul') =>
+  const variadic = (op: string) =>
     z.union([
       z
         .object({
@@ -77,6 +77,51 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
         .passthrough(),
     ])
 
+  const unary = (op: string) =>
+    z
+      .object({
+        op: z.literal(op),
+        arg: exprSchema,
+      })
+      .passthrough()
+
+  const andOrNode = (op: 'and' | 'or') =>
+    z.union([
+      z.object({ op: z.literal(op), args: z.array(exprSchema).min(1) }).passthrough(),
+      z.object({ op: z.literal(op), left: exprSchema, right: exprSchema }).passthrough(),
+    ])
+
+  const notNode = z.object({ op: z.literal('not'), arg: exprSchema }).passthrough()
+
+  const ifNode = z.object({
+    op: z.literal('if'),
+    cond: exprSchema,
+    then: exprSchema,
+    else: exprSchema,
+  }).passthrough()
+
+  const regexNode = z.object({
+    op: z.literal('regex'),
+    value: exprSchema,
+    pattern: z.string(),
+    flags: z.string().optional(),
+  }).passthrough()
+
+  // Math function nodes
+  const clampNode = z.object({
+    op: z.literal('clamp'),
+    value: exprSchema,
+    min: exprSchema,
+    max: exprSchema,
+  }).passthrough()
+
+  const sliceNode = z.object({
+    op: z.literal('slice'),
+    value: exprSchema,
+    start: exprSchema,
+    end: exprSchema,
+  }).passthrough()
+
   return z
     .union([
       constNode,
@@ -86,8 +131,14 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
       countNode,
       variadic('add'),
       variadic('mul'),
+      variadic('min'),
+      variadic('max'),
+      variadic('concat'),
       binary('sub'),
       binary('div'),
+      binary('mod'),
+      binary('pow'),
+      binary('includes'),
       binary('eq'),
       binary('neq'),
       binary('gt'),
@@ -103,6 +154,21 @@ export const exprSchema: ExprSchemaType = z.lazy(() => {
       binary('>='),
       binary('<'),
       binary('<='),
+      andOrNode('and'),
+      andOrNode('or'),
+      notNode,
+      ifNode,
+      regexNode,
+      clampNode,
+      sliceNode,
+      unary('abs'),
+      unary('round'),
+      unary('floor'),
+      unary('ceil'),
+      unary('length'),
+      unary('trim'),
+      unary('toUpper'),
+      unary('toLower'),
     ])
     .transform((val): ExprNode => normalizeExprNode(val as ExprNode))
 })
@@ -111,7 +177,9 @@ export const exprOutputSchema = z.object({
   expr: exprSchema,
 })
 
-type BinaryOp = 'sub' | 'div' | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte'
+type BinaryOp = 'sub' | 'div' | 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'mod' | 'pow' | 'includes'
+type UnaryOp = 'not' | 'abs' | 'round' | 'floor' | 'ceil' | 'length' | 'trim' | 'toUpper' | 'toLower'
+type VariadicOp = 'add' | 'mul' | 'and' | 'or' | 'min' | 'max' | 'concat'
 
 const binaryOps = new Set<BinaryOp>([
   'sub',
@@ -122,7 +190,24 @@ const binaryOps = new Set<BinaryOp>([
   'gte',
   'lt',
   'lte',
+  'mod',
+  'pow',
+  'includes',
 ])
+
+const unaryOps = new Set<UnaryOp>([
+  'not',
+  'abs',
+  'round',
+  'floor',
+  'ceil',
+  'length',
+  'trim',
+  'toUpper',
+  'toLower',
+])
+
+const variadicOps = new Set<VariadicOp>(['add', 'mul', 'and', 'or', 'min', 'max', 'concat'])
 
 function getBinaryOperands(node: ExprNode): { left: ExprNode; right: ExprNode } | null {
   const maybe = node as ExprNode & { left?: ExprNode; right?: ExprNode; args?: ExprNode[] }
@@ -159,7 +244,7 @@ export function normalizeExprNode(node: ExprNode): ExprNode {
   )
     return normalized
 
-  if (normalized.op === 'add' || normalized.op === 'mul') {
+  if (variadicOps.has(normalized.op as VariadicOp)) {
     const existingArgs = (normalized as { args?: ExprNode[] }).args
     const pair = getBinaryOperands(normalized)
     const args = Array.isArray(existingArgs)
@@ -167,10 +252,12 @@ export function normalizeExprNode(node: ExprNode): ExprNode {
       : pair
         ? [pair.left, pair.right]
         : []
-    return {
-      op: normalized.op,
-      args: normalizeVariadicArgs(normalized.op, args),
-    } as ExprNode
+    const op = normalized.op as VariadicOp
+    // Only flatten for add/mul (not and/or/min/max/concat)
+    const normalizedArgs = op === 'add' || op === 'mul'
+      ? normalizeVariadicArgs(op, args)
+      : args.map((a) => normalizeExprNode(a))
+    return { op, args: normalizedArgs } as ExprNode
   }
 
   if (binaryOps.has(normalized.op as BinaryOp)) {
@@ -181,6 +268,52 @@ export function normalizeExprNode(node: ExprNode): ExprNode {
       left: normalizeExprNode(pair.left),
       right: normalizeExprNode(pair.right),
     } as ExprNode
+  }
+
+  if (unaryOps.has(normalized.op as UnaryOp)) {
+    const maybe = normalized as ExprNode & { arg?: ExprNode }
+    if (!maybe.arg) return normalized
+    return { op: normalized.op, arg: normalizeExprNode(maybe.arg) } as ExprNode
+  }
+
+  if (normalized.op === 'if') {
+    const ifNode = normalized as Extract<ExprNode, { op: 'if' }>
+    return {
+      op: 'if',
+      cond: normalizeExprNode(ifNode.cond),
+      then: normalizeExprNode(ifNode.then),
+      else: normalizeExprNode(ifNode.else),
+    }
+  }
+
+  if (normalized.op === 'regex') {
+    const regexNode = normalized as Extract<ExprNode, { op: 'regex' }>
+    return {
+      op: 'regex',
+      value: normalizeExprNode(regexNode.value),
+      pattern: regexNode.pattern,
+      flags: regexNode.flags,
+    }
+  }
+
+  if (normalized.op === 'clamp') {
+    const clampNode = normalized as Extract<ExprNode, { op: 'clamp' }>
+    return {
+      op: 'clamp',
+      value: normalizeExprNode(clampNode.value),
+      min: normalizeExprNode(clampNode.min),
+      max: normalizeExprNode(clampNode.max),
+    }
+  }
+
+  if (normalized.op === 'slice') {
+    const sliceNode = normalized as Extract<ExprNode, { op: 'slice' }>
+    return {
+      op: 'slice',
+      value: normalizeExprNode(sliceNode.value),
+      start: normalizeExprNode(sliceNode.start),
+      end: normalizeExprNode(sliceNode.end),
+    }
   }
 
   return normalized

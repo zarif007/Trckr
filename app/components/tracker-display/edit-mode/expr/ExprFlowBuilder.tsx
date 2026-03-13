@@ -5,9 +5,7 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   ConnectionLineType,
-  Handle,
   MarkerType,
-  Position,
   addEdge,
   useEdgesState,
   useNodesState,
@@ -18,125 +16,26 @@ import ReactFlow, {
 } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Trash2,
-  Database,
-  Type,
-  Plus,
-  Minus,
-  X,
-  Divide,
-  Calculator,
-  CheckCircle2,
-  Equal,
-  Sigma,
-} from 'lucide-react'
-import { compileExprFromGraph, exprToGraph, FLOW_CONSTANTS, type ExprFlowNodeData } from './expr-graph'
+import { Trash2 } from 'lucide-react'
+import { compileExprFromGraph, exprToGraph, type ExprFlowNodeData } from './expr-graph'
 import type { ExprNode } from '@/lib/functions/types'
 import { normalizeExprNode } from '@/lib/schemas/expr'
 import { FlowBuilderLayout } from '@/lib/flow-builder'
 import { cn } from '@/lib/utils'
-import type { AccumulateAction, AvailableField, ExprFlowOperator, ExprFlowNodeType } from './expr-types'
-
-const OPERATOR_LABELS: Record<ExprFlowOperator, string> = {
-  add: 'Add',
-  sub: 'Subtract',
-  mul: 'Multiply',
-  div: 'Divide',
-  eq: 'Equals',
-  neq: 'Not equal',
-  gt: 'Greater than',
-  gte: 'Greater or equal',
-  lt: 'Less than',
-  lte: 'Less or equal',
-}
-
-const OPERATOR_ICONS: Record<ExprFlowOperator, ReactNode> = {
-  add: <Plus className="h-3.5 w-3.5" />,
-  sub: <Minus className="h-3.5 w-3.5" />,
-  mul: <X className="h-3.5 w-3.5" />,
-  div: <Divide className="h-3.5 w-3.5" />,
-  eq: <Equal className="h-3.5 w-3.5" />,
-  neq: <span className="text-[10px] font-bold">≠</span>,
-  gt: <span className="text-[10px] font-bold">&gt;</span>,
-  gte: <span className="text-[10px] font-bold">≥</span>,
-  lt: <span className="text-[10px] font-bold">&lt;</span>,
-  lte: <span className="text-[10px] font-bold">≤</span>,
-}
-
-type NodeUpdater = (id: string, partial: Partial<ExprFlowNodeData>) => void
-
-interface FlowNodeData extends ExprFlowNodeData {
-  onChange?: NodeUpdater
-  onDelete?: (id: string) => void
-  availableFields?: AvailableField[]
-  /** Shown on Result node: "Value of [resultFieldLabel]" */
-  resultFieldLabel?: string
-  resultFieldId?: string
-}
-
-type FlowNode = Node<FlowNodeData>
+import type { AvailableField, ExprFlowNodeType, ExprFlowOperator, LogicOp, MathOp, StringOp } from './expr-types'
+import { nodeTypes, type FlowNode, type FlowNodeData } from './ExprFlowNodes'
+import { ExprFlowPalette } from './ExprFlowPalette'
 
 interface ExprFlowBuilderProps {
   expr: ExprNode
   availableFields: AvailableField[]
   onChange: (expr: ExprNode) => void
-  /** Optional: show "Value of [label]" on the Result node for this field */
   resultFieldId?: string
   resultFieldLabel?: string
   headerAction?: ReactNode
   flowHeightClassName?: string
 }
 
-// Modern n8n-inspired node styling with color coding
-const NODE_STYLES = {
-  field: {
-    border: 'border-blue-500/60',
-    bg: 'bg-blue-500/10',
-    icon: <Database className="h-3.5 w-3.5 text-blue-600" />,
-    label: 'Field',
-  },
-  const: {
-    border: 'border-emerald-500/60',
-    bg: 'bg-emerald-500/10',
-    icon: <Type className="h-3.5 w-3.5 text-emerald-600" />,
-    label: 'Value',
-  },
-  op: {
-    border: 'border-violet-500/60',
-    bg: 'bg-violet-500/10',
-    icon: <Calculator className="h-3.5 w-3.5 text-violet-600" />,
-    label: 'Operation',
-  },
-  result: {
-    border: 'border-amber-500/60',
-    bg: 'bg-amber-500/10',
-    icon: <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" />,
-    label: 'Result',
-  },
-  accumulator: {
-    border: 'border-cyan-500/60',
-    bg: 'bg-cyan-500/10',
-    icon: <Sigma className="h-3.5 w-3.5 text-cyan-600" />,
-    label: 'Accumulator',
-  },
-} as const
-
-const ACCUMULATOR_ACTION_OPTIONS: { value: AccumulateAction; label: string }[] = [
-  { value: 'add', label: 'Sum (+)' },
-  { value: 'sub', label: 'Subtract (−)' },
-  { value: 'mul', label: 'Multiply (×)' },
-]
-
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md'
-const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2 text-xs font-semibold'
-const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
-const NODE_DELETE_BUTTON_CLASSES =
-  'nodrag inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors'
-const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
-
-// Enhanced edge styling with animated connections
 const EDGE_STYLE: CSSProperties = {
   stroke: 'hsl(var(--primary) / 0.5)',
   strokeWidth: 2.5,
@@ -154,295 +53,6 @@ const EDGE_DEFAULTS = {
   markerEnd: EDGE_MARKER,
   animated: true,
 }
-
-function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
-  const value = data.fieldId ?? ''
-  const options = data.availableFields ?? []
-  const style = NODE_STYLES.field
-  return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-blue-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      <div className={NODE_BODY_CLASSES}>
-        <select
-          className="w-full rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-          value={value}
-          onChange={(e) => data.onChange?.(id, { fieldId: e.target.value })}
-        >
-          <option value="">Select field...</option>
-          {options.map((field) => (
-            <option key={field.fieldId} value={field.fieldId}>
-              {field.label}
-            </option>
-          ))}
-        </select>
-      </div>
-      <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-blue-500')} />
-    </div>
-  )
-}
-
-function ConstNode({ id, data }: { id: string; data: FlowNodeData }) {
-  const style = NODE_STYLES.const
-  return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[180px] border-emerald-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      <div className={NODE_BODY_CLASSES}>
-        <Input
-          value={data.value ?? ''}
-          onChange={(e) => data.onChange?.(id, { value: e.target.value })}
-          className="h-9 border-border/60 bg-muted/30 text-xs text-foreground/90 focus:ring-2 focus:ring-emerald-500/30 rounded-md"
-          placeholder="Enter value (e.g., 10, true, text)"
-        />
-      </div>
-      <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-emerald-500')} />
-    </div>
-  )
-}
-
-function OpNode({ id, data }: { id: string; data: FlowNodeData }) {
-  const label = data.op ? OPERATOR_LABELS[data.op] : 'Operator'
-  const icon = data.op ? OPERATOR_ICONS[data.op] : <Calculator className="h-3.5 w-3.5" />
-  const style = NODE_STYLES.op
-  return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[180px] border-violet-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {icon}
-        <span className="text-foreground/80">{label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      <div className={cn(NODE_BODY_CLASSES, 'flex items-center gap-3 text-[11px] text-muted-foreground')}>
-        <div className="flex items-center gap-1">
-          <div className="h-2 w-2 rounded-full bg-violet-400" />
-          <span>Input A</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="h-2 w-2 rounded-full bg-violet-400" />
-          <span>Input B</span>
-        </div>
-      </div>
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={FLOW_CONSTANTS.INPUT_HANDLES[0]}
-        style={{ top: 40 }}
-        className={cn(HANDLE_CLASSES, '!border-violet-500')}
-      />
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={FLOW_CONSTANTS.INPUT_HANDLES[1]}
-        style={{ top: 58 }}
-        className={cn(HANDLE_CLASSES, '!border-violet-500')}
-      />
-      <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-violet-500')} />
-    </div>
-  )
-}
-
-function ResultNode({ data }: { data: FlowNodeData }) {
-  const style = NODE_STYLES.result
-  const name = data.resultFieldLabel
-  const id = data.resultFieldId
-  const bodyText =
-    name && id
-      ? `Value of ${name} (${id})`
-      : name
-        ? `Value of ${name}`
-        : id
-          ? `Value of ${id}`
-          : 'Final expression output'
-  return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[160px] border-amber-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
-      </div>
-      <div className={cn(NODE_BODY_CLASSES, 'text-[11px] text-muted-foreground')}>
-        {bodyText}
-      </div>
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={FLOW_CONSTANTS.RESULT_HANDLE_ID}
-        className={cn(HANDLE_CLASSES, '!border-amber-500')}
-      />
-    </div>
-  )
-}
-
-function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
-  const style = NODE_STYLES.accumulator
-  const kind = data.accumulatorKind ?? 'accumulate'
-  const isCount = kind === 'count'
-  const isSum = kind === 'sum'
-  const action = data.action ?? 'add'
-  const startIndex = data.startIndex
-  const endIndex = data.endIndex
-  const increment = data.increment ?? 1
-  const initialValue = data.initialValue
-
-  const headerLabel =
-    kind === 'count' ? 'Count' : kind === 'sum' ? 'Sum' : style.label
-
-  return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-cyan-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{headerLabel}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
-      </div>
-      <div className={cn(NODE_BODY_CLASSES, 'space-y-2')}>
-        {!isCount && (
-          <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-14 shrink-0">Action</label>
-            {isSum ? (
-              <span className="flex-1 text-xs text-muted-foreground">Sum (+)</span>
-            ) : (
-              <select
-                className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
-                value={action}
-                onChange={(e) => data.onChange?.(id, { action: e.target.value as AccumulateAction })}
-              >
-                {ACCUMULATOR_ACTION_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
-        {!isCount && (
-          <>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-muted-foreground w-14 shrink-0">Start</label>
-              <Input
-                type="number"
-                min={0}
-                className="h-8 text-xs"
-                placeholder="0"
-                value={startIndex === undefined ? '' : startIndex}
-                onChange={(e) => {
-                  const v = e.target.value
-                  if (v === '') {
-                    data.onChange?.(id, { startIndex: undefined })
-                    return
-                  }
-                  const n = parseInt(v, 10)
-                  data.onChange?.(id, { startIndex: Number.isNaN(n) ? undefined : n })
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-muted-foreground w-14 shrink-0">End</label>
-              <Input
-                type="number"
-                min={0}
-                className="h-8 text-xs"
-                placeholder="To end"
-                value={endIndex === undefined ? '' : endIndex}
-                onChange={(e) => {
-                  const v = e.target.value
-                  if (v === '') {
-                    data.onChange?.(id, { endIndex: undefined })
-                    return
-                  }
-                  const n = parseInt(v, 10)
-                  data.onChange?.(id, { endIndex: Number.isNaN(n) ? undefined : n })
-                }}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-muted-foreground w-14 shrink-0">Step</label>
-              <select
-                className="flex-1 rounded-md border border-border/60 bg-muted/30 px-2 py-1.5 text-xs"
-                value={increment}
-                onChange={(e) => data.onChange?.(id, { increment: parseInt(e.target.value, 10) })}
-              >
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={n}>+{n}</option>
-                ))}
-              </select>
-            </div>
-          </>
-        )}
-        {isSum && (
-          <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-14 shrink-0">Initial</label>
-            <Input
-              type="number"
-              className="h-8 text-xs"
-              placeholder="0"
-              value={initialValue === undefined ? '' : initialValue}
-              onChange={(e) => {
-                const v = e.target.value
-                if (v === '') {
-                  data.onChange?.(id, { initialValue: undefined })
-                  return
-                }
-                const n = Number(v)
-                data.onChange?.(id, { initialValue: Number.isNaN(n) ? undefined : n })
-              }}
-            />
-          </div>
-        )}
-        <p className="text-[10px] text-muted-foreground">
-          {isCount ? 'Connect a Field (any column) to count rows.' : 'Connect a Field node (table column) to the left.'}
-        </p>
-      </div>
-      <Handle
-        type="target"
-        position={Position.Left}
-        id={FLOW_CONSTANTS.ACCUMULATOR_SOURCE_HANDLE}
-        style={{ top: 48 }}
-        className={cn(HANDLE_CLASSES, '!border-cyan-500')}
-      />
-      <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-cyan-500')} />
-    </div>
-  )
-}
-
-const nodeTypes = {
-  field: FieldNode,
-  const: ConstNode,
-  op: OpNode,
-  result: ResultNode,
-  accumulator: AccumulatorNode,
-} as const
 
 export function ExprFlowBuilder({
   expr,
@@ -582,14 +192,31 @@ export function ExprFlowBuilder({
   )
 
   const createNode = useCallback(
-    (type: ExprFlowNodeType, position: { x: number; y: number }, op?: ExprFlowOperator) => {
+    (
+      type: ExprFlowNodeType,
+      position: { x: number; y: number },
+      op?: ExprFlowOperator,
+      logicOp?: LogicOp,
+      mathOp?: MathOp,
+      stringOp?: StringOp,
+    ) => {
       const id = `expr_ui_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-      const data: FlowNodeData = { op, onChange: undefined, availableFields }
+      const data: FlowNodeData = { onChange: undefined, availableFields }
       if (type === 'field') data.fieldId = ''
       if (type === 'const') data.value = ''
-      if (type === 'accumulator') {
-        data.action = 'add'
-        data.increment = 1
+      if (type === 'op') data.op = op
+      if (type === 'accumulator') { data.action = 'add'; data.increment = 1 }
+      if (type === 'logic') {
+        data.logicOp = logicOp ?? 'and'
+        if (logicOp === 'and' || logicOp === 'or') data.inputCount = 2
+      }
+      if (type === 'math') {
+        data.mathOp = mathOp ?? 'abs'
+        if (mathOp === 'min' || mathOp === 'max') data.inputCount = 2
+      }
+      if (type === 'string') {
+        data.stringOp = stringOp ?? 'concat'
+        if (stringOp === 'concat') data.inputCount = 2
       }
       setNodes((nds) => [...nds, enrichNode({ id, type, position, data })])
     },
@@ -604,20 +231,19 @@ export function ExprFlowBuilder({
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault()
-      const data = event.dataTransfer.getData('application/reactflow')
-      if (!data || !rfInstance) return
-      let parsed: { type?: ExprFlowNodeType; op?: ExprFlowOperator } = {}
-      try {
-        parsed = JSON.parse(data)
-      } catch {
-        return
-      }
+      const raw = event.dataTransfer.getData('application/reactflow')
+      if (!raw || !rfInstance) return
+      let parsed: {
+        type?: ExprFlowNodeType
+        op?: ExprFlowOperator
+        logicOp?: LogicOp
+        mathOp?: MathOp
+        stringOp?: StringOp
+      } = {}
+      try { parsed = JSON.parse(raw) } catch { return }
       if (!parsed.type) return
-      const position = rfInstance.screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      })
-      createNode(parsed.type, position, parsed.op)
+      const position = rfInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+      createNode(parsed.type, position, parsed.op, parsed.logicOp, parsed.mathOp, parsed.stringOp)
     },
     [createNode, rfInstance]
   )
@@ -632,100 +258,10 @@ export function ExprFlowBuilder({
     onChange(result.expr)
   }
 
-  const paletteItems = useMemo(
-    () => [
-      { label: 'Field', type: 'field' as const, icon: <Database className="h-3.5 w-3.5 text-blue-500" />, color: 'blue' },
-      { label: 'Value', type: 'const' as const, icon: <Type className="h-3.5 w-3.5 text-emerald-500" />, color: 'emerald' },
-      {
-        label: 'Accumulator (Σ)',
-        type: 'accumulator' as const,
-        icon: <Sigma className="h-3.5 w-3.5 text-cyan-500" />,
-        color: 'cyan',
-        title: 'Sum or reduce a table column with start/end/increment and action',
-      },
-      { label: 'Add', type: 'op' as const, op: 'add' as const, icon: <Plus className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
-      { label: 'Subtract', type: 'op' as const, op: 'sub' as const, icon: <Minus className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
-      { label: 'Multiply', type: 'op' as const, op: 'mul' as const, icon: <X className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
-      { label: 'Divide', type: 'op' as const, op: 'div' as const, icon: <Divide className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
-      { label: 'Equal', type: 'op' as const, op: 'eq' as const, icon: <Equal className="h-3.5 w-3.5 text-violet-500" />, color: 'violet' },
-      { label: 'Not equal', type: 'op' as const, op: 'neq' as const, icon: <span className="text-[10px] font-bold text-violet-500">≠</span>, color: 'violet' },
-      { label: 'Greater than', type: 'op' as const, op: 'gt' as const, icon: <span className="text-[10px] font-bold text-violet-500">&gt;</span>, color: 'violet' },
-      { label: 'Greater or equal', type: 'op' as const, op: 'gte' as const, icon: <span className="text-[10px] font-bold text-violet-500">≥</span>, color: 'violet' },
-      { label: 'Less than', type: 'op' as const, op: 'lt' as const, icon: <span className="text-[10px] font-bold text-violet-500">&lt;</span>, color: 'violet' },
-      { label: 'Less or equal', type: 'op' as const, op: 'lte' as const, icon: <span className="text-[10px] font-bold text-violet-500">≤</span>, color: 'violet' },
-    ],
-    []
-  )
-
-  const palette = (
-    <div className="space-y-4">
-      {/* Data Sources Section */}
-      <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-          <Database className="h-3 w-3" />
-          Data
-        </p>
-        <div className="space-y-1.5">
-          {paletteItems.filter((i) => i.type === 'field' || i.type === 'const' || i.type === 'accumulator').map((item) => (
-            <div
-              key={`${item.type}-${(item as { op?: string }).op ?? item.label}`}
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(
-                  'application/reactflow',
-                  JSON.stringify({ type: item.type, op: (item as { op?: ExprFlowOperator }).op })
-                )
-                event.dataTransfer.effectAllowed = 'move'
-              }}
-              className={cn(
-                'cursor-grab rounded-md border px-2.5 py-2 text-xs text-foreground/80 transition-all duration-150',
-                'active:cursor-grabbing active:scale-[0.98] hover:shadow-sm flex items-center gap-2',
-                item.color === 'blue' && 'border-blue-200 bg-blue-50/50 hover:bg-blue-100/50 dark:border-blue-500/30 dark:bg-blue-500/10',
-                item.color === 'emerald' && 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/50 dark:border-emerald-500/30 dark:bg-emerald-500/10',
-                item.color === 'cyan' && 'border-cyan-200 bg-cyan-50/50 hover:bg-cyan-100/50 dark:border-cyan-500/30 dark:bg-cyan-500/10'
-              )}
-              title={(item as { title?: string }).title}
-              aria-label={(item as { title?: string }).title ?? item.label}
-            >
-              {item.icon}
-              <span className="font-medium">{item.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Operations Section */}
-      <div className="space-y-2">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-          <Calculator className="h-3 w-3" />
-          Operations
-        </p>
-        <div className="grid grid-cols-2 gap-1.5">
-          {paletteItems.filter(i => i.type === 'op').map((item) => (
-            <div
-              key={`${item.type}-${item.op}`}
-              draggable
-              onDragStart={(event) => {
-                event.dataTransfer.setData(
-                  'application/reactflow',
-                  JSON.stringify({ type: item.type, op: item.op })
-                )
-                event.dataTransfer.effectAllowed = 'move'
-              }}
-              className={cn(
-                "cursor-grab rounded-md border border-violet-200 bg-violet-50/50 px-2 py-1.5 text-[11px] text-foreground/80 transition-all duration-150",
-                "active:cursor-grabbing active:scale-[0.98] hover:bg-violet-100/50 hover:shadow-sm flex items-center justify-center gap-1",
-                "dark:border-violet-500/30 dark:bg-violet-500/10 dark:hover:bg-violet-500/20"
-              )}
-              title={item.label}
-            >
-              {item.icon}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+  const makeDragStart = useCallback((payload: object) => (event: React.DragEvent) => {
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(payload))
+    event.dataTransfer.effectAllowed = 'move'
+  }, [])
 
   return (
     <FlowBuilderLayout
@@ -739,12 +275,12 @@ export function ExprFlowBuilder({
           </Button>
         ) : undefined)
       }
-      palette={palette}
+      palette={<ExprFlowPalette makeDragStart={makeDragStart} />}
       canvasMinHeight="360px"
       applyError={compileError}
       onApply={handleCompile}
       applyLabel="Apply visual expression"
-      paletteClassName="w-[140px]"
+      paletteClassName="w-[148px]"
       canvasClassName="flex flex-col min-h-0"
     >
       <div ref={wrapperRef} className={cn('w-full h-full min-h-[320px]', flowHeightClassName ?? 'h-[360px]')}>
