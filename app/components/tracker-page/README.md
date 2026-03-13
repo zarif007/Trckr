@@ -18,7 +18,7 @@ UI components used **only by the `/tracker` route** (the main chat + tracker bui
 ## Imports
 
 - From **page**: `import { ... } from '@/app/components/tracker-page/...'`
-- **Tracker types/hooks**: `@/app/tracker/hooks/useTrackerChat` (Message, TrackerResponse, suggestions, quickSuggestions).
+- **Tracker types/hooks**: `@/app/tracker/hooks/useTrackerChat` (Message, TrackerResponse, suggestions).
 
 ## File layout
 

@@ -866,6 +866,7 @@ export function TrackerAIView(props: TrackerEditorViewProps = {}) {
     activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
     toolCalls,
     isResolvingExpressions,
+    mode: (isDataPage ? 'data' : 'schema') as 'schema' | 'data',
   }
 
   const mobileLayout = (

@@ -3,14 +3,26 @@
 import type { ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { Sparkles, ArrowRight } from 'lucide-react'
-import { suggestions } from '@/app/tracker/hooks/useTrackerChat'
+import { suggestions, dataSuggestions } from '@/app/tracker/hooks/constants'
 
 interface TrackerEmptyStateProps {
   onApplySuggestion: (query: string) => void
   inputSlot?: ReactNode
+  mode?: 'schema' | 'data'
 }
 
-export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmptyStateProps) {
+export function TrackerEmptyState({
+  onApplySuggestion,
+  inputSlot,
+  mode = 'schema',
+}: TrackerEmptyStateProps) {
+  const isDataMode = mode === 'data'
+  const heading = isDataMode ? 'Ask about your tracker' : 'Build your tracker'
+  const subtitle = isDataMode
+    ? 'Ask for summaries, insights, or suggestions from the data'
+    : 'Describe what you need in plain English.'
+  const list = isDataMode ? dataSuggestions : suggestions
+
   return (
     <motion.div
       key="empty-state"
@@ -28,10 +40,18 @@ export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmpty
 
       <div className="text-center space-y-2">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-          Build your <span className="text-foreground/90">tracker</span>
+          {isDataMode ? (
+            <>
+              Understand your <span className="text-foreground/90">tracker data</span>
+            </>
+          ) : (
+            <>
+              Build your <span className="text-foreground/90">tracker</span>
+            </>
+          )}
         </h2>
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          Describe what you need in plain English.
+          {subtitle}
         </p>
       </div>
 
@@ -40,7 +60,7 @@ export function TrackerEmptyState({ onApplySuggestion, inputSlot }: TrackerEmpty
       </div>
 
       <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-        {suggestions.map((suggestion) => (
+        {list.map((suggestion) => (
           <button
             key={suggestion.title}
             onClick={() => onApplySuggestion(suggestion.query)}

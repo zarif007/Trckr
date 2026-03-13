@@ -26,7 +26,7 @@ import {
 } from './resolveExprIntents'
 
 export type { ToolCallEntry } from './resolveExprIntents'
-export { suggestions, quickSuggestions } from './constants'
+export { suggestions } from './constants'
 
 export type TrackerResponse = TrackerDisplayProps
 
@@ -84,7 +84,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
   const conversationIdRef = useRef<string | null>(initialConversationId ?? null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const submitRef = useRef<(input: any) => void>(() => {})
+  const submitRef = useRef<(input: any) => void>(() => { })
 
   useEffect(() => {
     conversationIdRef.current = conversationId
@@ -312,12 +312,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           setMessages((prev) => [...prev, assistantMessage])
           const cid = conversationIdRef.current
           if (cid) {
-          persistMessage(cid, {
-            role: 'ASSISTANT',
-            content: '',
-            trackerSchemaSnapshot: partialTracker ?? undefined,
-            managerData: sanitizeManagerData(partial.manager),
-          }).catch((err) => console.error('Failed to persist assistant message:', err))
+            persistMessage(cid, {
+              role: 'ASSISTANT',
+              content: '',
+              trackerSchemaSnapshot: partialTracker ?? undefined,
+              managerData: sanitizeManagerData(partial.manager),
+            }).catch((err) => console.error('Failed to persist assistant message:', err))
           }
           if (partialTracker) setResolvedTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {

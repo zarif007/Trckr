@@ -27,6 +27,7 @@ interface TrackerChatPanelProps {
   activeTrackerMessageIndex?: number | null
   toolCalls?: ToolCallEntry[]
   isResolvingExpressions?: boolean
+  mode?: 'schema' | 'data'
 }
 
 export function TrackerChatPanel({
@@ -49,6 +50,7 @@ export function TrackerChatPanel({
   activeTrackerMessageIndex,
   toolCalls,
   isResolvingExpressions,
+  mode = 'schema',
 }: TrackerChatPanelProps) {
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/30 border-l border-border/60">
@@ -61,20 +63,7 @@ export function TrackerChatPanel({
               <TrackerEmptyState
                 key="empty-state"
                 onApplySuggestion={applySuggestion}
-                inputSlot={
-                  <TrackerInputArea
-                    input={input}
-                    setInput={setInput}
-                    isFocused={isFocused}
-                    setIsFocused={setIsFocused}
-                    handleSubmit={handleSubmit}
-                    applySuggestion={applySuggestion}
-                    isLoading={isLoading}
-                    isChatEmpty={isChatEmpty}
-                    textareaRef={textareaRef}
-                    variant="hero"
-                  />
-                }
+                mode={mode}
               />
             ) : (
               <TrackerMessageList
@@ -94,23 +83,23 @@ export function TrackerChatPanel({
         </div>
       </div>
 
-      {!isChatEmpty && (
-        <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-sm px-6 py-4">
-          <div className="mx-auto max-w-2xl">
-            <TrackerInputArea
-              input={input}
-              setInput={setInput}
-              isFocused={isFocused}
-              setIsFocused={setIsFocused}
-              handleSubmit={handleSubmit}
-              applySuggestion={applySuggestion}
-              isLoading={isLoading}
-              isChatEmpty={isChatEmpty}
-              textareaRef={textareaRef}
-            />
-          </div>
+      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-sm px-6 py-4">
+        <div className="mx-auto max-w-2xl">
+          <TrackerInputArea
+            input={input}
+            setInput={setInput}
+            isFocused={isFocused}
+            setIsFocused={setIsFocused}
+            handleSubmit={handleSubmit}
+            applySuggestion={applySuggestion}
+            isLoading={isLoading}
+            isChatEmpty={isChatEmpty}
+            textareaRef={textareaRef}
+            variant={isChatEmpty ? 'hero' : 'default'}
+            mode={mode}
+          />
         </div>
-      )}
+      </div>
     </section>
   )
 }

@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { Send, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { quickSuggestions } from '@/app/tracker/hooks/useTrackerChat'
 
 interface TrackerInputAreaProps {
   input: string
@@ -16,6 +15,7 @@ interface TrackerInputAreaProps {
   isChatEmpty: boolean
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   variant?: 'default' | 'hero'
+  mode?: 'schema' | 'data'
 }
 
 export function TrackerInputArea({
@@ -29,31 +29,19 @@ export function TrackerInputArea({
   isChatEmpty,
   textareaRef,
   variant = 'default',
+  mode = 'schema',
 }: TrackerInputAreaProps) {
   const isHero = variant === 'hero'
+  const isDataMode = mode === 'data'
+  const placeholder = isDataMode
+    ? isChatEmpty
+      ? 'Ask for a report, summary, or insights on this tracker’s data...'
+      : 'Ask follow-up questions or new analyses on your data...'
+    : isChatEmpty
+      ? 'Describe your ideal tracker...'
+      : 'Ask for changes or refinements...'
   return (
     <div className={isHero ? 'space-y-4' : 'space-y-3'}>
-      {!isChatEmpty && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-1"
-        >
-          {quickSuggestions.map((s) => (
-            <button
-              key={s.text}
-              onClick={() => applySuggestion(s.text)}
-              className="group flex items-center gap-2 px-3 py-1.5 rounded-full border border-border/50 bg-card/80 backdrop-blur-md hover:bg-card hover:border-primary/50 transition-all whitespace-nowrap"
-            >
-              <span className="text-sm group-hover:scale-110 transition-transform">{s.icon}</span>
-              <span className="text-[11px] font-bold text-muted-foreground group-hover:text-foreground transition-colors uppercase tracking-wider">
-                {s.text}
-              </span>
-            </button>
-          ))}
-        </motion.div>
-      )}
-
       <div className="relative group">
         <div
           className={`relative overflow-hidden transition-shadow duration-200 ${isHero ? 'bg-card rounded-2xl border border-border/60 shadow-sm' : 'bg-background rounded-xl border border-border/50 shadow-none focus-within:border-foreground/20 focus-within:shadow-[0_0_0_1px_hsl(var(--foreground)/0.06)]'} ${isFocused ? 'ring-1 ring-foreground/10' : ''}`}
@@ -75,7 +63,7 @@ export function TrackerInputArea({
                   textareaRef.current?.blur()
                 }
               }}
-              placeholder={isChatEmpty ? 'Describe your ideal tracker...' : 'Ask for changes or refinements...'}
+              placeholder={placeholder}
               rows={1}
               className={`flex-1 bg-transparent resize-none text-foreground placeholder:text-muted-foreground/60 focus:outline-none max-h-[200px] ${isHero ? 'text-base min-h-[72px]' : 'px-0 py-2 text-sm font-medium min-h-[40px]'}`}
             />
