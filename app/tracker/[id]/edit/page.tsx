@@ -207,8 +207,9 @@ function TrackerByIdEditContent({
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       pageMode="schema"
       showPanelUtilities={false}
-      primaryNavAction={{ label: 'Open tracker', href: `/tracker/${id}` }}
       schemaAutoSave
+      primaryNavAction={{ label: 'Open Tracker', href: `/tracker/${id}` }}
+      autoSave={state.tracker?.autoSave ?? true}
     />
   )
 }

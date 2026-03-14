@@ -48,6 +48,8 @@ export interface UseTrackerChatOptions {
   conversationId?: string | null
   /** Messages loaded from DB for this tracker; used to hydrate chat on open. */
   initialMessages?: Message[]
+  /** When provided and conversationId is unset (draft tab), called on first submit to create conversation and persist message; hook skips persist. */
+  onConversationCreate?: (userMessage: string) => Promise<{ id: string; title: string } | null>
 }
 
 function sanitizeManagerData(
@@ -60,7 +62,13 @@ function sanitizeManagerData(
 }
 
 export function useTrackerChat(options: UseTrackerChatOptions = {}) {
-  const { initialTracker = null, trackerId, conversationId: conversationIdProp, initialMessages } = options
+  const {
+    initialTracker = null,
+    trackerId,
+    conversationId: conversationIdProp,
+    initialMessages,
+    onConversationCreate,
+  } = options
   const [input, setInput] = useState('')
   const [isFocused, setIsFocused] = useState(false)
   const [messages, setMessages] = useState<Message[]>(() => initialMessages ?? [])
@@ -439,6 +447,20 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages((prev) => [...prev, newUserMessage])
 
     let cid = conversationIdRef.current
+    let alreadyPersisted = false
+    if (trackerId && !cid && onConversationCreate) {
+      try {
+        const result = await onConversationCreate(userMessage)
+        if (result) {
+          setConversationId(result.id)
+          conversationIdRef.current = result.id
+          cid = result.id
+          alreadyPersisted = true
+        }
+      } catch (err) {
+        console.error('Failed to create conversation via callback:', err)
+      }
+    }
     if (trackerId && !cid) {
       try {
         cid = await ensureConversation(trackerId)
@@ -448,7 +470,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         console.error('Failed to create conversation:', err)
       }
     }
-    if (cid) {
+    if (cid && !alreadyPersisted) {
       try {
         await persistMessage(cid, { role: 'USER', content: userMessage })
       } catch (err) {

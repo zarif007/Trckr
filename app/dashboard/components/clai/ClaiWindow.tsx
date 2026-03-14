@@ -4,6 +4,7 @@ import { Rnd } from 'react-rnd'
 import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { cliTheme } from './cliTheme'
 import { ClaiPanel } from './ClaiPanel'
 import type { ClaiInstance } from './types'
 
@@ -81,17 +82,18 @@ export function ClaiWindow({
       onDragStop={(_e, d) => onPositionChange?.(d.x, d.y)}
       onResizeStop={(_e, _dir, el) => onSizeChange?.(el.offsetWidth, el.offsetHeight)}
       className={cn(
-        '!z-50 flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl',
+        '!z-50 flex flex-col overflow-hidden rounded-xl border shadow-2xl',
         className
       )}
-      style={{ zIndex: 50 }}
+      style={{ zIndex: 50, backgroundColor: cliTheme.bgTabBar, borderColor: cliTheme.border }}
     >
       <div
         className={cn(
           TAB_BAR_HANDLE,
           'flex-shrink-0 flex items-stretch cursor-grab active:cursor-grabbing',
-          'border-b border-border bg-muted/90'
+          'border-b'
         )}
+        style={{ backgroundColor: cliTheme.bgTabBar, borderColor: cliTheme.border }}
       >
         <div className="flex flex-1 min-w-0 items-center gap-px overflow-x-auto">
           {instances.map((inst, index) => {
@@ -102,14 +104,18 @@ export function ClaiWindow({
                 key={inst.id}
                 className={cn(
                   'group flex items-center gap-1.5 shrink-0 px-3 py-2 rounded-t-md border-b-2 transition-colors',
-                  isActive
-                    ? 'bg-background border-primary text-foreground'
-                    : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground/80'
+                  isActive ? 'border-b-2' : 'border-transparent hover:bg-white/5'
                 )}
+                style={{
+                  ...(isActive
+                    ? { backgroundColor: cliTheme.bg, color: cliTheme.text, borderBottomColor: cliTheme.success }
+                    : { color: cliTheme.textMuted }),
+                }}
               >
                 <button
                   type="button"
-                  className="min-w-0 truncate text-left text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+                  className="min-w-0 truncate text-left text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded"
+                  style={{ color: 'inherit' }}
                   onClick={() => onActiveIdChange(inst.id)}
                   title={inst.location || 'dashboard'}
                 >
@@ -118,7 +124,8 @@ export function ClaiWindow({
                 {canCloseTab && (
                   <button
                     type="button"
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                    style={{ color: cliTheme.textMuted }}
                     onClick={(e) => {
                       e.stopPropagation()
                       onCloseTab(inst.id)
@@ -133,7 +140,8 @@ export function ClaiWindow({
           })}
           <button
             type="button"
-            className="shrink-0 p-2 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="shrink-0 p-2 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 hover:bg-white/10"
+            style={{ color: cliTheme.textMuted }}
             onClick={onAddTab}
             aria-label="New tab"
           >
@@ -144,7 +152,8 @@ export function ClaiWindow({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+          className="h-8 w-8 shrink-0 rounded-md cursor-pointer border-0 bg-transparent hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/30"
+          style={{ color: cliTheme.textMuted }}
           onClick={onCloseWindow}
           aria-label="Close CLAI"
         >

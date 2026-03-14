@@ -50,6 +50,8 @@ export function FormDialog({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter') {
+        // In a textarea, Enter inserts a newline; only Shift+Enter submits.
+        if (e.target instanceof HTMLTextAreaElement && !e.shiftKey) return
         // Topmost dialog handles the key so nested dialogs (e.g. Add option) win over parent (Add entry).
         e.stopPropagation()
         if (e.shiftKey) {

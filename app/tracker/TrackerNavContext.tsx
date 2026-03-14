@@ -37,6 +37,8 @@ export type TrackerSaveState = {
   canConfigureFormActions: boolean
   onFormActionsChange: ((actions: TrackerFormAction[]) => void) | null
   onFormActionSelect: ((action: TrackerFormAction) => void | Promise<void>) | null
+  /** When true, navbar shows editable tracker name (edit page only). When false, name is read-only. */
+  titleEditable: boolean
 }
 
 const TrackerNavContext = createContext<{
@@ -46,7 +48,7 @@ const TrackerNavContext = createContext<{
   setSaveState: (state: Partial<TrackerSaveState>) => void
 } | null>(null)
 
-const initialSaveState: TrackerSaveState = {
+export const initialSaveState: TrackerSaveState = {
   onSaveTracker: null,
   onSaveData: null,
   isAgentBuilding: false,
@@ -63,6 +65,7 @@ const initialSaveState: TrackerSaveState = {
   canConfigureFormActions: false,
   onFormActionsChange: null,
   onFormActionSelect: null,
+  titleEditable: false,
 }
 
 export function TrackerNavProvider({ children }: { children: ReactNode }) {

@@ -15,6 +15,8 @@ export interface UseAnalystChatOptions {
   trackerDataRef?: React.RefObject<
     (() => Record<string, Array<Record<string, unknown>>>) | null
   >
+  /** When provided and conversationId is unset (draft tab), called on first submit to create conversation and persist message; hook skips persist. */
+  onConversationCreate?: (userMessage: string) => Promise<{ id: string; title: string } | null>
 }
 
 export function useAnalystChat(options: UseAnalystChatOptions = {}) {
@@ -24,6 +26,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     initialMessages,
     trackerSchema,
     trackerDataRef,
+    onConversationCreate,
   } = options
 
   const [input, setInput] = useState('')
@@ -124,6 +127,20 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     setMessages((prev) => [...prev, newUserMessage])
 
     let cid = conversationIdRef.current
+    let alreadyPersisted = false
+    if (trackerId && !cid && onConversationCreate) {
+      try {
+        const result = await onConversationCreate(userMessage)
+        if (result) {
+          setConversationId(result.id)
+          conversationIdRef.current = result.id
+          cid = result.id
+          alreadyPersisted = true
+        }
+      } catch (err) {
+        console.error('Failed to create analyst conversation via callback:', err)
+      }
+    }
     if (trackerId && !cid) {
       try {
         cid = await ensureConversation(trackerId, 'ANALYST')
@@ -133,7 +150,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
         console.error('Failed to create analyst conversation:', err)
       }
     }
-    if (cid) {
+    if (cid && !alreadyPersisted) {
       try {
         await persistMessage(cid, { role: 'USER', content: userMessage })
       } catch (err) {
@@ -152,7 +169,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
       trackerSchema: trackerSchema ?? null,
       trackerData: currentData,
     })
-  }, [input, isLoading, trackerId, trackerSchema, trackerDataRef, submit])
+  }, [input, isLoading, trackerId, trackerSchema, trackerDataRef, submit, onConversationCreate])
 
   useEffect(() => {
     if (textareaRef.current) {

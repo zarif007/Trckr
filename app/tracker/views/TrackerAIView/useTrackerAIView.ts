@@ -14,7 +14,9 @@ import {
   createConversation,
   getConversation,
   listConversations,
+  persistMessage,
 } from '../../hooks/conversation'
+import { conversationDisplayTitle, firstWords } from '../../utils/titleFromMessage'
 import { useAutoSave } from '@/app/hooks/useAutoSave'
 import type { TrackerFormAction } from '@/app/components/tracker-display/types'
 import type { GridDataSnapshot } from '../TrackerPanel'
@@ -59,7 +61,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const [builderChatWindows, setBuilderChatWindows] = useState<ChatWindow[]>(() =>
     trackerId && initialConversationId && !isDataPage
       ? [{ id: initialConversationId, title: 'New chat' }]
-      : [{ id: 'builder-1', title: 'Chat 1' }]
+      : [{ id: 'builder-1', title: 'New chat' }]
   )
   const [activeBuilderWindowId, setActiveBuilderWindowId] = useState<string>(() =>
     trackerId && initialConversationId && !isDataPage ? initialConversationId : 'builder-1'
@@ -67,10 +69,60 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const [analystChatWindows, setAnalystChatWindows] = useState<ChatWindow[]>(() =>
     trackerId && initialConversationId && isDataPage
       ? [{ id: initialConversationId, title: 'New chat' }]
-      : [{ id: 'analyst-1', title: 'Chat 1' }]
+      : [{ id: 'analyst-1', title: 'New chat' }]
   )
   const [activeAnalystWindowId, setActiveAnalystWindowId] = useState<string>(() =>
     trackerId && initialConversationId && isDataPage ? initialConversationId : 'analyst-1'
+  )
+  const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
+  const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
+
+  const onBuilderConversationCreate = useCallback(
+    async (userMessage: string): Promise<{ id: string; title: string } | null> => {
+      if (!trackerId || !activeBuilderWindowId?.startsWith('draft-')) return null
+      const title = firstWords(userMessage, 5)
+      try {
+        const created = await createConversation(trackerId, 'BUILDER', title)
+        await persistMessage(created.id, { role: 'USER', content: userMessage })
+        const draftId = activeBuilderWindowId
+        setBuilderChatWindows((prev) =>
+          prev.map((w) =>
+            w.id === draftId ? { id: created.id, title } : w
+          )
+        )
+        setActiveBuilderWindowId(created.id)
+        builderWindowStateRef.current[created.id] =
+          builderWindowStateRef.current[draftId] ?? { messages: [] }
+        return { id: created.id, title: created.title ?? title }
+      } catch {
+        return null
+      }
+    },
+    [trackerId, activeBuilderWindowId]
+  )
+
+  const onAnalystConversationCreate = useCallback(
+    async (userMessage: string): Promise<{ id: string; title: string } | null> => {
+      if (!trackerId || !activeAnalystWindowId?.startsWith('draft-')) return null
+      const title = firstWords(userMessage, 5)
+      try {
+        const created = await createConversation(trackerId, 'ANALYST', title)
+        await persistMessage(created.id, { role: 'USER', content: userMessage })
+        const draftId = activeAnalystWindowId
+        setAnalystChatWindows((prev) =>
+          prev.map((w) =>
+            w.id === draftId ? { id: created.id, title } : w
+          )
+        )
+        setActiveAnalystWindowId(created.id)
+        analystWindowStateRef.current[created.id] =
+          analystWindowStateRef.current[draftId] ?? { messages: [] }
+        return { id: created.id, title: created.title ?? title }
+      } catch {
+        return null
+      }
+    },
+    [trackerId, activeAnalystWindowId]
   )
 
   const {
@@ -102,16 +154,32 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
-    conversationId: isDataPage ? undefined : (activeBuilderWindowId || initialConversationId) ?? undefined,
+    conversationId: isDataPage
+      ? undefined
+      : (activeBuilderWindowId?.startsWith('draft-')
+        ? undefined
+        : (activeBuilderWindowId || initialConversationId) ?? undefined),
     initialMessages: isDataPage ? undefined : initialMessages,
+    onConversationCreate:
+      !isDataPage && activeBuilderWindowId?.startsWith('draft-')
+        ? onBuilderConversationCreate
+        : undefined,
   })
 
   const analyst = useAnalystChat({
     trackerId: trackerId ?? undefined,
-    conversationId: isDataPage ? (activeAnalystWindowId || initialConversationId) ?? undefined : undefined,
+    conversationId: isDataPage
+      ? (activeAnalystWindowId?.startsWith('draft-')
+        ? undefined
+        : (activeAnalystWindowId || initialConversationId) ?? undefined)
+      : undefined,
     initialMessages: isDataPage ? initialMessages : undefined,
     trackerSchema: (initialSchema ?? activeTrackerData) as TrackerResponse | null,
     trackerDataRef,
+    onConversationCreate:
+      isDataPage && activeAnalystWindowId?.startsWith('draft-')
+        ? onAnalystConversationCreate
+        : undefined,
   })
 
   const isDesktop = useIsDesktop()
@@ -136,7 +204,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
   const setSaveState = trackerNavCtx?.setSaveState ?? null
-  const saveDataRef = useRef<() => Promise<void>>(async () => {})
+  const saveDataRef = useRef<() => Promise<void>>(async () => { })
   const setTrackerNavRef = useRef(setTrackerNav)
   setTrackerNavRef.current = setTrackerNav
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
@@ -145,8 +213,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const saveStatusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [schemaSaveStatus, setSchemaSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [schemaSaveError, setSchemaSaveError] = useState<string | null>(null)
-  const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
-  const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
 
   useEffect(() => {
     formStatusRef.current = currentFormStatus
@@ -217,10 +283,14 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         if (list.length === 0) {
           const created = await createConversation(trackerIdStr, 'BUILDER')
           if (cancelled) return
-          setBuilderChatWindows([{ id: created.id, title: created.title ?? 'New chat' }])
+          setBuilderChatWindows([
+            { id: created.id, title: conversationDisplayTitle(created.title) },
+          ])
           setActiveBuilderWindowId(created.id)
         } else {
-          setBuilderChatWindows(list.map((c) => ({ id: c.id, title: c.title ?? 'New chat' })))
+          setBuilderChatWindows(
+            list.map((c) => ({ id: c.id, title: conversationDisplayTitle(c.title) }))
+          )
           const hasInitial = initialConversationId && list.some((c) => c.id === initialConversationId)
           if (hasInitial && initialConversationId) setActiveBuilderWindowId(initialConversationId)
           else setActiveBuilderWindowId((prev) => (list.some((c) => c.id === prev) ? prev : list[0].id))
@@ -246,10 +316,14 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         if (list.length === 0) {
           const created = await createConversation(trackerIdStr, 'ANALYST')
           if (cancelled) return
-          setAnalystChatWindows([{ id: created.id, title: created.title ?? 'New chat' }])
+          setAnalystChatWindows([
+            { id: created.id, title: conversationDisplayTitle(created.title) },
+          ])
           setActiveAnalystWindowId(created.id)
         } else {
-          setAnalystChatWindows(list.map((c) => ({ id: c.id, title: c.title ?? 'New chat' })))
+          setAnalystChatWindows(
+            list.map((c) => ({ id: c.id, title: conversationDisplayTitle(c.title) }))
+          )
           const hasInitial = initialConversationId && list.some((c) => c.id === initialConversationId)
           if (hasInitial && initialConversationId) setActiveAnalystWindowId(initialConversationId)
           else setActiveAnalystWindowId((prev) => (list.some((c) => c.id === prev) ? prev : list[0].id))
@@ -532,6 +606,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         setMessages(cached.messages)
         return
       }
+      if (id.startsWith('draft-')) {
+        setMessages([])
+        return
+      }
       if (trackerId) {
         try {
           const data = await getConversation(trackerId, id, 'BUILDER')
@@ -555,27 +633,13 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     [setMessages, trackerId]
   )
 
-  const handleBuilderWindowCreate = useCallback(async () => {
+  const handleBuilderWindowCreate = useCallback(() => {
     if (trackerId) {
-      try {
-        const created = await createConversation(trackerId, 'BUILDER')
-        setBuilderChatWindows((prev) => [
-          ...prev,
-          { id: created.id, title: created.title ?? 'New chat' },
-        ])
-        builderWindowStateRef.current[created.id] = { messages: [] }
-        setActiveBuilderWindowId(created.id)
-        setMessages([])
-      } catch {
-        setBuilderChatWindows((prev) => {
-          const index = prev.length + 1
-          const id = `builder-${index}`
-          builderWindowStateRef.current[id] = { messages: [] }
-          setActiveBuilderWindowId(id)
-          setMessages([])
-          return [...prev, { id, title: `Chat ${index}` }]
-        })
-      }
+      const draftId = `draft-builder-${Date.now()}`
+      setBuilderChatWindows((prev) => [...prev, { id: draftId, title: 'New chat' }])
+      builderWindowStateRef.current[draftId] = { messages: [] }
+      setActiveBuilderWindowId(draftId)
+      setMessages([])
     } else {
       setBuilderChatWindows((prev) => {
         const index = prev.length + 1
@@ -583,7 +647,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         builderWindowStateRef.current[id] = { messages: [] }
         setActiveBuilderWindowId(id)
         setMessages([])
-        return [...prev, { id, title: `Chat ${index}` }]
+        return [...prev, { id, title: 'New chat' }]
       })
     }
   }, [setMessages, trackerId])
@@ -604,6 +668,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       const cached = analystWindowStateRef.current[id]
       if (cached) {
         analyst.setMessages(cached.messages)
+        return
+      }
+      if (id.startsWith('draft-')) {
+        analyst.setMessages([])
         return
       }
       if (trackerId) {
@@ -627,27 +695,13 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     [analyst, trackerId]
   )
 
-  const handleAnalystWindowCreate = useCallback(async () => {
+  const handleAnalystWindowCreate = useCallback(() => {
     if (trackerId) {
-      try {
-        const created = await createConversation(trackerId, 'ANALYST')
-        setAnalystChatWindows((prev) => [
-          ...prev,
-          { id: created.id, title: created.title ?? 'New chat' },
-        ])
-        analystWindowStateRef.current[created.id] = { messages: [] }
-        setActiveAnalystWindowId(created.id)
-        analyst.setMessages([])
-      } catch {
-        setAnalystChatWindows((prev) => {
-          const index = prev.length + 1
-          const id = `analyst-${index}`
-          analystWindowStateRef.current[id] = { messages: [] }
-          setActiveAnalystWindowId(id)
-          analyst.setMessages([])
-          return [...prev, { id, title: `Chat ${index}` }]
-        })
-      }
+      const draftId = `draft-analyst-${Date.now()}`
+      setAnalystChatWindows((prev) => [...prev, { id: draftId, title: 'New chat' }])
+      analystWindowStateRef.current[draftId] = { messages: [] }
+      setActiveAnalystWindowId(draftId)
+      analyst.setMessages([])
     } else {
       setAnalystChatWindows((prev) => {
         const index = prev.length + 1
@@ -655,7 +709,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         analystWindowStateRef.current[id] = { messages: [] }
         setActiveAnalystWindowId(id)
         analyst.setMessages([])
-        return [...prev, { id, title: `Chat ${index}` }]
+        return [...prev, { id, title: 'New chat' }]
       })
     }
   }, [analyst, trackerId])
@@ -755,6 +809,14 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       : allowSchemaAutoSave
         ? schemaSaveError
         : null
+    const showFormActions =
+      !allowSchemaAutoSave &&
+      !allowAutoSave &&
+      (isDataPage || (canEditSchema && editMode))
+    const showActionsConfig =
+      canEditSchema &&
+      editMode &&
+      (!allowSchemaAutoSave || !autoSave)
     setSaveState({
       onSaveTracker: exposeManualTrackerSave ? handleSaveTracker : null,
       onSaveData: showManualSaveData ? () => saveDataRef.current() : null,
@@ -763,15 +825,16 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       autosaveEnabled: autosaveEnabledForNav,
       dataSaveStatus: navDataSaveStatus,
       dataSaveError: navDataSaveError,
-      formActions: isDataPage || (canEditSchema && editMode) ? formActions : [],
+      formActions: showFormActions ? formActions : [],
       currentFormStatus: isDataPage ? effectiveCurrentFormStatus : null,
       previousFormStatus: isDataPage ? previousFormStatus : null,
       visibleFormActions: isDataPage ? visibleFormActions : [],
       formActionSaving: isDataPage ? formActionSaving : false,
       formActionError: isDataPage ? formActionError : null,
-      canConfigureFormActions: canEditSchema && editMode,
-      onFormActionsChange: canEditSchema && editMode ? handleFormActionsChange : null,
+      canConfigureFormActions: showActionsConfig,
+      onFormActionsChange: showActionsConfig ? handleFormActionsChange : null,
       onFormActionSelect: isDataPage ? handleFormActionSelect : null,
+      titleEditable: !isDataPage && canEditSchema && editMode,
     })
   }, [
     setSaveState,
@@ -794,6 +857,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     formActionError,
     canEditSchema,
     editMode,
+    autoSave,
     handleFormActionsChange,
     isDataPage,
     handleFormActionSelect,
@@ -819,6 +883,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         canConfigureFormActions: false,
         onFormActionsChange: null,
         onFormActionSelect: null,
+        titleEditable: false,
       })
   }, [setSaveState])
 
@@ -985,57 +1050,57 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const chatPanelProps = isDataPage
     ? {
-        showStatusPanel: Boolean(analyst.error),
-        statusPanelProps: chatStatusPanelProps,
-        input: analyst.input,
-        setInput: analyst.setInput,
-        isFocused: analyst.isFocused,
-        setIsFocused: analyst.setIsFocused,
-        handleSubmit: analyst.handleSubmit,
-        applySuggestion: analyst.applySuggestion,
-        isLoading: analyst.isLoading,
-        isChatEmpty: analyst.isChatEmpty,
-        textareaRef: analyst.textareaRef,
-        messages: analyst.messages,
-        setMessageThinkingOpen: analyst.setMessageThinkingOpen,
-        messagesEndRef: analyst.messagesEndRef,
-        object: analyst.object,
-        onViewTracker: undefined,
-        activeTrackerMessageIndex: undefined,
-        toolCalls: undefined,
-        isResolvingExpressions: false,
-        mode: 'data' as const,
-        conversationWindows: analystChatWindows,
-        activeConversationId: activeAnalystWindowId,
-        onSelectConversation: handleAnalystWindowSelect,
-        onCreateConversation: handleAnalystWindowCreate,
-      }
+      showStatusPanel: Boolean(analyst.error),
+      statusPanelProps: chatStatusPanelProps,
+      input: analyst.input,
+      setInput: analyst.setInput,
+      isFocused: analyst.isFocused,
+      setIsFocused: analyst.setIsFocused,
+      handleSubmit: analyst.handleSubmit,
+      applySuggestion: analyst.applySuggestion,
+      isLoading: analyst.isLoading,
+      isChatEmpty: analyst.isChatEmpty,
+      textareaRef: analyst.textareaRef,
+      messages: analyst.messages,
+      setMessageThinkingOpen: analyst.setMessageThinkingOpen,
+      messagesEndRef: analyst.messagesEndRef,
+      object: analyst.object,
+      onViewTracker: undefined,
+      activeTrackerMessageIndex: undefined,
+      toolCalls: undefined,
+      isResolvingExpressions: false,
+      mode: 'data' as const,
+      conversationWindows: analystChatWindows,
+      activeConversationId: activeAnalystWindowId,
+      onSelectConversation: handleAnalystWindowSelect,
+      onCreateConversation: handleAnalystWindowCreate,
+    }
     : {
-        showStatusPanel,
-        statusPanelProps: chatStatusPanelProps,
-        input,
-        setInput,
-        isFocused,
-        setIsFocused,
-        handleSubmit: handleSubmitWithReset,
-        applySuggestion,
-        isLoading,
-        isChatEmpty,
-        textareaRef,
-        messages,
-        setMessageThinkingOpen,
-        messagesEndRef,
-        object,
-        onViewTracker: handleViewHistoricalTracker,
-        activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
-        toolCalls,
-        isResolvingExpressions,
-        mode: 'schema' as const,
-        conversationWindows: builderChatWindows,
-        activeConversationId: activeBuilderWindowId,
-        onSelectConversation: handleBuilderWindowSelect,
-        onCreateConversation: handleBuilderWindowCreate,
-      }
+      showStatusPanel,
+      statusPanelProps: chatStatusPanelProps,
+      input,
+      setInput,
+      isFocused,
+      setIsFocused,
+      handleSubmit: handleSubmitWithReset,
+      applySuggestion,
+      isLoading,
+      isChatEmpty,
+      textareaRef,
+      messages,
+      setMessageThinkingOpen,
+      messagesEndRef,
+      object,
+      onViewTracker: handleViewHistoricalTracker,
+      activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
+      toolCalls,
+      isResolvingExpressions,
+      mode: 'schema' as const,
+      conversationWindows: builderChatWindows,
+      activeConversationId: activeBuilderWindowId,
+      onSelectConversation: handleBuilderWindowSelect,
+      onCreateConversation: handleBuilderWindowCreate,
+    }
 
   return {
     // Layout

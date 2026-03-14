@@ -1,6 +1,10 @@
 import { badRequest, jsonOk, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { listConversationsForTracker } from '@/lib/repositories'
+import {
+  firstWords,
+  isLegacyConversationTitle,
+} from '@/lib/utils/titleFromMessage'
 
 type ConversationMode = 'BUILDER' | 'ANALYST'
 
@@ -41,10 +45,22 @@ export async function GET(
 
   return jsonOk({
     conversations: conversations.map((c) => {
-      const row = c as unknown as { id: string; title: string | null; mode: ConversationMode; createdAt: Date }
+      const row = c as unknown as {
+        id: string
+        title: string | null
+        mode: ConversationMode
+        createdAt: Date
+        messages: Array<{ content: string }>
+      }
+      const storedTitle = row.title
+      const firstUserContent = row.messages?.[0]?.content
+      const title =
+        isLegacyConversationTitle(storedTitle) && firstUserContent
+          ? firstWords(firstUserContent, 5)
+          : storedTitle
       return {
         id: row.id,
-        title: row.title,
+        title,
         mode: row.mode,
         createdAt: row.createdAt,
       }

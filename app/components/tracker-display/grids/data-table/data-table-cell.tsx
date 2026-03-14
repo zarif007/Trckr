@@ -102,7 +102,7 @@ export function DataTableCell<TData>({
         </div>
       ) : fieldInfo ? (
         isHidden ? null : (
-          <div className={cn((isMultiselect || isFieldMappings) && "min-w-0 overflow-hidden w-full")}>
+          <div className={cn((isMultiselect || isFieldMappings) && "min-w-0 overflow-hidden w-full", "h-full min-h-0")}>
             <DataTableInput
               value={value}
               onChange={handleUpdate}
@@ -114,6 +114,7 @@ export function DataTableCell<TData>({
               optionsGridFields={fieldInfo.optionsGridFields}
               getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
               className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
+              compact
             />
           </div>
         )

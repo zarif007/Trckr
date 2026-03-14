@@ -19,7 +19,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { TeamMembersDialog } from './teams'
-import { useTrackerNav } from '@/app/tracker/TrackerNavContext'
+import { initialSaveState, useTrackerNav } from '@/app/tracker/TrackerNavContext'
 import type { TrackerFormAction } from '@/app/components/tracker-display/types'
 
 const DEFAULT_TRACKER_NAME = 'Untitled tracker'
@@ -130,22 +130,8 @@ export default function TrackerNavBar() {
     canConfigureFormActions,
     onFormActionsChange,
     onFormActionSelect,
-  } = ctx?.saveState ?? {
-    onSaveTracker: null,
-    onSaveData: null,
-    isAgentBuilding: false,
-    primaryNavAction: null,
-    autosaveEnabled: false,
-    dataSaveStatus: 'idle' as const,
-    dataSaveError: null as string | null,
-    formActions: [] as TrackerFormAction[],
-    currentFormStatus: null as string | null,
-    formActionSaving: false,
-    formActionError: null as string | null,
-    canConfigureFormActions: false,
-    onFormActionsChange: null as ((actions: TrackerFormAction[]) => void) | null,
-    onFormActionSelect: null as ((action: TrackerFormAction) => void | Promise<void>) | null,
-  }
+    titleEditable: navTitleEditable = false,
+  } = ctx?.saveState ?? initialSaveState
   const [actionsConfigOpen, setActionsConfigOpen] = useState(false)
   const [actionsDraft, setActionsDraft] = useState<TrackerFormAction[]>([])
   const [savingTracker, setSavingTracker] = useState(false)
@@ -171,10 +157,12 @@ export default function TrackerNavBar() {
     if (!nextAction) return -1
     return formActions.findIndex((action) => action.id === nextAction.id)
   }, [formActions, nextAction])
-  const visibleStatusTag =
-    nextActionIndex <= 0
-      ? DRAFT_STATUS_TAG
-      : formActions[nextActionIndex - 1]?.statusTag.trim() || DRAFT_STATUS_TAG
+  // Current status to show beside title: the step we're at (so after Submit we still show "Submitted")
+  const currentStatusTag =
+    activeActionIndex >= 0
+      ? (formActions[activeActionIndex]?.statusTag.trim() || DRAFT_STATUS_TAG)
+      : DRAFT_STATUS_TAG
+  const showFormStatus = formActions.length > 0
   const hasInvalidActionDraft = useMemo(
     () =>
       actionsDraft.length === 0 ||
@@ -310,11 +298,24 @@ export default function TrackerNavBar() {
             >
               <ArrowLeft className="h-4 w-4" strokeWidth={2} />
             </button>
-            {trackerNav && (
-              <TrackerNameEdit
-                name={trackerNav.name}
-                onNameChange={trackerNav.onNameChange}
-              />
+            {trackerNav &&
+              (navTitleEditable ? (
+                <TrackerNameEdit
+                  name={trackerNav.name}
+                  onNameChange={trackerNav.onNameChange}
+                />
+              ) : (
+                <span
+                  className="min-w-0 max-w-[min(50vw,360px)] truncate px-1.5 py-0.5 text-base font-bold text-foreground"
+                  title={trackerNav.name || DEFAULT_TRACKER_NAME}
+                >
+                  {trackerNav.name || DEFAULT_TRACKER_NAME}
+                </span>
+              ))}
+            {showFormStatus && (
+              <Badge variant="secondary" className="h-7 shrink-0 px-2 text-[11px]">
+                {currentStatusTag}
+              </Badge>
             )}
           </div>
 
@@ -351,9 +352,6 @@ export default function TrackerNavBar() {
             )}
             {nextAction && onFormActionSelect && (
               <div className="relative flex items-center gap-1.5">
-                <Badge variant="secondary" className="h-7 px-2 text-[11px]">
-                  {visibleStatusTag}
-                </Badge>
                 <Button
                   variant="outline"
                   size="sm"
@@ -467,7 +465,7 @@ export default function TrackerNavBar() {
                 </DialogContent>
               </Dialog>
             )}
-            {!nextAction && hasLegacySave && !onFormActionSelect && (
+            {!nextAction && hasLegacySave && !onFormActionSelect && !autosaveEnabled && (
               <Button
                 variant="outline"
                 size="sm"

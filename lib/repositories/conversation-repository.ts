@@ -70,6 +70,12 @@ export async function listConversationsForTracker(
       title: true,
       mode: true,
       createdAt: true,
+      messages: {
+        where: { role: Role.USER },
+        orderBy: { createdAt: 'asc' },
+        take: 1,
+        select: { content: true },
+      },
     },
   })
 }

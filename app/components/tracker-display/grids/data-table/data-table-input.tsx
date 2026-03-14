@@ -39,6 +39,8 @@ interface DataTableInputProps {
   getBindingUpdatesFromRow?: (row: Record<string, unknown>) => Record<string, unknown>
   /** When true, used inside a form (e.g. add/edit dialog); multiselect uses same styling as normal select. */
   formField?: boolean
+  /** When true, used in table cell; textarea uses fixed row height and does not expand the row. */
+  compact?: boolean
 }
 
 /** Options passed when onChange is called after adding an option (so dialog can apply auto-populate). */
@@ -61,6 +63,7 @@ export function DataTableInput({
   optionsGridFields,
   getBindingUpdatesFromRow,
   formField = false,
+  compact = false,
 }: DataTableInputProps) {
   const inlineInputClass = `${FIELD_INNER_INPUT_BASE_CLASS} h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
@@ -259,7 +262,12 @@ export function DataTableInput({
               setTimeout(() => onChange(nextValue), 0)
             }
           }}
-          className={cn(inlineInputClass, 'min-h-[64px] py-1', className)}
+          className={cn(
+            inlineInputClass,
+            'py-1',
+            compact ? 'min-h-0 h-10 resize-none overflow-auto' : 'min-h-[64px]',
+            className
+          )}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />
@@ -563,7 +571,12 @@ export function DataTableInput({
                 .filter(Boolean)
             )
           }
-          className={cn(inlineInputClass, 'min-h-[64px] py-1', className)}
+          className={cn(
+            inlineInputClass,
+            'py-1',
+            compact ? 'min-h-0 h-10 resize-none overflow-auto' : 'min-h-[64px]',
+            className
+          )}
           autoFocus={autoFocus}
           disabled={isDisabled}
           placeholder="One file URL or name per line"

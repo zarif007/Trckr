@@ -2,7 +2,15 @@
 
 import { useState, useMemo, useCallback, memo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Plus, Settings2 } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -110,6 +118,7 @@ function TrackerKanbanGridInner({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
+  const [cardFieldVisibility, setCardFieldVisibility] = useState<Record<string, boolean>>({})
 
   const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
   const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
@@ -137,6 +146,24 @@ function TrackerKanbanGridInner({
   const fieldOrder = kanbanState?.fieldOrder ?? []
   const kanbanFields = kanbanState?.kanbanFields ?? EMPTY_FIELDS
   const rows = kanbanState?.rows ?? EMPTY_ROWS
+
+  // Default: first 5 card fields visible (like data table column visibility)
+  const effectiveCardVisibility = useMemo(() => {
+    const next: Record<string, boolean> = { ...cardFieldVisibility }
+    cardFieldsDisplay.forEach((f, i) => {
+      if (next[f.id] === undefined) next[f.id] = i < 5
+    })
+    return next
+  }, [cardFieldsDisplay, cardFieldVisibility])
+
+  const visibleCardFields = useMemo(
+    () => cardFieldsDisplay.filter((f) => effectiveCardVisibility[f.id]).slice(0, 5),
+    [cardFieldsDisplay, effectiveCardVisibility]
+  )
+
+  const toggleCardFieldVisibility = useCallback((fieldId: string, visible: boolean) => {
+    setCardFieldVisibility((prev) => ({ ...prev, [fieldId]: visible }))
+  }, [])
 
   const groupedCards = useMemo(() => {
     const map = new Map<string, Array<Record<string, unknown> & { _originalIdx: number }>>()
@@ -301,44 +328,95 @@ function TrackerKanbanGridInner({
 
   const content = (
     <div className="w-full space-y-4">
-      {addable && (
+      {(addable || cardFieldsDisplay.length > 0) && (
         <>
-          <div className="flex justify-end gap-2">
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => setShowAddDialog(true)}
-              className="font-medium"
-            >
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Entry
-            </Button>
+          <div className="flex justify-end items-center gap-2">
+            {cardFieldsDisplay.length > 0 && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 p-0 hover:bg-muted text-muted-foreground hover:text-foreground"
+                    aria-label="Card preview fields"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent
+                  className="sm:max-w-[300px]"
+                  onInteractOutside={(e) => e.preventDefault()}
+                >
+                  <DialogHeader>
+                    <DialogTitle>Card preview fields</DialogTitle>
+                  </DialogHeader>
+                  <p className="text-xs text-muted-foreground -mt-2">
+                    Choose which fields to show on cards (up to 5).
+                  </p>
+                  <div className="py-2 max-h-[50vh] overflow-y-auto pr-2 space-y-2">
+                    {cardFieldsDisplay.map((field) => (
+                      <div
+                        key={field.id}
+                        className="flex items-center space-x-2"
+                      >
+                        <Checkbox
+                          id={`card-field-${field.id}`}
+                          checked={effectiveCardVisibility[field.id] ?? false}
+                          onCheckedChange={(checked) =>
+                            toggleCardFieldVisibility(field.id, !!checked)
+                          }
+                        />
+                        <label
+                          htmlFor={`card-field-${field.id}`}
+                          className="text-sm font-medium leading-none cursor-pointer flex-1"
+                        >
+                          {field.label}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            {addable && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={() => setShowAddDialog(true)}
+                className="font-medium"
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Entry
+              </Button>
+            )}
           </div>
 
-          <EntryFormDialog
-            open={showAddDialog}
-            onOpenChange={setShowAddDialog}
-            title="Add New Entry"
-            submitLabel="Add Entry"
-            fieldMetadata={fieldMetadata}
-            fieldOrder={fieldOrder}
-            initialValues={
-              groupByFieldId && groups.length > 0
-                ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
-                : {}
-            }
-            onSave={(values) => {
-              onAddEntry(values)
-              setShowAddDialog(false)
-            }}
-            onSaveAnother={(values) => onAddEntry(values)}
-            getBindingUpdates={getBindingUpdates}
-            getFieldOverrides={(values, fieldId) =>
-              resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
-            }
-            gridId={grid.id}
-            calculations={calculations}
-          />
+          {addable && (
+            <EntryFormDialog
+              open={showAddDialog}
+              onOpenChange={setShowAddDialog}
+              title="Add New Entry"
+              submitLabel="Add Entry"
+              fieldMetadata={fieldMetadata}
+              fieldOrder={fieldOrder}
+              initialValues={
+                groupByFieldId && groups.length > 0
+                  ? { [groupByFieldId]: (groups.find((g) => g.id !== '') ?? groups[0])?.id ?? '' }
+                  : {}
+              }
+              onSave={(values) => {
+                onAddEntry(values)
+                setShowAddDialog(false)
+              }}
+              onSaveAnother={(values) => onAddEntry(values)}
+              getBindingUpdates={getBindingUpdates}
+              getFieldOverrides={(values, fieldId) =>
+                resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values)[fieldId]
+              }
+              gridId={grid.id}
+              calculations={calculations}
+            />
+          )}
         </>
       )}
 
@@ -373,10 +451,10 @@ function TrackerKanbanGridInner({
 
           return (
             <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
-              <div className="bg-muted/70 rounded-md p-4 mb-4">
-                <h3 className="font-semibold text-foreground flex items-center justify-between">
-                  {group.label}
-                  <span className="text-xs text-muted-foreground bg-background px-2 py-0.5 rounded-full">
+              <div className="bg-muted/50 border border-border/40 rounded-lg px-4 py-3 mb-3">
+                <h3 className="font-medium text-foreground text-sm flex items-center justify-between gap-2">
+                  <span className="truncate">{group.label || 'Uncategorized'}</span>
+                  <span className="text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-md shrink-0 tabular-nums">
                     {cardsInGroup.length}
                   </span>
                 </h3>
@@ -399,7 +477,7 @@ function TrackerKanbanGridInner({
                               key={sortId}
                               id={sortId}
                               card={card}
-                              cardFields={cardFieldsDisplay}
+                              cardFields={visibleCardFields}
                               gridId={grid.id}
                               gridData={gridDataForKanban}
                               dependsOn={dependsOnForGrid}
@@ -425,7 +503,7 @@ function TrackerKanbanGridInner({
                     <KanbanCard
                       key={`${group.id}-${card._originalIdx ?? 'row'}`}
                       card={card}
-                      cardFields={cardFieldsDisplay}
+                      cardFields={visibleCardFields}
                       gridId={grid.id}
                       gridData={gridDataForKanban}
                       dependsOn={dependsOnForGrid}
@@ -464,7 +542,7 @@ function TrackerKanbanGridInner({
         {activeCard ? (
           <KanbanCard
             card={activeCard as Record<string, unknown> & { _originalIdx?: number }}
-            cardFields={cardFieldsDisplay}
+            cardFields={visibleCardFields}
             gridId={grid.id}
             gridData={gridDataForKanban}
             dependsOn={dependsOnForGrid}
