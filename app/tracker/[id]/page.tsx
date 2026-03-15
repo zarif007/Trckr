@@ -147,6 +147,7 @@ function TrackerByIdContent({
   initialBranchName,
   onBranchChange,
   onBack,
+  conversationIdParam,
 }: {
   id: string
   isNew: boolean
@@ -154,6 +155,7 @@ function TrackerByIdContent({
   initialBranchName: string | null
   onBranchChange: (branchName: string) => void
   onBack: () => void
+  conversationIdParam: string | null
 }) {
   const initial = use(getTrackerResource(id, instanceId))
   const [state, setState] = useState<TrackerResource>(initial)
@@ -168,7 +170,10 @@ function TrackerByIdContent({
     let cancelled = false
     async function fetchConversation() {
       try {
-        const res = await fetch(`/api/trackers/${id}/conversation?mode=ANALYST`)
+        const url = conversationIdParam
+          ? `/api/trackers/${id}/conversation?mode=ANALYST&conversationId=${conversationIdParam}`
+          : `/api/trackers/${id}/conversation?mode=ANALYST`
+        const res = await fetch(url)
         if (res.status === 404) {
           if (!cancelled) setConversation({ conversationId: null, messages: [] })
           return
@@ -192,7 +197,7 @@ function TrackerByIdContent({
     return () => {
       cancelled = true
     }
-  }, [id, state.tracker])
+  }, [id, state.tracker, conversationIdParam])
 
   const handleSaveTracker = useCallback(
     async (schema: TrackerResponse) => {
@@ -313,6 +318,7 @@ export default function TrackerByIdPage() {
   const isNew = searchParams.get('new') === 'true'
   const instanceId = searchParams.get('instanceId')
   const branchFromUrl = searchParams.get('branch')
+  const conversationIdParam = searchParams.get('conversationId')
 
   const handleBranchChange = useCallback(
     (branchName: string) => {
@@ -358,6 +364,7 @@ export default function TrackerByIdPage() {
           initialBranchName={branchFromUrl}
           onBranchChange={handleBranchChange}
           onBack={handleBack}
+          conversationIdParam={conversationIdParam}
         />
       </TrackerErrorBoundary>
     </Suspense>

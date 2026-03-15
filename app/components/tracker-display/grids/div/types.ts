@@ -63,4 +63,6 @@ export interface DivGridFieldCellProps {
   openAddOption: (fieldId: string, currentValue?: unknown) => void
   datePickerOpen: boolean
   onDatePickerOpenChange: (open: boolean) => void
+  /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
+  optionsSourceLabel?: string
 }

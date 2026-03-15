@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Plus } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Database, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import {
@@ -204,6 +204,8 @@ interface SearchableSelectProps {
   onAddOptionClick?: () => void
   /** Label for the add-option action. Default "Add option..." */
   addOptionLabel?: string
+  /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
+  optionsSourceLabel?: string
 }
 
 function SearchableSelect({
@@ -218,10 +220,18 @@ function SearchableSelect({
   size = "default",
   onAddOptionClick,
   addOptionLabel = "Add option...",
+  optionsSourceLabel,
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false)
   const [searchValue, setSearchValue] = React.useState("")
   const triggerRef = React.useRef<HTMLDivElement>(null)
+
+  const displayEmptyMessage =
+    options.length === 0
+      ? optionsSourceLabel
+        ? `No data. From table: ${optionsSourceLabel}`
+        : "No data."
+      : emptyMessage
 
   const displayLabel = React.useMemo(() => {
     if (!value || value === "__empty__") return null
@@ -314,8 +324,27 @@ function SearchableSelect({
       >
         <Command shouldFilter={false}>
           <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
+            <CommandEmpty>{displayEmptyMessage}</CommandEmpty>
             <CommandGroup>
+              {options.length === 0 ? (
+                <CommandItem
+                  value="__no_data__"
+                  disabled
+                  className="cursor-default pointer-events-none py-3"
+                >
+                  <div className="flex flex-col gap-0.5 w-full py-1">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Database className="size-4 shrink-0 opacity-60" />
+                      <span className="font-medium">No data</span>
+                    </span>
+                    {optionsSourceLabel ? (
+                      <span className="text-xs text-muted-foreground/80 pl-6">
+                        From table: {optionsSourceLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                </CommandItem>
+              ) : null}
               {filteredOptions.map((option) => {
                 const optValue = typeof option === "string" ? option : option.value
                 const optLabel = typeof option === "string" ? option : option.label

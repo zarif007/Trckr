@@ -242,6 +242,7 @@ export function EntryFormDialog({
                   onAddOption={fieldInfo.onAddOption}
                   optionsGridFields={fieldInfo.optionsGridFields}
                   getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
+                  optionsSourceLabel={fieldInfo.optionsGridName}
                   className="h-10 w-full min-w-0 px-3 bg-transparent border-0 outline-none ring-0 focus:ring-0 focus-visible:ring-0 rounded-md"
                   autoFocus={index === 0}
                 />

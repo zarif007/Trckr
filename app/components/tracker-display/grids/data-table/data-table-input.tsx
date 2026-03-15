@@ -41,6 +41,8 @@ interface DataTableInputProps {
   formField?: boolean
   /** When true, used in table cell; textarea uses fixed row height and does not expand the row. */
   compact?: boolean
+  /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
+  optionsSourceLabel?: string
 }
 
 /** Options passed when onChange is called after adding an option (so dialog can apply auto-populate). */
@@ -64,6 +66,7 @@ export function DataTableInput({
   getBindingUpdatesFromRow,
   formField = false,
   compact = false,
+  optionsSourceLabel,
 }: DataTableInputProps) {
   const inlineInputClass = `${FIELD_INNER_INPUT_BASE_CLASS} h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`
 
@@ -306,6 +309,7 @@ export function DataTableInput({
             disabled={isDisabled}
             onAddOptionClick={onAddOption ? () => openAddOptionDialog('select') : undefined}
             addOptionLabel="Add option..."
+            optionsSourceLabel={optionsSourceLabel}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog
@@ -339,6 +343,7 @@ export function DataTableInput({
             "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
           )}
           disabled={isDisabled}
+          optionsSourceLabel={optionsSourceLabel}
         />
       )
     }
@@ -354,6 +359,7 @@ export function DataTableInput({
             className={formField ? cn(className, 'w-full text-left shadow-none dark:bg-transparent') : cn(inlineInputClass, className)}
             disabled={isDisabled}
             onAddOptionClick={type === 'multiselect' && onAddOption ? () => openAddOptionDialog('multiselect') : undefined}
+            optionsSourceLabel={optionsSourceLabel}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog
@@ -398,6 +404,7 @@ export function DataTableInput({
                 searchPlaceholder="From..."
                 className={cn(inlineInputClass, 'flex-1 min-w-[80px]')}
                 disabled={isDisabled}
+                optionsSourceLabel={optionsSourceLabel}
               />
               <span className="text-muted-foreground shrink-0">→</span>
               <SearchableSelect
@@ -408,6 +415,7 @@ export function DataTableInput({
                 searchPlaceholder="To..."
                 className={cn(inlineInputClass, 'flex-1 min-w-[80px]')}
                 disabled={isDisabled}
+                optionsSourceLabel={optionsSourceLabel}
               />
               <Button
                 type="button"
@@ -505,6 +513,7 @@ export function DataTableInput({
             "text-left px-2 border-0 shadow-none bg-transparent focus:ring-0 focus:ring-offset-0 h-full w-full"
           )}
           disabled={isDisabled}
+          optionsSourceLabel={optionsSourceLabel}
         />
       )
     }
@@ -542,6 +551,7 @@ export function DataTableInput({
             isInline={!formField}
             className={formField ? cn(className, 'w-full text-left shadow-none dark:bg-transparent') : cn(inlineInputClass, className)}
             disabled={isDisabled}
+            optionsSourceLabel={optionsSourceLabel}
           />
         )
       }

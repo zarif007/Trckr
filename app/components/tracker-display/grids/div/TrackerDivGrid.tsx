@@ -272,6 +272,20 @@ function TrackerDivGridInner({
     validations,
     onAddEntryToGrid,
   ])
+  const optionsGridNameByFieldId = useMemo(() => {
+    const map = new Map<string, string>()
+    const grids = trackerContext?.grids
+    if (!grids) return map
+    optionFieldIds.forEach((fieldId) => {
+      const binding = bindingByFieldId.get(fieldId)
+      if (!binding?.optionsGrid) return
+      const optionsGridId = binding.optionsGrid.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+      if (!optionsGridId) return
+      const g = grids.find((gr) => gr.id === optionsGridId)
+      map.set(fieldId, g?.name ?? optionsGridId)
+    })
+    return map
+  }, [optionFieldIds, bindingByFieldId, trackerContext?.grids])
   const nodesByRow = useMemo(() => {
     const map = new Map<number, TrackerLayoutNode[]>()
     fieldNodes.forEach((node) => {
@@ -687,6 +701,7 @@ function TrackerDivGridInner({
         openAddOption={openAddOption}
         datePickerOpen={datePickerOpen}
         onDatePickerOpenChange={setDatePickerOpenStable}
+        optionsSourceLabel={optionsGridNameByFieldId.get(field.id)}
       />
     )
 

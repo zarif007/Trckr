@@ -133,6 +133,8 @@ export interface FieldMetadata {
     onAddOption?: (row: Record<string, unknown>) => string
     /** When adding an option, compute binding updates from the new row (for auto-populate in Add Entry dialog). */
     getBindingUpdatesFromRow?: (row: Record<string, unknown>) => Record<string, unknown>
+    /** Name of the options grid/table (for empty state: "No data. From table: X"). */
+    optionsGridName?: string
   }
 }
 

@@ -310,6 +310,13 @@ function TrackerTableGridInner({
     return map
   }, [tableFields, grid.id, bindings, tabId])
 
+  const gridsById = useMemo(() => {
+    const map = new Map<string, TrackerGrid>()
+    const grids = trackerContext?.grids
+    if (grids) for (const g of grids) map.set(g.id, g)
+    return map
+  }, [trackerContext?.grids])
+
   const fieldMetadata = useMemo<FieldMetadata>(() => {
     const meta: FieldMetadata = {}
     tableFields.forEach((field) => {
@@ -318,6 +325,7 @@ function TrackerTableGridInner({
       const selectFieldPath = `${grid.id}.${field.id}`
       let optionsGridFields: OptionsGridFieldDef[] | undefined
       let onAddOption: ((row: Record<string, unknown>) => string) | undefined
+      let optionsGridName: string | undefined
       if (binding && onAddEntryToGrid) {
         const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
         const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
@@ -354,6 +362,10 @@ function TrackerTableGridInner({
             return result
           }
           : undefined
+      if (binding?.optionsGrid) {
+        const id = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
+        if (id) optionsGridName = gridsById.get(id)?.name ?? id
+      }
       meta[field.id] = {
         name: field.ui.label,
         type: field.dataType,
@@ -364,6 +376,7 @@ function TrackerTableGridInner({
         optionsGridFields,
         onAddOption,
         getBindingUpdatesFromRow,
+        optionsGridName,
       }
     })
     return meta
@@ -377,6 +390,7 @@ function TrackerTableGridInner({
     validations,
     calculations,
     onAddEntryToGrid,
+    gridsById,
   ])
 
   const handleCellUpdate = useCallback(

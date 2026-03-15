@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Command,
@@ -29,6 +29,8 @@ interface MultiSelectProps {
   'aria-invalid'?: boolean
   /** When set, shows "Add option..." in the list; callback is responsible for adding and optionally updating value. */
   onAddOptionClick?: () => void
+  /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
+  optionsSourceLabel?: string
 }
 
 export function MultiSelect({
@@ -43,10 +45,18 @@ export function MultiSelect({
   disabled = false,
   'aria-invalid': ariaInvalid = false,
   onAddOptionClick,
+  optionsSourceLabel,
 }: MultiSelectProps) {
   const [open, setOpen] = React.useState(autoFocus)
   const [searchValue, setSearchValue] = React.useState('')
   const triggerRef = React.useRef<HTMLDivElement>(null)
+
+  const emptyMessage =
+    options.length === 0
+      ? optionsSourceLabel
+        ? `No data. From table: ${optionsSourceLabel}`
+        : 'No data.'
+      : 'No results found.'
 
   const handleSelect = (optionValue: string) => {
     const newValue = value.includes(optionValue)
@@ -148,8 +158,27 @@ export function MultiSelect({
       >
         <Command shouldFilter={false}>
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
+              {options.length === 0 ? (
+                <CommandItem
+                  value="__no_data__"
+                  disabled
+                  className="cursor-default pointer-events-none py-3"
+                >
+                  <div className="flex flex-col gap-0.5 w-full py-1">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <Database className="size-4 shrink-0 opacity-60" />
+                      <span className="font-medium">No data</span>
+                    </span>
+                    {optionsSourceLabel ? (
+                      <span className="text-xs text-muted-foreground/80 pl-6">
+                        From table: {optionsSourceLabel}
+                      </span>
+                    ) : null}
+                  </div>
+                </CommandItem>
+              ) : null}
               {filteredOptions.map((option) => {
                 const optValue = typeof option === 'string' ? option : option.id
                 const optLabel = typeof option === 'string' ? option : option.label

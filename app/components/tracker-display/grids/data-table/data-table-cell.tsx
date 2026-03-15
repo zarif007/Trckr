@@ -113,6 +113,7 @@ export function DataTableCell<TData>({
               onAddOption={fieldInfo.onAddOption}
               optionsGridFields={fieldInfo.optionsGridFields}
               getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
+              optionsSourceLabel={fieldInfo.optionsGridName}
               className={tableStyles ? cn(tableStyles.fontSizeForInput, tableStyles.fontWeightForInput, tableStyles.textColorForInput) : undefined}
               compact
             />

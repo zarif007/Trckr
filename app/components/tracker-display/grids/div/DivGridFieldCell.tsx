@@ -48,6 +48,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
   openAddOption,
   datePickerOpen,
   onDatePickerOpenChange,
+  optionsSourceLabel,
 }: DivGridFieldCellProps) {
   const fieldId = field.id
   const fieldLabel = field.ui.label
@@ -110,6 +111,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             className={`w-full ${innerClass}`}
             onAddOptionClick={() => openAddOption(fieldId, value)}
             addOptionLabel="Add option..."
+            optionsSourceLabel={optionsSourceLabel}
           />
         )
       case 'multiselect':
@@ -121,6 +123,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             disabled={isDisabled}
             className={`w-full ${innerClass}`}
             onAddOptionClick={() => openAddOption(fieldId, value)}
+            optionsSourceLabel={optionsSourceLabel}
           />
         )
       case 'dynamic_select': {
@@ -133,6 +136,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             onValueChange={(val) => onSelectChange(fieldId, val === '__empty__' ? '' : val)}
             searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
             className={`w-full ${innerClass}`}
+            optionsSourceLabel={optionsSourceLabel}
           />
         )
       }
@@ -144,6 +148,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             onChange={(val) => onSelectChange(fieldId, val)}
             disabled={isDisabled}
             className={`w-full ${innerClass}`}
+            optionsSourceLabel={optionsSourceLabel}
           />
         )
       case 'date':

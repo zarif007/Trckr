@@ -36,11 +36,14 @@ export function LabelWithBlockControls({
 
   const showControls = hovered
 
+  const hasExtraControls = Boolean(onAddBlockClick || onSettings)
+  const showGap = isSortable || hasExtraControls
+
   return (
     <div
       className={cn(
         'flex items-center min-w-0 group',
-        showControls || isSortable ? 'gap-1.5' : '!gap-0',
+        showGap && 'gap-1.5',
         className
       )}
       onMouseEnter={handleMouseEnter}
@@ -52,7 +55,7 @@ export function LabelWithBlockControls({
           <button
             type="button"
             className={cn(
-              'flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,opacity,transform] duration-200 ease-out',
+              'flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,opacity,transform] duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
               'hover:bg-muted hover:scale-110 text-muted-foreground/50 hover:text-foreground',
               'cursor-grab active:cursor-grabbing active:scale-95',
               showControls ? 'opacity-100' : 'opacity-50'
@@ -63,17 +66,19 @@ export function LabelWithBlockControls({
             <GripVertical className="h-3.5 w-3.5" aria-hidden />
           </button>
         )}
-        {/* Add + Remove: only visible on hover to avoid clutter. */}
+        {/* Add + Remove: only visible on hover to avoid clutter. Smooth expand via max-width + opacity. */}
         <div
           className={cn(
-            'flex items-center gap-0.5 overflow-hidden transition-[width,opacity,transform] duration-200 ease-out',
-            showControls ? 'w-auto opacity-100 scale-100' : 'w-0 opacity-0 scale-95 pointer-events-none'
+            'flex items-center gap-0.5 overflow-hidden transition-[max-width,opacity] duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)]',
+            showControls
+              ? 'max-w-[10rem] opacity-100'
+              : 'max-w-0 opacity-0 pointer-events-none'
           )}
         >
           {onAddBlockClick && (
             <button
               type="button"
-              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
+              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
               onClick={(e) => {
                 e.stopPropagation()
                 onAddBlockClick()
@@ -86,7 +91,7 @@ export function LabelWithBlockControls({
           {onSettings && (
             <button
               type="button"
-              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
+              className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-110 hover:bg-muted text-muted-foreground/50 hover:text-foreground active:scale-95"
               onClick={(e) => {
                 e.stopPropagation()
                 onSettings()
@@ -98,7 +103,7 @@ export function LabelWithBlockControls({
           )}
           <button
             type="button"
-            className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform] duration-200 ease-out hover:scale-110 hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive active:scale-95"
+            className="flex items-center justify-center h-6 w-6 rounded-md shrink-0 transition-[color,transform,background-color] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] hover:scale-110 hover:bg-destructive/10 text-muted-foreground/50 hover:text-destructive active:scale-95"
             onClick={(e) => {
               e.stopPropagation()
               onRemove()

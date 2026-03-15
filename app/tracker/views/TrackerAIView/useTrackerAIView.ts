@@ -76,6 +76,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   )
   const builderWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
   const analystWindowStateRef = useRef<Record<string, { messages: Message[] }>>({})
+  const prevBuilderWindowIdRef = useRef<string | null>(null)
+  const prevAnalystWindowIdRef = useRef<string | null>(null)
 
   const onBuilderConversationCreate = useCallback(
     async (userMessage: string): Promise<{ id: string; title: string } | null> => {
@@ -589,13 +591,17 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   )
 
   useEffect(() => {
-    builderWindowStateRef.current = {
-      ...builderWindowStateRef.current,
-      [activeBuilderWindowId]: {
-        ...(builderWindowStateRef.current[activeBuilderWindowId] ?? {}),
-        messages,
-      },
+    const prevId = prevBuilderWindowIdRef.current
+    if (prevId && prevId !== activeBuilderWindowId) {
+      builderWindowStateRef.current = {
+        ...builderWindowStateRef.current,
+        [prevId]: {
+          ...(builderWindowStateRef.current[prevId] ?? {}),
+          messages,
+        },
+      }
     }
+    prevBuilderWindowIdRef.current = activeBuilderWindowId
   }, [messages, activeBuilderWindowId])
 
   const handleBuilderWindowSelect = useCallback(
@@ -653,13 +659,17 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [setMessages, trackerId])
 
   useEffect(() => {
-    analystWindowStateRef.current = {
-      ...analystWindowStateRef.current,
-      [activeAnalystWindowId]: {
-        ...(analystWindowStateRef.current[activeAnalystWindowId] ?? {}),
-        messages: analyst.messages,
-      },
+    const prevId = prevAnalystWindowIdRef.current
+    if (prevId && prevId !== activeAnalystWindowId) {
+      analystWindowStateRef.current = {
+        ...analystWindowStateRef.current,
+        [prevId]: {
+          ...(analystWindowStateRef.current[prevId] ?? {}),
+          messages: analyst.messages,
+        },
+      }
     }
+    prevAnalystWindowIdRef.current = activeAnalystWindowId
   }, [analyst.messages, activeAnalystWindowId])
 
   const handleAnalystWindowSelect = useCallback(

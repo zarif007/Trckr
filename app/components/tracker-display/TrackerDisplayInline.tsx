@@ -60,7 +60,7 @@ function SortableTabRow({
     >
       {editMode && onSchemaChange && (
         <span
-          className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded-md text-muted-foreground/50 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6 hover:bg-muted/80"
+          className="flex min-w-0 max-w-0 shrink-0 cursor-grab active:cursor-grabbing items-center justify-center rounded-md text-muted-foreground/50 overflow-hidden transition-[max-width,opacity] duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] opacity-0 max-w-0 group-hover:max-w-6 group-hover:opacity-100 hover:bg-muted/80"
           aria-hidden
           {...attributes}
           {...listeners}
@@ -82,7 +82,7 @@ function SortableTabRow({
         )}
       </TabsTrigger>
       {editMode && onSchemaChange && onRemoveTab && (
-        <span className="flex min-w-0 max-w-0 shrink-0 overflow-hidden transition-[max-width] duration-200 group-hover:max-w-6">
+        <span className="flex min-w-0 max-w-0 shrink-0 overflow-hidden transition-[max-width,opacity] duration-[400ms] ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:max-w-6 group-hover:opacity-100 opacity-0">
           <Button
             type="button"
             variant="ghost"

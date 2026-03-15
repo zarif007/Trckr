@@ -92,11 +92,13 @@ function TrackerByIdEditContent({
   isNew,
   instanceId,
   onBack,
+  conversationIdParam,
 }: {
   id: string
   isNew: boolean
   instanceId: string | null
   onBack: () => void
+  conversationIdParam: string | null
 }) {
   const initial = use(getTrackerResource(id, instanceId))
   const [state, setState] = useState<TrackerResource>(initial)
@@ -110,7 +112,10 @@ function TrackerByIdEditContent({
     let cancelled = false
     async function fetchConversation() {
       try {
-        const res = await fetch(`/api/trackers/${id}/conversation?mode=BUILDER`)
+        const url = conversationIdParam
+          ? `/api/trackers/${id}/conversation?mode=BUILDER&conversationId=${conversationIdParam}`
+          : `/api/trackers/${id}/conversation?mode=BUILDER`
+        const res = await fetch(url)
         if (res.status === 404) {
           if (!cancelled) setConversation({ conversationId: null, messages: [] })
           return
@@ -134,7 +139,7 @@ function TrackerByIdEditContent({
     return () => {
       cancelled = true
     }
-  }, [id])
+  }, [id, conversationIdParam])
 
   const handleSaveTracker = useCallback(
     async (schema: TrackerResponse) => {
@@ -251,6 +256,7 @@ export default function TrackerEditByIdPage() {
   const id = typeof params.id === 'string' ? params.id : null
   const isNew = searchParams.get('new') === 'true'
   const instanceId = searchParams.get('instanceId')
+  const conversationIdParam = searchParams.get('conversationId')
 
   const handleBack = useCallback(() => {
     if (typeof window !== 'undefined' && window.history.length > 1) {
@@ -279,6 +285,7 @@ export default function TrackerEditByIdPage() {
           isNew={isNew}
           instanceId={instanceId}
           onBack={handleBack}
+          conversationIdParam={conversationIdParam}
         />
       </TrackerErrorBoundary>
     </Suspense>
