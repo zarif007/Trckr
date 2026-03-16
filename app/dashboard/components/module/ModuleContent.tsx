@@ -32,6 +32,7 @@ import {
 import { dashboardQueryKeys } from '../../query-keys'
 import { NewModuleButton } from '../NewModuleButton'
 import { NewTrackerDialog } from '../NewTrackerDialog'
+import { type ConfigTileRow } from '../configs/configRows'
 
 const MODULE_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
   TEAMS: Users,
@@ -407,8 +408,9 @@ export function ModuleContent({
   const moduleFiles = mod?.moduleFiles ?? []
   const trackerSchemas = mod?.trackerSchemas ?? []
   const childModules = mod?.children ?? []
+  const hasModuleConfigs = moduleFiles.length > 0
   const totalItems =
-    moduleFiles.length + trackerSchemas.length + childModules.length
+    (hasModuleConfigs ? 1 : 0) + trackerSchemas.length + childModules.length
   const isEmpty = totalItems === 0
 
   const existingFileTypes = new Set(moduleFiles.map((f) => f.type))
@@ -422,15 +424,45 @@ export function ModuleContent({
         .map((t) => [t.listForSchemaId as string, t.id]),
     )
     const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
-    const fileRows = moduleFiles.map((file: ModuleFile) => ({
-      kind: 'file' as const,
-      id: file.id,
-      label: PROJECT_FILE_LABELS[file.type],
-      sublabel: 'Override',
-      icon: MODULE_FILE_ICONS[file.type],
-      updatedAt: file.updatedAt,
-      href: `${base}/${projectId}/module/${moduleId}/file/${file.id}`,
-    }))
+    const rows: (ConfigTileRow | {
+      kind: 'module'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof Folder
+      updatedAt: string
+      href: string
+    } | {
+      kind: 'tracker'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof FileText | typeof LayoutList
+      trackerView: 'list' | 'detail'
+      updatedAt: string
+      href: string
+      trackerHrefs: {
+        trackerPageHref: string
+        schemaEditHref: string
+        listHref: string | null
+        bindingsHref: string
+        validationsHref: string
+        calculationsHref: string
+        dependsOnHref: string
+      }
+    })[] = []
+
+    if (hasModuleConfigs) {
+      rows.push({
+        kind: 'file',
+        id: 'configs-folder',
+        label: 'Configs',
+        sublabel: 'Module configs',
+        icon: Folder,
+        updatedAt: mod.updatedAt,
+        href: `${base}/${projectId}/module/${moduleId}/configs`,
+      })
+    }
     const moduleRows = childModules.map((child) => ({
       kind: 'module' as const,
       id: child.id,
@@ -468,8 +500,8 @@ export function ModuleContent({
         },
       }
     })
-    return [...fileRows, ...moduleRows, ...trackerRows]
-  }, [pathname, projectId, moduleId, mod, moduleFiles, childModules, trackerSchemas])
+    return [...rows, ...moduleRows, ...trackerRows]
+  }, [pathname, projectId, moduleId, mod, childModules, trackerSchemas, hasModuleConfigs])
 
   const handleTrackerCreated = useCallback(
     async (trackerId: string) => {
