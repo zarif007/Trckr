@@ -164,7 +164,7 @@ export function DataTableInput({
     if (!showPrefix) return child
     return (
       <div className="relative h-full w-full">
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
           {prefix}
         </span>
         {child}
@@ -198,7 +198,7 @@ export function DataTableInput({
                 setTimeout(() => onChange(nextValue), 0)
               }
             }}
-            className={cn(inlineInputClass, withPrefixLeftPadding, className)}
+            className={cn(inlineInputClass, className, withPrefixLeftPadding)}
             autoFocus={autoFocus}
             disabled={isDisabled}
           />
@@ -209,7 +209,7 @@ export function DataTableInput({
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(inlineInputClass, withPrefixLeftPadding, className)}
+          className={cn(inlineInputClass, className, withPrefixLeftPadding)}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />
@@ -617,7 +617,7 @@ export function DataTableInput({
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(inlineInputClass, withPrefixLeftPadding, className)}
+          className={cn(inlineInputClass, className, withPrefixLeftPadding)}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />

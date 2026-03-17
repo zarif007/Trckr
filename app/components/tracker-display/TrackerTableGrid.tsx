@@ -268,7 +268,7 @@ function TrackerTableGridInner({
       return
     }
 
-    ;(async () => {
+    ; (async () => {
       const entries = await Promise.all(
         dynamicFields.map(async (field) => {
           try {
