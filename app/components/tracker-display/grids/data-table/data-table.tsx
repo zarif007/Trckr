@@ -40,6 +40,8 @@ import { Settings2, ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { FieldMetadata, getFieldIcon } from './utils'
 import { DataTableCell } from './data-table-cell'
 import { EntryFormDialog } from './entry-form-dialog'
+import { EntryWayButton } from '../../entry-way/EntryWayButton'
+import type { EntryWayDefinition } from '../../entry-way/entry-way-types'
 import type { StyleOverrides } from '../../types'
 import { resolveTableStyles } from '@/lib/style-utils'
 import type { FieldCalculationRule } from '@/lib/functions/types'
@@ -98,6 +100,8 @@ interface DataTableProps<TData, TValue> {
   renderRowAction?: (args: { row: TData; rowIndex: number }) => ReactNode
   /** When false and no custom action is provided, hide the actions column. */
   showRowDetails?: boolean
+  /** Optional Entry Way shortcuts for quick-create. */
+  entryWays?: EntryWayDefinition[]
 }
 
 export function DataTable<TData, TValue>({
@@ -126,6 +130,7 @@ export function DataTable<TData, TValue>({
   defaultSort: defaultSortProp,
   renderRowAction,
   showRowDetails = true,
+  entryWays = [],
 }: DataTableProps<TData, TValue>) {
   void pageSizeOptions
   const pageSize = pageSizeProp ?? 10
@@ -462,16 +467,13 @@ export function DataTable<TData, TValue>({
           )}
           {addable && (
             <>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setShowAddDialog(true)}
-                className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
-                aria-label="New entry"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                New
-              </Button>
+              <EntryWayButton
+                onNewEntryClick={() => setShowAddDialog(true)}
+                entryWays={entryWays}
+                // For now, Entry Ways are just visible options; clicking does not create rows yet.
+                onSelectEntryWay={() => {}}
+                disabled={!onAddEntry}
+              />
               <EntryFormDialog
                 open={showAddDialog}
                 onOpenChange={setShowAddDialog}

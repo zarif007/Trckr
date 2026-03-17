@@ -1,6 +1,7 @@
 'use client'
 
 import { useTheme } from 'next-themes'
+import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type ThemeToggleProps = {
@@ -21,7 +22,7 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       onClick={toggleTheme}
       className={`size-9 shrink-0 rounded-full border-0 shadow-none ${className ?? ''}`}
     >
-      <span aria-hidden className="text-lg">{isDark ? '🌙' : '☀️'}</span>
+      {isDark ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />}
     </Button>
   )
 }

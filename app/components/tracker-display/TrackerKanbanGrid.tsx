@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus, Settings2 } from 'lucide-react'
+import { Settings2 } from 'lucide-react'
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +34,8 @@ import { resolveKanbanStyles } from '@/lib/style-utils'
 import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridDependsOn } from './hooks/useGridDependsOn'
+import { EntryWayButton } from './entry-way/EntryWayButton'
+import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
 import {
   KanbanCard,
   SortableKanbanCard,
@@ -317,6 +319,11 @@ function TrackerKanbanGridInner({
     return Number.isNaN(idx) ? null : rows[idx]
   }, [activeId, rows])
 
+  const entryWays = useMemo(
+    () => buildEntryWaysForGrid({ grid, tabId }),
+    [grid, tabId]
+  )
+
   if (!kanbanState) {
     if (layoutNodes.filter((node) => node.gridId === grid.id).length === 0) return null
     return (
@@ -379,15 +386,13 @@ function TrackerKanbanGridInner({
               </Dialog>
             )}
             {addable && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={() => setShowAddDialog(true)}
-                className="font-medium"
-              >
-                <Plus className="h-4 w-4 mr-1.5" />
-                Add Entry
-              </Button>
+              <EntryWayButton
+                onNewEntryClick={() => setShowAddDialog(true)}
+                entryWays={entryWays}
+                // For now, Entry Ways are just visible options; clicking does not create rows yet.
+                onSelectEntryWay={() => {}}
+                disabled={!onAddEntry}
+              />
             )}
           </div>
 

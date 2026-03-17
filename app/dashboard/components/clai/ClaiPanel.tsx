@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, type FormEvent, type ReactNode } from 'react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { cliTheme as cli } from './cliTheme'
@@ -11,12 +11,6 @@ export interface ClaiPanelProps {
   location: string
   onSubmit: (value: string) => void
   className?: string
-}
-
-/** Format location for prompt: ~/dashboard/projects → display as path */
-function formatPromptLocation(location: string): string {
-  const trimmed = location.replace(/^\/+|\/+$/g, '') || 'dashboard'
-  return trimmed === 'dashboard' ? '~' : `~/${trimmed}`
 }
 
 const SUCCESS_PATTERNS = [
@@ -61,47 +55,135 @@ function isStatusValue(value: string): boolean {
   return STATUS_VALUES.some((s) => v === s || v.startsWith(s + ' ') || v.endsWith(' ' + s))
 }
 
+type PanelStatus = 'ready' | 'working' | 'idle'
+function getPanelStatus(lines: ClaiLine[]): PanelStatus {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i]
+    if (line.type !== 'system') continue
+    const c = line.content.toLowerCase()
+    if (c.includes('running') || c.includes('working') || c.includes('loading')) return 'working'
+    if (isSuccessSystemLine(line.content)) return 'ready'
+  }
+  return 'idle'
+}
+
+function StatusChip({ status }: { status: PanelStatus }) {
+  const map: Record<PanelStatus, { label: string; fg: string; bg: string; border: string }> = {
+    ready: { label: 'Ready', fg: cli.success, bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.22)' },
+    working: { label: 'Working', fg: cli.link, bg: 'rgba(125,211,252,0.08)', border: 'rgba(125,211,252,0.20)' },
+    idle: { label: 'Idle', fg: cli.textMuted, bg: 'rgba(255,255,255,0.05)', border: cli.border },
+  }
+  const s = map[status]
+  return (
+    <span
+      className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] tracking-wide"
+      style={{ color: s.fg, backgroundColor: s.bg, borderColor: s.border }}
+    >
+      <span
+        className="h-1.5 w-1.5 rounded-full"
+        style={{ backgroundColor: s.fg, boxShadow: `0 0 0 2px ${s.bg}` }}
+      />
+      {s.label}
+    </span>
+  )
+}
+
+function PanelHeader({ status }: { status: PanelStatus }) {
+  return (
+    <div
+      className="flex items-center justify-between gap-4 border-b px-6 py-4"
+      style={{ borderColor: cli.border, backgroundColor: 'rgba(255,255,255,0.02)' }}
+    >
+      <div className="min-w-0">
+        <div className="text-[12px] font-semibold tracking-wide" style={{ color: cli.text }}>
+          CLAI Control Panel
+        </div>
+        <div className="mt-0.5 text-[11px] leading-4" style={{ color: cli.textMuted }}>
+          Commands, output, and system status
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <StatusChip status={status} />
+      </div>
+    </div>
+  )
+}
+
+function CardShell({
+  children,
+  accent,
+  className,
+}: {
+  children: ReactNode
+  accent?: string
+  className?: string
+}) {
+  return (
+    <div className={cn('rounded-lg border', className)} style={{ borderColor: cli.border, backgroundColor: cli.panelBg }}>
+      <div className="flex gap-3 px-4 py-3">
+        <div className="w-[2px] shrink-0 rounded-full" style={{ backgroundColor: accent ?? 'transparent' }} />
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </div>
+  )
+}
+
 function LineBlock({ line }: { line: ClaiLine }) {
   const isSuccess = line.type === 'system' && isSuccessSystemLine(line.content)
 
   if (line.type === 'command') {
     return (
-      <div
-        className="animate-in fade-in duration-200 flex font-mono text-[13px] leading-relaxed border-l-2 pl-3 py-0.5"
-        style={{ borderColor: cli.border }}
-      >
-        <span style={{ color: cli.promptMuted }} className="select-none shrink-0">
-          $
-        </span>
-        <span className="ml-2 shrink-0 font-medium" style={{ color: cli.text }}>
-          <span className="whitespace-pre-wrap break-words">{line.content}</span>
-        </span>
+      <div className="animate-in fade-in duration-200">
+        <CardShell accent={cli.success} className="bg-transparent">
+          <div className="flex items-start gap-2 font-mono text-[13px] leading-relaxed">
+            <span style={{ color: cli.promptMuted }} className="select-none shrink-0 pt-[1px]">
+              $
+            </span>
+            <span className="min-w-0 font-medium" style={{ color: cli.text }}>
+              <span className="whitespace-pre-wrap break-words">{line.content}</span>
+            </span>
+          </div>
+        </CardShell>
       </div>
     )
   }
   if (line.type === 'system') {
     const showCheck = isSuccess && !/^[✔✓]/.test(line.content.trim())
     return (
-      <div
-        className="animate-in fade-in duration-200 pl-5 font-mono text-[13px] leading-relaxed"
-        style={{ color: isSuccess ? cli.success : cli.textMuted }}
-      >
-        {showCheck && <span className="mr-1.5">✔</span>}
-        <span className="whitespace-pre-wrap break-words">{line.content}</span>
+      <div className="animate-in fade-in duration-200">
+        <CardShell accent={isSuccess ? cli.success : cli.border}>
+          <div className="flex items-start gap-2 font-mono text-[13px] leading-relaxed">
+            {showCheck && (
+              <span className="shrink-0 pt-[1px]" style={{ color: cli.success }}>
+                ✔
+              </span>
+            )}
+            <span className="min-w-0 whitespace-pre-wrap break-words" style={{ color: isSuccess ? cli.success : cli.textMuted }}>
+              {line.content}
+            </span>
+          </div>
+        </CardShell>
       </div>
     )
   }
   if (line.type === 'error') {
     return (
-      <div
-        className="animate-in fade-in duration-200 rounded border px-4 py-3 font-mono text-[13px] leading-relaxed"
-        style={{
-          color: cli.error,
-          backgroundColor: cli.errorBg,
-          borderColor: cli.errorBorder,
-        }}
-      >
-        <span className="whitespace-pre-wrap break-words">{line.content}</span>
+      <div className="animate-in fade-in duration-200">
+        <div
+          className="rounded-lg border px-4 py-3"
+          style={{
+            color: cli.error,
+            backgroundColor: cli.errorBg,
+            borderColor: cli.errorBorder,
+          }}
+        >
+          <div className="mb-1 text-[11px] uppercase tracking-wider" style={{ color: cli.error }}>
+            Error
+          </div>
+          <div className="font-mono text-[13px] leading-relaxed">
+            <span className="whitespace-pre-wrap break-words">{line.content}</span>
+          </div>
+        </div>
       </div>
     )
   }
@@ -110,38 +192,67 @@ function LineBlock({ line }: { line: ClaiLine }) {
   if (kv && kv.rows.length > 0) {
     const title = kv.title ?? 'Info'
     return (
+      <div className="animate-in fade-in duration-200">
+        <div
+          className="rounded-lg border px-4 py-4"
+          style={{
+            color: cli.text,
+            backgroundColor: cli.panelBg,
+            borderColor: cli.border,
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-[11px] uppercase tracking-wider" style={{ color: cli.promptMuted }}>
+              {title}
+            </div>
+          </div>
+          <dl className="grid grid-cols-1 gap-y-2">
+            {kv.rows.map(({ label, value }, i) => {
+              const statusish = isStatusValue(value)
+              return (
+                <div key={i} className="flex items-start justify-between gap-6">
+                  <dt className="min-w-0 truncate text-[12px]" style={{ color: cli.textMuted }}>
+                    {label}
+                  </dt>
+                  <dd className="flex shrink-0 items-center gap-2">
+                    {statusish && (
+                      <span
+                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]"
+                        style={{
+                          color: cli.success,
+                          borderColor: 'rgba(34,197,94,0.25)',
+                          backgroundColor: 'rgba(34,197,94,0.08)',
+                        }}
+                      >
+                        {value}
+                      </span>
+                    )}
+                    {!statusish && (
+                      <span className="text-[12px]" style={{ color: cli.text }}>
+                        {value}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              )
+            })}
+          </dl>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="animate-in fade-in duration-200">
       <div
-        className="animate-in fade-in duration-200 rounded border px-4 py-4 font-mono text-[13px] leading-[1.65]"
+        className="rounded-lg border px-4 py-4 font-mono text-[13px] leading-[1.65]"
         style={{
           color: cli.text,
           backgroundColor: cli.panelBg,
           borderColor: cli.border,
         }}
       >
-        <div className="text-[11px] uppercase tracking-wider mb-3" style={{ color: cli.promptMuted }}>
-          {title}
-        </div>
-        <div className="space-y-1.5">
-          {kv.rows.map(({ label, value }, i) => (
-            <div key={i} className="flex justify-between gap-4">
-              <span style={{ color: cli.textMuted }}>{label}</span>
-              <span style={{ color: isStatusValue(value) ? cli.success : cli.text }}>{value}</span>
-            </div>
-          ))}
-        </div>
+        <span className="whitespace-pre-wrap break-words">{line.content}</span>
       </div>
-    )
-  }
-  return (
-    <div
-      className="animate-in fade-in duration-200 rounded border px-4 py-4 font-mono text-[13px] leading-[1.65]"
-      style={{
-        color: cli.text,
-        backgroundColor: cli.panelBg,
-        borderColor: cli.border,
-      }}
-    >
-      <span className="whitespace-pre-wrap break-words">{line.content}</span>
     </div>
   )
 }
@@ -157,13 +268,13 @@ const SCROLLBAR_STYLES = `
 export function ClaiPanel({ lines, location, onSubmit, className }: ClaiPanelProps) {
   const outputEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const displayLocation = formatPromptLocation(location)
+  const status = getPanelStatus(lines)
 
   useEffect(() => {
     outputEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [lines])
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const val = inputRef.current?.value.trim()
     if (!val) return
@@ -175,19 +286,20 @@ export function ClaiPanel({ lines, location, onSubmit, className }: ClaiPanelPro
     <div
       className={cn(
         'flex h-full w-full flex-col overflow-hidden rounded-b-xl',
-        'font-mono text-[13px] antialiased',
+        'text-[13px] antialiased',
         className
       )}
       style={{ backgroundColor: cli.bg, color: cli.text }}
     >
+      <PanelHeader status={status} />
       <div
         className={cn(
           'flex-1 overflow-y-auto overflow-x-hidden',
           SCROLLBAR_STYLES
         )}
-        style={{ padding: '24px 28px' }}
+        style={{ padding: '18px 24px' }}
       >
-        <div className="space-y-6">
+        <div className="space-y-3">
           {lines.map((line) => (
             <LineBlock key={line.id} line={line} />
           ))}
@@ -200,38 +312,27 @@ export function ClaiPanel({ lines, location, onSubmit, className }: ClaiPanelPro
         className="flex-shrink-0 border-t px-6 py-4"
         style={{ borderColor: cli.border }}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2">
-            <span className="shrink-0 font-mono text-[13px]" style={{ color: cli.promptMuted }}>
-              user@clai
-            </span>
-            <span className="shrink-0 font-mono text-[13px]" style={{ color: cli.textMuted }}>
-              {displayLocation}
-            </span>
-            <span className="shrink-0 font-mono text-[13px]" style={{ color: cli.promptMuted }}>
-              ›
-            </span>
-            <span className="shrink-0 font-mono text-[13px] font-medium" style={{ color: cli.text }}>
-              $
-            </span>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+          <div
+            className="flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors"
+            style={{ borderColor: cli.border, backgroundColor: 'rgba(255,255,255,0.02)' }}
+          >
             <Input
               ref={inputRef}
               autoFocus
               className={cn(
-                'min-w-0 flex-1 border-0 bg-transparent px-0 py-2 text-[13px] leading-7 shadow-none',
+                'min-w-0 flex-1 border-0 bg-transparent px-0 py-1.5 text-[13px] leading-6 shadow-none',
                 'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
                 'placeholder:font-normal'
               )}
               style={{ color: cli.text, caretColor: cli.caret }}
-              placeholder="Ask or run a command..."
+              placeholder="Type a command or ask CLAI…"
             />
           </div>
-          <p
-            className="font-mono text-[11px] pl-0"
-            style={{ color: cli.promptMuted }}
-          >
-            Tab to complete · ⌘↩ to submit
-          </p>
+          <div className="flex items-center justify-between gap-4 text-[11px]" style={{ color: cli.promptMuted }}>
+            <span>⌘↩ to submit</span>
+            <span className="hidden sm:inline">Shift+Esc to blur</span>
+          </div>
         </form>
       </div>
     </div>

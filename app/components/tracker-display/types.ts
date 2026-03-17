@@ -51,6 +51,8 @@ export type TrackerGridConfig = {
   pageSizeOptions?: number[]
   /** Table: initial sort { id: columnId, desc?: boolean }. */
   defaultSort?: { id: string; desc?: boolean }
+  /** Optional quick-create shortcuts for adding rows (“Entry Ways”), configured per grid. */
+  entryWays?: import('./entry-way/entry-way-types').EntryWayConfig[]
   [key: string]: unknown
 }
 

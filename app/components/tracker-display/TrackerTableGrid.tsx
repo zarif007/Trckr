@@ -18,6 +18,7 @@ import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridDependsOn } from './hooks/useGridDependsOn'
+import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
 import { useMemo, useCallback, useState, useEffect, memo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import type { DragEndEvent } from '@dnd-kit/core'
@@ -393,6 +394,11 @@ function TrackerTableGridInner({
     gridsById,
   ])
 
+  const entryWays = useMemo(
+    () => buildEntryWaysForGrid({ grid, tabId }),
+    [grid, tabId]
+  )
+
   const handleCellUpdate = useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
       if (!onUpdate) return
@@ -574,6 +580,7 @@ function TrackerTableGridInner({
         pageSize={grid.config?.pageSize}
         pageSizeOptions={grid.config?.pageSizeOptions}
         defaultSort={grid.config?.defaultSort}
+        entryWays={entryWays}
       />
     </>
   )

@@ -25,17 +25,20 @@ export default function NavBar() {
   const isSignedIn = status === 'authenticated' && !!session
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 text-foreground backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border/40 bg-background/90 text-foreground backdrop-blur-md">
       <nav className="relative mx-auto flex h-14 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
         {/* Left: nav links (desktop); spacer on mobile so logo stays centered */}
         <div className="flex min-w-0 flex-1 items-center md:min-w-0">
           <div className="w-10 shrink-0 md:hidden" aria-hidden />
-          <div className="hidden items-center gap-1 md:flex">
+          <div
+            className="hidden items-center gap-1 rounded-full border border-border/60 bg-muted/20 p-1 md:flex"
+            aria-label="Primary"
+          >
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
-                className="rounded-md px-3 py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground border-b-2 border-transparent hover:border-foreground/30"
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted/60 hover:text-foreground focus-visible:bg-muted/60 focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {label}
               </Link>
@@ -46,7 +49,7 @@ export default function NavBar() {
         {/* Center: logo only (icon) */}
         <Link
           href="/"
-          className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80"
+          className="absolute left-1/2 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg outline-none transition-opacity hover:opacity-80 focus-visible:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           aria-label="trckr home"
         >
           <svg
@@ -84,7 +87,7 @@ export default function NavBar() {
                   <PopoverTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-2.5 rounded-md border border-border bg-muted/50 px-2 py-1.5 pr-3 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                      className="flex items-center gap-2.5 rounded-full border border-border/60 bg-muted/20 px-2 py-1.5 pr-3 text-sm text-foreground outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                       aria-label="Open user menu"
                     >
                       {session.user.image ? (
@@ -93,10 +96,10 @@ export default function NavBar() {
                           alt=""
                           width={26}
                           height={26}
-                          className="rounded-full ring-1 ring-border"
+                          className="rounded-full ring-1 ring-border/60"
                         />
                       ) : (
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/50 text-xs font-medium text-foreground">
                           {(session.user.name ?? session.user.email ?? '?')
                             .charAt(0)
                             .toUpperCase()}
@@ -151,7 +154,8 @@ export default function NavBar() {
               <Button
                 asChild
                 size="sm"
-                className="rounded-md px-4 py-2 text-xs font-medium uppercase tracking-widest"
+                variant="outline"
+                className="rounded-full px-4 py-2 text-sm font-medium"
               >
                 <Link href="/login?callbackUrl=/tracker">Sign in</Link>
               </Button>
@@ -166,7 +170,7 @@ export default function NavBar() {
             aria-label={open ? 'Close menu' : 'Open menu'}
             aria-expanded={open}
             onClick={() => setOpen(!open)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/50 text-foreground transition-colors hover:bg-muted active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/40 text-foreground transition-colors hover:bg-muted/60 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             {open ? (
               <svg
@@ -206,7 +210,7 @@ export default function NavBar() {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden">
-          <div className="mx-3 mb-3 overflow-hidden rounded-2xl border border-border/60 bg-background/98 shadow-lg shadow-black/5 backdrop-blur-xl dark:shadow-black/20">
+          <div className="mx-3 mb-3 overflow-hidden rounded-2xl border border-border/60 bg-background/98 backdrop-blur-xl">
             <div className="px-4 py-5 sm:px-5">
               {/* Nav links */}
               <nav className="flex flex-col gap-0.5" aria-label="Main">
@@ -215,7 +219,7 @@ export default function NavBar() {
                     key={href}
                     href={href}
                     onClick={() => setOpen(false)}
-                    className="rounded-xl px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60 active:bg-muted/80"
+                    className="rounded-xl px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/50 active:bg-muted/70"
                   >
                     {label}
                   </Link>
@@ -223,7 +227,7 @@ export default function NavBar() {
               </nav>
 
               {/* Theme */}
-              <div className="mt-4 flex items-center justify-between rounded-xl bg-muted/40 px-4 py-3">
+              <div className="mt-4 flex items-center justify-between rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
                 <span className="text-sm font-medium text-foreground">Theme</span>
                 <ThemeToggle />
               </div>
@@ -242,7 +246,7 @@ export default function NavBar() {
                           className="rounded-full ring-2 ring-border/50"
                         />
                       ) : (
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-muted/50 text-sm font-semibold text-foreground">
                           {(session.user.name ?? session.user.email ?? '?')
                             .charAt(0)
                             .toUpperCase()}
@@ -260,7 +264,7 @@ export default function NavBar() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Button asChild size="sm" className="h-10 rounded-xl font-medium" variant="default">
+                      <Button asChild size="sm" className="h-10 rounded-xl font-medium" variant="outline">
                         <Link href="/dashboard" onClick={() => setOpen(false)}>
                           Dashboard
                         </Link>
@@ -288,7 +292,7 @@ export default function NavBar() {
                     asChild
                     size="sm"
                     className="h-11 w-full rounded-xl font-medium"
-                    variant="default"
+                    variant="outline"
                   >
                     <Link href="/login?callbackUrl=/tracker" onClick={() => setOpen(false)}>
                       Sign in
