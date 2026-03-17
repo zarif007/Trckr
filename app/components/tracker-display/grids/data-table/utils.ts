@@ -25,6 +25,8 @@ export interface FieldConfig {
   isRequired?: boolean
   isDisabled?: boolean
   isHidden?: boolean
+  /** Optional visual prefix shown before the value (e.g. "$"). */
+  prefix?: string
   min?: number
   max?: number
   minLength?: number

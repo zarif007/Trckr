@@ -164,6 +164,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     setLabel={state.setLabel}
                     placeholder={state.placeholder}
                     setPlaceholder={state.setPlaceholder}
+                    prefix={state.prefix}
+                    setPrefix={state.setPrefix}
                     dataSourcesList={state.dataSourcesList}
                     resolvePathLabelFn={state.resolvePathLabelFn}
                     isRequired={state.isRequired}

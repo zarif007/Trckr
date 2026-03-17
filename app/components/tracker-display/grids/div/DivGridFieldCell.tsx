@@ -53,6 +53,13 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
   const fieldId = field.id
   const fieldLabel = field.ui.label
   const opts = options ?? []
+  const prefix = typeof field.config?.prefix === 'string' ? field.config.prefix.trim() : ''
+  const showPrefix =
+    Boolean(prefix) &&
+    (field.dataType === 'string' ||
+      field.dataType === 'number' ||
+      field.dataType === 'currency' ||
+      field.dataType === 'percentage')
 
   const onBooleanChange = useCallback(
     (checked: boolean) => onUpdateWithTouched(fieldId, checked),
@@ -187,7 +194,27 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
         return (
           <Input
             type="number"
-            className={innerClass}
+            className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
+            value={numValue === '' ? '' : numValue}
+            placeholder="0"
+            disabled={isDisabled}
+            onChange={(e) => {
+              const raw = e.target.value
+              onUpdate(fieldId, raw === '' ? undefined : Number(raw))
+            }}
+            onBlur={(e) =>
+              onUpdateWithTouched(fieldId, e.target.value === '' ? undefined : Number(e.target.value))
+            }
+          />
+        )
+      }
+      case 'currency':
+      case 'percentage': {
+        const numValue = typeof value === 'number' ? value : valueString
+        return (
+          <Input
+            type="number"
+            className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
             value={numValue === '' ? '' : numValue}
             placeholder="0"
             disabled={isDisabled}
@@ -204,7 +231,7 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
       default:
         return (
           <Input
-            className={innerClass}
+            className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
             value={valueString}
             placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
             disabled={isDisabled}
@@ -224,6 +251,11 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => focusInputInContainer(e.currentTarget as HTMLElement)}
       >
+        {showPrefix && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+            {prefix}
+          </span>
+        )}
         {renderInput()}
       </FieldWrapper>
       {showError && validationError ? (

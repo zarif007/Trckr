@@ -79,6 +79,8 @@ export type TrackerFieldConfig = {
   isRequired?: boolean
   isDisabled?: boolean
   isHidden?: boolean
+  /** Optional visual prefix shown before the value (e.g. "$"). */
+  prefix?: string
   defaultValue?: unknown
   /** Dynamic function id used by dynamic_select/dynamic_multiselect fields. */
   dynamicOptionsFunction?: string

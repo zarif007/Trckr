@@ -822,11 +822,14 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     const showFormActions =
       !allowSchemaAutoSave &&
       !allowAutoSave &&
-      (isDataPage || (canEditSchema && editMode))
+      (isDataPage ? instanceType === 'MULTI' : (canEditSchema && editMode))
+    const showPreviewSaveButton =
+      isDataPage && instanceType === 'SINGLE' && !allowAutoSave && !versionControl
     const showActionsConfig =
       canEditSchema &&
       editMode &&
-      (!allowSchemaAutoSave || !autoSave)
+      (!allowSchemaAutoSave || !autoSave) &&
+      !(instanceType === 'SINGLE' && versionControl)
     setSaveState({
       onSaveTracker: exposeManualTrackerSave ? handleSaveTracker : null,
       onSaveData: showManualSaveData ? () => saveDataRef.current() : null,
@@ -843,7 +846,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       formActionError: isDataPage ? formActionError : null,
       canConfigureFormActions: showActionsConfig,
       onFormActionsChange: showActionsConfig ? handleFormActionsChange : null,
-      onFormActionSelect: isDataPage ? handleFormActionSelect : null,
+      onFormActionSelect: (isDataPage && showFormActions) ? handleFormActionSelect : null,
+      showPreviewSaveButton,
       titleEditable: !isDataPage && canEditSchema && editMode,
     })
   }, [
@@ -870,6 +874,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     autoSave,
     handleFormActionsChange,
     isDataPage,
+    instanceType,
+    versionControl,
     handleFormActionSelect,
   ])
 
@@ -893,6 +899,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         canConfigureFormActions: false,
         onFormActionsChange: null,
         onFormActionSelect: null,
+        showPreviewSaveButton: false,
         titleEditable: false,
       })
   }, [setSaveState])
@@ -960,6 +967,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   useEffect(() => {
     saveDataRef.current = () => saveTrackerData().then(() => undefined)
   }, [saveTrackerData])
+
+  const onPreviewSave = useCallback(() => {
+    return saveDataRef.current?.() ?? Promise.resolve()
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -1149,6 +1160,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     handleVcBranchCreated,
     handleVcMergedToMain,
     showPanelUtilities,
+    // Preview save (single instance non-autosave)
+    showPreviewSaveButton: isDataPage && instanceType === 'SINGLE' && !allowAutoSave && !versionControl,
+    onPreviewSave,
+    dataSaveStatus,
     // Chat
     chatPanelProps,
   }

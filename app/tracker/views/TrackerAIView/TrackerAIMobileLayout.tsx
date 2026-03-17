@@ -38,6 +38,9 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     handleVcBranchCreated,
     handleVcMergedToMain,
     showPanelUtilities,
+    showPreviewSaveButton,
+    onPreviewSave,
+    dataSaveStatus,
     chatPanelProps,
   } = state
 
@@ -92,6 +95,9 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               onVcBranchCreated={handleVcBranchCreated}
               onVcMergedToMain={handleVcMergedToMain}
               showDebugActions={showPanelUtilities}
+              showPreviewSaveButton={showPreviewSaveButton}
+              onPreviewSave={onPreviewSave}
+              previewSaveStatus={dataSaveStatus}
             />
           </TabsContent>
           <TabsContent

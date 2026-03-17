@@ -37,6 +37,9 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     handleVcBranchCreated,
     handleVcMergedToMain,
     showPanelUtilities,
+    showPreviewSaveButton,
+    onPreviewSave,
+    dataSaveStatus,
     chatPanelProps,
   } = state
 
@@ -74,6 +77,9 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           onVcBranchCreated={handleVcBranchCreated}
           onVcMergedToMain={handleVcMergedToMain}
           showDebugActions={showPanelUtilities}
+          showPreviewSaveButton={showPreviewSaveButton}
+          onPreviewSave={onPreviewSave}
+          previewSaveStatus={dataSaveStatus}
         />
 
         {isChatOpen && (

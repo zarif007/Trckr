@@ -130,6 +130,7 @@ export default function TrackerNavBar() {
     canConfigureFormActions,
     onFormActionsChange,
     onFormActionSelect,
+    showPreviewSaveButton = false,
     titleEditable: navTitleEditable = false,
   } = ctx?.saveState ?? initialSaveState
   const [actionsConfigOpen, setActionsConfigOpen] = useState(false)
@@ -465,7 +466,7 @@ export default function TrackerNavBar() {
                 </DialogContent>
               </Dialog>
             )}
-            {!nextAction && hasLegacySave && !onFormActionSelect && !autosaveEnabled && (
+            {!nextAction && hasLegacySave && !onFormActionSelect && !autosaveEnabled && !showPreviewSaveButton && (
               <Button
                 variant="outline"
                 size="sm"

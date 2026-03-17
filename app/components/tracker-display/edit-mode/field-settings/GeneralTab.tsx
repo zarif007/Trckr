@@ -23,6 +23,8 @@ export interface GeneralTabProps {
   setLabel: (v: string) => void
   placeholder: string
   setPlaceholder: (v: string) => void
+  prefix: string
+  setPrefix: (v: string) => void
   dataSourcesList: Array<{ type: 'manual' } | { type: 'calculation' } | { type: 'auto_populate'; fromPath: string }>
   resolvePathLabelFn: (path: string) => string
   isRequired: boolean
@@ -72,6 +74,8 @@ export function GeneralTab({
   setLabel,
   placeholder,
   setPlaceholder,
+  prefix,
+  setPrefix,
   dataSourcesList,
   resolvePathLabelFn,
   isRequired,
@@ -159,6 +163,26 @@ export function GeneralTab({
                 />
               </FieldWrapper>
             </div>
+          </div>
+          <div className="mt-4 max-w-xs space-y-2">
+            <label
+              htmlFor="field-settings-prefix"
+              className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+            >
+              Prefix
+            </label>
+            <FieldWrapper>
+              <Input
+                id="field-settings-prefix"
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value)}
+                className={FIELD_FORM_INPUT_CLASS}
+                placeholder="e.g. $"
+              />
+            </FieldWrapper>
+            <p className="text-[11px] text-muted-foreground">
+              Shown before the value in inputs and display (e.g. currency symbol).
+            </p>
           </div>
         </CardContent>
       </Card>

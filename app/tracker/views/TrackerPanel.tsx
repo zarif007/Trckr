@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useState } from 'react'
-import { Bot, Database, Eye, GitBranch, History, Layout, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
+import { Bot, Check, Database, Eye, GitBranch, History, Layout, Loader2, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -58,6 +58,10 @@ interface TrackerPanelProps {
   onVcBranchCreated?: (branch: BranchRecord) => void
   onVcMergedToMain?: (updatedMain: BranchRecord) => void
   showDebugActions?: boolean
+  /** When true, show a persistent Save button in the preview (single instance non-autosave). */
+  showPreviewSaveButton?: boolean
+  onPreviewSave?: () => void | Promise<void>
+  previewSaveStatus?: 'idle' | 'saving' | 'saved' | 'error'
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -89,6 +93,9 @@ export const TrackerPanel = memo(function TrackerPanel({
   onVcBranchCreated,
   onVcMergedToMain,
   showDebugActions = true,
+  showPreviewSaveButton = false,
+  onPreviewSave,
+  previewSaveStatus = 'idle',
 }: TrackerPanelProps) {
   const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
@@ -418,6 +425,35 @@ export const TrackerPanel = memo(function TrackerPanel({
             />
           )}
         </TrackerDisplayErrorBoundary>
+
+        {showPreviewSaveButton && onPreviewSave && (
+          <div className="sticky bottom-0 left-0 right-0 flex justify-end border-t border-border/60 bg-background/95 backdrop-blur-sm py-3 px-4 mt-4 -mb-6">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 min-w-[100px] gap-1.5 text-xs"
+              disabled={previewSaveStatus === 'saving'}
+              onClick={() => void onPreviewSave()}
+              aria-label={previewSaveStatus === 'saved' ? 'Saved' : previewSaveStatus === 'saving' ? 'Saving' : 'Save'}
+            >
+              {previewSaveStatus === 'saving' ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving…
+                </>
+              ) : previewSaveStatus === 'saved' ? (
+                <>
+                  <Check className="h-3.5 w-3.5" />
+                  Saved
+                </>
+              ) : previewSaveStatus === 'error' ? (
+                'Save failed'
+              ) : (
+                'Save'
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {versionControl && trackerId && onVcBranchSwitch && onVcBranchCreated && onVcMergedToMain && (

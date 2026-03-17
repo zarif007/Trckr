@@ -44,6 +44,7 @@ export function useFieldSettingsState({
 
   const [label, setLabel] = useState('')
   const [placeholder, setPlaceholder] = useState('')
+  const [prefix, setPrefix] = useState('')
   const [dataType, setDataType] = useState<TrackerFieldType>('string')
   const [isRequired, setIsRequired] = useState(false)
   const [isHidden, setIsHidden] = useState(false)
@@ -190,6 +191,7 @@ export function useFieldSettingsState({
     if (!open || !field) return
     setLabel(field.ui.label ?? '')
     setPlaceholder(field.ui.placeholder ?? '')
+    setPrefix(typeof field.config?.prefix === 'string' ? field.config.prefix : '')
     setDataType(field.dataType)
     setIsRequired(Boolean(field.config?.isRequired))
     setIsHidden(Boolean(field.config?.isHidden))
@@ -399,6 +401,7 @@ export function useFieldSettingsState({
       isRequired,
       isHidden,
       isDisabled,
+      prefix: prefix.trim() || undefined,
       min: toNumberOrUndefined(min),
       max: toNumberOrUndefined(max),
       minLength: toNumberOrUndefined(minLength),
@@ -559,6 +562,7 @@ export function useFieldSettingsState({
     dataType,
     label,
     placeholder,
+    prefix,
     isRequired,
     isHidden,
     isDisabled,
@@ -617,6 +621,8 @@ export function useFieldSettingsState({
     setLabel,
     placeholder,
     setPlaceholder,
+    prefix,
+    setPrefix,
     dataType,
     setDataType,
     isRequired,

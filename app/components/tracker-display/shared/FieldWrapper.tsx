@@ -30,7 +30,7 @@ export function FieldWrapper({
   return (
     <div
       className={cn(
-        'min-w-0 rounded-md border bg-transparent transition-colors',
+        'relative min-w-0 rounded-md border bg-transparent transition-colors',
         'hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30',
         error
           ? 'border-destructive/60 ring-1 ring-destructive/40'

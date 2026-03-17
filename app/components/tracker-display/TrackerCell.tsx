@@ -7,6 +7,7 @@ type DisplayFieldConfig = {
   dateFormat?: 'iso' | 'us' | 'eu' | 'long'
   numberDecimalPlaces?: number
   ratingMax?: number
+  prefix?: string
 }
 
 interface TrackerCellProps {
@@ -21,8 +22,11 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
 })
 
+const numberFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 20 })
+
 export function TrackerCell({ value, type, options, config }: TrackerCellProps) {
   if (value === null || value === undefined) return <span>-</span>
+  const prefix = (config?.prefix ?? '').trim()
 
   const optionLabelByKey = new Map<string, string>()
   if (options?.length) {
@@ -100,12 +104,21 @@ export function TrackerCell({ value, type, options, config }: TrackerCellProps) 
       return (
         <span>
           {!isNaN(currencyValue)
-            ? currencyFormatter.format(
-              typeof config?.numberDecimalPlaces === 'number'
-                ? Number(currencyValue.toFixed(config.numberDecimalPlaces))
-                : currencyValue
-            )
-            : String(value)}
+            ? (() => {
+                const formattedNumber =
+                  typeof config?.numberDecimalPlaces === 'number'
+                    ? numberFormatter.format(
+                        Number(currencyValue.toFixed(config.numberDecimalPlaces))
+                      )
+                    : numberFormatter.format(currencyValue)
+                if (prefix) return `${prefix}${formattedNumber}`
+                return currencyFormatter.format(
+                  typeof config?.numberDecimalPlaces === 'number'
+                    ? Number(currencyValue.toFixed(config.numberDecimalPlaces))
+                    : currencyValue
+                )
+              })()
+            : `${prefix}${String(value)}`}
         </span>
       )
     case 'percentage':
@@ -113,8 +126,8 @@ export function TrackerCell({ value, type, options, config }: TrackerCellProps) 
       return (
         <span>
           {!isNaN(percentValue)
-            ? `${typeof config?.numberDecimalPlaces === 'number' ? percentValue.toFixed(config.numberDecimalPlaces) : percentValue}%`
-            : String(value)}
+            ? `${prefix}${typeof config?.numberDecimalPlaces === 'number' ? percentValue.toFixed(config.numberDecimalPlaces) : percentValue}%`
+            : `${prefix}${String(value)}`}
         </span>
       )
     case 'status':
@@ -126,6 +139,6 @@ export function TrackerCell({ value, type, options, config }: TrackerCellProps) 
       return <span>{files.length} file{files.length === 1 ? '' : 's'}</span>
     }
     default:
-      return <span>{String(value)}</span>
+      return <span>{`${prefix}${String(value)}`}</span>
   }
 }

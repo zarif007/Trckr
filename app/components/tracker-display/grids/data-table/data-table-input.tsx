@@ -150,16 +150,33 @@ export function DataTableInput({
 
   const config = _config ?? undefined
   const isDisabled = disabled ?? config?.isDisabled ?? false
+  const prefix = typeof config?.prefix === 'string' ? config.prefix.trim() : ''
+  const showPrefix =
+    Boolean(prefix) &&
+    (type === 'string' || type === 'number' || type === 'currency' || type === 'percentage')
+  const withPrefixLeftPadding = showPrefix ? 'pl-9' : ''
   const statusOptions = (config?.statusOptions ?? [])
     .map((label) => String(label).trim())
     .filter(Boolean)
     .map((label) => ({ value: label, label }))
 
+  const wrapWithPrefix = (child: React.ReactNode) => {
+    if (!showPrefix) return child
+    return (
+      <div className="relative h-full w-full">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+          {prefix}
+        </span>
+        {child}
+      </div>
+    )
+  }
+
   switch (type) {
     case 'string':
     case 'number': {
       if (type === 'string') {
-        return (
+        return wrapWithPrefix(
           <Input
             type="text"
             value={localStringValue}
@@ -181,18 +198,18 @@ export function DataTableInput({
                 setTimeout(() => onChange(nextValue), 0)
               }
             }}
-            className={cn(inlineInputClass, className)}
+            className={cn(inlineInputClass, withPrefixLeftPadding, className)}
             autoFocus={autoFocus}
             disabled={isDisabled}
           />
         )
       }
-      return (
+      return wrapWithPrefix(
         <Input
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(inlineInputClass, className)}
+          className={cn(inlineInputClass, withPrefixLeftPadding, className)}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />
@@ -595,12 +612,12 @@ export function DataTableInput({
     }
     case 'currency':
     case 'percentage':
-      return (
+      return wrapWithPrefix(
         <Input
           type="number"
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
-          className={cn(inlineInputClass, className)}
+          className={cn(inlineInputClass, withPrefixLeftPadding, className)}
           autoFocus={autoFocus}
           disabled={isDisabled}
         />

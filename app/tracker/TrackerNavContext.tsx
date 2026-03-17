@@ -37,6 +37,8 @@ export type TrackerSaveState = {
   canConfigureFormActions: boolean
   onFormActionsChange: ((actions: TrackerFormAction[]) => void) | null
   onFormActionSelect: ((action: TrackerFormAction) => void | Promise<void>) | null
+  /** When true, save button is in the preview only; nav should not show legacy Save. */
+  showPreviewSaveButton: boolean
   /** When true, navbar shows editable tracker name (edit page only). When false, name is read-only. */
   titleEditable: boolean
 }
@@ -65,6 +67,7 @@ export const initialSaveState: TrackerSaveState = {
   canConfigureFormActions: false,
   onFormActionsChange: null,
   onFormActionSelect: null,
+  showPreviewSaveButton: false,
   titleEditable: false,
 }
 
