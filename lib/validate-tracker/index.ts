@@ -8,6 +8,7 @@ import { buildValidationContext } from './context'
 import {
   validateLayout,
   validateOptionsFields,
+  validateReservedFieldIds,
   validateDependsOn,
   validateBindings,
   validateValidations,
@@ -39,6 +40,7 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
   const results = [
     validateLayout(ctx),
     validateOptionsFields(ctx),
+    validateReservedFieldIds(ctx),
     validateDependsOn(tracker, ctx),
     validateBindings(ctx),
     validateValidations(ctx),

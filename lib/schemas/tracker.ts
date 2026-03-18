@@ -22,6 +22,15 @@ const snakeCaseId = () =>
     .string()
     .describe('Immutable, DB-safe identifier (snake_case preferred)')
 
+/** Field ids reserved for system use. LLMs and users cannot create fields with these ids. */
+export const RESERVED_FIELD_IDS = ['row_id'] as const
+
+const fieldId = () =>
+  snakeCaseId().refine(
+    (id) => !(RESERVED_FIELD_IDS as readonly string[]).includes(id),
+    { message: 'row_id is reserved for system use' }
+  )
+
 // --- Config standards (required for LLM output; components enforce these) ---
 
 /** Config is lenient so LLM output always passes; UI handles missing/wrong keys. */
@@ -247,7 +256,7 @@ export const trackerSchema = z
       .array(
         z
           .object({
-            id: snakeCaseId(),
+            id: fieldId(),
             dataType: fieldDataTypeEnum,
             ui: z
               .object({

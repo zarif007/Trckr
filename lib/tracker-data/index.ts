@@ -4,6 +4,7 @@ export type {
   UpdateTrackerDataBody,
 } from './types'
 export { validateGridDataSnapshot } from './validate'
+export { backfillRowIds } from './backfill'
 export {
   createTrackerData,
   listTrackerData,

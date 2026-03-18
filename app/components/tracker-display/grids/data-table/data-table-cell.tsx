@@ -80,6 +80,7 @@ export function DataTableCell<TData>({
   const showError = dirty && !!validationError
   const isMultiselect = fieldInfo?.type === 'multiselect' || fieldInfo?.type === 'dynamic_multiselect'
   const isFieldMappings = fieldInfo?.type === 'field_mappings'
+  const isTextareaType = fieldInfo?.type === 'text' || fieldInfo?.type === 'files'
 
   return (
     <TableCell
@@ -91,7 +92,7 @@ export function DataTableCell<TData>({
       className={cn(
         "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",
         !isSelect && "cursor-text hover:bg-muted/50 focus-within:bg-muted",
-        (isMultiselect || isFieldMappings) && "overflow-hidden",
+        (isMultiselect || isFieldMappings || isTextareaType) && "overflow-hidden",
         showError && "ring-2 ring-destructive ring-inset"
       )}
       title={showError ? validationError! : undefined}
@@ -102,7 +103,7 @@ export function DataTableCell<TData>({
         </div>
       ) : fieldInfo ? (
         isHidden ? null : (
-          <div className={cn((isMultiselect || isFieldMappings) && "min-w-0 overflow-hidden w-full", "h-full min-h-0")}>
+          <div className={cn((isMultiselect || isFieldMappings || isTextareaType) && "min-w-0 overflow-hidden w-full", "h-full min-h-0")}>
             <DataTableInput
               value={value}
               onChange={handleUpdate}

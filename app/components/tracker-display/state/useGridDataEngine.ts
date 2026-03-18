@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
+import { backfillRowIds } from '@/lib/tracker-data'
 import {
   applyCompiledCalculationsForRow,
   buildAccumulateDepsBySourceGrid,
@@ -48,7 +49,7 @@ export function useGridDataEngine({
       }
     }
 
-    return merged
+    return backfillRowIds(merged)
   }, [bindings, initialGridData])
 
   const [localGridData, setLocalGridData] = useState<Record<string, Array<Record<string, unknown>>>>(
@@ -142,22 +143,24 @@ export function useGridDataEngine({
 
   const handleAddEntry = useCallback(
     (gridId: string, newRow: Record<string, unknown>) => {
+      const rowWithId =
+        newRow.row_id != null ? newRow : { ...newRow, row_id: crypto.randomUUID() }
       setEditVersion((v) => v + 1)
       setLocalGridData((prev) => {
         const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        const newRows = [...current, newRow]
+        const newRows = [...current, rowWithId]
         result[gridId] = newRows
         const gridDataForCalc = result
         const plan = compiledCalculationsByGrid.get(gridId)
         const calculatedRow = plan
           ? applyCompiledCalculationsForRow({
             plan,
-            row: newRow,
-            changedFieldIds: Object.keys(newRow),
+            row: rowWithId,
+            changedFieldIds: Object.keys(rowWithId),
             gridData: gridDataForCalc,
           }).row
-          : newRow
+          : rowWithId
         result[gridId] = [...current, calculatedRow]
 
         const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)

@@ -60,8 +60,8 @@ function buildOptionRowIndex(
     if (labelFieldId && row[labelFieldId] !== undefined) {
       byLabel.set(String(row[labelFieldId]), row)
     }
-    // Index by id
-    const rowId = (row as { id?: unknown }).id
+    // Index by row_id (system) or id
+    const rowId = (row as { row_id?: unknown }).row_id ?? (row as { id?: unknown }).id
     if (rowId !== undefined) {
       byId.set(rowId, row)
       byId.set(String(rowId), row)
@@ -266,7 +266,7 @@ export function resolveOptionsFromBinding(
     const val = row[valueFieldId]
     const display = String(row[labelFieldId] ?? val ?? '')
     return {
-      id: row.id != null ? String(row.id) : `opt-${i}`,
+      id: row.row_id != null ? String(row.row_id) : row.id != null ? String(row.id) : `opt-${i}`,
       label: display,
       value: val,
     }

@@ -285,7 +285,7 @@ export function DataTableInput({
           className={cn(
             inlineInputClass,
             'py-1',
-            compact ? 'min-h-0 h-10 resize-none overflow-auto' : 'min-h-[64px]',
+            compact ? 'min-h-0 h-10 resize-none overflow-auto field-sizing-fixed' : 'min-h-[64px]',
             className
           )}
           autoFocus={autoFocus}
@@ -601,7 +601,7 @@ export function DataTableInput({
           className={cn(
             inlineInputClass,
             'py-1',
-            compact ? 'min-h-0 h-10 resize-none overflow-auto' : 'min-h-[64px]',
+            compact ? 'min-h-0 h-10 resize-none overflow-auto field-sizing-fixed' : 'min-h-[64px]',
             className
           )}
           autoFocus={autoFocus}

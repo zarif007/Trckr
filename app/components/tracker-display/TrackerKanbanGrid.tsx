@@ -182,11 +182,32 @@ function TrackerKanbanGridInner({
     return map
   }, [rows, groupByFieldId])
 
+  const getCardSortId = useCallback(
+    (card: Record<string, unknown> & { _originalIdx: number }, groupId: string) =>
+      `${String(card.row_id ?? card.id ?? card._originalIdx)}-${groupId}`,
+    []
+  )
+
   const validGroupIds = useMemo(() => new Set(groups.map((g) => g.id)), [groups])
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveId(event.active.id as string)
   }, [])
+
+  const resolveCardIndex = useCallback(
+    (sortId: string): number => {
+      const dashAt = sortId.indexOf('-')
+      if (dashAt < 0) return -1
+      const firstPart = sortId.slice(0, dashAt)
+      const byRowId = rows.findIndex(
+        (r) => (r as Record<string, unknown>).row_id === firstPart || String((r as Record<string, unknown>).id) === firstPart
+      )
+      if (byRowId >= 0) return byRowId
+      const idx = parseInt(firstPart, 10)
+      return !Number.isNaN(idx) && idx >= 0 && idx < rows.length ? idx : -1
+    },
+    [rows]
+  )
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -196,10 +217,8 @@ function TrackerKanbanGridInner({
 
       const cardId = active.id as string
       const overId = String(over.id)
-      const dashAt = cardId.indexOf('-')
-      if (dashAt < 0) return
-      const cardIdx = parseInt(cardId.slice(0, dashAt), 10)
-      if (Number.isNaN(cardIdx) || cardIdx < 0 || cardIdx >= rows.length) return
+      const cardIdx = resolveCardIndex(cardId)
+      if (cardIdx < 0) return
 
       const currentCard = rows[cardIdx]
       let nextGroupId = overId
@@ -239,6 +258,7 @@ function TrackerKanbanGridInner({
     [
       groupByFieldId,
       rows,
+      resolveCardIndex,
       onUpdate,
       onCrossGridUpdate,
       validGroupIds,
@@ -315,9 +335,9 @@ function TrackerKanbanGridInner({
 
   const activeCard = useMemo(() => {
     if (!activeId) return null
-    const idx = parseInt(activeId.split('-')[0], 10)
-    return Number.isNaN(idx) ? null : rows[idx]
-  }, [activeId, rows])
+    const idx = resolveCardIndex(activeId)
+    return idx >= 0 ? rows[idx] : null
+  }, [activeId, rows, resolveCardIndex])
 
   const entryWays = useMemo(
     () => buildEntryWaysForGrid({ grid, tabId }),
@@ -468,7 +488,7 @@ function TrackerKanbanGridInner({
                 {canDrag ? (
                   <SortableContext
                     id={group.id}
-                    items={cardsInGroup.map((c) => `${(c as Record<string, unknown> & { _originalIdx: number })._originalIdx}-${group.id}`)}
+                    items={cardsInGroup.map((c) => getCardSortId(c, group.id))}
                     strategy={verticalListSortingStrategy}
                   >
                     {cardsInGroup.length === 0 ? (
@@ -476,7 +496,7 @@ function TrackerKanbanGridInner({
                     ) : (
                       <>
                         {cardsInGroup.map((card) => {
-                          const sortId = `${card._originalIdx}-${group.id}`
+                          const sortId = getCardSortId(card, group.id)
                           return (
                             <SortableKanbanCard
                               key={sortId}
@@ -506,7 +526,7 @@ function TrackerKanbanGridInner({
                 ) : (
                   cardsInGroup.map((card) => (
                     <KanbanCard
-                      key={`${group.id}-${card._originalIdx ?? 'row'}`}
+                      key={`${group.id}-${card.row_id ?? card.id ?? card._originalIdx ?? 'row'}`}
                       card={card}
                       cardFields={visibleCardFields}
                       gridId={grid.id}

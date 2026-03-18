@@ -19,6 +19,7 @@ ID NAMING (follow exactly so agents and code stay consistent):
 - Sections: snake_case, MUST end with _section (e.g. main_section, option_lists_section).
 - Grids: snake_case, MUST end with _grid (e.g. tasks_grid, meta_grid). Options grids MUST end with _options_grid (e.g. category_options_grid).
 - Fields: snake_case, no suffix (e.g. due_date, status, title).
+- RESERVED: Never use "row_id" as a field id — it is reserved for the system.
 
 GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
 - IDs for tabs, sections, grids, and fields MUST be globally unique across the ENTIRE tracker – do not reuse the same id in different places.

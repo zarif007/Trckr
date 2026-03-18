@@ -40,7 +40,7 @@ interface GridDiff {
   stats: { added: number; removed: number; modified: number }
 }
 
-const ROW_ID_CANDIDATES = ['id', '_id', 'rowId', 'key'] as const
+const ROW_ID_CANDIDATES = ['row_id', 'id', '_id', 'rowId', 'key'] as const
 
 function findRowIdField(rows: Array<Record<string, unknown>>): string | null {
   for (const candidate of ROW_ID_CANDIDATES) {
