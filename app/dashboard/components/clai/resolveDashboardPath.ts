@@ -29,6 +29,7 @@ export function resolveDashboardPath(pathname: string, projects: Project[]): str
   const second = segments[1]
   if (second === 'projects') return 'dashboard/projects'
   if (second === 'recents') return 'dashboard/recents'
+  if (second === 'ai-project') return 'dashboard/ai-project'
 
   // second is projectId
   const projectId = second

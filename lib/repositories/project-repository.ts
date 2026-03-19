@@ -35,39 +35,45 @@ export async function listProjectsForUser(userId: string) {
 }
 
 export async function createProjectForUser(userId: string, name: string) {
-  return prisma.$transaction(async (tx) => {
-    const project = await tx.project.create({
-      data: {
-        userId,
-        name,
-      },
-    })
-    await tx.trackerSchema.createMany({
-      data: SYSTEM_FILE_TYPES.map((systemType) => ({
-        projectId: project.id,
-        moduleId: null,
-        name: SYSTEM_FILE_LABELS[systemType],
-        type: TrackerSchemaType.SYSTEM,
-        systemType,
-        instance: Instance.SINGLE,
-        versionControl: false,
-        autoSave: true,
-        schema: createEmptyTrackerSchema() as object,
-      })),
-    })
-    return tx.project.findUniqueOrThrow({
-      where: { id: project.id },
-      include: {
-        trackerSchemas: { orderBy: { updatedAt: 'desc' } },
-        modules: {
-          orderBy: { updatedAt: 'desc' },
-          include: {
-            trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+  return prisma.$transaction(
+    async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          userId,
+          name,
+        },
+      })
+      await tx.trackerSchema.createMany({
+        data: SYSTEM_FILE_TYPES.map((systemType) => ({
+          projectId: project.id,
+          moduleId: null,
+          name: SYSTEM_FILE_LABELS[systemType],
+          type: TrackerSchemaType.SYSTEM,
+          systemType,
+          instance: Instance.SINGLE,
+          versionControl: false,
+          autoSave: true,
+          schema: createEmptyTrackerSchema() as object,
+        })),
+      })
+      return tx.project.findUniqueOrThrow({
+        where: { id: project.id },
+        include: {
+          trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+          modules: {
+            orderBy: { updatedAt: 'desc' },
+            include: {
+              trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+            },
           },
         },
-      },
-    })
-  })
+      })
+    },
+    {
+      maxWait: 10000,
+      timeout: 20000,
+    },
+  )
 }
 
 export async function findProjectByIdForUser(projectId: string, userId: string) {

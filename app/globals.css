@@ -26,6 +26,18 @@ body {
   mask-image: radial-gradient(circle at center, black, transparent 80%);
 }
 
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.ai-gradient-border {
+  background: linear-gradient(120deg, hsl(181 85% 38%), hsl(38 92% 50%), hsl(199 89% 48%));
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
 /* Helper for accessibility (visually hidden) */
 .visually-hidden {
   position: absolute !important;

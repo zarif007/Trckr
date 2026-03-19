@@ -13,6 +13,7 @@ import {
   List,
   LayoutList,
   FileText,
+  Sparkles,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -157,6 +158,16 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Link
+              href="/dashboard/ai-project"
+              className="group relative"
+            >
+              <span className="absolute -inset-0.5 rounded-md ai-gradient-border opacity-80 group-hover:opacity-100 transition-opacity" />
+              <span className="relative h-7 px-2.5 rounded-md bg-background/90 border border-border/40 shadow-sm flex items-center gap-1.5 text-[11px] font-semibold text-foreground/90 group-hover:text-foreground transition-colors">
+                <Sparkles className="h-3.5 w-3.5 text-foreground/80 group-hover:text-foreground" />
+                AI Project
+              </span>
+            </Link>
             <CreateDropdown
               variant="toolbar"
               onError={setError}
