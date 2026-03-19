@@ -314,6 +314,13 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     [handleSchemaChange]
   )
 
+  const onNameChangeRef = useRef(stableOnTrackerNameChange)
+  onNameChangeRef.current = stableOnTrackerNameChange
+
+  const onNameChangeStable = useCallback((name: string) => {
+    onNameChangeRef.current(name)
+  }, [])
+
   const handleFormActionsChange = useCallback(
     (actions: TrackerFormAction[]) => {
       handleSchemaChange({
@@ -324,10 +331,25 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     [handleSchemaChange]
   )
 
+  const formActionsChangeRef = useRef(handleFormActionsChange)
+  formActionsChangeRef.current = handleFormActionsChange
+  const formActionsChangeStable = useCallback((actions: TrackerFormAction[]) => {
+    formActionsChangeRef.current(actions)
+  }, [])
+
+  const formActionSelectRef = useRef(handleFormActionSelect)
+  formActionSelectRef.current = handleFormActionSelect
+  const formActionSelectStable = useCallback(
+    (action: TrackerFormAction) => {
+      formActionSelectRef.current(action)
+    },
+    []
+  )
+
   useEffect(() => {
     if (!setTrackerNav) return
-    setTrackerNav({ name: trackerName, onNameChange: stableOnTrackerNameChange })
-  }, [setTrackerNav, trackerName, stableOnTrackerNameChange])
+    setTrackerNav({ name: trackerName, onNameChange: onNameChangeStable })
+  }, [setTrackerNav, trackerName, onNameChangeStable])
 
   useEffect(() => {
     return () => setTrackerNavRef.current?.(null)
@@ -392,8 +414,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       formActionSaving: isDataPage ? formActionSaving : false,
       formActionError: isDataPage ? formActionError : null,
       canConfigureFormActions: showActionsConfig,
-      onFormActionsChange: showActionsConfig ? handleFormActionsChange : null,
-      onFormActionSelect: isDataPage && showFormActions ? handleFormActionSelect : null,
+      onFormActionsChange: showActionsConfig ? formActionsChangeStable : null,
+      onFormActionSelect: isDataPage && showFormActions ? formActionSelectStable : null,
       showPreviewSaveButton,
       titleEditable: !isDataPage && canEditSchema && editMode,
     })
@@ -419,11 +441,11 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     canEditSchema,
     editMode,
     autoSave,
-    handleFormActionsChange,
+    formActionsChangeStable,
     isDataPage,
     instanceType,
     versionControl,
-    handleFormActionSelect,
+    formActionSelectStable,
   ])
 
   useEffect(() => {

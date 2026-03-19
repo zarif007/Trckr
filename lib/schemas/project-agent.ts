@@ -21,6 +21,16 @@ export const projectQuestionnaireSchema = z
   })
   .passthrough()
 
+export const projectSingleQuestionSchema = z
+  .object({
+    question: projectQuestionSchema.optional(),
+    done: z.literal(true).optional(),
+  })
+  .passthrough()
+  .refine((data) => data.done === true || (data.question != null), {
+    message: 'Must have either question or done',
+  })
+
 export const projectPlanSchema = z
   .object({
     project: z
@@ -59,4 +69,5 @@ export const projectPlanSchema = z
   .passthrough()
 
 export type ProjectQuestionnaire = z.infer<typeof projectQuestionnaireSchema>
+export type ProjectSingleQuestion = z.infer<typeof projectSingleQuestionSchema>
 export type ProjectPlan = z.infer<typeof projectPlanSchema>

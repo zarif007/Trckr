@@ -6,6 +6,10 @@ export type QuestionsParseResult =
   | { ok: true; prompt: string }
   | { ok: false; error: string; status: number }
 
+export type QuestionParseResult =
+  | { ok: true; prompt: string; answers: Record<string, unknown> }
+  | { ok: false; error: string; status: number }
+
 export type PlanParseResult =
   | { ok: true; prompt: string; answers: Record<string, unknown> }
   | { ok: false; error: string; status: number }
@@ -49,6 +53,37 @@ export function parseQuestionsBody(body: unknown): QuestionsParseResult {
   }
 
   return { ok: true, prompt: prompt.trim() }
+}
+
+export function parseQuestionBody(body: unknown): QuestionParseResult {
+  const obj = getBodyObject(body)
+  if (!obj) {
+    return {
+      ok: false,
+      error: 'Invalid request body. Expected JSON with "prompt".',
+      status: 400,
+    }
+  }
+
+  const prompt = obj.prompt
+  if (!prompt || typeof prompt !== 'string' || prompt.trim() === '') {
+    return { ok: false, error: 'Prompt is required and must be a non-empty string.', status: 400 }
+  }
+
+  const answers = obj.answers
+  if (answers != null && (typeof answers !== 'object' || Array.isArray(answers))) {
+    return { ok: false, error: 'Answers must be an object when provided.', status: 400 }
+  }
+
+  if (!hasDeepSeekApiKey()) {
+    return { ok: false, error: 'DEEPSEEK_API_KEY is not configured', status: 500 }
+  }
+
+  return {
+    ok: true,
+    prompt: prompt.trim(),
+    answers: (answers as Record<string, unknown>) ?? {},
+  }
 }
 
 export function parsePlanBody(body: unknown): PlanParseResult {

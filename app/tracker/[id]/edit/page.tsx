@@ -1,6 +1,6 @@
 'use client'
 
-import React, { use, Suspense, useEffect, useState, useCallback } from 'react'
+import React, { use, Suspense, useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { TrackerAIView } from '../../page'
@@ -201,6 +201,11 @@ function TrackerByIdEditContent({
     )
   }
 
+  const primaryNavAction = useMemo(
+    () => ({ label: 'Open Tracker', href: `/tracker/${id}` }),
+    [id]
+  )
+
   return (
     <TrackerAIView
       initialSchema={schema}
@@ -213,7 +218,7 @@ function TrackerByIdEditContent({
       pageMode="schema"
       showPanelUtilities={false}
       schemaAutoSave
-      primaryNavAction={{ label: 'Open Tracker', href: `/tracker/${id}` }}
+      primaryNavAction={primaryNavAction}
       autoSave={state.tracker?.autoSave ?? true}
     />
   )

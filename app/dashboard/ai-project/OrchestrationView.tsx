@@ -85,14 +85,12 @@ function StreamingText({
 interface OrchestrationViewProps {
   userPrompt: string
   stage: string
-  questionnaire: { questions: Question[] } | null
-  answers: Record<string, unknown>
-  currentQuestionIndex: number
+  answeredQuestions: Array<{ question: Question; answer: unknown }>
   currentQuestion: Question | null
+  answers: Record<string, unknown>
   plan: ProjectPlan | null
   setupItems: SetupItem[]
   buildItems: BuildItem[]
-  streamedQuestions: unknown
   streamedPlan: unknown
   isQuestionsLoading: boolean
   isPlanLoading: boolean
@@ -109,18 +107,6 @@ interface OrchestrationViewProps {
   projectId?: string
   planError?: Error | null
   questionsError?: Error | null
-}
-
-function formatQuestionDraft(questionnaire?: unknown): string {
-  if (!questionnaire || typeof questionnaire !== 'object') return 'Analyzing your request...'
-  const q = questionnaire as { questions?: unknown[] }
-  const total = q.questions?.length ?? 0
-  if (!total) return 'Analyzing your request...'
-  const first = q.questions?.[0] as { label?: string; help?: string; options?: string[] } | undefined
-  if (!first) return 'Analyzing your request...'
-  const parts = [`Preparing question 1 of ${total}: ${first?.label || '...'}`]
-  if (first?.help) parts.push(first.help)
-  return parts.join('\n')
 }
 
 function formatPlanDraft(plan?: unknown): string {
@@ -158,14 +144,12 @@ function buildPlanSummary(plan: ProjectPlan): string {
 export function OrchestrationView({
   userPrompt,
   stage,
-  questionnaire,
-  answers,
-  currentQuestionIndex,
+  answeredQuestions,
   currentQuestion,
+  answers,
   plan,
   setupItems,
   buildItems,
-  streamedQuestions,
   streamedPlan,
   isQuestionsLoading,
   isPlanLoading,
@@ -187,10 +171,11 @@ export function OrchestrationView({
 
   React.useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [stage, questionnaire, answers, currentQuestionIndex, plan, setupItems, buildItems, streamedQuestions, streamedPlan])
+  }, [stage, answeredQuestions, currentQuestion, plan, setupItems, buildItems, streamedPlan])
 
-  const questionList = questionnaire?.questions ?? []
   const answeredCount = Object.keys(answers).length
+  const hasQuestionsToShow = answeredQuestions.length > 0 || currentQuestion != null
+  const isPreparingQuestion = isQuestionsLoading && !currentQuestion
 
   return (
     <div className="space-y-6">
@@ -217,27 +202,27 @@ export function OrchestrationView({
         </div>
 
         <div className="p-4 space-y-4 text-sm leading-relaxed">
-          {/* Thinking / streaming questions */}
-          {(isQuestionsLoading || (stage === 'asking' && questionList.length === 0)) && (
+          {/* Preparing question - static message, no partial streaming */}
+          {isPreparingQuestion && (
             <div className="text-foreground/90">
-              <StreamingText text={formatQuestionDraft(streamedQuestions)} showCursor={true} />
+              {answeredQuestions.length > 0 ? 'Preparing your next question...' : 'Preparing your question...'}
             </div>
           )}
 
           {/* Asking - answered Q&A + current question with inline input */}
-          {stage === 'asking' && questionList.length > 0 && (
+          {stage === 'asking' && hasQuestionsToShow && (
             <div className="space-y-4">
               <p className="text-foreground/90">
                 To design your project, I need a few details:
               </p>
 
-              {questionList.slice(0, currentQuestionIndex).map((q, idx) => (
+              {answeredQuestions.map(({ question: q, answer }, idx) => (
                 <div key={q.id} className="flex flex-col gap-1">
                   <div className="text-foreground/80">
                     {idx + 1}. {q.label}
                   </div>
                   <div className="text-foreground font-medium pl-4 border-l-2 border-border/40">
-                    → {formatAnswerDisplay(answers[q.id])}
+                    → {formatAnswerDisplay(answer)}
                   </div>
                 </div>
               ))}
@@ -245,19 +230,19 @@ export function OrchestrationView({
               {currentQuestion && (
                 <div className="space-y-2">
                   <div className="text-foreground/80">
-                    {currentQuestionIndex + 1}. {currentQuestion.label}
+                    {answeredQuestions.length + 1}. {currentQuestion.label}
                     {currentQuestion.help && (
                       <span className="block text-xs text-muted-foreground mt-0.5">
                         {currentQuestion.help}
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-2 rounded-xl border border-border/50 bg-background p-3 shadow-sm">
+                  <div className="flex gap-2 items-end">
                     <Textarea
                       value={input}
                       onChange={(e) => onInputChange(e.target.value)}
                       placeholder={currentQuestion.placeholder ?? 'Your answer...'}
-                      className="min-h-[56px] max-h-[160px] py-3 px-4 text-sm leading-relaxed resize-y border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground focus:outline-none"
+                      className="min-h-[80px] max-h-[200px] flex-1 resize-y text-sm"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault()
@@ -265,12 +250,12 @@ export function OrchestrationView({
                         }
                       }}
                       disabled={inputDisabled}
-                      rows={2}
+                      rows={3}
                     />
                     <Button
                       onClick={onSend}
                       disabled={!canSend}
-                      className="shrink-0 rounded-lg h-11 w-11 p-0"
+                      className="shrink-0 h-10 w-10"
                       size="icon"
                     >
                       {busy ? (

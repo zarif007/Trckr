@@ -6,14 +6,9 @@ import { Loader2, Sparkles } from 'lucide-react'
 import { OrchestrationView } from './OrchestrationView'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { projectPlanSchema, projectQuestionnaireSchema } from '@/lib/schemas/project-agent'
+import { projectPlanSchema, projectSingleQuestionSchema } from '@/lib/schemas/project-agent'
 
 type QuestionType = 'text' | 'textarea' | 'select' | 'multiselect' | 'boolean' | 'number'
-
-type Questionnaire = {
-  summary?: string
-  questions: Question[]
-}
 
 type Question = {
   id: string
@@ -86,26 +81,11 @@ type BuildItem = {
 
 type Stage = 'idle' | 'asking' | 'planning' | 'confirm' | 'building'
 
-function formatQuestion(question: Question, index: number, total: number) {
-  const parts = [`Question ${index + 1}/${total}: ${question.label}`]
+function formatQuestion(question: Question, index: number): string {
+  const parts = [`${index + 1}. ${question.label}`]
   if (question.help) parts.push(question.help)
   if (question.options?.length) {
     parts.push(`Options: ${question.options.join(', ')}`)
-  }
-  return parts.join('\n')
-}
-
-function formatQuestionDraft(questionnaire?: unknown): string {
-  if (!questionnaire || typeof questionnaire !== 'object') return 'Drafting your first question...'
-  const q = questionnaire as { questions?: unknown[] }
-  const total = q.questions?.length ?? 0
-  if (!total) return 'Drafting your first question...'
-  const first = q.questions?.[0] as { label?: string; help?: string; options?: string[] } | undefined
-  if (!first) return 'Drafting your first question...'
-  const parts = [`Question 1/${total}: ${first?.label || '...'} `]
-  if (first?.help) parts.push(first.help)
-  if (first?.options?.length) {
-    parts.push(`Options: ${first.options.join(', ')}`)
   }
   return parts.join('\n')
 }
@@ -174,9 +154,9 @@ export default function AiProjectBuilderPage() {
   const [buildBusy, setBuildBusy] = useState(false)
 
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [questionnaire, setQuestionnaire] = useState<Questionnaire | null>(null)
+  const [answeredQuestions, setAnsweredQuestions] = useState<Array<{ question: Question; answer: unknown }>>([])
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [plan, setPlan] = useState<ProjectPlan | null>(null)
 
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -189,23 +169,39 @@ export default function AiProjectBuilderPage() {
   const planStreamIdRef = useRef<string | null>(null)
 
   const {
-    object: streamedQuestions,
-    submit: submitQuestions,
+    submit: submitQuestion,
     isLoading: isQuestionsLoading,
     error: questionsError,
   } = useObject({
-    api: '/api/ai-project/questions',
-    schema: projectQuestionnaireSchema,
+    api: '/api/ai-project/question',
+    schema: projectSingleQuestionSchema,
     onFinish: ({ object }) => {
       const streamId = questionStreamIdRef.current
-      if (object?.questions?.length) {
-        setQuestionnaire(object)
-        setAnswers({})
-        setCurrentQuestionIndex(0)
+      const obj = object as { question?: Question; done?: true } | null
+      if (obj?.done === true) {
+        if (streamId) {
+          updateMessage(streamId, {
+            content: 'I have everything I need. Planning the project now...',
+            stream: true,
+            agentType: 'orchestrator',
+            phase: 'think',
+          })
+        } else {
+          appendMessage({
+            role: 'assistant',
+            content: 'I have everything I need. Planning the project now...',
+            stream: true,
+            agentType: 'orchestrator',
+            phase: 'think',
+          })
+        }
+        void handlePlan(prompt, answers)
+      } else if (obj?.question) {
+        setCurrentQuestion(obj.question)
         setStage('asking')
         if (streamId) {
           updateMessage(streamId, {
-            content: formatQuestion(object.questions[0], 0, object.questions.length),
+            content: formatQuestion(obj.question, answeredQuestions.length),
             stream: true,
             agentType: 'orchestrator',
             phase: 'ask',
@@ -213,30 +209,12 @@ export default function AiProjectBuilderPage() {
         } else {
           appendMessage({
             role: 'assistant',
-            content: formatQuestion(object.questions[0], 0, object.questions.length),
+            content: formatQuestion(obj.question, answeredQuestions.length),
             stream: true,
             agentType: 'orchestrator',
             phase: 'ask',
           })
         }
-      } else {
-        if (streamId) {
-          updateMessage(streamId, {
-            content: 'I have everything I need. Planning the project now...',
-            stream: true,
-            agentType: 'orchestrator',
-            phase: 'think',
-          })
-        } else {
-          appendMessage({
-            role: 'assistant',
-            content: 'I have everything I need. Planning the project now...',
-            stream: true,
-            agentType: 'orchestrator',
-            phase: 'think',
-          })
-        }
-        void handlePlan(prompt, {})
       }
       questionStreamIdRef.current = null
     },
@@ -246,7 +224,7 @@ export default function AiProjectBuilderPage() {
         updateMessage(streamId, {
           role: 'assistant',
           tone: 'error',
-          content: err.message || 'Failed to generate questions.',
+          content: err.message || 'Failed to generate question.',
           stream: true,
           agentType: 'orchestrator',
           phase: 'ask',
@@ -255,7 +233,7 @@ export default function AiProjectBuilderPage() {
         appendMessage({
           role: 'assistant',
           tone: 'error',
-          content: err.message || 'Failed to generate questions.',
+          content: err.message || 'Failed to generate question.',
           stream: true,
           agentType: 'orchestrator',
           phase: 'ask',
@@ -351,17 +329,7 @@ export default function AiProjectBuilderPage() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, streamedQuestions, streamedPlan, isPlanLoading, isQuestionsLoading, buildItems])
-
-  useEffect(() => {
-    const streamId = questionStreamIdRef.current
-    if (!streamId) return
-    if (!streamedQuestions) return
-    updateMessage(streamId, {
-      content: formatQuestionDraft(streamedQuestions),
-      stream: false,
-    })
-  }, [streamedQuestions])
+  }, [messages, streamedPlan, isPlanLoading, isQuestionsLoading, buildItems, answeredQuestions, currentQuestion])
 
   useEffect(() => {
     const streamId = planStreamIdRef.current
@@ -372,9 +340,6 @@ export default function AiProjectBuilderPage() {
       stream: false,
     })
   }, [streamedPlan])
-
-  const questionList = questionnaire?.questions ?? []
-  const currentQuestion = questionList[currentQuestionIndex]
 
   const inputPlaceholder = useMemo(() => {
     if (stage === 'idle') return 'Describe the system you want to build...'
@@ -407,6 +372,9 @@ export default function AiProjectBuilderPage() {
 
   const handleStart = async (userPrompt: string) => {
     setPrompt(userPrompt)
+    setAnsweredQuestions([])
+    setCurrentQuestion(null)
+    setAnswers({})
     appendMessage({ role: 'user', content: userPrompt, phase: 'discuss' })
     appendMessage({
       role: 'status',
@@ -419,13 +387,13 @@ export default function AiProjectBuilderPage() {
 
     const streamId = appendMessage({
       role: 'assistant',
-      content: 'Drafting your first question...',
+      content: 'Preparing your question...',
       agentType: 'orchestrator',
       phase: 'ask',
     })
     questionStreamIdRef.current = streamId
 
-    submitQuestions({ prompt: userPrompt })
+    submitQuestion({ prompt: userPrompt })
   }
 
   const handlePlan = async (userPrompt: string, collectedAnswers: Record<string, unknown>) => {
@@ -791,10 +759,19 @@ export default function AiProjectBuilderPage() {
   }
 
   const handleEditAnswers = () => {
-    if (!questionnaire) return
+    if (!plan) return
     setStage('asking')
-    setCurrentQuestionIndex(0)
+    setAnsweredQuestions([])
+    setCurrentQuestion(null)
     setAnswers({})
+    const streamId = appendMessage({
+      role: 'assistant',
+      content: 'Preparing your question...',
+      agentType: 'orchestrator',
+      phase: 'ask',
+    })
+    questionStreamIdRef.current = streamId
+    submitQuestion({ prompt })
   }
 
   const handleRetryPlan = async () => {
@@ -813,15 +790,19 @@ export default function AiProjectBuilderPage() {
 
     if (stage === 'asking' && currentQuestion) {
       const normalized = normalizeAnswer(currentQuestion, value)
-      setAnswers((prev) => ({ ...prev, [currentQuestion.id]: normalized }))
+      const collected = { ...answers, [currentQuestion.id]: normalized }
+      setAnswers(collected)
+      setAnsweredQuestions((prev) => [...prev, { question: currentQuestion, answer: normalized }])
+      setCurrentQuestion(null)
 
-      const nextIndex = currentQuestionIndex + 1
-      if (nextIndex < questionList.length) {
-        setCurrentQuestionIndex(nextIndex)
-      } else {
-        const collected = { ...answers, [currentQuestion.id]: normalized }
-        await handlePlan(prompt, collected)
-      }
+      const streamId = appendMessage({
+        role: 'assistant',
+        content: 'Preparing your next question...',
+        agentType: 'orchestrator',
+        phase: 'ask',
+      })
+      questionStreamIdRef.current = streamId
+      submitQuestion({ prompt, answers: collected })
     }
   }
 
@@ -853,14 +834,12 @@ export default function AiProjectBuilderPage() {
             <OrchestrationView
               userPrompt={prompt}
               stage={stage}
-              questionnaire={questionnaire}
+              answeredQuestions={answeredQuestions}
+              currentQuestion={currentQuestion}
               answers={answers}
-              currentQuestionIndex={currentQuestionIndex}
-              currentQuestion={currentQuestion ?? null}
               plan={plan}
               setupItems={setupItems}
               buildItems={buildItems}
-              streamedQuestions={streamedQuestions}
               streamedPlan={streamedPlan}
               isQuestionsLoading={isQuestionsLoading}
               isPlanLoading={isPlanLoading}

@@ -1,8 +1,13 @@
 import projectOrchestratorPrompt from '@/lib/prompts/project-orchestrator'
+import projectOrchestratorSinglePrompt from '@/lib/prompts/project-orchestrator-single'
 import projectPlannerPrompt from '@/lib/prompts/project-planner'
 
 export function getOrchestratorSystemPrompt(): string {
   return projectOrchestratorPrompt
+}
+
+export function getOrchestratorSingleSystemPrompt(): string {
+  return projectOrchestratorSinglePrompt
 }
 
 export function getPlannerSystemPrompt(): string {
@@ -11,6 +16,17 @@ export function getPlannerSystemPrompt(): string {
 
 export function buildQuestionsPrompt(userPrompt: string): string {
   return `User prompt:\n${userPrompt.trim()}\n\nGenerate the questionnaire now.`
+}
+
+export function buildSingleQuestionPrompt(
+  userPrompt: string,
+  answers: Record<string, unknown>,
+): string {
+  const formattedAnswers = Object.entries(answers)
+    .map(([key, value]) => `- ${key}: ${formatAnswerValue(value)}`)
+    .join('\n')
+
+  return `User prompt:\n${userPrompt.trim()}\n\nPrevious answers:\n${formattedAnswers || '- (none)'}\n\nOutput the next question or { "done": true } if you have enough.`
 }
 
 function formatAnswerValue(value: unknown): string {
