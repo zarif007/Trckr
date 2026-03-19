@@ -92,7 +92,7 @@ function TrackerTableGridInner({
   const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
     Record<string, ReturnType<typeof resolveFieldOptionsV2> | undefined>
   >({})
-  const { editMode, schema, onSchemaChange } = useEditMode()
+  const { editMode, schema, onSchemaChange, trackerSchemaId: editTrackerSchemaId } = useEditMode()
   const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
 
@@ -546,6 +546,7 @@ function TrackerTableGridInner({
           gridId={grid.id}
           schema={schema}
           onSchemaChange={onSchemaChange}
+          trackerSchemaId={editTrackerSchemaId}
         />
       )}
       <DataTable

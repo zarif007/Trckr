@@ -70,6 +70,8 @@ const contextSchema = z
 const requestSchema = z
   .object({
     functionId: z.string().trim().min(1),
+    projectId: z.string().trim().min(1).optional(),
+    trackerSchemaId: z.string().trim().min(1).optional(),
     args: z.record(z.string(), z.any()).optional(),
     context: contextSchema,
     runtime: z

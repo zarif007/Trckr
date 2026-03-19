@@ -19,6 +19,7 @@ describe('parseQuestionsBody', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.prompt).toBe('build a crm')
+    expect(result.projectId).toBeNull()
   })
 
   it('returns 400 for empty prompt', () => {
@@ -46,6 +47,7 @@ describe('parsePlanBody', () => {
     if (!result.ok) return
     expect(result.prompt).toBe('build a crm')
     expect(result.answers).toEqual({ industry: 'SaaS' })
+    expect(result.projectId).toBeNull()
   })
 
   it('returns 400 when answers missing', () => {

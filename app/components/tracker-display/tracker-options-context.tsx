@@ -14,6 +14,7 @@ export function TrackerOptionsProvider({
   sections,
   dynamicOptions,
   gridData,
+  trackerSchemaId,
   children,
 }: {
   grids: TrackerGrid[]
@@ -22,11 +23,20 @@ export function TrackerOptionsProvider({
   sections?: TrackerSection[]
   dynamicOptions?: DynamicOptionsDefinitions
   gridData?: Record<string, Array<Record<string, unknown>>>
+  trackerSchemaId?: string | null
   children: React.ReactNode
 }) {
   const value = useMemo<TrackerContextForOptions>(
-    () => ({ grids, fields, layoutNodes, sections, dynamicOptions, gridData }),
-    [grids, fields, layoutNodes, sections, dynamicOptions, gridData]
+    () => ({
+      grids,
+      fields,
+      layoutNodes,
+      sections,
+      dynamicOptions,
+      gridData,
+      ...(trackerSchemaId ? { trackerSchemaId } : {}),
+    }),
+    [grids, fields, layoutNodes, sections, dynamicOptions, gridData, trackerSchemaId]
   )
   return (
     <TrackerOptionsContext.Provider value={value}>

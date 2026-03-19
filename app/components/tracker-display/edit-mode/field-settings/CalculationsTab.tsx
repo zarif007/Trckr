@@ -14,6 +14,7 @@ export interface CalculationsTabProps {
   calculationRule: FieldCalculationRule | null
   setCalculationRule: React.Dispatch<React.SetStateAction<FieldCalculationRule | null>>
   availableFields: Array<{ fieldId: string; label: string; dataType?: string }>
+  trackerSchemaId?: string | null
 }
 
 export function CalculationsTab({
@@ -23,6 +24,7 @@ export function CalculationsTab({
   calculationRule,
   setCalculationRule,
   availableFields,
+  trackerSchemaId,
 }: CalculationsTabProps) {
   if (!gridId) {
     return (
@@ -59,6 +61,7 @@ export function CalculationsTab({
         fieldId={field.id}
         availableFields={availableFields}
         currentTracker={schema}
+        trackerSchemaId={trackerSchemaId}
         onChange={(nextExpr) => setCalculationRule({ expr: nextExpr })}
       />
       <div className="flex justify-end">

@@ -46,6 +46,8 @@ export interface DynamicOptionsContext {
   runtime?: DynamicOptionsRuntimeContext
   /** Optional tracker-level dynamic options definitions (user-created functions/connectors). */
   dynamicOptions?: DynamicOptionsDefinitions
+  /** When resolving options via the server, attribute LLM usage to this tracker schema id. */
+  trackerSchemaId?: string
 }
 
 /** Signature of a dynamic options function. */

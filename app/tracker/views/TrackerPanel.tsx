@@ -369,6 +369,7 @@ export const TrackerPanel = memo(function TrackerPanel({
               initialGridData={initialGridData ?? undefined}
               onGridDataChange={onGridDataChange}
               readOnly={readOnly}
+              trackerSchemaId={trackerId}
             />
           ) : (
             <TrackerDisplay
@@ -393,6 +394,7 @@ export const TrackerPanel = memo(function TrackerPanel({
               onSchemaChange={editMode ? handleSchemaChange : undefined}
               undo={undo}
               canUndo={canUndo}
+              trackerSchemaId={trackerId}
             />
           )}
         </TrackerDisplayErrorBoundary>

@@ -3,6 +3,8 @@ import { multiAgentSchema, type MultiAgentSchema } from '@/lib/schemas/multi-age
 import { getDefaultAiProvider, logAiError, logAiStage, getConfiguredMaxOutputTokens } from '@/lib/ai'
 import { createRequestLogContext, jsonError } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { prisma } from '@/lib/db'
+import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { createTrackerForUser } from '@/lib/repositories'
 import { getCombinedSystemPrompt } from '@/app/api/generate-tracker/lib/prompts'
 import { buildTrackerBuilderPrompt } from '../lib/prompts'
@@ -90,6 +92,14 @@ export async function POST(request: Request) {
 
   const projectContext = contextParsed.data
 
+  const ownedProject = await prisma.project.findFirst({
+    where: { id: parsed.projectId, userId: authResult.user.id },
+    select: { id: true },
+  })
+  if (!ownedProject) {
+    return jsonError('Project not found or access denied.', 403)
+  }
+
   try {
     const provider = getDefaultAiProvider()
     const system = getCombinedSystemPrompt()
@@ -126,7 +136,11 @@ export async function POST(request: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const resultAny = result as { partialObjectStream?: AsyncIterable<unknown>; object: Promise<MultiAgentSchema> }
+          const resultAny = result as {
+            partialObjectStream?: AsyncIterable<unknown>
+            object: Promise<MultiAgentSchema>
+            usage: Promise<import('ai').LanguageModelUsage>
+          }
           const partialStream = resultAny.partialObjectStream
           if (partialStream && typeof partialStream[Symbol.asyncIterator] === 'function') {
             for await (const partial of partialStream) {
@@ -139,30 +153,86 @@ export async function POST(request: Request) {
           }
 
           const fullObject = await resultAny.object
+          let usage: import('ai').LanguageModelUsage | undefined
+          try {
+            usage = await resultAny.usage
+          } catch {
+            usage = undefined
+          }
+
           const trackerSchema = fullObject?.tracker
           if (!trackerSchema) {
-            controller.enqueue(encoder.encode(JSON.stringify({ type: 'error', message: 'AI did not return a tracker schema.' }) + '\n'))
+            if (usage) {
+              scheduleRecordLlmUsage({
+                userId: authResult.user.id,
+                source: 'ai-project-build-tracker',
+                usage,
+                projectId: parsed.projectId,
+                trackerSchemaId: null,
+              })
+            }
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({ type: 'error', message: 'AI did not return a tracker schema.' }) + '\n',
+              ),
+            )
             controller.close()
             return
           }
 
-          const resolvedName = trackerSpec.name?.trim() || (trackerSchema as { name?: string }).name || 'Untitled tracker'
-          const tracker = await createTrackerForUser({
-            userId: authResult.user.id,
-            name: resolvedName,
-            schema: trackerSchema as object,
-            projectId: parsed.projectId,
-            moduleId: parsed.moduleId ?? undefined,
-            instance: trackerSpec.instance === 'MULTI' ? 'MULTI' : 'SINGLE',
-            versionControl: trackerSpec.versionControl ?? false,
-            autoSave: trackerSpec.autoSave ?? true,
-          })
+          const resolvedName =
+            trackerSpec.name?.trim() || (trackerSchema as { name?: string }).name || 'Untitled tracker'
+          let createdTracker: { id: string; name: string | null; moduleId: string | null }
+          try {
+            createdTracker = await createTrackerForUser({
+              userId: authResult.user.id,
+              name: resolvedName,
+              schema: trackerSchema as object,
+              projectId: parsed.projectId,
+              moduleId: parsed.moduleId ?? undefined,
+              instance: trackerSpec.instance === 'MULTI' ? 'MULTI' : 'SINGLE',
+              versionControl: trackerSpec.versionControl ?? false,
+              autoSave: trackerSpec.autoSave ?? true,
+            })
+          } catch (createErr) {
+            if (usage) {
+              scheduleRecordLlmUsage({
+                userId: authResult.user.id,
+                source: 'ai-project-build-tracker',
+                usage,
+                projectId: parsed.projectId,
+                trackerSchemaId: null,
+              })
+            }
+            logAiError(logContext, 'create-tracker', createErr)
+            controller.enqueue(
+              encoder.encode(
+                JSON.stringify({
+                  type: 'error',
+                  message:
+                    createErr instanceof Error ? createErr.message : 'Failed to save tracker.',
+                }) + '\n',
+              ),
+            )
+            controller.close()
+            return
+          }
+
+          if (usage) {
+            scheduleRecordLlmUsage({
+              userId: authResult.user.id,
+              source: 'ai-project-build-tracker',
+              usage,
+              projectId: parsed.projectId,
+              trackerSchemaId: createdTracker.id,
+            })
+          }
 
           controller.enqueue(encoder.encode(JSON.stringify({
             type: 'complete',
-            trackerId: tracker.id,
-            name: tracker.name,
-            moduleId: tracker.moduleId ?? undefined,
+            trackerId: createdTracker.id,
+            name: createdTracker.name,
+            moduleId: createdTracker.moduleId ?? undefined,
           }) + '\n'))
         } catch (error) {
           logAiError(logContext, 'stream-error', error)

@@ -212,6 +212,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         query: fixPrompt,
         messages: nextMessages,
         currentTracker: tracker as TrackerResponse,
+        ...(trackerId ? { trackerSchemaId: trackerId } : {}),
       })
       return
     }
@@ -264,7 +265,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         )
       }
     }
-  }, [setResolvedTrackerData])
+  }, [setResolvedTrackerData, trackerId])
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/generate-tracker',
@@ -285,7 +286,9 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
 
         if (intents.length > 0 && tracker) {
           setIsResolvingExpressions(true)
-          resolveExprIntents(tracker as TrackerLike, setToolCalls)
+          resolveExprIntents(tracker as TrackerLike, setToolCalls, {
+            trackerSchemaId: trackerId,
+          })
             .then(({ tracker: resolved, errors, toolCalls: resolvedToolCalls }) => {
               let resolvedTracker = resolved as TrackerResponse
               if (resolvedTracker) {
@@ -489,6 +492,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       query: userMessage,
       messages: messages,
       currentTracker: getCurrentTrackerForApi(),
+      ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
   }
 
@@ -507,6 +511,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       query: CONTINUE_PROMPT,
       messages: nextMessages,
       currentTracker: getCurrentTrackerForApi(),
+      ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
     continueCountRef.current = 0
   }
@@ -528,6 +533,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       query: CONTINUE_PROMPT,
       messages: nextMessages,
       currentTracker: getCurrentTrackerForApi(),
+      ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
     setPendingContinue(false)
     continueCountRef.current += 1

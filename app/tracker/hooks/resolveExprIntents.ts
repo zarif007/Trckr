@@ -82,6 +82,7 @@ export function detectIntents(tracker: TrackerLike): IntentLocation[] {
 async function callExprAgent(
   intent: IntentLocation,
   currentTracker: unknown,
+  trackerSchemaId?: string | null,
 ): Promise<{ expr: unknown }> {
   const dotIndex = intent.fieldPath.indexOf('.')
   const gridId = intent.fieldPath.substring(0, dotIndex)
@@ -96,6 +97,7 @@ async function callExprAgent(
       fieldId,
       purpose: intent.purpose,
       currentTracker,
+      ...(trackerSchemaId ? { trackerSchemaId } : {}),
     }),
   })
 
@@ -120,6 +122,7 @@ export interface ResolveResult {
 export async function resolveExprIntents(
   tracker: TrackerLike,
   onProgress: (toolCalls: ToolCallEntry[]) => void,
+  options?: { trackerSchemaId?: string | null },
 ): Promise<ResolveResult> {
   const intents = detectIntents(tracker)
   if (intents.length === 0) {
@@ -142,7 +145,7 @@ export async function resolveExprIntents(
       onProgress([...toolCalls])
 
       try {
-        const result = await callExprAgent(intent, tracker)
+        const result = await callExprAgent(intent, tracker, options?.trackerSchemaId)
         toolCalls[i] = { ...toolCalls[i], status: 'done', result: result.expr }
         onProgress([...toolCalls])
         return { index: i, intent, expr: result.expr }

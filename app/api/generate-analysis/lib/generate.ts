@@ -1,3 +1,5 @@
+import type { LanguageModelUsage } from 'ai'
+
 import { analystSchema, type AnalystSchema } from '@/lib/schemas/analyst'
 import { getDefaultAiProvider, logAiError, logAiStage } from '@/lib/ai'
 import type { RequestLogContext } from '@/lib/api'
@@ -7,6 +9,7 @@ import { getConfiguredMaxOutputTokens } from '@/lib/ai'
 
 export interface GenerateAnalysisOptions {
   logContext?: RequestLogContext
+  onLlmUsage?: (usage: LanguageModelUsage) => void
 }
 
 function toStreamResponse(object: AnalystSchema): Response {
@@ -37,7 +40,8 @@ export async function generateAnalysisResponse(
       prompt: userPrompt,
       schema: analystSchema,
       maxOutputTokens: maxTokens,
-      onFinish: ({ error: validationError }) => {
+      onFinish: ({ error: validationError, usage }) => {
+        options.onLlmUsage?.(usage)
         if (validationError && options.logContext) {
           logAiError(options.logContext, 'analyst-stream-validation', validationError)
         }
@@ -55,12 +59,13 @@ export async function generateAnalysisResponse(
 
   // Fallback: single generateObject call
   try {
-    const object = await provider.generateObject<AnalystSchema>({
+    const { object, usage } = await provider.generateObject<AnalystSchema>({
       system: systemPrompt,
       prompt: userPrompt,
       schema: analystSchema,
       maxOutputTokens: maxTokens,
     })
+    options.onLlmUsage?.(usage)
     if (options.logContext) {
       logAiStage(options.logContext, 'analyst-fallback-success', `Provider=${provider.id}`)
     }

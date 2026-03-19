@@ -21,7 +21,7 @@ import { ValidationsTab } from './ValidationsTab'
 import { DynamicOptionsBuilder } from '../dynamic-options'
 
 export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
-  const { defaultTab = 'general', allowedTabs } = props
+  const { defaultTab = 'general', allowedTabs, trackerSchemaId } = props
   const state = useFieldSettingsState(props)
   const {
     open,
@@ -247,6 +247,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                       dynamicOptionsDraft={state.dynamicOptionsDraft}
                       onDynamicOptionsDraftChange={state.setDynamicOptionsDraft}
                       onValidationStateChange={state.setDynamicBuilderState}
+                      trackerSchemaId={trackerSchemaId ?? undefined}
                     />
                     {state.dynamicConfigError && (
                       <p className="text-xs text-destructive">{state.dynamicConfigError}</p>
@@ -263,6 +264,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     calculationRule={state.calculationRule}
                     setCalculationRule={state.setCalculationRule}
                     availableFields={state.availableFields}
+                    trackerSchemaId={trackerSchemaId ?? undefined}
                   />
                   </TabsContent>
                 )}
@@ -296,6 +298,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     setStructureOpen={state.setStructureOpen}
                     showJsonInStructure={state.showJsonInStructure}
                     setShowJsonInStructure={state.setShowJsonInStructure}
+                    trackerSchemaId={trackerSchemaId ?? undefined}
                   />
                   </TabsContent>
                 )}

@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -39,6 +39,7 @@ interface DynamicOptionsBuilderProps {
     compileErrors: string[]
     previewError: string | null
   }) => void
+  trackerSchemaId?: string | null
 }
 
 function sanitizeFunctionId(raw: string): string {
@@ -74,21 +75,6 @@ function toPrettyJson(value: unknown): string {
   return JSON.stringify(value ?? {}, null, 2)
 }
 
-const remoteResolve: NonNullable<DynamicOptionsResolveInput['remoteResolver']> = async (
-  payload
-): Promise<DynamicOptionsResolveResult> => {
-  const response = await fetch('/api/dynamic-options/resolve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    throw new Error(data?.error ?? 'Failed to resolve dynamic options preview')
-  }
-  return data as DynamicOptionsResolveResult
-}
-
 export function DynamicOptionsBuilder({
   schema,
   fieldId,
@@ -101,7 +87,29 @@ export function DynamicOptionsBuilder({
   dynamicOptionsDraft,
   onDynamicOptionsDraftChange,
   onValidationStateChange,
+  trackerSchemaId,
 }: DynamicOptionsBuilderProps) {
+  const remoteResolve = useCallback<
+    NonNullable<DynamicOptionsResolveInput['remoteResolver']>
+  >(
+    async (payload): Promise<DynamicOptionsResolveResult> => {
+      const response = await fetch('/api/dynamic-options/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          ...(trackerSchemaId ? { trackerSchemaId } : {}),
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(data?.error ?? 'Failed to resolve dynamic options preview')
+      }
+      return data as DynamicOptionsResolveResult
+    },
+    [trackerSchemaId],
+  )
+
   const [activeTab, setActiveTab] = useState<'visual' | 'json' | 'ai'>('visual')
   const [jsonDraft, setJsonDraft] = useState('')
   const [jsonError, setJsonError] = useState<string | null>(null)
@@ -306,6 +314,7 @@ export function DynamicOptionsBuilder({
             dynamicOptions: dynamicOptionsDraft,
           },
           sampleResponse: parseJsonAny(aiSampleResponse),
+          ...(trackerSchemaId ? { trackerSchemaId } : {}),
         }),
       })
 

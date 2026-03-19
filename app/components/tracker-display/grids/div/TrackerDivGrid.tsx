@@ -79,7 +79,7 @@ function TrackerDivGridInner({
   }, [grid.id, thisGridRows])
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
-  const { editMode, schema, onSchemaChange } = useEditMode()
+  const { editMode, schema, onSchemaChange, trackerSchemaId: editTrackerSchemaId } = useEditMode()
   const { remove, move, applySchemaChange } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
@@ -843,6 +843,7 @@ function TrackerDivGridInner({
           gridId={grid.id}
           schema={schema}
           onSchemaChange={onSchemaChange}
+          trackerSchemaId={editTrackerSchemaId}
         />
       )}
     </div>

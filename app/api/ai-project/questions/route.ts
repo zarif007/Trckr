@@ -1,6 +1,8 @@
 import { projectQuestionnaireSchema } from '@/lib/schemas/project-agent'
 import { getDefaultAiProvider, logAiError, logAiStage, getConfiguredMaxOutputTokens } from '@/lib/ai'
 import { createRequestLogContext, jsonError } from '@/lib/api'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { resolveLlmUsageAttribution, scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { buildQuestionsPrompt, getOrchestratorSystemPrompt } from '../lib/prompts'
 import { parseQuestionsBody } from '../lib/validation'
 
@@ -20,6 +22,9 @@ function toStreamResponse(object: unknown): Response {
 export async function POST(request: Request) {
   const logContext = createRequestLogContext(request, 'ai-project/questions')
   try {
+    const authResult = await requireAuthenticatedUser()
+    if (!authResult.ok) return authResult.response
+
     let body: unknown
     try {
       body = await request.json()
@@ -30,6 +35,13 @@ export async function POST(request: Request) {
     const parsed = parseQuestionsBody(body)
     if (!parsed.ok) {
       return jsonError(parsed.error, parsed.status)
+    }
+
+    const attr = await resolveLlmUsageAttribution(authResult.user.id, {
+      projectId: parsed.projectId,
+    })
+    if (!attr.ok) {
+      return jsonError(attr.error, attr.status)
     }
 
     const provider = getDefaultAiProvider()
@@ -44,10 +56,17 @@ export async function POST(request: Request) {
         prompt,
         schema: projectQuestionnaireSchema,
         maxOutputTokens,
-        onFinish: ({ error: validationError }) => {
+        onFinish: ({ error: validationError, usage }) => {
           if (validationError) {
             logAiError(logContext, 'stream-finish-validation', validationError)
           }
+          scheduleRecordLlmUsage({
+            userId: authResult.user.id,
+            source: 'ai-project-questions',
+            usage,
+            projectId: attr.value.projectId,
+            trackerSchemaId: attr.value.trackerSchemaId,
+          })
         },
       })
       return result.toTextStreamResponse()
@@ -56,11 +75,18 @@ export async function POST(request: Request) {
     }
 
     logAiStage(logContext, 'fallback', 'Falling back to non-streaming questionnaire.')
-    const object = await provider.generateObject({
+    const { object, usage } = await provider.generateObject({
       system,
       prompt,
       schema: projectQuestionnaireSchema,
       maxOutputTokens,
+    })
+    scheduleRecordLlmUsage({
+      userId: authResult.user.id,
+      source: 'ai-project-questions',
+      usage,
+      projectId: attr.value.projectId,
+      trackerSchemaId: attr.value.trackerSchemaId,
     })
     return toStreamResponse(object)
   } catch (error) {

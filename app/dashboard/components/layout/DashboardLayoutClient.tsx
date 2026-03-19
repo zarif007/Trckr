@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   FunctionSquare,
   GitBranch,
+  BarChart2,
 } from 'lucide-react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
@@ -643,6 +644,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const isProjectsPage = pathname === '/dashboard/projects'
   const isRecentsPage = pathname === '/dashboard/recents'
+  const isUsagePage = pathname === '/dashboard/usage'
   const isDashboardHome = pathname === '/dashboard' || pathname === '/dashboard/'
 
   if (status === 'loading' || (status === 'authenticated' && projectsLoading)) {
@@ -927,6 +929,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   ))}
                 </div>
               )}
+              <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
+                <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
+                <Link
+                  href="/dashboard/usage"
+                  className={cn(
+                    'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
+                    isUsagePage
+                      ? 'text-primary'
+                      : 'text-muted-foreground/70 hover:text-muted-foreground',
+                  )}
+                >
+                  AI usage
+                </Link>
+              </div>
             </div>
             <div className="border-t border-border/50 p-2 bg-background/50">
               <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted/30">
@@ -1076,6 +1092,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         ))}
                       </div>
                     )}
+                    <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
+                      <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
+                      <Link
+                        href="/dashboard/usage"
+                        className={cn(
+                          'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
+                          isUsagePage
+                            ? 'text-primary'
+                            : 'text-muted-foreground/70 hover:text-muted-foreground',
+                        )}
+                      >
+                        AI usage
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1249,6 +1279,20 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                           ))}
                         </div>
                       )}
+                      <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
+                        <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
+                        <Link
+                          href="/dashboard/usage"
+                          className={cn(
+                            'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
+                            isUsagePage
+                              ? 'text-primary'
+                              : 'text-muted-foreground/70 hover:text-muted-foreground',
+                          )}
+                        >
+                          AI usage
+                        </Link>
+                      </div>
                     </div>
                   </div>
                   <div className="border-t border-border/50 p-2 bg-background/50">

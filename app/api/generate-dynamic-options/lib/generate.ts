@@ -79,7 +79,7 @@ export async function generateDynamicOptionFunction(
   const system = buildSystemPrompt()
   const prompt = buildUserPrompt(input)
 
-  const object = await provider.generateObject<{
+  const { object, usage } = await provider.generateObject<{
     function: Record<string, unknown>
   }>({
     system,
@@ -106,5 +106,5 @@ export async function generateDynamicOptionFunction(
       : toGraphFallback(input, maybeFunction)
 
   const parsed = dynamicOptionFunctionSchema.parse(graphFirst)
-  return { function: parsed }
+  return { function: parsed, usage }
 }

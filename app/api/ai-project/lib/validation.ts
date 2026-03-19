@@ -3,15 +3,15 @@ import { hasDeepSeekApiKey } from '@/lib/ai'
 import { projectPlanSchema } from '@/lib/schemas/project-agent'
 
 export type QuestionsParseResult =
-  | { ok: true; prompt: string }
+  | { ok: true; prompt: string; projectId: string | null }
   | { ok: false; error: string; status: number }
 
 export type QuestionParseResult =
-  | { ok: true; prompt: string; answers: Record<string, unknown> }
+  | { ok: true; prompt: string; answers: Record<string, unknown>; projectId: string | null }
   | { ok: false; error: string; status: number }
 
 export type PlanParseResult =
-  | { ok: true; prompt: string; answers: Record<string, unknown> }
+  | { ok: true; prompt: string; answers: Record<string, unknown>; projectId: string | null }
   | { ok: false; error: string; status: number }
 
 export type CreateParseResult =
@@ -33,6 +33,13 @@ function getBodyObject(body: unknown): Record<string, unknown> | null {
   return body as Record<string, unknown>
 }
 
+function optionalProjectId(obj: Record<string, unknown>): string | null {
+  const v = obj.projectId
+  if (v == null) return null
+  if (typeof v !== 'string' || !v.trim()) return null
+  return v.trim()
+}
+
 export function parseQuestionsBody(body: unknown): QuestionsParseResult {
   const obj = getBodyObject(body)
   if (!obj) {
@@ -52,7 +59,7 @@ export function parseQuestionsBody(body: unknown): QuestionsParseResult {
     return { ok: false, error: 'DEEPSEEK_API_KEY is not configured', status: 500 }
   }
 
-  return { ok: true, prompt: prompt.trim() }
+  return { ok: true, prompt: prompt.trim(), projectId: optionalProjectId(obj) }
 }
 
 export function parseQuestionBody(body: unknown): QuestionParseResult {
@@ -83,6 +90,7 @@ export function parseQuestionBody(body: unknown): QuestionParseResult {
     ok: true,
     prompt: prompt.trim(),
     answers: (answers as Record<string, unknown>) ?? {},
+    projectId: optionalProjectId(obj),
   }
 }
 
@@ -110,7 +118,12 @@ export function parsePlanBody(body: unknown): PlanParseResult {
     return { ok: false, error: 'DEEPSEEK_API_KEY is not configured', status: 500 }
   }
 
-  return { ok: true, prompt: prompt.trim(), answers: answers as Record<string, unknown> }
+  return {
+    ok: true,
+    prompt: prompt.trim(),
+    answers: answers as Record<string, unknown>,
+    projectId: optionalProjectId(obj),
+  }
 }
 
 export function parseCreateBody(body: unknown): CreateParseResult {

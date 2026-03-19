@@ -487,6 +487,7 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
         allowedTabs={[modeTab(mode)]}
         schema={schema}
         onSchemaChange={onSchemaChange}
+        trackerSchemaId={id}
       />
 
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

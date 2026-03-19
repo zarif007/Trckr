@@ -1,6 +1,10 @@
+import type { LanguageModelUsage } from 'ai'
+
 import { resolveDynamicOptions } from '@/lib/dynamic-options'
 import { badRequest, createRequestLogContext, jsonError, jsonOk } from '@/lib/api'
 import { getDefaultAiProvider, hasDeepSeekApiKey, logAiError, runWithTimeout } from '@/lib/ai'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { resolveLlmUsageAttribution, scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { z } from 'zod'
 import { getErrorMessage, parseResolveDynamicOptionsRequest } from './lib/validation'
 
@@ -56,9 +60,9 @@ async function extractRowsWithAi(input: {
   payload: unknown
   maxRows: number
   request: Request
-}): Promise<Array<Record<string, unknown>>> {
+}): Promise<{ rows: Array<Record<string, unknown>>; usage?: LanguageModelUsage }> {
   if (!hasDeepSeekApiKey()) {
-    return []
+    return { rows: [] }
   }
   const provider = getDefaultAiProvider()
   const logContext = createRequestLogContext(input.request, 'dynamic-options/resolve')
@@ -86,11 +90,12 @@ async function extractRowsWithAi(input: {
   })
 
   try {
-    const object = await runWithTimeout(run, {
+    const { object, usage } = await runWithTimeout(run, {
       timeoutMs: AI_TIMEOUT_MS,
       timeoutMessage: 'AI extraction timed out',
     })
-    return object.rows.slice(0, Math.max(1, Math.min(input.maxRows, AI_MAX_ROWS)))
+    const cap = Math.max(1, Math.min(input.maxRows, AI_MAX_ROWS))
+    return { rows: object.rows.slice(0, cap), usage }
   } catch (error) {
     logAiError(logContext, 'extract-options', error)
     throw error
@@ -100,6 +105,9 @@ async function extractRowsWithAi(input: {
 export async function POST(request: Request) {
   const logContext = createRequestLogContext(request, 'dynamic-options/resolve')
   try {
+    const authResult = await requireAuthenticatedUser()
+    if (!authResult.ok) return authResult.response
+
     const body = await request.json().catch(() => null)
     if (body == null) return badRequest('Invalid request body for dynamic options resolve')
     const parsed = parseResolveDynamicOptionsRequest(body)
@@ -107,10 +115,19 @@ export async function POST(request: Request) {
       return jsonError(parsed.error, parsed.status)
     }
 
+    const attr = await resolveLlmUsageAttribution(authResult.user.id, {
+      projectId: parsed.data.projectId,
+      trackerSchemaId: parsed.data.trackerSchemaId,
+    })
+    if (!attr.ok) {
+      return jsonError(attr.error, attr.status)
+    }
+
     if (isRateLimited(parsed.data.functionId)) {
       return jsonError('Rate limit exceeded for dynamic option resolution', 429)
     }
 
+    let resolveAiUsage: LanguageModelUsage | undefined
     const result = await resolveDynamicOptions({
       functionId: parsed.data.functionId,
       context: parsed.data.context as Parameters<typeof resolveDynamicOptions>[0]['context'],
@@ -120,14 +137,27 @@ export async function POST(request: Request) {
       cacheTtlSecondsOverride: parsed.data.cacheTtlSecondsOverride,
       allowHttpGet: true,
       secretResolver: resolveSecretFromEnv,
-      aiExtractor: ({ prompt, input: payload, maxRows }) =>
-        extractRowsWithAi({
+      aiExtractor: async ({ prompt, input: payload, maxRows }) => {
+        const { rows, usage } = await extractRowsWithAi({
           prompt,
           payload,
           maxRows,
           request,
-        }),
+        })
+        if (usage) resolveAiUsage = usage
+        return rows
+      },
     })
+
+    if (resolveAiUsage) {
+      scheduleRecordLlmUsage({
+        userId: authResult.user.id,
+        source: 'dynamic-options-resolve',
+        usage: resolveAiUsage,
+        projectId: attr.value.projectId,
+        trackerSchemaId: attr.value.trackerSchemaId,
+      })
+    }
 
     return jsonOk(result)
   } catch (error) {

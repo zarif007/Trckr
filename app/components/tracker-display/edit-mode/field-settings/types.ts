@@ -29,4 +29,6 @@ export interface FieldSettingsDialogProps {
   >
   schema: TrackerDisplayProps | undefined
   onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
+  /** When set, AI / resolve calls attribute token usage to this tracker schema id. */
+  trackerSchemaId?: string | null
 }

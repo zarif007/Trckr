@@ -19,6 +19,7 @@ interface ExprRuleEditorProps {
   fieldId: string
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
+  trackerSchemaId?: string | null
   mode?: 'validation' | 'calculation'
   onChange: (expr: ExprNode) => void
 }
@@ -29,6 +30,7 @@ export function ExprRuleEditor({
   fieldId,
   availableFields,
   currentTracker,
+  trackerSchemaId,
   mode = 'validation',
   onChange,
 }: ExprRuleEditorProps) {
@@ -98,6 +100,7 @@ export function ExprRuleEditor({
           fieldId,
           purpose: mode,
           currentTracker: trackerPayload,
+          ...(trackerSchemaId ? { trackerSchemaId } : {}),
         }),
       })
       const data = await res.json().catch(() => ({}))

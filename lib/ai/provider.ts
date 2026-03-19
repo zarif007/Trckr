@@ -1,5 +1,6 @@
 import { deepseek } from '@ai-sdk/deepseek'
 import { generateObject, streamObject } from 'ai'
+import type { LanguageModelUsage } from 'ai'
 import type { ZodTypeAny } from 'zod'
 
 export interface AiGenerationInput {
@@ -13,9 +14,14 @@ export interface AiStreamInput extends AiGenerationInput {
   onFinish?: Parameters<typeof streamObject>[0]['onFinish']
 }
 
+export interface AiObjectResult<T> {
+  object: T
+  usage: LanguageModelUsage
+}
+
 export interface StructuredAiProvider {
   id: string
-  generateObject<T>(input: AiGenerationInput): Promise<T>
+  generateObject<T>(input: AiGenerationInput): Promise<AiObjectResult<T>>
   streamObject(input: AiStreamInput): ReturnType<typeof streamObject>
 }
 
@@ -26,15 +32,15 @@ class DeepSeekProvider implements StructuredAiProvider {
     return deepseek('deepseek-chat')
   }
 
-  async generateObject<T>(input: AiGenerationInput): Promise<T> {
-    const { object } = await generateObject({
+  async generateObject<T>(input: AiGenerationInput): Promise<AiObjectResult<T>> {
+    const result = await generateObject({
       model: this.model(),
       system: input.system,
       prompt: input.prompt,
       schema: input.schema,
       maxOutputTokens: input.maxOutputTokens,
     })
-    return object as T
+    return { object: result.object as T, usage: result.usage }
   }
 
   streamObject(input: AiStreamInput) {

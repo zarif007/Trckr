@@ -116,6 +116,21 @@ CREATE TABLE "TrackerSchema" (
 );
 
 -- CreateTable
+CREATE TABLE "LlmTokenUsage" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "projectId" TEXT,
+    "trackerSchemaId" TEXT,
+    "source" TEXT NOT NULL,
+    "promptTokens" INTEGER NOT NULL,
+    "completionTokens" INTEGER NOT NULL,
+    "totalTokens" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "LlmTokenUsage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "TrackerData" (
     "id" TEXT NOT NULL,
     "trackerSchemaId" TEXT NOT NULL,
@@ -210,6 +225,18 @@ CREATE INDEX "TrackerSchema_moduleId_idx" ON "TrackerSchema"("moduleId");
 CREATE UNIQUE INDEX "TrackerSchema_projectId_moduleId_systemType_key" ON "TrackerSchema"("projectId", "moduleId", "systemType");
 
 -- CreateIndex
+CREATE INDEX "LlmTokenUsage_userId_idx" ON "LlmTokenUsage"("userId");
+
+-- CreateIndex
+CREATE INDEX "LlmTokenUsage_userId_projectId_idx" ON "LlmTokenUsage"("userId", "projectId");
+
+-- CreateIndex
+CREATE INDEX "LlmTokenUsage_userId_trackerSchemaId_idx" ON "LlmTokenUsage"("userId", "trackerSchemaId");
+
+-- CreateIndex
+CREATE INDEX "LlmTokenUsage_createdAt_idx" ON "LlmTokenUsage"("createdAt");
+
+-- CreateIndex
 CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
 
 -- CreateIndex
@@ -253,6 +280,15 @@ ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_moduleId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_listForSchemaId_fkey" FOREIGN KEY ("listForSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;

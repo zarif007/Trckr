@@ -3,10 +3,15 @@ import { deriveAvailableFields } from './lib/prompts'
 import { generateExpr } from './lib/generate'
 import { badRequest, createRequestLogContext, jsonError, jsonOk } from '@/lib/api'
 import { logAiError, logAiStage } from '@/lib/ai'
+import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { resolveLlmUsageAttribution, scheduleRecordLlmUsage } from '@/lib/llm-usage'
 
 export async function POST(request: Request) {
   const logContext = createRequestLogContext(request, 'generate-expr')
   try {
+    const authResult = await requireAuthenticatedUser()
+    if (!authResult.ok) return authResult.response
+
     let body: unknown
     try {
       body = await request.json()
@@ -19,17 +24,32 @@ export async function POST(request: Request) {
       return jsonError(parsed.error, parsed.status)
     }
 
+    const attr = await resolveLlmUsageAttribution(authResult.user.id, {
+      trackerSchemaId: parsed.trackerSchemaId,
+      projectId: parsed.projectId,
+    })
+    if (!attr.ok) {
+      return jsonError(attr.error, attr.status)
+    }
+
     const { prompt, gridId, fieldId, purpose, currentTracker } = parsed
     const availableFields = deriveAvailableFields(currentTracker, gridId)
 
     try {
       logAiStage(logContext, 'request', 'Generating expression.')
-      const { expr } = await generateExpr({
+      const { expr, usage } = await generateExpr({
         prompt,
         gridId,
         fieldId,
         purpose,
         availableFields,
+      })
+      scheduleRecordLlmUsage({
+        userId: authResult.user.id,
+        source: 'generate-expr',
+        usage,
+        projectId: attr.value.projectId,
+        trackerSchemaId: attr.value.trackerSchemaId,
       })
       return jsonOk({ expr })
     } catch (error) {

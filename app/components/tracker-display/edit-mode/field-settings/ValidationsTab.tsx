@@ -32,6 +32,7 @@ export interface ValidationsTabProps {
   setStructureOpen: React.Dispatch<React.SetStateAction<boolean>>
   showJsonInStructure: boolean
   setShowJsonInStructure: React.Dispatch<React.SetStateAction<boolean>>
+  trackerSchemaId?: string | null
 }
 
 export function ValidationsTab({
@@ -47,6 +48,7 @@ export function ValidationsTab({
   setStructureOpen,
   showJsonInStructure,
   setShowJsonInStructure,
+  trackerSchemaId,
 }: ValidationsTabProps) {
   const addRuleButtons = (
     <div className="flex flex-wrap gap-2">
@@ -187,6 +189,7 @@ export function ValidationsTab({
                 fieldId={field.id}
                 availableFields={availableFields}
                 currentTracker={schema}
+                trackerSchemaId={trackerSchemaId}
                 onChange={(nextExpr) =>
                   updateRule(index, { ...(rules[index] as FieldValidationRule), type: 'expr', expr: nextExpr })
                 }

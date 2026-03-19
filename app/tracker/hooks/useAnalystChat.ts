@@ -175,6 +175,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
       })),
       trackerSchema: trackerSchema ?? null,
       trackerData: currentData,
+      ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
   }, [input, isLoading, trackerId, trackerSchema, trackerDataRef, submit, onConversationCreate])
 

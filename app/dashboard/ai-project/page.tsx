@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { OrchestrationView } from './OrchestrationView'
@@ -160,6 +160,24 @@ export default function AiProjectBuilderPage() {
   const [plan, setPlan] = useState<ProjectPlan | null>(null)
 
   const [projectId, setProjectId] = useState<string | null>(null)
+  const projectAwareFetch = useCallback(
+    (url: RequestInfo | URL, init?: RequestInit) => {
+      let parsed: Record<string, unknown> = {}
+      try {
+        parsed = JSON.parse((init?.body as string) ?? '{}') as Record<string, unknown>
+      } catch {
+        parsed = {}
+      }
+      return fetch(url, {
+        ...init,
+        body: JSON.stringify({
+          ...parsed,
+          ...(projectId ? { projectId } : {}),
+        }),
+      })
+    },
+    [projectId],
+  )
   const [modulesByName, setModulesByName] = useState<Record<string, string>>({})
   const [setupItems, setSetupItems] = useState<SetupItem[]>([])
   const [buildItems, setBuildItems] = useState<BuildItem[]>([])
@@ -174,6 +192,7 @@ export default function AiProjectBuilderPage() {
     error: questionsError,
   } = useObject({
     api: '/api/ai-project/question',
+    fetch: projectAwareFetch,
     schema: projectSingleQuestionSchema,
     onFinish: ({ object }) => {
       const streamId = questionStreamIdRef.current
@@ -251,6 +270,7 @@ export default function AiProjectBuilderPage() {
     error: planError,
   } = useObject({
     api: '/api/ai-project/plan',
+    fetch: projectAwareFetch,
     schema: projectPlanSchema,
     onFinish: ({ object }) => {
       const streamId = planStreamIdRef.current

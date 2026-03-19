@@ -5,8 +5,24 @@ import { hasDeepSeekApiKey } from '@/lib/ai'
  */
 
 export type ParseResult =
-  | { ok: true; prompt: string; gridId: string; fieldId: string; purpose: 'validation' | 'calculation'; currentTracker: unknown }
+  | {
+      ok: true
+      prompt: string
+      gridId: string
+      fieldId: string
+      purpose: 'validation' | 'calculation'
+      currentTracker: unknown
+      trackerSchemaId?: string
+      projectId?: string
+    }
   | { ok: false; error: string; status: number }
+
+function optionalId(value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value !== 'string') return undefined
+  const t = value.trim()
+  return t.length ? t : undefined
+}
 
 export function getErrorMessage(error: unknown): string {
   if (error == null || error === undefined) {
@@ -81,5 +97,7 @@ export function parseRequestBody(body: unknown): ParseResult {
     fieldId: fieldId.trim(),
     purpose: normalizedPurpose,
     currentTracker: currentTracker ?? null,
+    trackerSchemaId: optionalId(b.trackerSchemaId),
+    projectId: optionalId(b.projectId),
   }
 }

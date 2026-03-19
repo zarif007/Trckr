@@ -2,14 +2,23 @@ import { hasDeepSeekApiKey } from '@/lib/ai'
 
 export type ParseResult =
   | {
-    ok: true
-    prompt: string
-    functionId: string
-    functionName: string
-    currentTracker: unknown
-    sampleResponse?: unknown
-  }
+      ok: true
+      prompt: string
+      functionId: string
+      functionName: string
+      currentTracker: unknown
+      sampleResponse?: unknown
+      trackerSchemaId?: string
+      projectId?: string
+    }
   | { ok: false; error: string; status: number }
+
+function optionalId(value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value !== 'string') return undefined
+  const t = value.trim()
+  return t.length ? t : undefined
+}
 
 export function parseRequestBody(body: unknown): ParseResult {
   if (body == null || typeof body !== 'object' || Array.isArray(body)) {
@@ -65,6 +74,8 @@ export function parseRequestBody(body: unknown): ParseResult {
     functionName: functionName.trim(),
     currentTracker: b.currentTracker ?? null,
     sampleResponse: b.sampleResponse,
+    trackerSchemaId: optionalId(b.trackerSchemaId),
+    projectId: optionalId(b.projectId),
   }
 }
 

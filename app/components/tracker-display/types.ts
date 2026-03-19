@@ -204,4 +204,6 @@ export interface TrackerDisplayProps {
   undo?: () => void
   /** Whether undo is available. */
   canUndo?: boolean
+  /** When set, server-side dynamic option resolution attributes LLM usage to this tracker. */
+  trackerSchemaId?: string | null
 }

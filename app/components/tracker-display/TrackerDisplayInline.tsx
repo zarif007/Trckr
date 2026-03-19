@@ -125,6 +125,7 @@ export function TrackerDisplayInline({
   onSchemaChange,
   undo,
   canUndo,
+  trackerSchemaId,
 }: TrackerDisplayProps) {
   const effectiveSections = sections ?? []
   const effectiveGrids = grids ?? []
@@ -299,6 +300,7 @@ export function TrackerDisplayInline({
       sections={effectiveSections}
       dynamicOptions={dynamicOptions}
       gridData={gridData}
+      trackerSchemaId={trackerSchemaId ?? undefined}
     >
       <EditModeProvider
         editMode={!!editMode}
@@ -306,6 +308,7 @@ export function TrackerDisplayInline({
         onSchemaChange={onSchemaChange}
         undo={undo}
         canUndo={canUndo}
+        trackerSchemaId={trackerSchemaId}
       >
         {content}
       </EditModeProvider>

@@ -2,6 +2,8 @@
  * LLM generation: streaming first, then fallback with generateObject.
  */
 
+import type { LanguageModelUsage } from 'ai'
+
 import { multiAgentSchema, type MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { getDefaultAiProvider, logAiError, logAiStage } from '@/lib/ai'
 import type { RequestLogContext } from '@/lib/api'
@@ -38,6 +40,7 @@ export interface GenerateResult {
 
 export interface GenerateTrackerResponseOptions {
   logContext?: RequestLogContext
+  onLlmUsage?: (usage: LanguageModelUsage) => void
 }
 
 /**
@@ -59,7 +62,8 @@ export async function generateTrackerResponse(
       prompt: fullPrompt,
       schema: multiAgentSchema,
       maxOutputTokens: maxTokens,
-      onFinish: ({ object: finalObject, error: validationError }) => {
+      onFinish: ({ object: finalObject, error: validationError, usage }) => {
+        options.onLlmUsage?.(usage)
         const typedObject = finalObject as MultiAgentSchema | undefined
         if (validationError) {
           if (options.logContext) {
@@ -97,12 +101,13 @@ export async function generateTrackerResponse(
   let lastError: unknown = null
   for (let i = 0; i < MAX_FALLBACK_ATTEMPTS; i++) {
     try {
-      const object = await provider.generateObject<MultiAgentSchema>({
+      const { object, usage } = await provider.generateObject<MultiAgentSchema>({
         system: systemPrompt,
         prompt: fallbackPrompts[i],
         schema: multiAgentSchema,
         maxOutputTokens: maxTokens,
       })
+      options.onLlmUsage?.(usage)
       if (hasValidOutput(object)) {
         if (options.logContext) {
           logAiStage(

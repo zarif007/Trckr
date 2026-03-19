@@ -104,18 +104,24 @@ interface ResolveFieldOptionsAsyncOptions {
   forceRefresh?: boolean
 }
 
-async function resolveDynamicOptionsRemote(payload: {
-  functionId: string
-  args?: Record<string, unknown>
-  context: TrackerContextForOptions
-  runtime?: DynamicOptionsRuntimeContext
-  forceRefresh?: boolean
-  cacheTtlSecondsOverride?: number
-}): Promise<DynamicOptionsResolveResult> {
+async function resolveDynamicOptionsRemote(
+  payload: {
+    functionId: string
+    args?: Record<string, unknown>
+    context: TrackerContextForOptions
+    runtime?: DynamicOptionsRuntimeContext
+    forceRefresh?: boolean
+    cacheTtlSecondsOverride?: number
+  },
+  trackerSchemaId?: string,
+): Promise<DynamicOptionsResolveResult> {
   const response = await fetch('/api/dynamic-options/resolve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      ...payload,
+      ...(trackerSchemaId ? { trackerSchemaId } : {}),
+    }),
   })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
@@ -212,7 +218,8 @@ export async function resolveFieldOptionsV2Async(
     args: config.dynamicOptionsArgs,
     forceRefresh: options?.forceRefresh,
     cacheTtlSecondsOverride: config.dynamicOptionsCacheTtlSeconds,
-    remoteResolver: resolveDynamicOptionsRemote,
+    remoteResolver: (p) =>
+      resolveDynamicOptionsRemote(p, trackerContext.trackerSchemaId),
   })
 
   return result.options.map((opt) => normalizeOption(opt))

@@ -26,6 +26,7 @@ model User {
   loginEvents          LoginEvent[]
   projects             Project[]
   authoredTrackerData  TrackerData[] @relation("TrackerDataAuthor")
+  llmTokenUsages       LlmTokenUsage[]
 }
 
 model Account {
@@ -112,6 +113,7 @@ model Project {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   trackerSchemas TrackerSchema[]
   modules        Module[]
+  llmTokenUsages LlmTokenUsage[]
 
   @@index([userId])
 }
@@ -155,10 +157,31 @@ model TrackerSchema {
   listCompanion    TrackerSchema? @relation("ListCompanion")
   trackerData      TrackerData[]
   conversations    Conversation[]
+  llmTokenUsages   LlmTokenUsage[]
 
   @@index([projectId])
   @@index([moduleId])
   @@unique([projectId, moduleId, systemType])
+}
+
+model LlmTokenUsage {
+  id               String         @id @default(cuid())
+  userId           String
+  projectId        String?
+  trackerSchemaId  String?
+  source           String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  createdAt        DateTime       @default(now())
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project          Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  trackerSchema    TrackerSchema? @relation(fields: [trackerSchemaId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([userId, projectId])
+  @@index([userId, trackerSchemaId])
+  @@index([createdAt])
 }
 
 model TrackerData {
