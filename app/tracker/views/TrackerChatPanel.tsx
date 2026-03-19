@@ -35,6 +35,7 @@ interface TrackerChatPanelProps {
   toolCalls?: ToolCallEntry[]
   isResolvingExpressions?: boolean
   mode?: 'schema' | 'data'
+  isConversationLoading?: boolean
   /** Optional multi-conversation controls (Cursor-style chat tabs). */
   conversationWindows?: ConversationWindow[]
   activeConversationId?: string
@@ -63,6 +64,7 @@ export function TrackerChatPanel({
   toolCalls,
   isResolvingExpressions,
   mode = 'schema',
+  isConversationLoading = false,
   conversationWindows,
   activeConversationId,
   onSelectConversation,
@@ -131,29 +133,35 @@ export function TrackerChatPanel({
 
           {showStatusPanel && <TrackerStatusPanel {...statusPanelProps} />}
 
-          <AnimatePresence mode="wait">
-            {isChatEmpty ? (
-              <TrackerEmptyState
-                key="empty-state"
-                onApplySuggestion={applySuggestion}
-                mode={mode}
-              />
-            ) : (
-              <TrackerMessageList
-                key="chat-messages"
-                messages={messages}
-                isLoading={isLoading}
-                object={object}
-                setMessageThinkingOpen={setMessageThinkingOpen}
-                messagesEndRef={messagesEndRef}
-                onViewTracker={onViewTracker}
-                activeTrackerMessageIndex={activeTrackerMessageIndex}
-                toolCalls={toolCalls}
-                isResolvingExpressions={isResolvingExpressions}
-                mode={mode}
-              />
-            )}
-          </AnimatePresence>
+          {isConversationLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-xs text-muted-foreground">Loading conversation…</div>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {isChatEmpty ? (
+                <TrackerEmptyState
+                  key="empty-state"
+                  onApplySuggestion={applySuggestion}
+                  mode={mode}
+                />
+              ) : (
+                <TrackerMessageList
+                  key="chat-messages"
+                  messages={messages}
+                  isLoading={isLoading}
+                  object={object}
+                  setMessageThinkingOpen={setMessageThinkingOpen}
+                  messagesEndRef={messagesEndRef}
+                  onViewTracker={onViewTracker}
+                  activeTrackerMessageIndex={activeTrackerMessageIndex}
+                  toolCalls={toolCalls}
+                  isResolvingExpressions={isResolvingExpressions}
+                  mode={mode}
+                />
+              )}
+            </AnimatePresence>
+          )}
         </div>
       </div>
 

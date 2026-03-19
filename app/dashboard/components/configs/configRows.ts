@@ -1,11 +1,10 @@
 import type {
-  ProjectFile,
-  ModuleFile,
-  ProjectFileType,
+  SystemFileType,
+  TrackerSchema,
 } from '../../dashboard-context'
-import { PROJECT_FILE_LABELS } from '../../dashboard-context'
+import { SYSTEM_FILE_LABELS } from '../../dashboard-context'
 
-type BaseConfigFile = Pick<ProjectFile | ModuleFile, 'id' | 'type' | 'updatedAt'>
+type BaseConfigFile = Pick<TrackerSchema, 'id' | 'systemType' | 'updatedAt'>
 
 export type ConfigTileRow = {
   kind: 'file'
@@ -19,7 +18,7 @@ export type ConfigTileRow = {
 
 export function buildConfigRows<
   TFile extends BaseConfigFile,
-  TType extends ProjectFileType,
+  TType extends SystemFileType,
 >({
   files,
   baseHref,
@@ -32,17 +31,16 @@ export function buildConfigRows<
   sublabel?: string
 }): ConfigTileRow[] {
   return files.map((file) => {
-    const type = file.type as TType
+    const type = file.systemType as TType
     const Icon = icons[type]
     return {
       kind: 'file' as const,
       id: file.id,
-      label: PROJECT_FILE_LABELS[type],
+      label: SYSTEM_FILE_LABELS[type],
       sublabel,
       icon: Icon,
       updatedAt: file.updatedAt,
-      href: `${baseHref}/file/${file.id}`,
+      href: `${baseHref}/${file.id}/edit`,
     }
   })
 }
-

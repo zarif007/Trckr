@@ -22,19 +22,13 @@ function serializeModuleFlat(m: ProjectFromDb['modules'][number]): FlatModule {
     name: m.name,
     createdAt: m.createdAt.toISOString(),
     updatedAt: m.updatedAt.toISOString(),
-    moduleFiles: m.moduleFiles.map((f) => ({
-      id: f.id,
-      moduleId: f.moduleId,
-      type: f.type,
-      content: f.content,
-      createdAt: f.createdAt.toISOString(),
-      updatedAt: f.updatedAt.toISOString(),
-    })),
     trackerSchemas: m.trackerSchemas.map((t) => ({
       id: t.id,
       name: t.name,
       projectId: t.projectId,
       moduleId: t.moduleId,
+      type: t.type,
+      systemType: t.systemType ?? null,
       instance: t.instance,
       versionControl: t.versionControl,
       listForSchemaId: t.listForSchemaId ?? null,
@@ -69,19 +63,13 @@ function serializeProject(p: ProjectFromDb): Project | null {
     userId: p.userId,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
-    projectFiles: p.projectFiles.map((f) => ({
-      id: f.id,
-      projectId: f.projectId,
-      type: f.type,
-      content: f.content,
-      createdAt: f.createdAt.toISOString(),
-      updatedAt: f.updatedAt.toISOString(),
-    })),
     trackerSchemas: p.trackerSchemas.map((t) => ({
       id: t.id,
       name: t.name,
       projectId: t.projectId,
       moduleId: t.moduleId,
+      type: t.type,
+      systemType: t.systemType ?? null,
       instance: t.instance,
       versionControl: t.versionControl,
       listForSchemaId: t.listForSchemaId ?? null,
@@ -103,19 +91,13 @@ function serializeModule(
     name: m.name,
     createdAt: m.createdAt.toISOString(),
     updatedAt: m.updatedAt.toISOString(),
-    moduleFiles: m.moduleFiles.map((f) => ({
-      id: f.id,
-      moduleId: f.moduleId,
-      type: f.type,
-      content: f.content,
-      createdAt: f.createdAt.toISOString(),
-      updatedAt: f.updatedAt.toISOString(),
-    })),
     trackerSchemas: m.trackerSchemas.map((t) => ({
       id: t.id,
       name: t.name,
       projectId: t.projectId,
       moduleId: t.moduleId,
+      type: t.type,
+      systemType: t.systemType ?? null,
       instance: t.instance,
       versionControl: t.versionControl,
       listForSchemaId: t.listForSchemaId ?? null,
@@ -126,7 +108,7 @@ function serializeModule(
   }
 }
 
-/** Serialize a project from list (modules may not have moduleFiles). */
+/** Serialize a project from list (modules are partial). */
 function serializeProjectFromList(p: ProjectFromList): Project {
   const flatModules: FlatModule[] = p.modules.map((m) => ({
     id: m.id,
@@ -135,12 +117,13 @@ function serializeProjectFromList(p: ProjectFromList): Project {
     name: m.name,
     createdAt: m.createdAt.toISOString(),
     updatedAt: m.updatedAt.toISOString(),
-    moduleFiles: [],
     trackerSchemas: m.trackerSchemas.map((t) => ({
       id: t.id,
       name: t.name,
       projectId: t.projectId,
       moduleId: t.moduleId,
+      type: t.type,
+      systemType: t.systemType ?? null,
       instance: t.instance,
       versionControl: t.versionControl,
       listForSchemaId: t.listForSchemaId ?? null,
@@ -154,19 +137,13 @@ function serializeProjectFromList(p: ProjectFromList): Project {
     userId: p.userId,
     createdAt: p.createdAt.toISOString(),
     updatedAt: p.updatedAt.toISOString(),
-    projectFiles: p.projectFiles.map((f) => ({
-      id: f.id,
-      projectId: f.projectId,
-      type: f.type,
-      content: f.content,
-      createdAt: f.createdAt.toISOString(),
-      updatedAt: f.updatedAt.toISOString(),
-    })),
     trackerSchemas: p.trackerSchemas.map((t) => ({
       id: t.id,
       name: t.name,
       projectId: t.projectId,
       moduleId: t.moduleId,
+      type: t.type,
+      systemType: t.systemType ?? null,
       instance: t.instance,
       versionControl: t.versionControl,
       listForSchemaId: t.listForSchemaId ?? null,

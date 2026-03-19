@@ -1,4 +1,4 @@
-import { Instance } from '@prisma/client'
+import { Instance, SystemFileType, TrackerSchemaType } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import {
   createProjectForUser,
@@ -95,6 +95,8 @@ export async function createTrackerForUser(params: {
   instance?: 'SINGLE' | 'MULTI'
   versionControl?: boolean
   autoSave?: boolean
+  type?: TrackerSchemaType
+  systemType?: SystemFileType | null
 }) {
   const project = await resolveTargetProjectForTrackerCreate(params.userId, params.projectId)
 
@@ -125,6 +127,8 @@ export async function createTrackerForUser(params: {
       projectId: project.id,
       moduleId: params.moduleId ?? null,
       name: resolvedName,
+      type: params.type ?? TrackerSchemaType.GENERAL,
+      systemType: params.systemType ?? null,
       instance,
       versionControl,
       autoSave,

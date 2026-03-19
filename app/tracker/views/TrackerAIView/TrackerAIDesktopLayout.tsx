@@ -22,7 +22,6 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     trackerDataRef,
     handleGridDataChange,
     undoable,
-    handleShareClick,
     trackerName,
     isViewingHistoricalVersion,
     handleReturnToLatest,
@@ -63,7 +62,6 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           undo={canEditSchema && editMode ? undoable.undo : undefined}
           canUndo={canEditSchema && editMode ? undoable.canUndo : false}
           leftWidth={leftWidth}
-          onShareClick={handleShareClick}
           trackerName={trackerName}
           isViewingHistoricalVersion={isViewingHistoricalVersion}
           onReturnToLatest={handleReturnToLatest}

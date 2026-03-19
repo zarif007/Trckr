@@ -11,10 +11,6 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
-  Users,
-  Settings,
-  ScrollText,
-  Network,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -22,28 +18,18 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import type {
   Project,
-  ProjectFile,
-  ProjectFileType,
   Module,
 } from '../../dashboard-context'
-import { PROJECT_FILE_LABELS, useDashboard } from '../../dashboard-context'
+import { useDashboard } from '../../dashboard-context'
 import {
   useRenameDeleteContextMenu,
   RenameDeleteContextMenuPortal,
   type ContextMenuItem,
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
-import { NewModuleButton } from '../NewModuleButton'
-import { NewTrackerDialog } from '../NewTrackerDialog'
+import { CreateDropdown } from '../CreateDropdown'
 import { DashboardPageSkeleton } from '../skeleton/DashboardPageSkeleton'
 import { type ConfigTileRow } from '../configs/configRows'
-
-const PROJECT_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
-  TEAMS: Users,
-  SETTINGS: Settings,
-  RULES: ScrollText,
-  CONNECTIONS: Network,
-}
 
 const STALE_TIME_MS = 60 * 1000
 const TILE_ICON_SHELL =
@@ -358,13 +344,18 @@ export function ProjectContent({
     optimisticDelete,
   })
 
-  const projectFiles = project?.projectFiles ?? []
+  const projectSystemFiles = (project?.trackerSchemas ?? []).filter(
+    (t) => t.type === 'SYSTEM' && !t.moduleId && t.systemType != null,
+  )
   const modules = project?.modules ?? []
   const projectLevelTrackers = useMemo(
-    () => (project?.trackerSchemas ?? []).filter((t) => !t.moduleId),
+    () =>
+      (project?.trackerSchemas ?? []).filter(
+        (t) => !t.moduleId && t.type === 'GENERAL',
+      ),
     [project?.trackerSchemas],
   )
-  const hasProjectConfigs = projectFiles.length > 0
+  const hasProjectConfigs = projectSystemFiles.length > 0
   const totalItems =
     (hasProjectConfigs ? 1 : 0) + modules.length + projectLevelTrackers.length
   const isEmpty = totalItems === 0
@@ -416,15 +407,18 @@ export function ProjectContent({
         href: `${base}/${projectId}/Configs`,
       })
     }
-    const moduleRows = modules.map((mod) => ({
-      kind: 'module' as const,
-      id: mod.id,
-      label: mod.name || 'Untitled module',
-      sublabel: `${mod.trackerSchemas.length} tracker${mod.trackerSchemas.length !== 1 ? 's' : ''}`,
-      icon: Folder,
-      updatedAt: mod.updatedAt,
-      href: `${base}/${projectId}/module/${mod.id}`,
-    }))
+    const moduleRows = modules.map((mod) => {
+      const trackerCount = mod.trackerSchemas.filter((t) => t.type === 'GENERAL').length
+      return {
+        kind: 'module' as const,
+        id: mod.id,
+        label: mod.name || 'Untitled module',
+        sublabel: `${trackerCount} tracker${trackerCount !== 1 ? 's' : ''}`,
+        icon: Folder,
+        updatedAt: mod.updatedAt,
+        href: `${base}/${projectId}/module/${mod.id}`,
+      }
+    })
     const trackerRows = projectLevelTrackers.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
       const isListView = tracker.listForSchemaId != null
@@ -516,18 +510,12 @@ export function ProjectContent({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <NewModuleButton
-              projectId={projectId}
-              variant="toolbar"
-              onError={(msg) => setErrorMessage(msg || null)}
-            />
-            <NewTrackerDialog
-              projectId={projectId}
-              onCreated={handleTrackerCreated}
-              onError={(msg) => setErrorMessage(msg)}
-            />
-          </div>
+          <CreateDropdown
+            projectId={projectId}
+            variant="toolbar"
+            onError={(msg) => setErrorMessage(msg || null)}
+            onTrackerCreated={handleTrackerCreated}
+          />
         </div>
 
         <div className="flex-1 overflow-auto px-4 py-6">
@@ -538,24 +526,12 @@ export function ProjectContent({
                   <FileText className="h-8 w-8 opacity-45" />
                 </div>
                 <p className="text-xs font-medium">This folder is empty</p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <NewModuleButton
-                    projectId={projectId}
-                    variant="empty"
-                    onError={(msg) => setErrorMessage(msg || null)}
-                  />
-                  <NewTrackerDialog
-                    projectId={projectId}
-                    onCreated={handleTrackerCreated}
-                    onError={(msg) => setErrorMessage(msg)}
-                    trigger={
-                      <Button size="sm" variant="secondary" className="rounded-full gap-1.5">
-                        <FilePlus className="h-3.5 w-3.5" />
-                        New Tracker
-                      </Button>
-                    }
-                  />
-                </div>
+                <CreateDropdown
+                  projectId={projectId}
+                  variant="empty"
+                  onError={(msg) => setErrorMessage(msg || null)}
+                  onTrackerCreated={handleTrackerCreated}
+                />
               </div>
             ) : (
               <div

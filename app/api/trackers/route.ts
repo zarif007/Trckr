@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TrackerSchemaType } from '@prisma/client'
 import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
 import { badRequest, jsonOk } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     instance,
     versionControl,
     autoSave,
+    type: TrackerSchemaType.GENERAL,
   })
 
   return jsonOk(tracker)

@@ -12,36 +12,22 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
-  Users,
-  Settings,
-  ScrollText,
-  Network,
-  Plus,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import type { Module, ModuleFile, ProjectFileType } from '../../dashboard-context'
-import { PROJECT_FILE_LABELS, useDashboard } from '../../dashboard-context'
+import type { Module, SystemFileType } from '../../dashboard-context'
+import { useDashboard } from '../../dashboard-context'
 import {
   useRenameDeleteContextMenu,
   RenameDeleteContextMenuPortal,
   type ContextMenuItem,
 } from '../../hooks/useRenameDeleteContextMenu'
 import { dashboardQueryKeys } from '../../query-keys'
-import { NewModuleButton } from '../NewModuleButton'
-import { NewTrackerDialog } from '../NewTrackerDialog'
+import { CreateDropdown } from '../CreateDropdown'
 import { type ConfigTileRow } from '../configs/configRows'
 
-const MODULE_FILE_ICONS: Record<ProjectFileType, typeof FileText> = {
-  TEAMS: Users,
-  SETTINGS: Settings,
-  RULES: ScrollText,
-  CONNECTIONS: Network,
-}
-
-const ALL_FILE_TYPES: ProjectFileType[] = ['TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS']
+const ALL_FILE_TYPES: SystemFileType[] = ['TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS']
 
 const STALE_TIME_MS = 60 * 1000
 const TILE_ICON_SHELL =
@@ -134,7 +120,7 @@ export function ModuleContent({
     queryClient.invalidateQueries({ queryKey: dashboardQueryKeys.project(projectId) })
   }, [queryClient, moduleId, projectId])
 
-  // Legacy stub: creation is handled by NewModuleButton; kept so stale closures (e.g. HMR) don’t throw
+  // Legacy stub: creation is handled by CreateDropdown; kept so stale closures (e.g. HMR) don’t throw
   const handleCreateSubmodule = useCallback(() => { }, [])
 
   const onRename = useCallback(
@@ -405,15 +391,23 @@ export function ModuleContent({
     return () => clearInterval(timer)
   }, [])
 
-  const moduleFiles = mod?.moduleFiles ?? []
-  const trackerSchemas = mod?.trackerSchemas ?? []
+  const moduleSystemFiles = (mod?.trackerSchemas ?? []).filter(
+    (t) => t.type === 'SYSTEM' && t.systemType != null,
+  )
+  const trackerSchemas = (mod?.trackerSchemas ?? []).filter(
+    (t) => t.type === 'GENERAL',
+  )
   const childModules = mod?.children ?? []
-  const hasModuleConfigs = moduleFiles.length > 0
+  const hasModuleConfigs = moduleSystemFiles.length > 0
   const totalItems =
     (hasModuleConfigs ? 1 : 0) + trackerSchemas.length + childModules.length
   const isEmpty = totalItems === 0
 
-  const existingFileTypes = new Set(moduleFiles.map((f) => f.type))
+  const existingFileTypes = new Set(
+    moduleSystemFiles
+      .map((f) => f.systemType)
+      .filter((value): value is SystemFileType => value != null),
+  )
   const availableFileTypes = ALL_FILE_TYPES.filter((t) => !existingFileTypes.has(t))
 
   const tableRows = useMemo(() => {
@@ -463,15 +457,18 @@ export function ModuleContent({
         href: `${base}/${projectId}/module/${moduleId}/configs`,
       })
     }
-    const moduleRows = childModules.map((child) => ({
-      kind: 'module' as const,
-      id: child.id,
-      label: child.name || 'Untitled module',
-      sublabel: `${child.trackerSchemas.length} tracker${child.trackerSchemas.length !== 1 ? 's' : ''}`,
-      icon: Folder,
-      updatedAt: child.updatedAt,
-      href: `${base}/${projectId}/module/${child.id}`,
-    }))
+    const moduleRows = childModules.map((child) => {
+      const trackerCount = child.trackerSchemas.filter((t) => t.type === 'GENERAL').length
+      return {
+        kind: 'module' as const,
+        id: child.id,
+        label: child.name || 'Untitled module',
+        sublabel: `${trackerCount} tracker${trackerCount !== 1 ? 's' : ''}`,
+        icon: Folder,
+        updatedAt: child.updatedAt,
+        href: `${base}/${projectId}/module/${child.id}`,
+      }
+    })
     const trackerRows = trackerSchemas.map((tracker) => {
       const parentId = tracker.listForSchemaId ?? tracker.id
       const isListView = tracker.listForSchemaId != null
@@ -512,7 +509,7 @@ export function ModuleContent({
     [invalidateModuleAndProjects, fetchProjects, router],
   )
 
-  const handleAddConfig = async (type: ProjectFileType) => {
+  const handleAddConfig = async (type: SystemFileType) => {
     setAddingConfig(true)
     setErrorMessage(null)
     try {
@@ -611,50 +608,16 @@ export function ModuleContent({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1">
-            <NewModuleButton
-              projectId={projectId}
-              parentId={moduleId}
-              variant="toolbar"
-              onError={(msg) => setErrorMessage(msg || null)}
-            />
-            {availableFileTypes.length > 0 && (
-              <div className="relative group">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 gap-1.5 rounded-md text-xs font-medium"
-                  disabled={addingConfig}
-                >
-                  {addingConfig ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5" />
-                  )}
-                  Add Config
-                </Button>
-                <div className="absolute right-0 top-full mt-1 bg-popover border border-border rounded-lg shadow-lg py-1 min-w-[140px] hidden group-hover:block z-20">
-                  {availableFileTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => handleAddConfig(type)}
-                      disabled={addingConfig}
-                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-muted/60 transition-colors"
-                    >
-                      {PROJECT_FILE_LABELS[type]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <NewTrackerDialog
-              projectId={projectId}
-              moduleId={moduleId}
-              onCreated={handleTrackerCreated}
-              onError={(msg) => setErrorMessage(msg)}
-            />
-          </div>
+          <CreateDropdown
+            projectId={projectId}
+            moduleId={moduleId}
+            variant="toolbar"
+            onError={(msg) => setErrorMessage(msg || null)}
+            onTrackerCreated={handleTrackerCreated}
+            availableConfigTypes={availableFileTypes}
+            onAddConfig={handleAddConfig}
+            addingConfig={addingConfig}
+          />
         </div>
 
         <div className="flex-1 overflow-auto px-4 py-6">
@@ -665,26 +628,16 @@ export function ModuleContent({
                   <FileText className="h-8 w-8 opacity-45" />
                 </div>
                 <p className="text-xs font-medium">This module is empty</p>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <NewModuleButton
-                    projectId={projectId}
-                    parentId={moduleId}
-                    variant="empty"
-                    onError={(msg) => setErrorMessage(msg || null)}
-                  />
-                  <NewTrackerDialog
-                    projectId={projectId}
-                    moduleId={moduleId}
-                    onCreated={handleTrackerCreated}
-                    onError={(msg) => setErrorMessage(msg)}
-                    trigger={
-                      <Button size="sm" variant="secondary" className="rounded-full gap-1.5">
-                        <FilePlus className="h-3.5 w-3.5" />
-                        New Tracker
-                      </Button>
-                    }
-                  />
-                </div>
+                <CreateDropdown
+                  projectId={projectId}
+                  moduleId={moduleId}
+                  variant="empty"
+                  onError={(msg) => setErrorMessage(msg || null)}
+                  onTrackerCreated={handleTrackerCreated}
+                  availableConfigTypes={availableFileTypes}
+                  onAddConfig={handleAddConfig}
+                  addingConfig={addingConfig}
+                />
               </div>
             ) : (
               <div

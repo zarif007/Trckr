@@ -20,8 +20,9 @@ app/dashboard/
 │   │   └── ProjectContent.tsx
 │   ├── module/               # Module view
 │   │   └── ModuleContent.tsx
-│   └── file/                 # Project file view (e.g. Teams, Settings)
-│       └── ProjectFileContent.tsx
+│   └── configs/              # Project + module configs tiles
+│       ├── ProjectConfigsContent.tsx
+│       └── ModuleConfigsContent.tsx
 ├── [projectId]/
 │   ├── page.tsx              # Server: fetch project → ProjectContent
 │   ├── file/[fileId]/page.tsx
@@ -35,7 +36,7 @@ app/dashboard/
 - **Layout**: Server fetches `getProjectsForUser()` → `DashboardLayoutClient` → `DashboardProvider` uses it as `initialData` for the `['projects']` query. Sidebar reads from the same cache.
 - **Project page**: Server fetches project → `ProjectContent` with `useQuery(['project', id], { initialData })`. Mutations invalidate `project` and `projects`.
 - **Module page**: Server fetches module + project name in one call → `ModuleContent` with `useQuery(['module', id], { initialData })`.
-- **File page**: Server fetches project, finds file → `ProjectFileContent` reuses project cache.
+- **Configs**: Config tiles link to tracker editor; system files are stored as trackers.
 
 Redirects on 404 are done in **useEffect** (not inside `queryFn` or during render) to avoid sudden redirects and keep the UI predictable.
 

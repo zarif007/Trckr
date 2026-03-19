@@ -1,20 +1,26 @@
+import { Instance, SystemFileType, TrackerSchemaType } from '@prisma/client'
+import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
 import { prisma } from '@/lib/db'
 
-const PROJECT_FILE_TYPES = [
-  'TEAMS',
-  'SETTINGS',
-  'RULES',
-  'CONNECTIONS',
-] as const
+const SYSTEM_FILE_TYPES: SystemFileType[] = [
+  SystemFileType.TEAMS,
+  SystemFileType.SETTINGS,
+  SystemFileType.RULES,
+  SystemFileType.CONNECTIONS,
+]
+
+const SYSTEM_FILE_LABELS: Record<SystemFileType, string> = {
+  [SystemFileType.TEAMS]: 'Teams',
+  [SystemFileType.SETTINGS]: 'Settings',
+  [SystemFileType.RULES]: 'Rules',
+  [SystemFileType.CONNECTIONS]: 'Connections',
+}
 
 export async function listProjectsForUser(userId: string) {
   return prisma.project.findMany({
     where: { userId },
     orderBy: { updatedAt: 'desc' },
     include: {
-      projectFiles: {
-        orderBy: { type: 'asc' },
-      },
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
       },
@@ -36,20 +42,28 @@ export async function createProjectForUser(userId: string, name: string) {
         name,
       },
     })
-    await tx.projectFile.createMany({
-      data: PROJECT_FILE_TYPES.map((type) => ({
+    await tx.trackerSchema.createMany({
+      data: SYSTEM_FILE_TYPES.map((systemType) => ({
         projectId: project.id,
-        type,
+        moduleId: null,
+        name: SYSTEM_FILE_LABELS[systemType],
+        type: TrackerSchemaType.SYSTEM,
+        systemType,
+        instance: Instance.SINGLE,
+        versionControl: false,
+        autoSave: true,
+        schema: createEmptyTrackerSchema() as object,
       })),
     })
     return tx.project.findUniqueOrThrow({
       where: { id: project.id },
       include: {
-        projectFiles: {
-          orderBy: { type: 'asc' },
-        },
+        trackerSchemas: { orderBy: { updatedAt: 'desc' } },
         modules: {
           orderBy: { updatedAt: 'desc' },
+          include: {
+            trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+          },
         },
       },
     })
@@ -63,16 +77,12 @@ export async function findProjectByIdForUser(projectId: string, userId: string) 
       userId,
     },
     include: {
-      projectFiles: {
-        orderBy: { type: 'asc' },
-      },
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
       },
       modules: {
         orderBy: { updatedAt: 'desc' },
         include: {
-          moduleFiles: { orderBy: { type: 'asc' } },
           trackerSchemas: { orderBy: { updatedAt: 'desc' } },
         },
       },
@@ -107,4 +117,3 @@ export async function deleteProjectForUser(projectId: string, userId: string) {
     where: { id: projectId },
   })
 }
-

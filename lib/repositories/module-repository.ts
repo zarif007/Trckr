@@ -1,4 +1,5 @@
-import { type ProjectFileType } from '@prisma/client'
+import { Instance, SystemFileType, TrackerSchemaType } from '@prisma/client'
+import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
 import { prisma } from '@/lib/db'
 
 export async function listModulesForProject(projectId: string, userId: string) {
@@ -9,7 +10,6 @@ export async function listModulesForProject(projectId: string, userId: string) {
     },
     orderBy: { updatedAt: 'desc' },
     include: {
-      moduleFiles: { orderBy: { type: 'asc' } },
       trackerSchemas: { orderBy: { updatedAt: 'desc' } },
     },
   })
@@ -42,7 +42,6 @@ export async function createModuleForProject(
       parentId: parentId ?? null,
     },
     include: {
-      moduleFiles: { orderBy: { type: 'asc' } },
       trackerSchemas: { orderBy: { updatedAt: 'desc' } },
     },
   })
@@ -55,7 +54,6 @@ export async function findModuleByIdForUser(moduleId: string, userId: string) {
       project: { userId },
     },
     include: {
-      moduleFiles: { orderBy: { type: 'asc' } },
       trackerSchemas: { orderBy: { updatedAt: 'desc' } },
     },
   })
@@ -74,7 +72,6 @@ export async function updateModuleForUser(
     where: { id: moduleId },
     data: update,
     include: {
-      moduleFiles: { orderBy: { type: 'asc' } },
       trackerSchemas: { orderBy: { updatedAt: 'desc' } },
     },
   })
@@ -95,76 +92,40 @@ export async function deleteModuleForUser(moduleId: string, userId: string) {
   return prisma.module.delete({ where: { id: moduleId } })
 }
 
-export async function addModuleFile(
+export async function addModuleSystemFile(
   moduleId: string,
   userId: string,
-  type: ProjectFileType,
+  systemType: SystemFileType,
 ) {
   const mod = await findModuleByIdForUser(moduleId, userId)
   if (!mod) return null
 
-  return prisma.moduleFile.upsert({
-    where: { moduleId_type: { moduleId, type } },
-    update: {},
-    create: { moduleId, type },
-  })
-}
-
-export async function findModuleFileForUser(
-  fileId: string,
-  userId: string,
-) {
-  return prisma.moduleFile.findFirst({
+  return prisma.trackerSchema.upsert({
     where: {
-      id: fileId,
-      module: { project: { userId } },
+      projectId_moduleId_systemType: {
+        projectId: mod.projectId,
+        moduleId,
+        systemType,
+      },
+    },
+    update: {},
+    create: {
+      projectId: mod.projectId,
+      moduleId,
+      name:
+        systemType === SystemFileType.TEAMS
+          ? 'Teams'
+          : systemType === SystemFileType.SETTINGS
+            ? 'Settings'
+            : systemType === SystemFileType.RULES
+              ? 'Rules'
+              : 'Connections',
+      type: TrackerSchemaType.SYSTEM,
+      systemType,
+      instance: Instance.SINGLE,
+      versionControl: false,
+      autoSave: true,
+      schema: createEmptyTrackerSchema() as object,
     },
   })
-}
-
-export async function updateModuleFileForUser(
-  fileId: string,
-  userId: string,
-  content: unknown,
-) {
-  const existing = await findModuleFileForUser(fileId, userId)
-  if (!existing) return null
-
-  return prisma.moduleFile.update({
-    where: { id: fileId },
-    data: { content: content as object },
-  })
-}
-
-/**
- * Returns the effective config for a given type within a module:
- * module-level override if it exists, otherwise the project-level config.
- */
-export async function getEffectiveConfig(
-  moduleId: string,
-  userId: string,
-  type: ProjectFileType,
-) {
-  const mod = await prisma.module.findFirst({
-    where: { id: moduleId, project: { userId } },
-    select: {
-      id: true,
-      projectId: true,
-      moduleFiles: { where: { type } },
-    },
-  })
-  if (!mod) return null
-
-  if (mod.moduleFiles.length > 0) {
-    return { source: 'module' as const, content: mod.moduleFiles[0].content }
-  }
-
-  const projectFile = await prisma.projectFile.findFirst({
-    where: { projectId: mod.projectId, type },
-  })
-
-  return {
-    source: 'project' as const,
-    content: projectFile?.content ?? {},
-  }
 }

@@ -18,6 +18,8 @@ interface NewTrackerDialogProps {
   projectId?: string
   moduleId?: string
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onCreated?: (trackerId: string) => void
   onError?: (msg: string) => void
 }
@@ -48,11 +50,16 @@ export function NewTrackerDialog({
   projectId,
   moduleId,
   trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   onCreated,
   onError,
 }: NewTrackerDialogProps) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen
   const [name, setName] = useState('')
   const [instance, setInstance] = useState<InstanceType>('SINGLE')
   const [versionControl, setVersionControl] = useState(false)
@@ -149,14 +156,16 @@ export function NewTrackerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button size="sm" variant="ghost" className="h-7 gap-1.5 rounded-md text-xs font-medium">
-            <FilePlus className="h-3.5 w-3.5" />
-            New Tracker
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger ?? (
+            <Button size="sm" variant="ghost" className="h-7 gap-1.5 rounded-md text-xs font-medium">
+              <FilePlus className="h-3.5 w-3.5" />
+              New Tracker
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

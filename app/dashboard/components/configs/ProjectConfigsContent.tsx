@@ -6,7 +6,7 @@ import { usePathname, useParams, useRouter } from 'next/navigation'
 import { ChevronRight, FileText } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardQueryKeys } from '../../query-keys'
-import type { Project, ProjectFileType } from '../../dashboard-context'
+import type { Project, SystemFileType, TrackerSchema } from '../../dashboard-context'
 import { buildConfigRows } from './configRows'
 
 const STALE_TIME_MS = 60 * 1000
@@ -40,10 +40,13 @@ export function ProjectConfigsContent({
 
   const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
 
-  const projectFiles = project?.projectFiles ?? []
-  const hasConfigs = projectFiles.length > 0
+  const projectSystemFiles: TrackerSchema[] =
+    (project?.trackerSchemas ?? []).filter(
+      (t) => t.type === 'SYSTEM' && !t.moduleId && t.systemType != null,
+    )
+  const hasConfigs = projectSystemFiles.length > 0
 
-  const ICONS: Record<ProjectFileType, typeof FileText> = {
+  const ICONS: Record<SystemFileType, typeof FileText> = {
     TEAMS: FileText,
     SETTINGS: FileText,
     RULES: FileText,
@@ -52,8 +55,8 @@ export function ProjectConfigsContent({
 
   const rows = hasConfigs
     ? buildConfigRows({
-      files: projectFiles,
-      baseHref: `${base}/${projectId}`,
+      files: projectSystemFiles,
+      baseHref: '/tracker',
       icons: ICONS,
       sublabel: '',
     })
@@ -139,4 +142,3 @@ export function ProjectConfigsContent({
     </main>
   )
 }
-

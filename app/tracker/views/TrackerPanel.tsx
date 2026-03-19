@@ -1,7 +1,7 @@
 'use client'
 
 import { memo, useCallback, useState } from 'react'
-import { Bot, Check, Database, Eye, GitBranch, History, Layout, Loader2, MoreHorizontal, Pencil, Share2 } from 'lucide-react'
+import { Bot, Check, Database, Eye, GitBranch, History, Layout, Loader2, MoreHorizontal, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -43,7 +43,6 @@ interface TrackerPanelProps {
   leftWidth: number | null
   fullWidth?: boolean
   hideChatToggle?: boolean
-  onShareClick?: () => void
   trackerName?: string
   isViewingHistoricalVersion?: boolean
   onReturnToLatest?: () => void
@@ -80,7 +79,6 @@ export const TrackerPanel = memo(function TrackerPanel({
   leftWidth,
   fullWidth,
   hideChatToggle,
-  onShareClick,
   isViewingHistoricalVersion,
   onReturnToLatest,
   trackerId,
@@ -273,21 +271,6 @@ export const TrackerPanel = memo(function TrackerPanel({
                   <Database className="h-3.5 w-3.5 shrink-0" />
                   Data
                 </Button>
-                {onShareClick && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 justify-start gap-2 text-xs"
-                    onClick={() => {
-                      onShareClick()
-                      setMoreOpen(false)
-                    }}
-                    aria-label="Share tracker with team"
-                  >
-                    <Share2 className="h-3.5 w-3.5 shrink-0" />
-                    Share
-                  </Button>
-                )}
                 {editMode && undo != null && (
                   <EditModeUndoButton
                     undo={() => {
@@ -327,18 +310,6 @@ export const TrackerPanel = memo(function TrackerPanel({
               <Database className="h-3.5 w-3.5" />
               Data
             </Button>
-            {onShareClick && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                onClick={onShareClick}
-                aria-label="Share tracker with team"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-                Share
-              </Button>
-            )}
             <EditModeUndoButton
               undo={undo}
               canUndo={canUndo ?? false}

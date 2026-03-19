@@ -8,7 +8,6 @@ import {
   Loader2,
   X,
   FolderPlus,
-  FilePlus,
   ExternalLink,
   LayoutGrid,
   List,
@@ -29,7 +28,7 @@ import {
 import { cn } from '@/lib/utils'
 import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
-import { NewTrackerDialog } from './components/NewTrackerDialog'
+import { CreateDropdown } from './components/CreateDropdown'
 
 export type DashboardView = 'all' | 'projects' | 'recents'
 
@@ -107,20 +106,14 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
     [handleCreateProject],
   )
 
-  const totalTrackers = projects.reduce(
-    (acc, p) =>
-      acc +
-      (p.trackerSchemas?.length ?? 0) +
-      collectTrackersFromModules(p.modules ?? []).length,
-    0,
-  )
-
   const allTrackers = projects.flatMap((p) => [
-    ...(p.trackerSchemas ?? []),
+    ...(p.trackerSchemas ?? []).filter((t) => t.type === 'GENERAL'),
     ...collectTrackersFromModules(p.modules ?? []),
   ])
   const trackersById = new Map(allTrackers.map((t) => [t.id, t]))
-  const recentTrackers = [...trackersById.values()]
+  const uniqueTrackers = [...trackersById.values()]
+  const totalTrackers = uniqueTrackers.length
+  const recentTrackers = uniqueTrackers
     .sort(
       (a, b) =>
         new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -134,62 +127,41 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
   return (
     <>
       <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-background">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center px-3 gap-3 bg-background/80 backdrop-blur-sm">
+        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             {view !== 'recents' && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
-                onClick={handleOpenCreateProject}
-                disabled={creating}
-              >
-                <FolderPlus className="h-3.5 w-3.5" />
-                New Project
-              </Button>
-            )}
-            <NewTrackerDialog
-              trigger={
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 gap-1.5 rounded-md text-xs font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+              <div className="flex rounded-md border border-border/50 overflow-hidden">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    'p-1.5 transition-colors',
+                    viewMode === 'grid'
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/50'
+                  )}
                 >
-                  <FilePlus className="h-3.5 w-3.5" />
-                  New Tracker
-                </Button>
-              }
-              onError={setError}
-            />
-            {view !== 'recents' && (
-              <>
-                <div className="w-px h-4 bg-border/60" />
-                <div className="flex rounded-md border border-border/50 overflow-hidden">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={cn(
-                      'p-1.5 transition-colors',
-                      viewMode === 'grid'
-                        ? 'bg-muted text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/50'
-                    )}
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={cn(
-                      'p-1.5 transition-colors',
-                      viewMode === 'list'
-                        ? 'bg-muted text-foreground'
-                        : 'text-muted-foreground hover:bg-muted/50'
-                    )}
-                  >
-                    <List className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </>
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'p-1.5 transition-colors',
+                    viewMode === 'list'
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/50'
+                  )}
+                >
+                  <List className="h-3.5 w-3.5" />
+                </button>
+              </div>
             )}
+          </div>
+          <div className="flex items-center gap-1">
+            <CreateDropdown
+              variant="toolbar"
+              onError={setError}
+              onCreateProjectClick={view !== 'recents' ? handleOpenCreateProject : undefined}
+            />
           </div>
         </div>
 
@@ -208,34 +180,39 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
             >
               {viewMode === 'grid' ? (
                 <>
-                  {projects.map((project) => (
-                  <Link
-                      key={project.id}
-                      href={`/project/${project.id}`}
-                      className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
-                    >
-                      <motion.div
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+                  {projects.map((project) => {
+                    const projectTrackerCount = (project.trackerSchemas ?? []).filter(
+                      (t) => t.type === 'GENERAL',
+                    ).length
+                    return (
+                      <Link
+                        key={project.id}
+                        href={`/project/${project.id}`}
+                        className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
                       >
-                        <div className={DASH_GRID_ICON_SHELL}>
-                          <FolderOpen className={DASH_GRID_ICON} />
-                          {project.trackerSchemas.length > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
-                              {project.trackerSchemas.length}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold text-center truncate w-full">
-                          {project.name || 'Untitled'}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {project.trackerSchemas.length} trackers
-                        </span>
-                      </motion.div>
-                    </Link>
-                  ))}
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+                        >
+                          <div className={DASH_GRID_ICON_SHELL}>
+                            <FolderOpen className={DASH_GRID_ICON} />
+                            {projectTrackerCount > 0 && (
+                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
+                                {projectTrackerCount}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs font-semibold text-center truncate w-full">
+                            {project.name || 'Untitled'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums">
+                            {projectTrackerCount} trackers
+                          </span>
+                        </motion.div>
+                      </Link>
+                    )
+                  })}
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -256,32 +233,37 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 </>
               ) : (
                 <>
-                  {projects.map((project) => (
-                  <Link
-                      key={project.id}
-                      href={`/project/${project.id}`}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium truncate block">
-                          {project.name || 'Untitled project'}
+                  {projects.map((project) => {
+                    const projectTrackerCount = (project.trackerSchemas ?? []).filter(
+                      (t) => t.type === 'GENERAL',
+                    ).length
+                    return (
+                      <Link
+                        key={project.id}
+                        href={`/project/${project.id}`}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">
+                            {project.name || 'Untitled project'}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {projectTrackerCount} trackers
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {new Date(project.updatedAt).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
                         </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {project.trackerSchemas.length} trackers
-                        </span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {new Date(project.updatedAt).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </span>
-                      <div className={DASH_LIST_ICON_SHELL}>
-                        <FolderOpen className={DASH_LIST_ICON} />
-                      </div>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
-                  ))}
+                        <div className={DASH_LIST_ICON_SHELL}>
+                          <FolderOpen className={DASH_LIST_ICON} />
+                        </div>
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </Link>
+                    )
+                  })}
                   <button
                     onClick={handleOpenCreateProject}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"

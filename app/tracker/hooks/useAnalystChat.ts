@@ -45,10 +45,13 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     conversationIdRef.current = conversationId
   }, [conversationId])
   // Controlled conversationId: when parent passes conversationId (e.g. active tab), sync internal state
+  // When parent clears it (draft tab), reset to null to avoid leaking prior conversation ids.
   useEffect(() => {
-    if (conversationIdProp !== undefined) {
-      setConversationId(conversationIdProp ?? null)
+    if (conversationIdProp === undefined) {
+      setConversationId(null)
+      return
     }
+    setConversationId(conversationIdProp ?? null)
   }, [conversationIdProp])
 
   const hasHydratedRef = useRef(false)
@@ -126,9 +129,10 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     const newUserMessage: Message = { role: 'user', content: userMessage }
     setMessages((prev) => [...prev, newUserMessage])
 
-    let cid = conversationIdRef.current
+    let cid = onConversationCreate ? null : conversationIdRef.current
     let alreadyPersisted = false
-    if (trackerId && !cid && onConversationCreate) {
+    let skipPersist = false
+    if (trackerId && onConversationCreate) {
       try {
         const result = await onConversationCreate(userMessage)
         if (result) {
@@ -136,12 +140,15 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
           conversationIdRef.current = result.id
           cid = result.id
           alreadyPersisted = true
+        } else {
+          skipPersist = true
         }
       } catch (err) {
         console.error('Failed to create analyst conversation via callback:', err)
+        skipPersist = true
       }
     }
-    if (trackerId && !cid) {
+    if (trackerId && !cid && !onConversationCreate) {
       try {
         cid = await ensureConversation(trackerId, 'ANALYST')
         setConversationId(cid)
@@ -150,7 +157,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
         console.error('Failed to create analyst conversation:', err)
       }
     }
-    if (cid && !alreadyPersisted) {
+    if (cid && !alreadyPersisted && !skipPersist) {
       try {
         await persistMessage(cid, { role: 'USER', content: userMessage })
       } catch (err) {

@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { getProjectForUser } from '@/lib/dashboard-data'
-import { ProjectFileContent } from '../../../../dashboard/components/file/ProjectFileContent'
 
 export default async function ProjectFilePage({
     params,
@@ -12,17 +11,11 @@ export default async function ProjectFilePage({
     if (!initialProject) {
         redirect('/project')
     }
-    const files = initialProject.projectFiles ?? []
-    const file = files.find((f) => f.id === fileId)
-    if (!file) {
+    const tracker = (initialProject.trackerSchemas ?? []).find(
+        (t) => t.id === fileId,
+    )
+    if (!tracker) {
         redirect(`/project/${projectId}`)
     }
-    return (
-        <ProjectFileContent
-            initialProject={initialProject}
-            fileId={fileId}
-            fileType={file.type}
-        />
-    )
+    redirect(`/tracker/${tracker.id}/edit`)
 }
-

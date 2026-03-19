@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardQueryKeys } from '../../query-keys'
-import type { Module, ModuleFile, ProjectFileType } from '../../dashboard-context'
+import type { Module, SystemFileType, TrackerSchema } from '../../dashboard-context'
 import { buildConfigRows } from './configRows'
 
 const STALE_TIME_MS = 60 * 1000
@@ -57,10 +57,13 @@ export function ModuleConfigsContent({
   const projectName = initialProjectName ?? null
   const breadcrumb = initialBreadcrumb ?? []
 
-  const moduleFiles: ModuleFile[] = mod?.moduleFiles ?? []
-  const hasConfigs = moduleFiles.length > 0
+  const moduleSystemFiles: TrackerSchema[] =
+    (mod?.trackerSchemas ?? []).filter(
+      (t) => t.type === 'SYSTEM' && t.systemType != null,
+    )
+  const hasConfigs = moduleSystemFiles.length > 0
 
-  const ICONS: Record<ProjectFileType, typeof FileText> = {
+  const ICONS: Record<SystemFileType, typeof FileText> = {
     TEAMS: Users,
     SETTINGS: Settings,
     RULES: ScrollText,
@@ -69,8 +72,8 @@ export function ModuleConfigsContent({
 
   const rows = hasConfigs
     ? buildConfigRows({
-      files: moduleFiles,
-      baseHref: `${base}/${projectId}/module/${moduleId}`,
+      files: moduleSystemFiles,
+      baseHref: '/tracker',
       icons: ICONS,
       sublabel: 'Override',
     })
@@ -183,4 +186,3 @@ export function ModuleConfigsContent({
     </main>
   )
 }
-

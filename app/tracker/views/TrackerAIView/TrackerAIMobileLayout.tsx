@@ -23,7 +23,6 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     trackerDataRef,
     handleGridDataChange,
     undoable,
-    handleShareClick,
     trackerName,
     isViewingHistoricalVersion,
     handleReturnToLatest,
@@ -81,7 +80,6 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               leftWidth={leftWidth}
               fullWidth
               hideChatToggle
-              onShareClick={handleShareClick}
               trackerName={trackerName}
               isViewingHistoricalVersion={isViewingHistoricalVersion}
               onReturnToLatest={handleReturnToLatest}

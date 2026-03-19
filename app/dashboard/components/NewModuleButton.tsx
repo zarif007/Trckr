@@ -23,18 +23,25 @@ export function NewModuleButton({
   projectId,
   parentId,
   variant = 'toolbar',
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
   onError,
 }: {
   projectId: string
   parentId?: string
   variant?: NewModuleButtonVariant
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   onError?: (message: string) => void
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { fetchProjects } = useDashboard()
 
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (controlledOnOpenChange ?? (() => {})) : setInternalOpen
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -98,20 +105,22 @@ export function NewModuleButton({
 
   return (
     <>
-      <Button
-        size="sm"
-        variant={isToolbar ? 'ghost' : 'secondary'}
-        className={isToolbar ? 'h-7 gap-1.5 rounded-md text-xs font-medium' : 'rounded-full gap-1.5'}
-        onClick={() => setOpen(true)}
-        disabled={creating}
-      >
-        {creating ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <FolderPlus className="h-3.5 w-3.5" />
-        )}
-        New Module
-      </Button>
+      {!isControlled && (
+        <Button
+          size="sm"
+          variant={isToolbar ? 'ghost' : 'secondary'}
+          className={isToolbar ? 'h-7 gap-1.5 rounded-md text-xs font-medium' : 'rounded-full gap-1.5'}
+          onClick={() => setOpen(true)}
+          disabled={creating}
+        >
+          {creating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <FolderPlus className="h-3.5 w-3.5" />
+          )}
+          New Module
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent

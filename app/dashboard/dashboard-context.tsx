@@ -16,6 +16,8 @@ export type TrackerSchema = {
   name: string | null
   projectId: string
   moduleId: string | null
+  type: 'GENERAL' | 'SYSTEM'
+  systemType: SystemFileType | null
   instance: string
   versionControl: boolean
   /** If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance) */
@@ -24,35 +26,17 @@ export type TrackerSchema = {
   updatedAt: string
 }
 
-export type ProjectFileType =
+export type SystemFileType =
   | 'TEAMS'
   | 'SETTINGS'
   | 'RULES'
   | 'CONNECTIONS'
 
-export const PROJECT_FILE_LABELS: Record<ProjectFileType, string> = {
+export const SYSTEM_FILE_LABELS: Record<SystemFileType, string> = {
   TEAMS: 'Teams',
   SETTINGS: 'Settings',
   RULES: 'Rules',
   CONNECTIONS: 'Connections',
-}
-
-export type ProjectFile = {
-  id: string
-  projectId: string
-  type: ProjectFileType
-  content: unknown
-  createdAt: string
-  updatedAt: string
-}
-
-export type ModuleFile = {
-  id: string
-  moduleId: string
-  type: ProjectFileType
-  content: unknown
-  createdAt: string
-  updatedAt: string
 }
 
 export type Module = {
@@ -62,7 +46,6 @@ export type Module = {
   name: string | null
   createdAt: string
   updatedAt: string
-  moduleFiles: ModuleFile[]
   trackerSchemas: TrackerSchema[]
   children: Module[]
 }
@@ -73,14 +56,13 @@ export type Project = {
   userId: string
   createdAt: string
   updatedAt: string
-  projectFiles: ProjectFile[]
   trackerSchemas: TrackerSchema[]
   modules: Module[]
 }
 
 export function collectTrackersFromModules(modules: Module[]): TrackerSchema[] {
   return modules.flatMap((m) => [
-    ...(m.trackerSchemas ?? []),
+    ...(m.trackerSchemas ?? []).filter((t) => t.type === 'GENERAL'),
     ...collectTrackersFromModules(m.children ?? []),
   ])
 }

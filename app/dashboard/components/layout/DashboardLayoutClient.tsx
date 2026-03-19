@@ -236,7 +236,9 @@ function SidebarModule({
 }) {
   const isModuleActive =
     projectId === currentProjectId && mod.id === currentModuleId
-  const trackers = mod.trackerSchemas ?? []
+  const trackers = (mod.trackerSchemas ?? []).filter(
+    (t) => t.type === 'GENERAL',
+  )
   const children = mod.children ?? []
   const hasTrackers = trackers.length > 0
   const hasChildModules = children.length > 0
@@ -347,7 +349,10 @@ function SidebarProject({
 }) {
   const isActive = project.id === currentProjectId && !currentModuleId
   const projectLevelTrackers = (project.trackerSchemas ?? []).filter(
-    (t) => !t.moduleId
+    (t) => !t.moduleId && t.type === 'GENERAL',
+  )
+  const hasProjectConfigs = (project.trackerSchemas ?? []).some(
+    (t) => t.type === 'SYSTEM' && !t.moduleId && t.systemType != null,
   )
   const hasModules = project.modules.length > 0
   const hasProjectTrackers = projectLevelTrackers.length > 0
@@ -362,7 +367,7 @@ function SidebarProject({
   const itemCount =
     projectLevelTrackers.length +
     project.modules.length +
-    (project.projectFiles?.length ?? 0)
+    (hasProjectConfigs ? 1 : 0)
 
   return (
     <div className="min-w-0">
@@ -582,7 +587,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const totalTrackers = projects.reduce(
     (acc, p) =>
       acc +
-      (p.trackerSchemas?.length ?? 0) +
+      (p.trackerSchemas ?? []).filter(
+        (t) => !t.moduleId && t.type === 'GENERAL',
+      ).length +
       collectTrackersFromModules(p.modules ?? []).length,
     0,
   )
@@ -590,10 +597,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     projects.length > 0
       ? projects
         .flatMap((p) =>
-          (p.trackerSchemas ?? []).map((t) => ({
-            date: t.updatedAt,
-            name: p.name,
-          }))
+          (p.trackerSchemas ?? [])
+            .filter((t) => t.type === 'GENERAL')
+            .map((t) => ({
+              date: t.updatedAt,
+              name: p.name,
+            }))
         )
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -611,7 +620,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     (isTrackerDetail || isTrackerList) && pathSegments[2] ? pathSegments[2] : null
 
   const allTrackers = projects.flatMap((p) => [
-    ...(p.trackerSchemas ?? []),
+    ...(p.trackerSchemas ?? []).filter(
+      (t) => !t.moduleId && t.type === 'GENERAL',
+    ),
     ...collectTrackersFromModules(p.modules ?? []),
   ])
   const trackersById = new Map(allTrackers.map((t) => [t.id, t]))

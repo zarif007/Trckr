@@ -1,5 +1,5 @@
 import type { Project, Module } from '../../dashboard-context'
-import { PROJECT_FILE_LABELS } from '../../dashboard-context'
+import { SYSTEM_FILE_LABELS } from '../../dashboard-context'
 
 function findModuleInTree(modules: Module[], moduleId: string): Module | null {
   for (const m of modules) {
@@ -53,8 +53,11 @@ export function resolveDashboardPath(pathname: string, projects: Project[]): str
 
   if (third === 'file' && fourth) {
     const fileId = fourth
-    const file = project?.projectFiles?.find((f) => f.id === fileId)
-    const fileLabel = file ? PROJECT_FILE_LABELS[file.type] : fileId
+    const tracker = project?.trackerSchemas?.find((t) => t.id === fileId)
+    const fileLabel =
+      tracker?.systemType != null
+        ? SYSTEM_FILE_LABELS[tracker.systemType]
+        : tracker?.name?.trim() || fileId
     parts.push('file', fileLabel)
     return parts.join('/')
   }

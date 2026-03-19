@@ -5,7 +5,10 @@ CREATE TYPE "Instance" AS ENUM ('SINGLE', 'MULTI');
 CREATE TYPE "Role" AS ENUM ('USER', 'ASSISTANT');
 
 -- CreateEnum
-CREATE TYPE "ProjectFileType" AS ENUM ('TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS');
+CREATE TYPE "TrackerSchemaType" AS ENUM ('GENERAL', 'SYSTEM');
+
+-- CreateEnum
+CREATE TYPE "SystemFileType" AS ENUM ('TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS');
 
 -- CreateEnum
 CREATE TYPE "ConversationMode" AS ENUM ('BUILDER', 'ANALYST');
@@ -82,18 +85,6 @@ CREATE TABLE "Project" (
 );
 
 -- CreateTable
-CREATE TABLE "ProjectFile" (
-    "id" TEXT NOT NULL,
-    "projectId" TEXT NOT NULL,
-    "type" "ProjectFileType" NOT NULL,
-    "content" JSONB NOT NULL DEFAULT '{}',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "ProjectFile_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "Module" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
@@ -106,23 +97,13 @@ CREATE TABLE "Module" (
 );
 
 -- CreateTable
-CREATE TABLE "ModuleFile" (
-    "id" TEXT NOT NULL,
-    "moduleId" TEXT NOT NULL,
-    "type" "ProjectFileType" NOT NULL,
-    "content" JSONB NOT NULL DEFAULT '{}',
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "ModuleFile_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "TrackerSchema" (
     "id" TEXT NOT NULL,
     "projectId" TEXT NOT NULL,
     "moduleId" TEXT,
     "name" TEXT,
+    "type" "TrackerSchemaType" NOT NULL DEFAULT 'GENERAL',
+    "systemType" "SystemFileType",
     "instance" "Instance" NOT NULL DEFAULT 'SINGLE',
     "versionControl" BOOLEAN NOT NULL DEFAULT false,
     "autoSave" BOOLEAN NOT NULL DEFAULT true,
@@ -211,22 +192,10 @@ CREATE INDEX "LoginEvent_createdAt_idx" ON "LoginEvent"("createdAt");
 CREATE INDEX "Project_userId_idx" ON "Project"("userId");
 
 -- CreateIndex
-CREATE INDEX "ProjectFile_projectId_idx" ON "ProjectFile"("projectId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ProjectFile_projectId_type_key" ON "ProjectFile"("projectId", "type");
-
--- CreateIndex
 CREATE INDEX "Module_projectId_idx" ON "Module"("projectId");
 
 -- CreateIndex
 CREATE INDEX "Module_parentId_idx" ON "Module"("parentId");
-
--- CreateIndex
-CREATE INDEX "ModuleFile_moduleId_idx" ON "ModuleFile"("moduleId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "ModuleFile_moduleId_type_key" ON "ModuleFile"("moduleId", "type");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TrackerSchema_listForSchemaId_key" ON "TrackerSchema"("listForSchemaId");
@@ -236,6 +205,9 @@ CREATE INDEX "TrackerSchema_projectId_idx" ON "TrackerSchema"("projectId");
 
 -- CreateIndex
 CREATE INDEX "TrackerSchema_moduleId_idx" ON "TrackerSchema"("moduleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerSchema_projectId_moduleId_systemType_key" ON "TrackerSchema"("projectId", "moduleId", "systemType");
 
 -- CreateIndex
 CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
@@ -268,16 +240,10 @@ ALTER TABLE "LoginEvent" ADD CONSTRAINT "LoginEvent_userId_fkey" FOREIGN KEY ("u
 ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ProjectFile" ADD CONSTRAINT "ProjectFile_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Module" ADD CONSTRAINT "Module_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Module" ADD CONSTRAINT "Module_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "ModuleFile" ADD CONSTRAINT "ModuleFile_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
