@@ -16,6 +16,8 @@ export interface EditModeContextValue {
   canUndo?: boolean
   /** Optional tracker schema id for LLM usage attribution in field settings. */
   trackerSchemaId?: string | null
+  /** Project id for loading sibling trackers in bindings UI. */
+  projectId?: string | null
 }
 
 const EditModeContext = createContext<EditModeContextValue>({
@@ -25,6 +27,7 @@ const EditModeContext = createContext<EditModeContextValue>({
   undo: undefined,
   canUndo: undefined,
   trackerSchemaId: undefined,
+  projectId: undefined,
 })
 
 export interface EditModeProviderProps {
@@ -34,6 +37,7 @@ export interface EditModeProviderProps {
   undo?: () => void
   canUndo?: boolean
   trackerSchemaId?: string | null
+  projectId?: string | null
   children: ReactNode
 }
 
@@ -45,6 +49,7 @@ export function EditModeProvider({
   undo,
   canUndo,
   trackerSchemaId,
+  projectId,
   children,
 }: EditModeProviderProps) {
   const value = useMemo<EditModeContextValue>(
@@ -55,8 +60,9 @@ export function EditModeProvider({
       undo,
       canUndo,
       trackerSchemaId,
+      projectId,
     }),
-    [editMode, schema, onSchemaChange, undo, canUndo, trackerSchemaId]
+    [editMode, schema, onSchemaChange, undo, canUndo, trackerSchemaId, projectId]
   )
   return (
     <EditModeContext.Provider value={value}>

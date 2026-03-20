@@ -14,6 +14,7 @@ type TrackerRecord = {
   id: string
   name: string | null
   schema: unknown
+  projectId?: string
   instance?: string
   versionControl?: boolean
   autoSave?: boolean
@@ -213,6 +214,7 @@ function TrackerByIdEditContent({
       initialEditMode
       initialChatOpen={isNew}
       trackerId={id}
+      projectId={state.tracker?.projectId ?? null}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       pageMode="schema"

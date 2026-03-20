@@ -41,6 +41,12 @@ export type TrackerSaveState = {
   showPreviewSaveButton: boolean
   /** When true, navbar shows editable tracker name (edit page only). When false, name is read-only. */
   titleEditable: boolean
+  /** Cross-tracker bindings: loading latest data for option sources. */
+  foreignLinkedSourcesLoading: boolean
+  /** Cross-tracker bindings: persisting a new option row to a linked tracker. */
+  foreignLinkedSourcesSaving: boolean
+  foreignLinkedPersistError: { sourceSchemaId: string; message: string } | null
+  onDismissForeignLinkedPersistError: (() => void) | null
 }
 
 const TrackerNavContext = createContext<{
@@ -69,6 +75,10 @@ export const initialSaveState: TrackerSaveState = {
   onFormActionSelect: null,
   showPreviewSaveButton: false,
   titleEditable: false,
+  foreignLinkedSourcesLoading: false,
+  foreignLinkedSourcesSaving: false,
+  foreignLinkedPersistError: null,
+  onDismissForeignLinkedPersistError: null,
 }
 
 export function TrackerNavProvider({ children }: { children: ReactNode }) {

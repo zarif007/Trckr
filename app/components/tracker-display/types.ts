@@ -164,6 +164,14 @@ import type { GridDataSnapshot } from '@/lib/tracker-data'
 /** Grid data map: grid id -> array of row objects. Used in refs to avoid TSX >> parsing. */
 export type GridDataRecord = Record<string, Array<Record<string, unknown>>>
 
+/** Reported to app chrome when bindings use `optionsSourceSchemaId` (linked tracker options). */
+export type ForeignBindingNavUiState = {
+  loading: boolean
+  saving: boolean
+  error: { sourceSchemaId: string; message: string } | null
+  dismissError: () => void
+}
+
 export interface TrackerDisplayProps {
   /** Optional display name for the tracker (shown in nav, share dialog, etc.). */
   name?: string
@@ -206,4 +214,8 @@ export interface TrackerDisplayProps {
   canUndo?: boolean
   /** When set, server-side dynamic option resolution attributes LLM usage to this tracker. */
   trackerSchemaId?: string | null
+  /** Project id for inter-tracker bindings picker (same-project trackers). */
+  projectId?: string | null
+  /** Push linked-tracker load/save UI state to the host (e.g. TrackerNavBar via TrackerNavContext). */
+  onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void
 }

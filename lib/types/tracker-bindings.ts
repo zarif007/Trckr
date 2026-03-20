@@ -16,7 +16,12 @@ export type FieldMapping = {
 
 /** Binding entry for a select/multiselect field */
 export type TrackerBindingEntry = {
-  /** Grid id containing options (e.g. "product_options_grid") */
+  /**
+   * When set, option rows are read from this tracker schema's instance data (same project).
+   * Omit or undefined: options come from the current tracker's grid data.
+   */
+  optionsSourceSchemaId?: string
+  /** Grid id containing options (e.g. "product_options_grid") within the source schema */
   optionsGrid: string
   /** Path to the option field in options grid (e.g. "exercise_options_grid.exercise_option"). This field provides both display and stored value. The option field must have a different id than the select field. */
   labelField: FieldPath

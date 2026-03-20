@@ -14,6 +14,7 @@
 
 import type { TrackerBindingEntry, FieldPath } from '@/lib/types/tracker-bindings'
 import type { GridData } from './grid-data'
+import { getOptionsGridRowsForBinding, type ForeignGridDataBySchemaId } from './binding-grid-data'
 import { parsePath } from './path'
 import { normalizeOptionsGridId } from './path'
 import { getValueFieldIdFromBinding } from './value-field'
@@ -127,7 +128,8 @@ export function findOptionRow(
   gridData: GridData,
   binding: TrackerBindingEntry,
   selectedValue: unknown,
-  selectFieldPath: FieldPath
+  selectFieldPath: FieldPath,
+  foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null
 ): Record<string, unknown> | undefined {
   const gridId = normalizeOptionsGridId(binding.optionsGrid)
   const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
@@ -153,7 +155,7 @@ export function findOptionRow(
     console.warn(`[Bindings] No value mapping for "${selectFieldPath}". Falling back to label/id matching.`)
   }
 
-  const rows = gridData[gridId] ?? []
+  const rows = getOptionsGridRowsForBinding(binding, gridData, foreignGridDataBySchemaId)
   debugLog(`Options grid "${gridId}" has ${rows.length} rows`, rows)
 
   // Use indexed lookup for O(1) performance
@@ -236,7 +238,8 @@ export interface ResolvedOption {
 export function resolveOptionsFromBinding(
   binding: TrackerBindingEntry,
   gridData: GridData,
-  selectFieldPath: FieldPath
+  selectFieldPath: FieldPath,
+  foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null
 ): ResolvedOption[] {
   const gridId = normalizeOptionsGridId(binding.optionsGrid)
   const { fieldId: labelFieldId } = parsePath(binding.labelField)
@@ -248,6 +251,7 @@ export function resolveOptionsFromBinding(
     labelFieldId,
     valueFieldId,
     availableGrids: Object.keys(gridData),
+    foreignSource: binding.optionsSourceSchemaId?.trim() ?? null,
   })
 
   if (!gridId || !labelFieldId || !valueFieldId) {
@@ -255,7 +259,7 @@ export function resolveOptionsFromBinding(
     return []
   }
 
-  const rows = gridData[gridId] ?? []
+  const rows = getOptionsGridRowsForBinding(binding, gridData, foreignGridDataBySchemaId)
 
   if (rows.length === 0) {
     debugLog('No rows in options grid, returning empty options')
@@ -283,9 +287,10 @@ export function resolveOptionsFromBinding(
  */
 export function getFullOptionRows(
   binding: TrackerBindingEntry,
-  gridData: GridData
+  gridData: GridData,
+  foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null
 ): Array<Record<string, unknown>> {
   const gridId = normalizeOptionsGridId(binding.optionsGrid)
   if (!gridId) return []
-  return gridData[gridId] ?? []
+  return getOptionsGridRowsForBinding(binding, gridData, foreignGridDataBySchemaId)
 }

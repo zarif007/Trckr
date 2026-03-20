@@ -93,7 +93,8 @@ export function resolveFieldOptionsV2(
   const binding = getBindingForField(gridId, field.id, bindings, tabId)
   if (binding) {
     const selectFieldPath = buildFieldPath(gridId, field.id)
-    const options = resolveOptionsFromBinding(binding, gridData, selectFieldPath)
+    const foreign = trackerContext?.foreignGridDataBySchemaId
+    const options = resolveOptionsFromBinding(binding, gridData, selectFieldPath, foreign)
     return options.map(normalizeOption)
   }
 

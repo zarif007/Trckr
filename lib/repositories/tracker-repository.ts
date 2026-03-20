@@ -14,6 +14,20 @@ export async function findTrackerByIdForUser(trackerId: string, userId: string) 
   })
 }
 
+/** Minimal tracker list for a project (bindings picker). Returns null if project not owned by user. */
+export async function listTrackerSchemasForProjectForUser(projectId: string, userId: string) {
+  const owned = await prisma.project.findFirst({
+    where: { id: projectId, userId },
+    select: { id: true },
+  })
+  if (!owned) return null
+  return prisma.trackerSchema.findMany({
+    where: { projectId },
+    select: { id: true, name: true, listForSchemaId: true },
+    orderBy: [{ name: 'asc' }],
+  })
+}
+
 export async function updateTrackerByIdForUser(
   trackerId: string,
   userId: string,

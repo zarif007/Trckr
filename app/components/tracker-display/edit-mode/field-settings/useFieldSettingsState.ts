@@ -28,6 +28,8 @@ import {
   type FieldDataSource,
 } from './constants'
 import type { FieldSettingsDialogProps } from './types'
+import { useEditMode } from '../context'
+import type { TrackerDisplayProps } from '../../types'
 
 export function useFieldSettingsState({
   open,
@@ -37,6 +39,7 @@ export function useFieldSettingsState({
   schema,
   onSchemaChange,
 }: FieldSettingsDialogProps) {
+  const { projectId: ctxProjectId, trackerSchemaId: ctxTrackerSchemaId } = useEditMode()
   const field = useMemo(() => {
     if (!schema || !fieldId) return null
     return schema.fields.find((f) => f.id === fieldId) ?? null
@@ -70,6 +73,12 @@ export function useFieldSettingsState({
   const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
+  const [siblingTrackers, setSiblingTrackers] = useState<Array<{ id: string; name: string | null }>>(
+    []
+  )
+  const [siblingsLoading, setSiblingsLoading] = useState(false)
+  const [sourceSchema, setSourceSchema] = useState<TrackerDisplayProps | null>(null)
+  const [sourceSchemaLoading, setSourceSchemaLoading] = useState(false)
   const [dynamicOptionsDraft, setDynamicOptionsDraft] = useState<DynamicOptionsDefinitions>({})
   const [dynamicFunctionId, setDynamicFunctionId] = useState('')
   const [dynamicOptionsArgsText, setDynamicOptionsArgsText] = useState('')
@@ -143,6 +152,7 @@ export function useFieldSettingsState({
   const defaultBindingDraft = useCallback((): BindingDraft => {
     return {
       key: bindingKey,
+      optionsSourceSchemaId: undefined,
       optionsGrid: '',
       labelField: '',
       fieldMappings: [],
@@ -167,6 +177,114 @@ export function useFieldSettingsState({
     },
     [gridFieldMap, pathLabelMap, schema?.grids, schema?.fields]
   )
+
+  const sourceGridFieldMap = useMemo(
+    () => buildGridFieldMap(sourceSchema?.layoutNodes ?? []),
+    [sourceSchema?.layoutNodes]
+  )
+
+  const sourcePathLabelMap = useMemo(
+    () =>
+      buildPathLabelMap(
+        sourceSchema?.layoutNodes ?? [],
+        sourceSchema?.grids ?? [],
+        sourceSchema?.fields ?? []
+      ),
+    [sourceSchema?.layoutNodes, sourceSchema?.grids, sourceSchema?.fields]
+  )
+
+  const getBindingSourceGridFieldOptions = useCallback(
+    (gridIdValue?: string | null) => {
+      if (!gridIdValue) return []
+      const sid = bindingDraft?.optionsSourceSchemaId?.trim()
+      const map = sid ? sourceGridFieldMap : gridFieldMap
+      const grids = sid ? sourceSchema?.grids ?? [] : schema?.grids ?? []
+      const fields = sid ? sourceSchema?.fields ?? [] : schema?.fields ?? []
+      const labels = sid ? sourcePathLabelMap : pathLabelMap
+      const fieldIds = map.get(gridIdValue)
+      if (!fieldIds || fieldIds.size === 0) return []
+      const options = Array.from(fieldIds).map((fieldIdValue) => {
+        const path = `${gridIdValue}.${fieldIdValue}`
+        return {
+          value: path,
+          label: labels.get(path) ?? resolvePathLabel(path, grids, fields),
+        }
+      })
+      return options.sort((a, b) => a.label.localeCompare(b.label))
+    },
+    [
+      bindingDraft?.optionsSourceSchemaId,
+      sourceGridFieldMap,
+      gridFieldMap,
+      sourceSchema?.grids,
+      sourceSchema?.fields,
+      schema?.grids,
+      schema?.fields,
+      sourcePathLabelMap,
+      pathLabelMap,
+    ]
+  )
+
+  useEffect(() => {
+    if (!open || !ctxProjectId?.trim() || !isBindable) {
+      if (!open) setSiblingTrackers([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      setSiblingsLoading(true)
+      try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(ctxProjectId)}/trackers`)
+        if (!res.ok) {
+          if (!cancelled) setSiblingTrackers([])
+          return
+        }
+        const data = (await res.json()) as { items?: Array<{ id: string; name: string | null }> }
+        if (!cancelled) setSiblingTrackers(Array.isArray(data.items) ? data.items : [])
+      } catch {
+        if (!cancelled) setSiblingTrackers([])
+      } finally {
+        if (!cancelled) setSiblingsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, ctxProjectId, isBindable])
+
+  useEffect(() => {
+    if (!open) {
+      setSourceSchema(null)
+      setSourceSchemaLoading(false)
+      return
+    }
+    const sid = bindingDraft?.optionsSourceSchemaId?.trim()
+    if (!sid) {
+      setSourceSchema(null)
+      setSourceSchemaLoading(false)
+      return
+    }
+    let cancelled = false
+    setSourceSchemaLoading(true)
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/trackers/${encodeURIComponent(sid)}`)
+        if (!res.ok) {
+          if (!cancelled) setSourceSchema(null)
+          return
+        }
+        const data = (await res.json()) as { schema?: TrackerDisplayProps }
+        if (!cancelled) setSourceSchema((data.schema ?? null) as TrackerDisplayProps | null)
+      } catch {
+        if (!cancelled) setSourceSchema(null)
+      } finally {
+        if (!cancelled) setSourceSchemaLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [open, bindingDraft?.optionsSourceSchemaId])
 
   useEffect(() => {
     if (isBindable) return
@@ -259,6 +377,7 @@ export function useFieldSettingsState({
         setBindingEnabled(true)
         setBindingDraft({
           key: bindingKey,
+          optionsSourceSchemaId: existingBinding.optionsSourceSchemaId?.trim() || undefined,
           optionsGrid: existingBinding.optionsGrid ?? '',
           labelField: existingBinding.labelField ?? '',
           fieldMappings: Array.isArray(existingBinding.fieldMappings)
@@ -295,15 +414,25 @@ export function useFieldSettingsState({
 
   const bindingValidation = useMemo(() => {
     if (!bindingEnabled || !bindingDraft) return { isValid: true, errors: {} as Record<string, string> }
+    const sid = bindingDraft.optionsSourceSchemaId?.trim()
     return validateBindingDraft(
       { ...bindingDraft, key: bindingKey },
       {
         existingKeys: new Set(Object.keys(schema?.bindings ?? {})),
         originalKey: bindingKey,
         gridFieldMap,
+        sourceGridFieldMap:
+          sid && sourceGridFieldMap.size > 0 ? sourceGridFieldMap : undefined,
       }
     )
-  }, [bindingEnabled, bindingDraft, bindingKey, schema?.bindings, gridFieldMap])
+  }, [
+    bindingEnabled,
+    bindingDraft,
+    bindingKey,
+    schema?.bindings,
+    gridFieldMap,
+    sourceGridFieldMap,
+  ])
 
   const autoPopulateSources = useMemo(() => {
     if (!gridId || !field?.id) return []
@@ -363,19 +492,50 @@ export function useFieldSettingsState({
     setBindingDraft(next)
   }, [])
 
+  const applyBindingSourcePick = useCallback(
+    (pick: { optionsSourceSchemaId?: string; optionsGrid: string; labelField: string }) => {
+      setBindingDraft((prev) => {
+        if (!prev) return prev
+        const nextSource = pick.optionsSourceSchemaId?.trim() || undefined
+        const prevSource = prev.optionsSourceSchemaId?.trim() || undefined
+        const gridOrSourceChanged =
+          pick.optionsGrid !== prev.optionsGrid || nextSource !== prevSource
+        const baseMappings = gridOrSourceChanged ? [] : prev.fieldMappings
+        let next: BindingDraft = {
+          ...prev,
+          optionsSourceSchemaId: nextSource,
+          optionsGrid: pick.optionsGrid,
+          labelField: pick.labelField,
+          fieldMappings: baseMappings,
+        }
+        const lf = pick.labelField.trim()
+        if (lf && bindingKey) {
+          next = {
+            ...next,
+            fieldMappings: ensureValueMapping(normalizeMappings(next.fieldMappings), lf, bindingKey),
+          }
+        }
+        return next
+      })
+    },
+    [bindingKey]
+  )
+
   const applyAutoMappings = useCallback(() => {
     if (!bindingDraft) return
     const existing = normalizeMappings(bindingDraft.fieldMappings)
+    const sid = bindingDraft.optionsSourceSchemaId?.trim()
     const suggestions = suggestFieldMappings({
       selectFieldPath: bindingKey,
       optionsGrid: bindingDraft.optionsGrid,
       labelField: bindingDraft.labelField,
       existingMappings: existing,
       gridFieldMap,
+      optionsGridFieldMap: sid && sourceGridFieldMap.size > 0 ? sourceGridFieldMap : undefined,
     })
     if (suggestions.length === 0) return
     setBindingDraftValue({ ...bindingDraft, fieldMappings: [...existing, ...suggestions] })
-  }, [bindingDraft, bindingKey, gridFieldMap, setBindingDraftValue])
+  }, [bindingDraft, bindingKey, gridFieldMap, sourceGridFieldMap, setBindingDraftValue])
 
   const handleRuleTypeChange = useCallback((index: number, nextType: FieldValidationRule['type']) => {
     setRules((prev) => {
@@ -523,11 +683,14 @@ export function useFieldSettingsState({
       } else if (bindingDraft) {
         let fieldMappings = normalizeMappings(bindingDraft.fieldMappings)
         fieldMappings = ensureValueMapping(fieldMappings, bindingDraft.labelField, bindingKey)
-        nextBindings[bindingKey] = {
+        const entry: TrackerBindingEntry = {
           optionsGrid: bindingDraft.optionsGrid.trim(),
           labelField: bindingDraft.labelField.trim(),
           fieldMappings,
         }
+        const src = bindingDraft.optionsSourceSchemaId?.trim()
+        if (src) entry.optionsSourceSchemaId = src
+        nextBindings[bindingKey] = entry
       }
     }
 
@@ -602,13 +765,31 @@ export function useFieldSettingsState({
     () => ['string', 'text', 'link', 'email', 'phone', 'url'].includes(dataType),
     [dataType]
   )
+  const foreignBindingIncomplete =
+    isBindable &&
+    bindingEnabled &&
+    Boolean(bindingDraft?.optionsSourceSchemaId?.trim()) &&
+    (sourceSchemaLoading || !sourceSchema)
+
   const disableSave =
     (isBindable && bindingEnabled && bindingDraft && !bindingValidation.isValid) ||
+    foreignBindingIncomplete ||
     (isDynamicField && !dynamicBuilderState.canSave)
 
   const resolvePathLabelFn = useCallback(
     (path: string) => resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? []),
     [schema?.grids, schema?.fields]
+  )
+
+  const resolveBindingFromPathLabelFn = useCallback(
+    (path: string) => {
+      const sid = bindingDraft?.optionsSourceSchemaId?.trim()
+      if (sid && sourceSchema) {
+        return resolvePathLabel(path, sourceSchema.grids ?? [], sourceSchema.fields ?? [])
+      }
+      return resolvePathLabel(path, schema?.grids ?? [], schema?.fields ?? [])
+    },
+    [bindingDraft?.optionsSourceSchemaId, sourceSchema, schema?.grids, schema?.fields]
   )
 
   return {
@@ -701,6 +882,8 @@ export function useFieldSettingsState({
     allGridOptions,
     allFieldPathOptions,
     getGridFieldOptions,
+    getBindingSourceGridFieldOptions,
+    applyBindingSourcePick,
     applyAutoMappings,
     handleSave,
     isBindable,
@@ -709,6 +892,14 @@ export function useFieldSettingsState({
     isText,
     disableSave,
     resolvePathLabelFn,
+    resolveBindingFromPathLabelFn,
     bindingKey,
+    siblingTrackers,
+    siblingsLoading,
+    sourceSchema,
+    sourceSchemaLoading,
+    projectIdForBindings: ctxProjectId ?? null,
+    currentTrackerSchemaId: ctxTrackerSchemaId ?? null,
+    currentTrackerName: schema?.name ?? null,
   }
 }

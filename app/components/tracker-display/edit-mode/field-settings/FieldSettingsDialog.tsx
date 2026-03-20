@@ -218,6 +218,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                       schema={schema}
                       bindingKey={state.bindingKey}
                       resolvePathLabelFn={state.resolvePathLabelFn}
+                      resolveBindingFromPathLabelFn={state.resolveBindingFromPathLabelFn}
                       bindingEnabled={state.bindingEnabled}
                       setBindingEnabled={state.setBindingEnabled}
                       bindingDraft={state.bindingDraft}
@@ -225,10 +226,17 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                       defaultBindingDraft={state.defaultBindingDraft}
                       bindingValidation={state.bindingValidation}
                       getGridFieldOptions={state.getGridFieldOptions}
-                      allGridOptions={state.allGridOptions}
-                      optionsGridOptions={state.optionsGridOptions}
+                      getBindingSourceGridFieldOptions={state.getBindingSourceGridFieldOptions}
                       allFieldPathOptions={state.allFieldPathOptions}
                       applyAutoMappings={state.applyAutoMappings}
+                      applyBindingSourcePick={state.applyBindingSourcePick}
+                      projectIdForBindings={state.projectIdForBindings}
+                      currentTrackerSchemaId={state.currentTrackerSchemaId}
+                      currentTrackerName={state.currentTrackerName}
+                      siblingTrackers={state.siblingTrackers}
+                      siblingsLoading={state.siblingsLoading}
+                      sourceSchema={state.sourceSchema}
+                      sourceSchemaLoading={state.sourceSchemaLoading}
                     />
                   </TabsContent>
                 )}

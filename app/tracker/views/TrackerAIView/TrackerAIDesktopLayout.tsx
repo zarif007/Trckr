@@ -26,6 +26,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     isViewingHistoricalVersion,
     handleReturnToLatest,
     trackerId,
+    projectId,
     loadedSnapshot,
     initialGridData,
     isReadOnly,
@@ -40,6 +41,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     onPreviewSave,
     dataSaveStatus,
     chatPanelProps,
+    reportForeignBindingNav,
   } = state
 
   return (
@@ -66,6 +68,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           isViewingHistoricalVersion={isViewingHistoricalVersion}
           onReturnToLatest={handleReturnToLatest}
           trackerId={trackerId ?? undefined}
+          projectId={projectId ?? undefined}
           initialGridData={loadedSnapshot?.data ?? initialGridData}
           readOnly={isReadOnly}
           versionControl={versionControl}
@@ -78,6 +81,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           showPreviewSaveButton={showPreviewSaveButton}
           onPreviewSave={onPreviewSave}
           previewSaveStatus={dataSaveStatus}
+          onForeignBindingNavUiChange={reportForeignBindingNav}
         />
 
         {isChatOpen && (

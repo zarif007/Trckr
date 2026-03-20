@@ -6,6 +6,8 @@ export type FieldPathOption = { value: string; label: string }
 
 export type BindingDraft = {
   key: string
+  /** When set, options grid + label live on this tracker schema (same project). */
+  optionsSourceSchemaId?: string
   optionsGrid: string
   labelField: string
   fieldMappings: FieldMapping[]
@@ -22,6 +24,8 @@ export type BindingValidationContext = {
   existingKeys: Set<string>
   originalKey?: string | null
   gridFieldMap: Map<string, Set<string>>
+  /** Layout field ids per grid for the foreign options source (when optionsSourceSchemaId is set). */
+  sourceGridFieldMap?: Map<string, Set<string>>
 }
 
 export type SuggestMappingsInput = {
@@ -30,6 +34,8 @@ export type SuggestMappingsInput = {
   labelField: string
   existingMappings?: FieldMapping[]
   gridFieldMap: Map<string, Set<string>>
+  /** Option-side fields when binding to another tracker (defaults to gridFieldMap). */
+  optionsGridFieldMap?: Map<string, Set<string>>
 }
 
 export function resolvePathLabel(
@@ -99,6 +105,13 @@ export function buildOptionsGridOptions(grids: TrackerGrid[]): FieldPathOption[]
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
+/** All grids for binding source picker (any grid/table, not only *_options_grid). */
+export function buildAllGridsPickerOptions(grids: TrackerGrid[]): FieldPathOption[] {
+  return (grids ?? [])
+    .map((g) => ({ value: g.id, label: g.name ?? g.id }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+}
+
 export function buildGridFieldMap(layoutNodes: TrackerLayoutNode[]): Map<string, Set<string>> {
   const map = new Map<string, Set<string>>()
   for (const node of layoutNodes ?? []) {
@@ -148,6 +161,11 @@ export function validateBindingDraft(
   const key = draft.key.trim()
   const optionsGrid = draft.optionsGrid.trim()
   const labelField = draft.labelField.trim()
+  const sourceId = draft.optionsSourceSchemaId?.trim()
+  const optionsSideMap =
+    sourceId && context.sourceGridFieldMap && context.sourceGridFieldMap.size > 0
+      ? context.sourceGridFieldMap
+      : context.gridFieldMap
 
   if (!key) {
     errors.key = 'Select field is required.'
@@ -173,7 +191,7 @@ export function validateBindingDraft(
     } else if (parsed.gridId && parsed.gridId !== optionsGrid) {
       errors.labelField = 'Label field must be in the selected options grid.'
     } else if (parsed.fieldId) {
-      const gridFields = context.gridFieldMap.get(optionsGrid)
+      const gridFields = optionsSideMap.get(optionsGrid)
       if (gridFields && !gridFields.has(parsed.fieldId)) {
         errors.labelField = 'Label field does not exist in the selected options grid.'
       } else if (key) {
@@ -188,7 +206,7 @@ export function validateBindingDraft(
 
   const mappings = normalizeMappings(draft.fieldMappings)
   const selectGridId = key ? parsePath(key).gridId ?? key.split('.')[0] : undefined
-  const optionsFieldIds = optionsGrid ? context.gridFieldMap.get(optionsGrid) : undefined
+  const optionsFieldIds = optionsGrid ? optionsSideMap.get(optionsGrid) : undefined
   const mainFieldIds = selectGridId ? context.gridFieldMap.get(selectGridId) : undefined
 
   if (mappings.length > 0 && (optionsFieldIds || mainFieldIds)) {
@@ -247,6 +265,7 @@ export function suggestFieldMappings(input: SuggestMappingsInput): FieldMapping[
     labelField,
     existingMappings = [],
     gridFieldMap,
+    optionsGridFieldMap,
   } = input
   if (!selectFieldPath) return []
   const selectParsed = parsePath(selectFieldPath)
@@ -254,7 +273,8 @@ export function suggestFieldMappings(input: SuggestMappingsInput): FieldMapping[
   const selectFieldId = selectParsed.fieldId ?? ''
   if (!selectGridId || !optionsGrid) return []
 
-  const optionFields = Array.from(gridFieldMap.get(optionsGrid) ?? [])
+  const optionSide = optionsGridFieldMap ?? gridFieldMap
+  const optionFields = Array.from(optionSide.get(optionsGrid) ?? [])
   const mainFields = Array.from(gridFieldMap.get(selectGridId) ?? [])
   if (optionFields.length === 0 || mainFields.length === 0) return []
 

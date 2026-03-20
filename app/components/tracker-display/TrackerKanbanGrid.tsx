@@ -116,6 +116,7 @@ function TrackerKanbanGridInner({
   )
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+  const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId
 
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showAddDialog, setShowAddDialog] = useState(false)
@@ -237,7 +238,13 @@ function TrackerKanbanGridInner({
           const binding = getBindingForField(grid.id, groupByFieldId, bindings, tabId)
           if (binding?.fieldMappings?.length) {
             const selectFieldPath = `${grid.id}.${groupByFieldId}`
-            const optionRow = findOptionRow(fullGridData, binding, nextGroupIdTrimmed, selectFieldPath)
+            const optionRow = findOptionRow(
+              fullGridData,
+              binding,
+              nextGroupIdTrimmed,
+              selectFieldPath,
+              foreignGridDataBySchemaId
+            )
             if (optionRow) {
               const updates = applyBindings(binding, optionRow, selectFieldPath)
               for (const update of updates) {
@@ -267,6 +274,7 @@ function TrackerKanbanGridInner({
       bindings,
       tabId,
       fullGridData,
+      foreignGridDataBySchemaId,
     ]
   )
 
@@ -275,7 +283,13 @@ function TrackerKanbanGridInner({
       const binding = getBindingForField(grid.id, fieldId, bindings, tabId)
       if (!binding?.fieldMappings?.length) return {}
       const selectFieldPath = `${grid.id}.${fieldId}`
-      const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
+      const optionRow = findOptionRow(
+        fullGridData,
+        binding,
+        value,
+        selectFieldPath,
+        foreignGridDataBySchemaId
+      )
       if (!optionRow) return {}
       const updates = applyBindings(binding, optionRow, selectFieldPath)
       const result: Record<string, unknown> = {}
@@ -285,7 +299,7 @@ function TrackerKanbanGridInner({
       }
       return result
     },
-    [grid.id, bindings, tabId, fullGridData]
+    [grid.id, bindings, tabId, fullGridData, foreignGridDataBySchemaId]
   )
 
   const handleEditSave = useCallback(
@@ -300,7 +314,13 @@ function TrackerKanbanGridInner({
           const binding = getBindingForField(grid.id, columnId, bindings, tabId)
           if (binding?.fieldMappings?.length) {
             const selectFieldPath = `${grid.id}.${columnId}`
-            const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
+            const optionRow = findOptionRow(
+              fullGridData,
+              binding,
+              value,
+              selectFieldPath,
+              foreignGridDataBySchemaId
+            )
             if (optionRow) {
               const updates = applyBindings(binding, optionRow, selectFieldPath)
               for (const update of updates) {
@@ -319,7 +339,17 @@ function TrackerKanbanGridInner({
       })
       setEditRowIndex(null)
     },
-    [editRowIndex, onUpdate, onCrossGridUpdate, kanbanFields, grid.id, bindings, tabId, fullGridData]
+    [
+      editRowIndex,
+      onUpdate,
+      onCrossGridUpdate,
+      kanbanFields,
+      grid.id,
+      bindings,
+      tabId,
+      fullGridData,
+      foreignGridDataBySchemaId,
+    ]
   )
 
   const cardStyles = useMemo(

@@ -20,7 +20,15 @@ export interface TrackerLike {
     connectors?: Record<string, unknown>
   }
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number }>
-  bindings?: Record<string, { optionsGrid: string; labelField: string; fieldMappings: Array<{ from: string; to: string }> }>
+  bindings?: Record<
+    string,
+    {
+      optionsSourceSchemaId?: string
+      optionsGrid: string
+      labelField: string
+      fieldMappings: Array<{ from: string; to: string }>
+    }
+  >
   dependsOn?: Array<Record<string, unknown>>
 }
 

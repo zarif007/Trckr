@@ -87,6 +87,7 @@ function TrackerTableGridInner({
   )
   const trackerOptionsFromContext = useTrackerOptionsContext()
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp
+  const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId
   const [addColumnOpen, setAddColumnOpen] = useState(false)
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null)
   const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
@@ -320,6 +321,8 @@ function TrackerTableGridInner({
 
   const fieldMetadata = useMemo<FieldMetadata>(() => {
     const meta: FieldMetadata = {}
+    const foreignSchemaById = trackerContext?.foreignSchemaBySchemaId
+    const onAddForeign = trackerContext?.onAddEntryToForeignGrid
     tableFields.forEach((field) => {
       const opts = fieldOptionsMap.get(field.id)
       const binding = bindingByFieldId.get(field.id)
@@ -327,13 +330,29 @@ function TrackerTableGridInner({
       let optionsGridFields: OptionsGridFieldDef[] | undefined
       let onAddOption: ((row: Record<string, unknown>) => string) | undefined
       let optionsGridName: string | undefined
-      if (binding && onAddEntryToGrid) {
-        const optionsGridId = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
-        const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
-        const { fieldId: labelFieldId } = parsePath(binding.labelField)
-        const optionLayoutNodes = optionsGridId ? (layoutNodesByGridId.get(optionsGridId) ?? []) : []
+      const sourceId = binding?.optionsSourceSchemaId?.trim()
+      const optionsGridId = binding?.optionsGrid?.includes('.')
+        ? binding.optionsGrid.split('.').pop()!
+        : binding?.optionsGrid
+      const canAddLocal = Boolean(binding && onAddEntryToGrid && !sourceId && optionsGridId)
+      const canAddForeign = Boolean(binding && sourceId && onAddForeign && optionsGridId)
+      if (canAddLocal || canAddForeign) {
+        const valueFieldId = getValueFieldIdFromBinding(binding!, selectFieldPath)
+        const { fieldId: labelFieldId } = parsePath(binding!.labelField)
+        const foreignSlice = sourceId ? foreignSchemaById?.[sourceId] : undefined
+        const optionLayoutNodes =
+          sourceId && foreignSlice
+            ? [...(foreignSlice.layoutNodes ?? [])]
+                .filter((n) => n.gridId === optionsGridId)
+                .sort((a, b) => a.order - b.order)
+            : optionsGridId
+              ? (layoutNodesByGridId.get(optionsGridId) ?? [])
+              : []
+        const fieldsForOptions: Map<string, TrackerField> = sourceId
+          ? new Map((foreignSlice?.fields ?? []).map((f) => [f.id, f]))
+          : fieldsById
         optionsGridFields = optionLayoutNodes
-          .map((n) => fieldsById.get(n.fieldId))
+          .map((n) => fieldsForOptions.get(n.fieldId))
           .filter((f): f is NonNullable<typeof f> => !!f && !f.config?.isHidden)
           .map((f) => ({
             id: f.id,
@@ -343,18 +362,22 @@ function TrackerTableGridInner({
             validations: validations?.[optionsGridId ? `${optionsGridId}.${f.id}` : f.id],
           }))
         onAddOption = (row: Record<string, unknown>) => {
-          onAddEntryToGrid!(optionsGridId!, row)
+          if (sourceId && onAddForeign) {
+            onAddForeign(sourceId, optionsGridId!, row)
+          } else {
+            onAddEntryToGrid!(optionsGridId!, row)
+          }
           const val = row[valueFieldId ?? '']
           const label = labelFieldId ? row[labelFieldId] : undefined
           return String(val ?? label ?? '')
         }
       }
       const getBindingUpdatesFromRow =
-        binding && onAddEntryToGrid
+        binding && (canAddLocal || canAddForeign)
           ? (row: Record<string, unknown>) => {
             if (!binding?.fieldMappings?.length) return {}
-            const selectFieldPath = `${grid.id}.${field.id}`
-            const updates = applyBindings(binding, row, selectFieldPath)
+            const selectFieldPathInner = `${grid.id}.${field.id}`
+            const updates = applyBindings(binding, row, selectFieldPathInner)
             const result: Record<string, unknown> = {}
             for (const u of updates) {
               const { gridId: targetGridId, fieldId: targetFieldId } = parsePath(u.targetPath)
@@ -363,9 +386,13 @@ function TrackerTableGridInner({
             return result
           }
           : undefined
-      if (binding?.optionsGrid) {
-        const id = binding.optionsGrid?.includes('.') ? binding.optionsGrid.split('.').pop()! : binding.optionsGrid
-        if (id) optionsGridName = gridsById.get(id)?.name ?? id
+      if (binding?.optionsGrid && optionsGridId) {
+        const foreignSlice = sourceId ? foreignSchemaById?.[sourceId] : undefined
+        if (sourceId) {
+          optionsGridName = foreignSlice?.grids.find((g) => g.id === optionsGridId)?.name ?? optionsGridId
+        } else {
+          optionsGridName = gridsById.get(optionsGridId)?.name ?? optionsGridId
+        }
       }
       meta[field.id] = {
         name: field.ui.label,
@@ -392,6 +419,8 @@ function TrackerTableGridInner({
     calculations,
     onAddEntryToGrid,
     gridsById,
+    trackerContext?.foreignSchemaBySchemaId,
+    trackerContext?.onAddEntryToForeignGrid,
   ])
 
   const entryWays = useMemo(
@@ -410,7 +439,13 @@ function TrackerTableGridInner({
         const binding = bindingByFieldId.get(columnId)
         if (binding && binding.fieldMappings.length > 0) {
           const selectFieldPath = `${grid.id}.${columnId}`
-          const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
+          const optionRow = findOptionRow(
+            fullGridData,
+            binding,
+            value,
+            selectFieldPath,
+            foreignGridDataBySchemaId
+          )
           if (optionRow) {
             const updates = applyBindings(binding, optionRow, selectFieldPath)
             for (const update of updates) {
@@ -427,7 +462,7 @@ function TrackerTableGridInner({
         }
       }
     },
-    [bindingByFieldId, fieldsById, grid.id, fullGridData, onCrossGridUpdate, onUpdate]
+    [bindingByFieldId, fieldsById, grid.id, fullGridData, foreignGridDataBySchemaId, onCrossGridUpdate, onUpdate]
   )
 
   const getBindingUpdates = useCallback(
@@ -435,7 +470,13 @@ function TrackerTableGridInner({
       const binding = bindingByFieldId.get(fieldId)
       if (!binding?.fieldMappings?.length) return {}
       const selectFieldPath = `${grid.id}.${fieldId}`
-      const optionRow = findOptionRow(fullGridData, binding, value, selectFieldPath)
+      const optionRow = findOptionRow(
+        fullGridData,
+        binding,
+        value,
+        selectFieldPath,
+        foreignGridDataBySchemaId
+      )
       if (!optionRow) return {}
       const updates = applyBindings(binding, optionRow, selectFieldPath)
       const result: Record<string, unknown> = {}
@@ -445,7 +486,7 @@ function TrackerTableGridInner({
       }
       return result
     },
-    [bindingByFieldId, grid.id, fullGridData]
+    [bindingByFieldId, grid.id, fullGridData, foreignGridDataBySchemaId]
   )
 
   const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(

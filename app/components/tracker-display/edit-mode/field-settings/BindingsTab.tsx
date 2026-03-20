@@ -1,58 +1,19 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { SearchableSelect } from '@/components/ui/select'
 import { Plus, Trash2, Wand2, X } from 'lucide-react'
-import { FieldWrapper } from '../../shared/FieldWrapper'
-import { FIELD_FORM_INPUT_CLASS } from '@/lib/style-utils'
 import { FieldMappingsEditor } from '../../bindings/FieldMappingsEditor'
 import { normalizeMappings, resolvePathLabel } from '../../bindings/bindings-utils'
 import type { TrackerDisplayProps } from '../../types'
 import type { BindingDraft } from '../../bindings/bindings-utils'
-
-function BindingSelect({
-  value,
-  onChange,
-  options,
-  placeholder,
-}: {
-  value: string
-  onChange: (next: string) => void
-  options: Array<{ value: string; label: string }>
-  placeholder: string
-}) {
-  if (options.length === 0) {
-    return (
-      <FieldWrapper>
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className={FIELD_FORM_INPUT_CLASS}
-        />
-      </FieldWrapper>
-    )
-  }
-  return (
-    <FieldWrapper>
-      <SearchableSelect
-        options={options}
-        value={value || '__empty__'}
-        onValueChange={(val) => onChange(val === '__empty__' ? '' : val)}
-        placeholder={placeholder}
-        searchPlaceholder={placeholder}
-        className={FIELD_FORM_INPUT_CLASS}
-      />
-    </FieldWrapper>
-  )
-}
+import { BindingSourceCascade } from './BindingSourceCascade'
 
 export interface BindingsTabProps {
   gridId: string | null | undefined
   schema: TrackerDisplayProps | undefined
   bindingKey: string
   resolvePathLabelFn: (path: string) => string
+  resolveBindingFromPathLabelFn: (path: string) => string
   bindingEnabled: boolean
   setBindingEnabled: (v: boolean) => void
   bindingDraft: BindingDraft | null
@@ -60,10 +21,21 @@ export interface BindingsTabProps {
   defaultBindingDraft: () => BindingDraft
   bindingValidation: { isValid: boolean; errors: Record<string, string> }
   getGridFieldOptions: (gridIdValue?: string | null) => Array<{ value: string; label: string }>
-  allGridOptions: Array<{ value: string; label: string }>
-  optionsGridOptions: Array<{ value: string; label: string }>
+  getBindingSourceGridFieldOptions: (gridIdValue?: string | null) => Array<{ value: string; label: string }>
   allFieldPathOptions: Array<{ value: string; label: string }>
   applyAutoMappings: () => void
+  applyBindingSourcePick: (pick: {
+    optionsSourceSchemaId?: string
+    optionsGrid: string
+    labelField: string
+  }) => void
+  projectIdForBindings: string | null | undefined
+  currentTrackerSchemaId: string | null | undefined
+  currentTrackerName: string | null | undefined
+  siblingTrackers: Array<{ id: string; name: string | null }>
+  siblingsLoading: boolean
+  sourceSchema: TrackerDisplayProps | null
+  sourceSchemaLoading: boolean
 }
 
 export function BindingsTab({
@@ -71,6 +43,7 @@ export function BindingsTab({
   schema,
   bindingKey,
   resolvePathLabelFn,
+  resolveBindingFromPathLabelFn,
   bindingEnabled,
   setBindingEnabled,
   bindingDraft,
@@ -78,10 +51,17 @@ export function BindingsTab({
   defaultBindingDraft,
   bindingValidation,
   getGridFieldOptions,
-  allGridOptions,
-  optionsGridOptions,
+  getBindingSourceGridFieldOptions,
   allFieldPathOptions,
   applyAutoMappings,
+  applyBindingSourcePick,
+  projectIdForBindings,
+  currentTrackerSchemaId,
+  currentTrackerName,
+  siblingTrackers,
+  siblingsLoading,
+  sourceSchema,
+  sourceSchemaLoading,
 }: BindingsTabProps) {
   if (!gridId) {
     return (
@@ -112,6 +92,8 @@ export function BindingsTab({
       </div>
     )
   }
+  if (!schema || !bindingDraft) return null
+
   return (
     <div className="space-y-5">
       <div className="rounded-md border border-border/60 bg-muted/30 px-4 py-3">
@@ -124,48 +106,31 @@ export function BindingsTab({
         <div className="text-xs text-muted-foreground">{bindingKey}</div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-            Options grid
-          </label>
-          {bindingDraft && (
-            <BindingSelect
-              value={bindingDraft.optionsGrid}
-              onChange={(val) =>
-                setBindingDraftValue({
-                  ...bindingDraft,
-                  optionsGrid: val,
-                })
-              }
-              options={allGridOptions.length > 0 ? allGridOptions : optionsGridOptions}
-              placeholder="Options grid"
-            />
-          )}
-          {bindingValidation.errors.optionsGrid && (
-            <div className="text-xs text-destructive">{bindingValidation.errors.optionsGrid}</div>
-          )}
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-            Label field
-          </label>
-          {bindingDraft && (
-            <BindingSelect
-              value={bindingDraft.labelField}
-              onChange={(val) => setBindingDraftValue({ ...bindingDraft, labelField: val })}
-              options={
-                bindingDraft.optionsGrid
-                  ? getGridFieldOptions(bindingDraft.optionsGrid)
-                  : allFieldPathOptions
-              }
-              placeholder="Label field"
-            />
-          )}
-          {bindingValidation.errors.labelField && (
-            <div className="text-xs text-destructive">{bindingValidation.errors.labelField}</div>
-          )}
-        </div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
+          Options source
+        </label>
+        <p className="text-xs text-muted-foreground">
+          Choose a tracker, then any grid, then the field that provides labels and stored values for options.
+        </p>
+        <BindingSourceCascade
+          localSchema={schema}
+          currentTrackerSchemaId={currentTrackerSchemaId}
+          currentTrackerName={currentTrackerName}
+          projectId={projectIdForBindings}
+          siblingTrackers={siblingTrackers}
+          siblingsLoading={siblingsLoading}
+          sourceSchema={sourceSchema}
+          sourceSchemaLoading={sourceSchemaLoading}
+          bindingDraft={bindingDraft}
+          onPick={applyBindingSourcePick}
+        />
+        {(bindingValidation.errors.optionsGrid || bindingValidation.errors.labelField) && (
+          <div className="text-xs text-destructive space-y-0.5">
+            {bindingValidation.errors.optionsGrid && <div>{bindingValidation.errors.optionsGrid}</div>}
+            {bindingValidation.errors.labelField && <div>{bindingValidation.errors.labelField}</div>}
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -187,39 +152,35 @@ export function BindingsTab({
           Mappings control auto‑population. When a user selects an option, values from the
           options grid fields (left) are copied into target fields on this grid (right).
         </p>
-        {bindingDraft && (
-          <FieldMappingsEditor
-            value={bindingDraft.fieldMappings}
-            onChange={(next) =>
-              setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
-            }
-            fromOptions={
-              bindingDraft.optionsGrid
-                ? getGridFieldOptions(bindingDraft.optionsGrid)
-                : allFieldPathOptions
-            }
-            toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
-            className="w-full"
-          />
-        )}
+        <FieldMappingsEditor
+          value={bindingDraft.fieldMappings}
+          onChange={(next) =>
+            setBindingDraftValue({ ...bindingDraft, fieldMappings: next })
+          }
+          fromOptions={
+            bindingDraft.optionsGrid
+              ? getBindingSourceGridFieldOptions(bindingDraft.optionsGrid)
+              : allFieldPathOptions
+          }
+          toOptions={gridId ? getGridFieldOptions(gridId) : allFieldPathOptions}
+          className="w-full"
+        />
         {bindingValidation.errors.fieldMappings && (
           <div className="text-xs text-destructive">{bindingValidation.errors.fieldMappings}</div>
         )}
-        {bindingDraft && (
-          <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
-            <div className="font-medium text-foreground/80">Preview</div>
-            {normalizeMappings(bindingDraft.fieldMappings).length === 0 ? (
-              <div>No mappings yet. Auto-map or add rows.</div>
-            ) : (
-              normalizeMappings(bindingDraft.fieldMappings).map((m, idx) => (
-                <div key={idx}>
-                  {resolvePathLabel(m.from, schema?.grids ?? [], schema?.fields ?? [])} →{' '}
-                  {resolvePathLabel(m.to, schema?.grids ?? [], schema?.fields ?? [])}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+        <div className="rounded-md border border-border/50 bg-muted/30 p-3 text-xs text-muted-foreground space-y-1">
+          <div className="font-medium text-foreground/80">Preview</div>
+          {normalizeMappings(bindingDraft.fieldMappings).length === 0 ? (
+            <div>No mappings yet. Auto-map or add rows.</div>
+          ) : (
+            normalizeMappings(bindingDraft.fieldMappings).map((m, idx) => (
+              <div key={idx}>
+                {resolveBindingFromPathLabelFn(m.from)} →{' '}
+                {resolvePathLabel(m.to, schema?.grids ?? [], schema?.fields ?? [])}
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       <div className="flex items-center justify-between gap-2">

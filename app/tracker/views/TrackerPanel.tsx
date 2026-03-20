@@ -22,6 +22,7 @@ import {
 import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
+import type { ForeignBindingNavUiState } from '@/app/components/tracker-display/types'
 
 const DEFAULT_LEFT_RATIO = 0.75
 
@@ -47,6 +48,7 @@ interface TrackerPanelProps {
   isViewingHistoricalVersion?: boolean
   onReturnToLatest?: () => void
   trackerId?: string | null
+  projectId?: string | null
   initialGridData?: GridDataSnapshot | null
   readOnly?: boolean
   /** Version control props — only relevant when versionControl === true */
@@ -61,6 +63,7 @@ interface TrackerPanelProps {
   showPreviewSaveButton?: boolean
   onPreviewSave?: () => void | Promise<void>
   previewSaveStatus?: 'idle' | 'saving' | 'saved' | 'error'
+  onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -82,6 +85,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   isViewingHistoricalVersion,
   onReturnToLatest,
   trackerId,
+  projectId,
   initialGridData,
   readOnly,
   versionControl,
@@ -94,6 +98,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   showPreviewSaveButton = false,
   onPreviewSave,
   previewSaveStatus = 'idle',
+  onForeignBindingNavUiChange,
 }: TrackerPanelProps) {
   const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
@@ -370,6 +375,8 @@ export const TrackerPanel = memo(function TrackerPanel({
               onGridDataChange={onGridDataChange}
               readOnly={readOnly}
               trackerSchemaId={trackerId}
+              projectId={projectId ?? undefined}
+              onForeignBindingNavUiChange={onForeignBindingNavUiChange}
             />
           ) : (
             <TrackerDisplay
@@ -395,6 +402,8 @@ export const TrackerPanel = memo(function TrackerPanel({
               undo={undo}
               canUndo={canUndo}
               trackerSchemaId={trackerId}
+              projectId={projectId ?? undefined}
+              onForeignBindingNavUiChange={onForeignBindingNavUiChange}
             />
           )}
         </TrackerDisplayErrorBoundary>

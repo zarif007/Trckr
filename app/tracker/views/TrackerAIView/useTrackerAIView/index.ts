@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
-import type { TrackerFormAction } from '@/app/components/tracker-display/types'
+import type { ForeignBindingNavUiState, TrackerFormAction } from '@/app/components/tracker-display/types'
 import type { GridDataSnapshot } from '../../TrackerPanel'
 import { useTrackerNav } from '../../../TrackerNavContext'
 import { useTrackerChat, type Message, type TrackerResponse } from '../../../hooks/useTrackerChat'
@@ -26,6 +26,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     initialEditMode = true,
     initialChatOpen = true,
     trackerId,
+    projectId = null,
     instanceType = 'SINGLE',
     instanceId = null,
     autoSave = true,
@@ -355,6 +356,28 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     return () => setTrackerNavRef.current?.(null)
   }, [])
 
+  const reportForeignBindingNav = useCallback(
+    (ui: ForeignBindingNavUiState | null) => {
+      if (!setSaveState) return
+      if (ui === null) {
+        setSaveState({
+          foreignLinkedSourcesLoading: false,
+          foreignLinkedSourcesSaving: false,
+          foreignLinkedPersistError: null,
+          onDismissForeignLinkedPersistError: null,
+        })
+        return
+      }
+      setSaveState({
+        foreignLinkedSourcesLoading: ui.loading,
+        foreignLinkedSourcesSaving: ui.saving,
+        foreignLinkedPersistError: ui.error,
+        onDismissForeignLinkedPersistError: ui.dismissError,
+      })
+    },
+    [setSaveState]
+  )
+
   const handleSaveTracker = useCallback(async () => {
     if (onSaveTracker) {
       await onSaveTracker(schema)
@@ -470,6 +493,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         onFormActionSelect: null,
         showPreviewSaveButton: false,
         titleEditable: false,
+        foreignLinkedSourcesLoading: false,
+        foreignLinkedSourcesSaving: false,
+        foreignLinkedPersistError: null,
+        onDismissForeignLinkedPersistError: null,
       })
   }, [setSaveState])
 
@@ -665,6 +692,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     isViewingHistoricalVersion,
     handleReturnToLatest,
     trackerId,
+    projectId,
     loadedSnapshot,
     initialGridData,
     isReadOnly,
@@ -679,5 +707,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     onPreviewSave,
     dataSaveStatus,
     chatPanelProps,
+    reportForeignBindingNav,
   }
 }

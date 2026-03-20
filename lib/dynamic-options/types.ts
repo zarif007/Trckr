@@ -2,7 +2,14 @@
  * Shared types and constants for dynamic options (dynamic_select / dynamic_multiselect).
  */
 
-import type { TrackerGrid, TrackerField } from '@/app/components/tracker-display/types'
+import type { TrackerGrid, TrackerField, TrackerLayoutNode } from '@/app/components/tracker-display/types'
+
+/** Schema slice for another tracker (inter-tracker bindings: add-option + labels). */
+export type ForeignBindingSourceSchema = {
+  grids: TrackerGrid[]
+  fields: TrackerField[]
+  layoutNodes: TrackerLayoutNode[]
+}
 
 /** Option shape returned by dynamic option functions (compatible with ResolvedOption in resolve-options). */
 export interface DynamicOption {
@@ -48,6 +55,15 @@ export interface DynamicOptionsContext {
   dynamicOptions?: DynamicOptionsDefinitions
   /** When resolving options via the server, attribute LLM usage to this tracker schema id. */
   trackerSchemaId?: string
+  /**
+   * Instance grid data for other tracker schemas (same shape as gridData per schema).
+   * Used when a binding has optionsSourceSchemaId set.
+   */
+  foreignGridDataBySchemaId?: Record<string, Record<string, Array<Record<string, unknown>>>>
+  /** Per foreign tracker: grids, fields, layoutNodes (for add-option UI on bound fields). */
+  foreignSchemaBySchemaId?: Record<string, ForeignBindingSourceSchema>
+  /** Append a row to a grid in another tracker’s in-memory snapshot (fill mode). */
+  onAddEntryToForeignGrid?: (sourceSchemaId: string, gridId: string, row: Record<string, unknown>) => void
 }
 
 /** Signature of a dynamic options function. */

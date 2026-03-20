@@ -15,6 +15,8 @@ export interface TrackerEditorViewProps {
   initialEditMode?: boolean
   initialChatOpen?: boolean
   trackerId?: string | null
+  /** Owning project (for inter-tracker bindings in schema editor). */
+  projectId?: string | null
   instanceType?: 'SINGLE' | 'MULTI'
   instanceId?: string | null
   autoSave?: boolean

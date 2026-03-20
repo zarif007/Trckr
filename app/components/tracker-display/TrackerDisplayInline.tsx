@@ -18,10 +18,12 @@ import { InlineEditableName } from './layout'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
 import { SHARED_TAB_ID } from '@/lib/depends-on-options'
+import { collectOptionsSourceSchemaIds } from '@/lib/resolve-bindings'
 import { getEffectiveDependsOn } from '@/lib/depends-on'
 import { useTrackerTabs } from './state/useTrackerTabs'
 import { useGridDataEngine } from './state/useGridDataEngine'
 import { useSchemaTabActions } from './state/useSchemaTabActions'
+import { useForeignBindingSources } from './foreign-binding-sources'
 // Bindings grid (Shared tab) intentionally unused; bindings are configured per field settings now.
 
 // Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
@@ -126,6 +128,8 @@ export function TrackerDisplayInline({
   undo,
   canUndo,
   trackerSchemaId,
+  projectId,
+  onForeignBindingNavUiChange,
 }: TrackerDisplayProps) {
   const effectiveSections = sections ?? []
   const effectiveGrids = grids ?? []
@@ -146,6 +150,50 @@ export function TrackerDisplayInline({
     gridIds: effectiveGrids.map((grid) => grid.id),
   })
   const effectiveBindings = useMemo(() => bindings ?? {}, [bindings])
+  const bindingSourceIds = useMemo(
+    () => collectOptionsSourceSchemaIds(effectiveBindings, trackerSchemaId ?? null),
+    [effectiveBindings, trackerSchemaId]
+  )
+  const {
+    foreignGridDataBySchemaId,
+    foreignSchemaBySchemaId,
+    onAddEntryToForeignGrid,
+    foreignSourcesLoading,
+    foreignSourcesSaving,
+    foreignPersistError,
+    dismissForeignPersistError,
+  } = useForeignBindingSources(bindingSourceIds)
+
+  const onForeignBindingNavRef = useRef(onForeignBindingNavUiChange)
+  onForeignBindingNavRef.current = onForeignBindingNavUiChange
+
+  useEffect(() => {
+    const notify = onForeignBindingNavRef.current
+    if (!notify) return
+    if (bindingSourceIds.length === 0) {
+      notify(null)
+      return
+    }
+    notify({
+      loading: foreignSourcesLoading,
+      saving: foreignSourcesSaving,
+      error: foreignPersistError,
+      dismissError: dismissForeignPersistError,
+    })
+  }, [
+    bindingSourceIds.length,
+    foreignSourcesLoading,
+    foreignSourcesSaving,
+    foreignPersistError,
+    dismissForeignPersistError,
+  ])
+
+  useEffect(() => {
+    return () => {
+      onForeignBindingNavRef.current?.(null)
+    }
+  }, [])
+
   const effectiveDependsOn = useMemo(
     () => getEffectiveDependsOn({ dependsOn, dependsOnByTarget }),
     [dependsOn, dependsOnByTarget]
@@ -301,6 +349,9 @@ export function TrackerDisplayInline({
       dynamicOptions={dynamicOptions}
       gridData={gridData}
       trackerSchemaId={trackerSchemaId ?? undefined}
+      foreignGridDataBySchemaId={foreignGridDataBySchemaId}
+      foreignSchemaBySchemaId={foreignSchemaBySchemaId}
+      onAddEntryToForeignGrid={onAddEntryToForeignGrid}
     >
       <EditModeProvider
         editMode={!!editMode}
@@ -309,6 +360,7 @@ export function TrackerDisplayInline({
         undo={undo}
         canUndo={canUndo}
         trackerSchemaId={trackerSchemaId}
+        projectId={projectId ?? undefined}
       >
         {content}
       </EditModeProvider>

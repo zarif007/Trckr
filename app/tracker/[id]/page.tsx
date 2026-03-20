@@ -14,6 +14,7 @@ type TrackerRecord = {
   id: string
   name: string | null
   schema: unknown
+  projectId?: string
   instance?: string
   versionControl?: boolean
   autoSave?: boolean
@@ -267,6 +268,7 @@ function TrackerByIdContent({
       initialEditMode={false}
       initialChatOpen={false}
       trackerId={id}
+      projectId={state.tracker?.projectId ?? null}
       instanceType={state.tracker?.instance === 'MULTI' ? 'MULTI' : 'SINGLE'}
       instanceId={instanceId}
       autoSave={state.tracker?.autoSave ?? true}

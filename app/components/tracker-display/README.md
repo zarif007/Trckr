@@ -25,6 +25,7 @@ tracker-display/
 ├── constants.ts                 # View labels
 ├── view-utils.ts                # normalizeGridViews
 ├── tracker-options-context.tsx  # Context for grids/fields/layoutNodes/sections
+├── foreign-binding-sources/     # Cross-tracker bindings: load/persist source tracker data (see README inside)
 │
 ├── layout/                      # Layout primitives (reusable)
 │   ├── index.ts

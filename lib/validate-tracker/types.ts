@@ -7,6 +7,7 @@ import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
 
 /** Binding entry structure for validation (no valueField - value is in fieldMappings) */
 export interface BindingEntry {
+  optionsSourceSchemaId?: string
   optionsGrid: string
   labelField: string
   fieldMappings: Array<{ from: string; to: string }>

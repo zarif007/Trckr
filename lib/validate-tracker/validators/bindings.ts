@@ -86,23 +86,31 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
       warnings.push(`Binding key "${fieldPath}": field "${fieldId}" not found`)
     }
 
+    const foreignSource = Boolean(entry.optionsSourceSchemaId?.trim())
+
     const optGridId = entry.optionsGrid?.includes('.')
       ? entry.optionsGrid.split('.').pop()!
       : entry.optionsGrid
-    if (!optGridId || !ctx.gridIds.has(optGridId)) {
-      warnings.push(`Binding "${fieldPath}": optionsGrid "${entry.optionsGrid}" not found`)
-    } else if (!optGridId.endsWith('_options_grid')) {
-      warnings.push(
-        `Binding "${fieldPath}": optionsGrid "${entry.optionsGrid}" should be an options grid (id ending with _options_grid), not a main data grid`
-      )
+    if (!foreignSource) {
+      if (!optGridId || !ctx.gridIds.has(optGridId)) {
+        warnings.push(`Binding "${fieldPath}": optionsGrid "${entry.optionsGrid}" not found`)
+      }
+    } else if (!optGridId) {
+      warnings.push(`Binding "${fieldPath}": optionsGrid is required for cross-tracker binding`)
     }
 
     const labelParsed = parsePath(entry.labelField)
-    if (!labelParsed.fieldId || !ctx.fieldIds.has(labelParsed.fieldId)) {
-      warnings.push(`Binding "${fieldPath}": labelField "${entry.labelField}" not found`)
-    } else if (fieldId && fieldId === labelParsed.fieldId) {
+    if (!foreignSource) {
+      if (!labelParsed.fieldId || !ctx.fieldIds.has(labelParsed.fieldId)) {
+        warnings.push(`Binding "${fieldPath}": labelField "${entry.labelField}" not found`)
+      } else if (fieldId && fieldId === labelParsed.fieldId) {
+        errors.push(
+          `Binding "${fieldPath}": the options grid must use a different field for option values than the select field. Use a dedicated field in the options grid (e.g. exercise_option) and set labelField to that grid.field path.`
+        )
+      }
+    } else if (fieldId && labelParsed.fieldId && fieldId === labelParsed.fieldId) {
       errors.push(
-        `Binding "${fieldPath}": the options grid must use a different field for option values than the select field. Use a dedicated field in the options grid (e.g. exercise_option) and set labelField to that grid.field path.`
+        `Binding "${fieldPath}": the options grid must use a different field for option values than the select field.`
       )
     }
 
@@ -116,8 +124,10 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
     for (const mapping of entry.fieldMappings ?? []) {
       const fromParsed = parsePath(mapping.from)
       const toParsed = parsePath(mapping.to)
-      if (!fromParsed.fieldId || !ctx.fieldIds.has(fromParsed.fieldId)) {
-        warnings.push(`Binding "${fieldPath}": source field "${mapping.from}" not found`)
+      if (!foreignSource) {
+        if (!fromParsed.fieldId || !ctx.fieldIds.has(fromParsed.fieldId)) {
+          warnings.push(`Binding "${fieldPath}": source field "${mapping.from}" not found`)
+        }
       }
       if (!toParsed.fieldId || !ctx.fieldIds.has(toParsed.fieldId)) {
         warnings.push(`Binding "${fieldPath}": target field "${mapping.to}" not found`)

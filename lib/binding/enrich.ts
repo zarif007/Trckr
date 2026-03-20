@@ -60,6 +60,7 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
 
   let anyChanged = false
   for (const [fieldPath, entry] of Object.entries(bindings)) {
+    if (entry.optionsSourceSchemaId?.trim()) continue
     const parts = fieldPath.split('.')
     if (parts.length < 2) continue
     const mainGridId = parts[0]!

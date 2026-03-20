@@ -157,15 +157,15 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Link
               href="/dashboard/ai-project"
-              className="group relative"
+              className="group relative rounded-md"
             >
               <span className="absolute -inset-0.5 rounded-md ai-gradient-border opacity-80 group-hover:opacity-100 transition-opacity" />
               <span className="relative h-7 px-2.5 rounded-md bg-background/90 border border-border/40 shadow-sm flex items-center gap-1.5 text-[11px] font-semibold text-foreground/90 group-hover:text-foreground transition-colors">
                 <Sparkles className="h-3.5 w-3.5 text-foreground/80 group-hover:text-foreground" />
-                AI Project
+                AI Project (Alpha)
               </span>
             </Link>
             <CreateDropdown
@@ -439,7 +439,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="rounded-lg"
+                className="rounded-md"
                 onClick={() => setCreateProjectOpen(false)}
               >
                 Cancel
@@ -447,7 +447,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               <Button
                 type="button"
                 size="sm"
-                className="rounded-lg min-w-[72px]"
+                className="rounded-md min-w-[72px]"
                 onClick={() => handleCreateProject()}
                 disabled={creating}
               >

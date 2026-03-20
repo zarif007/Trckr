@@ -53,6 +53,7 @@ labelField is the path to the option field that provides BOTH display and stored
 BINDINGS STRUCTURE (paths are grid.field - NO TAB):
 bindings: {
   "<grid_id>.<field_id>": {
+    // OPTIONAL: optionsSourceSchemaId — id of another tracker schema in the same project. When set, optionsGrid / labelField / mapping "from" refer to that tracker; "to" paths stay on this tracker. Omit for normal bindings (options live on this tracker).
     optionsGrid: "<grid_id>",              // Grid id containing options (e.g. product_options_grid)
     labelField: "<options_grid_id>.<option_field_id>",   // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
     fieldMappings: [

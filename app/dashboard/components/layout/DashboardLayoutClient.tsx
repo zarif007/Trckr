@@ -960,7 +960,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
       </div>
-      <div className="md:hidden flex-1 min-h-0 min-w-0 flex flex-col">
+      <div className="md:hidden flex-1 min-h-0 min-w-0 flex flex-col overflow-y-auto">
         {children}
       </div>
       <div className="hidden md:flex flex-1 min-h-0 min-w-0 overflow-hidden">
@@ -1157,7 +1157,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 )}
               </div>
             </aside>
-            <div className="flex-1 flex flex-col min-w-0 min-h-0">{children}</div>
+            <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-y-auto">{children}</div>
           </>
         ) : (
           <div className="flex-1 min-h-0 min-w-0 flex flex-col">
@@ -1330,7 +1330,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 className="shrink-0 w-1 bg-border/50 hover:bg-border active:bg-primary/30 transition-colors cursor-col-resize flex items-stretch"
                 style={{ minWidth: 6 }}
               />
-              <Panel id="dashboard-main-panel" defaultSize="90" minSize="70" className="flex flex-col min-w-0 min-h-0">
+              <Panel id="dashboard-main-panel" defaultSize="90" minSize="70" className="flex flex-col min-w-0 min-h-0 overflow-y-auto">
                 {children}
               </Panel>
             </Group>

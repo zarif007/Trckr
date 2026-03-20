@@ -30,6 +30,7 @@ export {
 export { GridBlockHeader, GridBlockContent, GridTypeBadge } from './blocks'
 
 export type {
+  ForeignBindingNavUiState,
   TrackerDisplayProps,
   TrackerTab,
   TrackerSection,

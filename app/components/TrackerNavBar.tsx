@@ -4,7 +4,17 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useTheme } from 'next-themes'
-import { ArrowLeft, LogOut, Moon, MoreHorizontal, Plus, Sun, Trash2, Users } from 'lucide-react'
+import {
+  ArrowLeft,
+  Loader2,
+  LogOut,
+  Moon,
+  MoreHorizontal,
+  Plus,
+  Sun,
+  Trash2,
+  Users,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -132,6 +142,10 @@ export default function TrackerNavBar() {
     onFormActionSelect,
     showPreviewSaveButton = false,
     titleEditable: navTitleEditable = false,
+    foreignLinkedSourcesLoading = false,
+    foreignLinkedSourcesSaving = false,
+    foreignLinkedPersistError = null,
+    onDismissForeignLinkedPersistError = null,
   } = ctx?.saveState ?? initialSaveState
   const [actionsConfigOpen, setActionsConfigOpen] = useState(false)
   const [actionsDraft, setActionsDraft] = useState<TrackerFormAction[]>([])
@@ -331,6 +345,37 @@ export default function TrackerNavBar() {
                 {primaryNavAction.label}
               </Button>
             )}
+            {foreignLinkedPersistError ? (
+              <div
+                role="alert"
+                className="flex max-w-[min(42vw,320px)] items-center gap-1 rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1 text-[11px] text-destructive"
+              >
+                <span className="min-w-0 truncate" title={foreignLinkedPersistError.message}>
+                  Linked tracker: {foreignLinkedPersistError.message}
+                </span>
+                {onDismissForeignLinkedPersistError && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 shrink-0 px-1.5 text-[11px] text-destructive hover:text-destructive"
+                    onClick={onDismissForeignLinkedPersistError}
+                  >
+                    Dismiss
+                  </Button>
+                )}
+              </div>
+            ) : foreignLinkedSourcesSaving ? (
+              <span className="inline-flex max-w-[min(40vw,280px)] items-center gap-1.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                Saving linked tracker…
+              </span>
+            ) : foreignLinkedSourcesLoading ? (
+              <span className="inline-flex max-w-[min(40vw,280px)] items-center gap-1.5 text-[11px] text-muted-foreground whitespace-nowrap">
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                Loading linked trackers…
+              </span>
+            ) : null}
             {showAutosaveBadge && (
               <Badge
                 variant="outline"

@@ -27,6 +27,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     isViewingHistoricalVersion,
     handleReturnToLatest,
     trackerId,
+    projectId,
     loadedSnapshot,
     initialGridData,
     isReadOnly,
@@ -41,6 +42,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     onPreviewSave,
     dataSaveStatus,
     chatPanelProps,
+    reportForeignBindingNav,
   } = state
 
   return (
@@ -84,6 +86,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               isViewingHistoricalVersion={isViewingHistoricalVersion}
               onReturnToLatest={handleReturnToLatest}
               trackerId={trackerId ?? undefined}
+              projectId={projectId ?? undefined}
               initialGridData={loadedSnapshot?.data ?? initialGridData}
               readOnly={isReadOnly}
               versionControl={versionControl}
@@ -96,6 +99,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               showPreviewSaveButton={showPreviewSaveButton}
               onPreviewSave={onPreviewSave}
               previewSaveStatus={dataSaveStatus}
+              onForeignBindingNavUiChange={reportForeignBindingNav}
             />
           </TabsContent>
           <TabsContent
