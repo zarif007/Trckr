@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react'
 import { TrackerDisplay } from '@/app/components/tracker-display'
+import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
 
 const EXAMPLES = [
   {
@@ -174,27 +175,54 @@ export default function Demo() {
       // Kanban layout
       { gridId: 'projects_by_status', fieldId: 'kb_project_name', order: 1 },
       { gridId: 'projects_by_status', fieldId: 'kb_project_owner', order: 2 },
-      { gridId: 'projects_by_status', fieldId: 'kb_project_due_date', order: 3 },
+      {
+        gridId: 'projects_by_status',
+        fieldId: 'kb_project_due_date',
+        order: 3,
+      },
       { gridId: 'projects_by_status', fieldId: 'kb_status', order: 4 },
       // Option grids (use dedicated option fields, not the select field ids)
-      { gridId: 'priority_options_grid', fieldId: 'project_priority_option', order: 1 },
-      { gridId: 'status_options_grid', fieldId: 'project_status_option', order: 1 },
+      {
+        gridId: 'priority_options_grid',
+        fieldId: 'project_priority_option',
+        order: 1,
+      },
+      {
+        gridId: 'status_options_grid',
+        fieldId: 'project_status_option',
+        order: 1,
+      },
     ],
     bindings: {
       'project_list.project_priority': {
         optionsGrid: 'priority_options_grid',
         labelField: 'priority_options_grid.project_priority_option',
-        fieldMappings: [{ from: 'priority_options_grid.project_priority_option', to: 'project_list.project_priority' }],
+        fieldMappings: [
+          {
+            from: 'priority_options_grid.project_priority_option',
+            to: 'project_list.project_priority',
+          },
+        ],
       },
       'project_list.project_status': {
         optionsGrid: 'status_options_grid',
         labelField: 'status_options_grid.project_status_option',
-        fieldMappings: [{ from: 'status_options_grid.project_status_option', to: 'project_list.project_status' }],
+        fieldMappings: [
+          {
+            from: 'status_options_grid.project_status_option',
+            to: 'project_list.project_status',
+          },
+        ],
       },
       'projects_by_status.kb_status': {
         optionsGrid: 'status_options_grid',
         labelField: 'status_options_grid.project_status_option',
-        fieldMappings: [{ from: 'status_options_grid.project_status_option', to: 'projects_by_status.kb_status' }],
+        fieldMappings: [
+          {
+            from: 'status_options_grid.project_status_option',
+            to: 'projects_by_status.kb_status',
+          },
+        ],
       },
     },
   }
@@ -234,9 +262,10 @@ export default function Demo() {
   }, [])
 
   return (
-    <div
+    <LandingAxisFrame
       id="demo"
-      className="mt-6 sm:mt-8 p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl bg-secondary/30 border border-border/50 hover:bg-secondary/40 transition-all"
+      className="mt-6 sm:mt-8"
+      contentClassName="p-4 sm:p-6 md:p-8 bg-secondary/30"
     >
       <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8">
         <div className="text-center space-y-1.5 sm:space-y-2">
@@ -244,12 +273,13 @@ export default function Demo() {
             See it in action
           </h3>
           <p className="text-muted-foreground text-xs sm:text-sm font-medium">
-            A project pipeline for a 10–20 person team—built and ready to use in seconds.
+            A project pipeline for a 10–20 person team—built and ready to use in
+            seconds.
           </p>
         </div>
 
         <TrackerDisplay {...demoData} initialGridData={initialGridData} />
       </div>
-    </div>
+    </LandingAxisFrame>
   )
 }

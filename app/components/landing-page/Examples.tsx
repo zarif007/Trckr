@@ -3,46 +3,65 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
 
 const HERO_EXAMPLE = {
   category: 'Projects & Ops',
-  prompt: 'Track our project pipeline with status, owner, due date, and priority',
-  youGet: 'Table + kanban by status',
+  prompt:
+    'Track our project pipeline with status, owner, due date, and priority',
+  youGet: {
+    summary: 'A live board your team can update without touching a spreadsheet.',
+    detail:
+      'Columns for project, owner, status, priority, due date • Table plus kanban grouped by status • Sort and filter by owner or date',
+  },
 }
 
 const GROUPED_EXAMPLES = [
   {
     category: 'Projects & Ops',
+    lead: 'Vendor, budget, and delivery workflows—same tool as internal projects.',
     items: [
       {
-        prompt: 'Track vendor contracts with renewal dates, owners, and cost per month',
-        youGet: 'Table with dates and currency',
+        prompt:
+          'Track vendor contracts with renewal dates, owners, and cost per month',
+        youGet:
+          'Renewal calendar, spend per vendor • Columns: vendor, owner, renewal date, monthly cost, notice period',
       },
     ],
   },
   {
     category: 'Requests & HR',
+    lead: 'Turn scattered Slack threads and tickets into one queue with owners.',
     items: [
       {
-        prompt: 'Create an internal requests board for IT and facilities with assignee and SLA',
-        youGet: 'Inbox, by owner',
+        prompt:
+          'Create an internal requests board for IT and facilities with assignee and SLA',
+        youGet:
+          'Single inbox for new work • Columns: type, requester, assignee, SLA, status • Views: all open, by assignee',
       },
       {
-        prompt: 'Track hiring pipeline with role, stage, recruiter, interviewer, and feedback',
-        youGet: 'Table + kanban by stage',
+        prompt:
+          'Track hiring pipeline with role, stage, recruiter, interviewer, and feedback',
+        youGet:
+          'Role-centric pipeline • Columns: role, stage, recruiter, next step • Kanban by stage plus table for reporting',
       },
     ],
   },
   {
     category: 'Inventory & Assets',
+    lead: 'Equipment and stock levels with location and responsibility baked in.',
     items: [
       {
-        prompt: 'Log all company equipment with who has it, where it lives, and current status',
-        youGet: 'Inventory table',
+        prompt:
+          'Log all company equipment with who has it, where it lives, and current status',
+        youGet:
+          'Asset register • Columns: asset, serial, custodian, location, status • Filter by site or owner',
       },
       {
-        prompt: 'Monitor inventory levels with location, reorder thresholds, and supplier',
-        youGet: 'Table with thresholds',
+        prompt:
+          'Monitor inventory levels with location, reorder thresholds, and supplier',
+        youGet:
+          'Stock table with alerts • Columns: SKU, location, on hand, reorder point, supplier',
       },
     ],
   },
@@ -52,84 +71,111 @@ export default function Examples() {
   return (
     <motion.section
       id="examples"
-      className="space-y-8 sm:space-y-12"
+      className="space-y-10 sm:space-y-14"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.8 }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="space-y-3 sm:space-y-4 text-center">
+      <div className="space-y-4 text-center max-w-3xl mx-auto">
         <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Describe your workflow—AI builds the tracker
+          Type what you track—get columns, views, and filters
         </h3>
-        <p className="text-muted-foreground text-sm sm:text-base max-w-2xl font-medium mx-auto">
-          From project pipelines to equipment logs, type in plain language and get a ready-to-use tracker for your team.
+        <p className="text-muted-foreground text-sm sm:text-base font-medium leading-relaxed">
+          You describe the work in plain language. Trckr turns that into a
+          structured tracker: the fields you need, table and board views, and
+          ways to slice the list—without you designing a database first.
         </p>
       </div>
 
-      {/* Hero example */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.4 }}
-        whileHover={{ y: -4 }}
-        className="group relative max-w-2xl mx-auto"
-      >
-        <div className="p-4 sm:p-6 rounded-md bg-secondary/30 border-2 border-border/50 transition-all hover:bg-secondary/50 hover:border-border">
-          <Badge
-            variant="outline"
-            className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-2 sm:mb-3"
-          >
-            {HERO_EXAMPLE.category}
-          </Badge>
-          <p className="text-xs sm:text-sm text-foreground font-mono leading-relaxed">
-            &ldquo;{HERO_EXAMPLE.prompt}&rdquo;
-          </p>
-          <p className="text-[9px] sm:text-[10px] font-medium text-muted-foreground/60 uppercase tracking-tight mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-border/30">
-            You get: {HERO_EXAMPLE.youGet}
-          </p>
-        </div>
-      </motion.div>
-
-      {/* Grouped prompts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 max-w-4xl mx-auto">
-        {GROUPED_EXAMPLES.flatMap((group) =>
-          group.items.map((item, itemIdx) => ({
-            ...item,
-            category: group.category,
-            key: `${group.category}-${itemIdx}`,
-          }))
-        ).map(({ category, prompt, youGet, key }, idx) => (
-          <motion.div
-            key={key}
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.3, delay: idx * 0.05 }}
-            whileHover={{ y: -4 }}
-            className="group relative"
-          >
-            <div className="p-4 sm:p-5 rounded-md bg-secondary/30 border border-border/50 transition-all hover:bg-secondary/50 hover:border-border cursor-pointer">
-              <Badge
-                variant="outline"
-                className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-1.5 sm:mb-2"
-              >
-                {category}
-              </Badge>
-              <p className="text-xs sm:text-sm text-foreground/90 font-mono leading-relaxed">
-                &ldquo;{prompt}&rdquo;
+      <div className="space-y-4">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Featured example
+        </p>
+        <div className="relative max-w-2xl mx-auto">
+          <LandingAxisFrame contentClassName="p-5 sm:p-7 bg-secondary/30">
+            <Badge
+              variant="outline"
+              className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-3"
+            >
+              {HERO_EXAMPLE.category}
+            </Badge>
+            <div className="space-y-2">
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Your prompt
               </p>
-              <p className="text-[9px] sm:text-[10px] font-medium text-muted-foreground/60 uppercase tracking-tight mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-border/30">
-                You get: {youGet}
+              <p className="text-sm sm:text-base text-foreground font-mono leading-relaxed">
+                &ldquo;{HERO_EXAMPLE.prompt}&rdquo;
               </p>
             </div>
-          </motion.div>
+            <div className="mt-5 pt-5 border-t border-border/40 space-y-2">
+              <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Trckr builds
+              </p>
+              <p className="text-sm text-foreground font-medium leading-snug">
+                {HERO_EXAMPLE.youGet.summary}
+              </p>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                {HERO_EXAMPLE.youGet.detail}
+              </p>
+            </div>
+          </LandingAxisFrame>
+        </div>
+      </div>
+
+      <div className="space-y-10 max-w-4xl mx-auto">
+        <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          More prompts by area
+        </p>
+        {GROUPED_EXAMPLES.map((group) => (
+          <div key={group.category} className="space-y-4">
+            <div className="text-center md:text-left space-y-1.5 px-1">
+              <h4 className="text-base sm:text-lg font-bold text-foreground">
+                {group.category}
+              </h4>
+              <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mx-auto md:mx-0 leading-relaxed">
+                {group.lead}
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {group.items.map((item) => (
+                <LandingAxisFrame
+                  key={item.prompt}
+                  contentClassName="p-4 sm:p-5 bg-secondary/25"
+                >
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-3"
+                  >
+                    {group.category}
+                  </Badge>
+                  <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5">
+                    Your prompt
+                  </p>
+                  <p className="text-xs sm:text-sm text-foreground font-mono leading-relaxed">
+                    &ldquo;{item.prompt}&rdquo;
+                  </p>
+                  <div className="mt-4 pt-4 border-t border-border/40 space-y-1.5">
+                    <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Trckr builds
+                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                      {item.youGet}
+                    </p>
+                  </div>
+                </LandingAxisFrame>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
-      <div className="text-center">
-        <Button size="lg" className="rounded-md px-6 sm:px-8 text-sm sm:text-base" asChild>
+      <div className="text-center pt-2">
+        <Button
+          size="lg"
+          className="rounded-md px-6 sm:px-8 text-sm sm:text-base"
+          asChild
+        >
           <a href="/login?callbackUrl=/tracker">Try with your own words →</a>
         </Button>
       </div>
