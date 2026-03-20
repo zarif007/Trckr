@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { arrayMove } from '@dnd-kit/sortable'
 import { getInitialGridDataFromBindings } from '@/lib/resolve-bindings'
-import { backfillRowIds } from '@/lib/tracker-data'
+import {
+  appendRowId,
+  assignOrderKeyAfterRowMove,
+  backfillRowIds,
+  isNumericRowId,
+} from '@/lib/tracker-data'
 import {
   applyCompiledCalculationsForRow,
   buildAccumulateDepsBySourceGrid,
@@ -23,6 +29,7 @@ interface GridDataEngineOutput {
   handleUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
   handleAddEntry: (gridId: string, newRow: Record<string, unknown>) => void
   handleDeleteEntries: (gridId: string, rowIndices: number[]) => void
+  handleReorderRows: (gridId: string, fromIndex: number, toIndex: number) => void
 }
 
 export function useGridDataEngine({
@@ -143,14 +150,14 @@ export function useGridDataEngine({
 
   const handleAddEntry = useCallback(
     (gridId: string, newRow: Record<string, unknown>) => {
-      const rowWithId =
-        newRow.row_id != null ? newRow : { ...newRow, row_id: crypto.randomUUID() }
       setEditVersion((v) => v + 1)
       setLocalGridData((prev) => {
         const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
         const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
-        const newRows = [...current, rowWithId]
-        result[gridId] = newRows
+        const rowWithId = isNumericRowId(newRow.row_id)
+          ? newRow
+          : { ...newRow, row_id: appendRowId(current) }
+        result[gridId] = [...current, rowWithId]
         const gridDataForCalc = result
         const plan = compiledCalculationsByGrid.get(gridId)
         const calculatedRow = plan
@@ -220,6 +227,44 @@ export function useGridDataEngine({
     [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
   )
 
+  const handleReorderRows = useCallback(
+    (gridId: string, fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return
+      setEditVersion((v) => v + 1)
+      setLocalGridData((prev) => {
+        const result: Record<string, Array<Record<string, unknown>>> = { ...(prev ?? {}) }
+        const current = prev?.[gridId] ?? baseGridData[gridId] ?? []
+        if (fromIndex < 0 || fromIndex >= current.length) return prev ?? {}
+        if (toIndex < 0 || toIndex >= current.length) return prev ?? {}
+        const moved = arrayMove([...current], fromIndex, toIndex)
+        const withKeys = assignOrderKeyAfterRowMove(moved, toIndex)
+        result[gridId] = withKeys
+        const gridDataForCalc = result
+
+        const dependentGridIds = accumulateDepsBySourceGrid.get(gridId)
+        if (dependentGridIds?.length) {
+          for (const depGridId of dependentGridIds) {
+            if (depGridId === gridId) continue
+            const depPlan = compiledCalculationsByGrid.get(depGridId)
+            if (!depPlan) continue
+            const depRows = result[depGridId] ?? prev?.[depGridId] ?? baseGridData[depGridId] ?? []
+            const rowsToRecalc = depRows.length > 0 ? depRows : [{}]
+            result[depGridId] = rowsToRecalc.map((r) =>
+              applyCompiledCalculationsForRow({
+                plan: depPlan,
+                row: r,
+                gridData: gridDataForCalc,
+              }).row
+            )
+          }
+        }
+
+        return result
+      })
+    },
+    [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid]
+  )
+
   return {
     gridData,
     gridDataRef,
@@ -227,5 +272,6 @@ export function useGridDataEngine({
     handleUpdate,
     handleAddEntry,
     handleDeleteEntries,
+    handleReorderRows,
   }
 }

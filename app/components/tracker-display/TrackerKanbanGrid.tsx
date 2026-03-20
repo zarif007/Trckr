@@ -200,10 +200,15 @@ function TrackerKanbanGridInner({
       const dashAt = sortId.indexOf('-')
       if (dashAt < 0) return -1
       const firstPart = sortId.slice(0, dashAt)
-      const byRowId = rows.findIndex(
-        (r) => (r as Record<string, unknown>).row_id === firstPart || String((r as Record<string, unknown>).id) === firstPart
-      )
+      const byRowId = rows.findIndex((r) => {
+        const rec = r as Record<string, unknown>
+        return (
+          String(rec.row_id ?? '') === firstPart ||
+          String(rec.id ?? '') === firstPart
+        )
+      })
       if (byRowId >= 0) return byRowId
+      if (!/^\d+$/.test(firstPart)) return -1
       const idx = parseInt(firstPart, 10)
       return !Number.isNaN(idx) && idx >= 0 && idx < rows.length ? idx : -1
     },

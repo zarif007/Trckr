@@ -8,14 +8,15 @@ import {
   loadForeignBindingSource,
   persistForeignBindingSnapshot,
 } from './tracker-api'
+import { appendRowId, isNumericRowId } from '@/lib/tracker-data'
 import type { ForeignDataPersistMeta, GridDataSnapshot } from './types'
 
-function ensureRowId(row: Record<string, unknown>): Record<string, unknown> {
-  if (row.row_id != null && String(row.row_id).trim() !== '') return row
-  return {
-    ...row,
-    row_id: globalThis.crypto?.randomUUID?.() ?? `tmp-${Date.now()}`,
-  }
+function ensureRowId(
+  row: Record<string, unknown>,
+  siblingRows: Array<Record<string, unknown>>
+): Record<string, unknown> {
+  if (isNumericRowId(row.row_id)) return row
+  return { ...row, row_id: appendRowId(siblingRows) }
 }
 
 export type ForeignPersistError = {
@@ -300,11 +301,11 @@ export function useForeignBindingSources(
 
   const onAddEntryToForeignGrid = useCallback(
     (sourceSchemaId: string, gridId: string, row: Record<string, unknown>) => {
-      const rowWithId = ensureRowId(row)
       dirtyForeignRef.current[sourceSchemaId] = true
       setForeignGridDataBySchemaId((prev) => {
         const doc = prev[sourceSchemaId] ?? {}
         const rows = [...(doc[gridId] ?? [])]
+        const rowWithId = ensureRowId(row, rows)
         rows.push(rowWithId)
         const nextDoc = { ...doc, [gridId]: rows }
         const next = { ...prev, [sourceSchemaId]: nextDoc }

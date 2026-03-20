@@ -1,9 +1,9 @@
 import type { GridDataSnapshot } from './types'
+import { isNumericRowId } from './row-order-key'
 
 /**
- * Backfill row_id for rows that don't have it.
- * Returns a new GridDataSnapshot; does not mutate the input.
- * Used when loading existing data so UI and diff work correctly.
+ * Assign numeric order keys: missing row_id, legacy string UUIDs, or non-numeric row_id
+ * become 1..n by current array order.
  */
 export function backfillRowIds(data: GridDataSnapshot): GridDataSnapshot {
   const result: GridDataSnapshot = {}
@@ -12,9 +12,12 @@ export function backfillRowIds(data: GridDataSnapshot): GridDataSnapshot {
       result[gridId] = rows
       continue
     }
-    result[gridId] = rows.map((row) => {
-      if (row != null && typeof row === 'object' && row.row_id == null) {
-        return { ...row, row_id: crypto.randomUUID() }
+    result[gridId] = rows.map((row, i) => {
+      if (row != null && typeof row === 'object') {
+        const rid = (row as Record<string, unknown>).row_id
+        if (rid == null || typeof rid === 'string' || !isNumericRowId(rid)) {
+          return { ...row, row_id: i + 1 }
+        }
       }
       return row
     })
