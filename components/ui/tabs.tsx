@@ -30,7 +30,8 @@ function TabsList({
         theme.border.subtle,
         theme.radius.md,
         'inline-flex w-fit items-center gap-[2px] border bg-muted/70 p-0.5 backdrop-blur transition-colors',
-        'ring-1 ring-inset ring-border/30',
+        'ring-1 ring-inset',
+        theme.border.dividerRing,
         className
       )}
       {...props}

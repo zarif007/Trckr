@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 const HERO_EXAMPLE = {
   category: 'Projects & Ops',
@@ -93,10 +95,19 @@ export default function Examples() {
           Featured example
         </p>
         <div className="relative max-w-2xl mx-auto">
-          <LandingAxisFrame contentClassName="p-5 sm:p-7 bg-secondary/30">
+          <LandingAxisFrame
+            contentClassName={cn(
+              theme.surface.secondarySubtle,
+              'p-5 sm:p-7'
+            )}
+          >
             <Badge
               variant="outline"
-              className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-3"
+              className={cn(
+                'mb-3 text-[9px] uppercase tracking-widest sm:text-[10px]',
+                theme.surface.badgeWash,
+                theme.border.subtleAlt
+              )}
             >
               {HERO_EXAMPLE.category}
             </Badge>
@@ -108,7 +119,12 @@ export default function Examples() {
                 &ldquo;{HERO_EXAMPLE.prompt}&rdquo;
               </p>
             </div>
-            <div className="mt-5 pt-5 border-t border-border/40 space-y-2">
+            <div
+              className={cn(
+                'mt-5 space-y-2 border-t pt-5',
+                theme.border.verySubtle
+              )}
+            >
               <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Trckr builds
               </p>
@@ -141,11 +157,18 @@ export default function Examples() {
               {group.items.map((item) => (
                 <LandingAxisFrame
                   key={item.prompt}
-                  contentClassName="p-4 sm:p-5 bg-secondary/25"
+                  contentClassName={cn(
+                    theme.surface.secondarySoft,
+                    'p-4 sm:p-5'
+                  )}
                 >
                   <Badge
                     variant="outline"
-                    className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50 mb-3"
+                    className={cn(
+                      'mb-3 text-[9px] uppercase tracking-widest sm:text-[10px]',
+                      theme.surface.badgeWash,
+                      theme.border.subtleAlt
+                    )}
                   >
                     {group.category}
                   </Badge>
@@ -155,7 +178,12 @@ export default function Examples() {
                   <p className="text-xs sm:text-sm text-foreground font-mono leading-relaxed">
                     &ldquo;{item.prompt}&rdquo;
                   </p>
-                  <div className="mt-4 pt-4 border-t border-border/40 space-y-1.5">
+                  <div
+                    className={cn(
+                      'mt-4 space-y-1.5 border-t pt-4',
+                      theme.border.verySubtle
+                    )}
+                  >
                     <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                       Trckr builds
                     </p>
@@ -173,7 +201,7 @@ export default function Examples() {
       <div className="text-center pt-2">
         <Button
           size="lg"
-          className="rounded-md px-6 sm:px-8 text-sm sm:text-base"
+          className={cn(theme.radius.md, 'px-6 text-sm sm:px-8 sm:text-base')}
           asChild
         >
           <a href="/login?callbackUrl=/tracker">Try with your own words →</a>

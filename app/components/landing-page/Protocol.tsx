@@ -4,6 +4,8 @@ import { motion } from 'framer-motion'
 import { PenLine, LayoutTemplate, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 const STEPS = [
   {
@@ -49,7 +51,7 @@ export default function Protocol() {
           asChild
           variant="outline"
           size="sm"
-          className="w-fit shrink-0 border-border/60"
+          className={cn('w-fit shrink-0', theme.border.subtle)}
         >
           <a href="#examples">
             See example prompts <span className="ml-1.5">↓</span>
@@ -60,7 +62,10 @@ export default function Protocol() {
       <div className="relative">
         <div
           aria-hidden
-          className="hidden lg:block absolute top-[52px] left-[8%] right-[8%] h-px bg-border/60 pointer-events-none"
+          className={cn(
+            'pointer-events-none absolute top-[52px] right-[8%] left-[8%] hidden h-px lg:block',
+            theme.surface.mutedLine
+          )}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-5">
@@ -75,9 +80,21 @@ export default function Protocol() {
                 transition={{ duration: 0.35, delay: idx * 0.06 }}
                 className="relative"
               >
-                <LandingAxisFrame contentClassName="p-5 sm:p-6 bg-secondary/30 h-full flex flex-col">
+                <LandingAxisFrame
+                  contentClassName={cn(
+                    theme.surface.secondarySubtle,
+                    'flex h-full flex-col p-5 sm:p-6'
+                  )}
+                >
                   <div className="flex items-start gap-3 mb-4">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-background/80 text-xs font-bold text-foreground">
+                    <span
+                      className={cn(
+                        'flex h-9 w-9 shrink-0 items-center justify-center border text-xs font-bold',
+                        theme.radius.md,
+                        theme.border.subtle,
+                        'bg-background/80 text-foreground'
+                      )}
+                    >
                       {idx + 1}
                     </span>
                     <Icon

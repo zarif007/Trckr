@@ -4,6 +4,8 @@
  * so edit and view stay pixel-identical.
  */
 
+import { theme } from '@/lib/theme'
+
 /** Gap between section groups (and before bottom row in edit). */
 export const SECTION_STACK_GAP = 'space-y-6'
 
@@ -33,5 +35,4 @@ export const TAB_CONTENT_ROOT = 'mt-5 w-full'
 export const TAB_CONTENT_INNER = 'space-y-6 w-full min-w-0'
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
-export const SECTION_BAR_CLASS =
-  'w-full flex items-center gap-2 px-3 py-2.5 rounded-md bg-muted/50 border border-border/40 text-foreground text-sm font-medium'
+export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 px-3 py-2.5 rounded-md bg-muted/50 border ${theme.border.verySubtle} text-foreground text-sm font-medium`

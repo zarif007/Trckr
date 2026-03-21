@@ -6,6 +6,7 @@ import { Loader2, CheckCircle, ArrowUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 type Question = {
   id: string
@@ -180,14 +181,31 @@ export function OrchestrationView({
   return (
     <div className="space-y-6">
       {/* User request - shown once, absorbed into the flow */}
-      <div className="rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
+      <div
+        className={cn(
+          'border bg-muted/30 px-4 py-3',
+          theme.radius.md,
+          theme.border.verySubtle
+        )}
+      >
         <div className="text-xs font-medium text-muted-foreground mb-1">Your request</div>
         <p className="text-sm text-foreground">{userPrompt}</p>
       </div>
 
       {/* Single agent stream - one continuous block */}
-      <div className="rounded-xl border border-border/40 bg-background overflow-hidden">
-        <div className="border-b border-border/40 px-4 py-2.5 bg-muted/20">
+      <div
+        className={cn(
+          'overflow-hidden border bg-background',
+          theme.radius.md,
+          theme.border.verySubtle
+        )}
+      >
+        <div
+          className={cn(
+            'border-b bg-muted/20 px-4 py-2.5',
+            theme.border.verySubtle
+          )}
+        >
           <div className="flex items-center gap-2">
             <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-medium text-muted-foreground">
@@ -221,7 +239,12 @@ export function OrchestrationView({
                   <div className="text-foreground/80">
                     {idx + 1}. {q.label}
                   </div>
-                  <div className="text-foreground font-medium pl-4 border-l-2 border-border/40">
+                  <div
+                    className={cn(
+                      'border-l-2 pl-4 font-medium text-foreground',
+                      theme.border.verySubtle
+                    )}
+                  >
                     → {formatAnswerDisplay(answer)}
                   </div>
                 </div>
@@ -282,10 +305,19 @@ export function OrchestrationView({
             <div className="space-y-4">
               <div className="whitespace-pre-wrap text-foreground/90">{buildPlanSummary(plan)}</div>
               <div className="flex flex-wrap gap-2 pt-2">
-                <Button onClick={onConfirmBuild} disabled={busy} className="rounded-lg">
+                <Button
+                  onClick={onConfirmBuild}
+                  disabled={busy}
+                  className={theme.radius.md}
+                >
                   Build
                 </Button>
-                <Button onClick={onEditAnswers} variant="outline" disabled={busy} className="rounded-lg">
+                <Button
+                  onClick={onEditAnswers}
+                  variant="outline"
+                  disabled={busy}
+                  className={theme.radius.md}
+                >
                   Edit answers
                 </Button>
               </div>
@@ -302,8 +334,10 @@ export function OrchestrationView({
                     <div
                       key={item.type === 'project' ? 'project' : `module-${item.name}`}
                       className={cn(
-                        'flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-sm',
-                        item.status === 'pending' && 'border-border/40 bg-muted/20 text-muted-foreground',
+                        'flex flex-col gap-1 border px-3 py-2.5 text-sm',
+                        theme.radius.md,
+                        item.status === 'pending' &&
+                          cn(theme.border.verySubtle, 'bg-muted/20 text-muted-foreground'),
                         item.status === 'working' && 'border-amber-500/40 bg-amber-500/10',
                         item.status === 'done' && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
                         item.status === 'error' && 'border-destructive/40 bg-destructive/10 text-destructive',
@@ -340,8 +374,10 @@ export function OrchestrationView({
                 <div
                   key={item.name}
                   className={cn(
-                    'flex flex-col gap-1 rounded-lg border px-3 py-2.5 text-sm',
-                    item.status === 'pending' && 'border-border/40 bg-muted/20 text-muted-foreground',
+                    'flex flex-col gap-1 border px-3 py-2.5 text-sm',
+                    theme.radius.md,
+                    item.status === 'pending' &&
+                      cn(theme.border.verySubtle, 'bg-muted/20 text-muted-foreground'),
                     item.status === 'working' && 'border-amber-500/40 bg-amber-500/10',
                     item.status === 'done' && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
                     item.status === 'error' && 'border-destructive/40 bg-destructive/10 text-destructive',
@@ -385,7 +421,7 @@ export function OrchestrationView({
                 </div>
               )}
               {!busy && projectId && (
-                <Button asChild className="rounded-lg mt-2">
+                <Button asChild className={cn('mt-2', theme.radius.md)}>
                   <Link href={`/project/${projectId}`}>Go to project</Link>
                 </Button>
               )}
@@ -396,7 +432,12 @@ export function OrchestrationView({
           {planError && answeredCount > 0 && (
             <div className="space-y-2">
               <p className="text-destructive">Could not generate a plan. Please try again.</p>
-              <Button onClick={onRetryPlan} variant="outline" size="sm" className="rounded-lg">
+              <Button
+                onClick={onRetryPlan}
+                variant="outline"
+                size="sm"
+                className={theme.radius.md}
+              >
                 Retry plan
               </Button>
             </div>

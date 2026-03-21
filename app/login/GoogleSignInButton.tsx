@@ -1,6 +1,8 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 type Props = { callbackUrl: string }
 
@@ -32,17 +34,12 @@ export function GoogleSignInButton({ callbackUrl }: Props) {
     <button
       type="button"
       onClick={() => signIn('google', { redirectTo: callbackUrl })}
-      className="
-        w-full flex items-center justify-center gap-3
-        h-11 px-6 rounded-lg
-        text-sm font-medium
-        bg-foreground text-background
-        hover:opacity-90
-        active:scale-[0.98]
-        transition-all duration-150 ease-out
-        cursor-pointer
-        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
-      "
+      className={cn(
+        'flex h-11 w-full cursor-pointer items-center justify-center gap-3 px-6 text-sm font-medium transition-all duration-150 ease-out',
+        'bg-foreground text-background hover:opacity-90 active:scale-[0.98]',
+        'focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+        theme.radius.md
+      )}
     >
       <div className="flex items-center justify-center w-5 h-5 rounded-sm bg-white p-0.5">
         <GoogleIcon />

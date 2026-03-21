@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import { Check, AlertCircle } from 'lucide-react'
 
 export interface FlowBuilderLayoutProps {
@@ -48,7 +49,13 @@ export function FlowBuilderLayout({
   applySuccess = false,
 }: FlowBuilderLayoutProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border/50 bg-card/50 p-4 shadow-sm">
+    <div
+      className={cn(
+        'flex flex-col gap-4 border bg-card/50 p-4 shadow-sm',
+        theme.radius.md,
+        theme.border.subtleAlt
+      )}
+    >
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -67,7 +74,9 @@ export function FlowBuilderLayout({
         {/* Palette Sidebar — scrollable when content exceeds viewport */}
         <div
           className={cn(
-            'shrink-0 flex flex-col gap-3 overflow-y-auto rounded-lg border border-border/40 bg-muted/30 p-3 max-h-[70vh]',
+            'flex max-h-[70vh] shrink-0 flex-col gap-3 overflow-y-auto border bg-muted/30 p-3',
+            theme.radius.md,
+            theme.border.verySubtle,
             paletteClassName ?? 'w-[160px]'
           )}
         >
@@ -77,7 +86,9 @@ export function FlowBuilderLayout({
         {/* Canvas Area */}
         <div
           className={cn(
-            'flex-1 min-h-0 min-w-0 rounded-xl border border-border/50 bg-background/80 shadow-inner overflow-hidden',
+            'min-h-0 min-w-0 flex-1 overflow-hidden border bg-background/80 shadow-inner',
+            theme.radius.md,
+            theme.border.subtleAlt,
             canvasClassName
           )}
           style={{ minHeight: canvasMinHeight }}
@@ -88,7 +99,12 @@ export function FlowBuilderLayout({
 
       {/* Error Message */}
       {applyError != null && applyError !== '' && (
-        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <div
+          className={cn(
+            'flex items-center gap-2 border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive',
+            theme.radius.md
+          )}
+        >
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{applyError}</span>
         </div>

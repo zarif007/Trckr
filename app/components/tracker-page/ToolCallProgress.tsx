@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { Wrench, Check, X, Loader2 } from 'lucide-react'
 import type { ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 interface ToolCallProgressProps {
   toolCalls: ToolCallEntry[]
@@ -37,7 +39,11 @@ export function ToolCallProgress({ toolCalls }: ToolCallProgressProps) {
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-3 rounded-xl bg-muted/30 border border-border/30 space-y-2.5 min-w-0"
+      className={cn(
+        'min-w-0 space-y-2.5 border bg-muted/30 p-3',
+        theme.radius.md,
+        theme.border.divider
+      )}
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

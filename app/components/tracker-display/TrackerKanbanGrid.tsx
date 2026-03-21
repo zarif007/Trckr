@@ -11,6 +11,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Settings2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import {
   DndContext,
   DragOverlay,
@@ -511,7 +513,13 @@ function TrackerKanbanGridInner({
 
           return (
             <div key={group.id} className="shrink-0" style={{ width: `${ks.columnWidth}px` }}>
-              <div className="bg-muted/50 border border-border/40 rounded-lg px-4 py-3 mb-3">
+              <div
+                className={cn(
+                  'mb-3 border bg-muted/50 px-4 py-3',
+                  theme.radius.md,
+                  theme.border.verySubtle
+                )}
+              >
                 <h3 className="font-medium text-foreground text-sm flex items-center justify-between gap-2">
                   <span className="truncate">{group.label || 'Uncategorized'}</span>
                   <span className="text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-md shrink-0 tabular-nums">

@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 export default function CTA() {
   return (
@@ -11,13 +13,22 @@ export default function CTA() {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 1 }}
-      className="relative text-center py-16 sm:py-24 md:py-32 border-t border-border/30 overflow-visible"
+      className="relative overflow-visible py-16 text-center sm:py-24 md:py-32"
     >
+      {/* Same paint as LandingAxisFrame lines (`h-px` fill, not `border-*`) so color matches exactly */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-px [transform:translateZ(0)]"
+        style={{ backgroundColor: 'hsl(var(--border))' }}
+      />
       <div className="absolute inset-0 bg-grid-small opacity-10 [mask-image:radial-gradient(circle_at_center,black,transparent_70%)]" />
 
       <LandingAxisFrame
         className="relative z-10 mx-auto max-w-4xl"
-        contentClassName="bg-background/40 px-4 py-10 sm:px-6 sm:py-14 md:py-16 dark:bg-background/25"
+        contentClassName={cn(
+          theme.surface.ctaWash,
+          'px-4 py-10 sm:px-6 sm:py-14 md:py-16',
+        )}
       >
         <div className="space-y-8 sm:space-y-12">
           <h3 className="text-2xl sm:text-4xl md:text-6xl lg:text-7xl font-black tracking-tighter text-foreground max-w-3xl mx-auto leading-[0.9] px-2">

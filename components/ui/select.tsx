@@ -5,6 +5,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Database, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { theme } from "@/lib/theme"
 import {
   Command,
   CommandEmpty,
@@ -49,7 +50,9 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 data-[size=sm]:h-8 data-[size=sm]:min-h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        theme.patterns.inputBase,
+        "[&_svg:not([class*='text-'])]:text-muted-foreground flex w-fit items-center justify-between gap-2 px-3 py-1 text-sm whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50 data-[size=sm]:h-8 data-[size=sm]:min-h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         className
       )}
       {...props}
@@ -251,7 +254,9 @@ function SearchableSelect({
   }, [options, searchValue])
 
   const triggerClassName = cn(
-    "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm whitespace-nowrap transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    theme.patterns.inputBase,
+    "[&_svg:not([class*='text-'])]:text-muted-foreground flex w-fit items-center justify-between gap-2 px-3 py-1 text-sm whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+    "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
     size === "sm" && "!h-8 !min-h-8",
     className
   )
@@ -395,7 +400,10 @@ function SearchableSelect({
                       onAddOptionClick()
                     }
                   }}
-                  className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
+                  className={cn(
+                    'cursor-pointer text-muted-foreground border-t mt-1 pt-1',
+                    theme.border.subtleAlt
+                  )}
                 >
                   <Plus className="mr-2 size-3.5" />
                   {addOptionLabel}

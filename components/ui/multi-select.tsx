@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { Check, ChevronDown, Database } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import {
   Command,
   CommandEmpty,
@@ -83,7 +84,9 @@ export function MultiSelect({
   }, [options, searchValue])
 
   const triggerClasses = cn(
-    "input-field-height border-input hover:border-ring [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring ring-0 focus:ring-0 focus-visible:ring-0 outline-none aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-1 text-sm transition-[color,box-shadow] disabled:cursor-not-allowed disabled:opacity-50 font-normal text-left",
+    theme.patterns.inputBase,
+    "[&_svg:not([class*='text-'])]:text-muted-foreground flex w-full min-w-0 items-center justify-between gap-2 px-3 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50 font-normal text-left",
+    "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
     isInline && "!h-full !min-h-0 border-0 bg-transparent shadow-none px-2 focus-visible:ring-0 focus:ring-0",
     className
   )
@@ -207,7 +210,10 @@ export function MultiSelect({
                 <CommandItem
                   value="Add option"
                   onSelect={() => onAddOptionClick()}
-                  className="cursor-pointer text-muted-foreground border-t border-border/50 mt-1 pt-1"
+                  className={cn(
+                    'cursor-pointer text-muted-foreground border-t mt-1 pt-1',
+                    theme.border.subtleAlt
+                  )}
                 >
                   <span className="mr-2">+</span>
                   Add option...

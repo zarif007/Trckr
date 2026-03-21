@@ -9,6 +9,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { useTeamContext } from '@/lib/teams'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import type { Team, TeamWithMembers } from '@/lib/teams/types'
 
 const PERSONAL_ID = '__personal__'
@@ -38,7 +40,10 @@ export function TeamSwitcher() {
         <Button
           variant="outline"
           size="sm"
-          className="h-8 gap-1.5 min-w-0 max-w-[140px] justify-between rounded-md border-border/60 px-2 font-medium text-muted-foreground hover:text-foreground"
+          className={cn(
+            'h-8 max-w-[140px] min-w-0 justify-between gap-1.5 rounded-md border px-2 font-medium text-muted-foreground hover:text-foreground',
+            theme.border.subtle
+          )}
           aria-label="Switch team or workspace"
           aria-haspopup="listbox"
           aria-expanded={undefined}

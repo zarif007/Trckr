@@ -12,6 +12,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { TrackerCell } from '../../TrackerCell'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import { resolveDependsOnOverrides } from '@/lib/depends-on'
 import type { TrackerFieldType, TrackerOption } from '../../types'
 import type { FieldMetadata } from '../data-table/utils'
@@ -76,7 +77,13 @@ export function KanbanCard({
 
   return (
     <Card
-      className={`group ${cardPadding} bg-card border border-border/60 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing relative ${fontWeight} rounded-lg overflow-hidden`}
+      className={cn(
+        'group relative cursor-grab overflow-hidden border bg-card shadow-sm transition-all hover:shadow-md active:cursor-grabbing',
+        cardPadding,
+        fontWeight,
+        theme.radius.md,
+        theme.border.subtle
+      )}
     >
       <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">
         {showEditButton && (

@@ -23,6 +23,8 @@ import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchP
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
 import type { ForeignBindingNavUiState } from '@/app/components/tracker-display/types'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 const DEFAULT_LEFT_RATIO = 0.75
 
@@ -131,7 +133,10 @@ export const TrackerPanel = memo(function TrackerPanel({
 
   return (
     <section
-      className="relative h-full bg-background/60 rounded-lg transition-shadow duration-300 overflow-hidden"
+      className={cn(
+        'relative h-full overflow-hidden bg-background/60 transition-shadow duration-300',
+        theme.radius.md
+      )}
       style={{
         width: fullWidth ? '100%' : isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%',
       }}

@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/select'
 import { FieldSettingsDialog } from '@/app/components/tracker-display/edit-mode/field-settings'
 import { getEffectiveDependsOn } from '@/lib/depends-on'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import type {
   TrackerDisplayProps,
   TrackerField,
@@ -322,7 +324,12 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 h-12 border-b border-border/40 bg-background/90 backdrop-blur-md">
+      <header
+        className={cn(
+          'sticky top-0 z-40 h-12 border-b bg-background/90 backdrop-blur-md',
+          theme.border.verySubtle
+        )}
+      >
         <nav className="flex h-full items-center justify-between px-4">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -407,25 +414,49 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
         </div>
         {filteredConfiguredTargets.length === 0 ? (
           configuredCount === 0 ? (
-            <div className="rounded-lg border border-border/60 px-3 py-10 text-center text-sm text-muted-foreground">
+            <div
+              className={cn(
+                'border px-3 py-10 text-center text-sm text-muted-foreground',
+                theme.radius.md,
+                theme.border.subtle
+              )}
+            >
               No configured {title.toLowerCase()} yet. Use <span className="font-medium">Add another</span> to start.
             </div>
           ) : (
-            <div className="rounded-lg border border-border/60 px-3 py-10 text-center text-sm text-muted-foreground">
+            <div
+              className={cn(
+                'border px-3 py-10 text-center text-sm text-muted-foreground',
+                theme.radius.md,
+                theme.border.subtle
+              )}
+            >
               No matches for &ldquo;{query.trim()}&rdquo;. Try a different search.
             </div>
           )
         ) : (
           <div className="space-y-4">
             {groupedConfiguredTargets.map((group) => (
-              <section key={group.gridName} className="overflow-hidden rounded-xl border border-border/60 bg-card/40 shadow-sm">
-                <div className="flex items-center justify-between border-b border-border/60 bg-muted/25 px-4 py-2.5">
+              <section
+                key={group.gridName}
+                className={cn(
+                  'overflow-hidden border bg-card/40 shadow-sm',
+                  theme.radius.md,
+                  theme.border.subtle
+                )}
+              >
+                <div
+                  className={cn(
+                    'flex items-center justify-between border-b bg-muted/25 px-4 py-2.5',
+                    theme.border.subtle
+                  )}
+                >
                   <h2 className="truncate text-sm font-semibold text-foreground">{group.gridName}</h2>
                   <Badge variant="outline" className="text-[11px] tabular-nums">
                     {group.items.length} configured
                   </Badge>
                 </div>
-                <div className="divide-y divide-border/60">
+                <div className={cn('divide-y', theme.border.divideSubtle)}>
                   {group.items.map((target) => (
                     <div
                       key={target.key}
@@ -551,7 +582,13 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
               again later.
             </p>
             {deleteTarget && (
-              <div className="rounded-md border border-border/60 bg-muted/25 px-3 py-2 text-xs">
+              <div
+                className={cn(
+                  'border bg-muted/25 px-3 py-2 text-xs',
+                  theme.radius.md,
+                  theme.border.subtle
+                )}
+              >
                 <div>
                   <span className="font-medium text-foreground">Field:</span> {deleteTarget.fieldLabel}
                 </div>

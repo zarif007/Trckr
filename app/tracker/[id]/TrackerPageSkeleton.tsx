@@ -10,6 +10,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useIsDesktop } from '@/app/tracker/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 function Skeleton({ className }: { className?: string }) {
   return (
@@ -31,10 +32,25 @@ export function TrackerPageSkeleton() {
         aria-hidden={!isDesktop}
       >
         <div className="flex-1 min-h-0 flex overflow-hidden">
-          <section className="relative h-full bg-background/60 rounded-lg w-full transition-shadow duration-300">
+          <section
+            className={cn(
+              'relative h-full w-full bg-background/60 transition-shadow duration-300',
+              theme.radius.md
+            )}
+          >
             {/* Toolbar strip — matches TrackerPanel top bar */}
-            <div className="absolute top-4 right-4 z-20 flex flex-wrap items-center justify-end gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)]">
-              <div className="inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 gap-1">
+            <div
+              className={cn(
+                'absolute top-4 right-4 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-md border bg-background/90 p-1.5 shadow-sm',
+                theme.border.subtle
+              )}
+            >
+              <div
+                className={cn(
+                  'inline-flex shrink-0 items-center gap-1 rounded-md border bg-background/80 p-0.5',
+                  theme.border.subtle
+                )}
+              >
                 <Skeleton className="h-7 w-14" />
                 <Skeleton className="h-7 w-12" />
               </div>
@@ -63,8 +79,19 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[180px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex w-full gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
+                          <div
+                            className={cn(
+                              'w-full min-w-0 overflow-hidden border',
+                              theme.radius.md,
+                              theme.border.verySubtle
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'flex w-full gap-4 border-b bg-muted/30 px-4 py-3',
+                                theme.border.verySubtle
+                              )}
+                            >
                               <Skeleton className="h-4 w-24 shrink-0" />
                               <Skeleton className="h-4 flex-1 min-w-0 max-w-[8rem]" />
                               <Skeleton className="h-4 w-20 shrink-0" />
@@ -72,7 +99,10 @@ export function TrackerPageSkeleton() {
                             {[1, 2, 3, 4].map((i) => (
                               <div
                                 key={i}
-                                className="flex w-full gap-4 px-4 py-3 border-b border-border/30 last:border-0"
+                                className={cn(
+                                  'flex w-full gap-4 border-b px-4 py-3 last:border-0',
+                                  theme.border.divider
+                                )}
                               >
                                 <Skeleton className="h-4 w-24 shrink-0" />
                                 <Skeleton className="h-4 flex-1 min-w-0 max-w-[8rem]" />
@@ -90,15 +120,29 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[140px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex w-full gap-4 px-4 py-3 border-b border-border/40 bg-muted/30">
+                          <div
+                            className={cn(
+                              'w-full min-w-0 overflow-hidden border',
+                              theme.radius.md,
+                              theme.border.verySubtle
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'flex w-full gap-4 border-b bg-muted/30 px-4 py-3',
+                                theme.border.verySubtle
+                              )}
+                            >
                               <Skeleton className="h-4 w-28 shrink-0" />
                               <Skeleton className="h-4 flex-1 min-w-0 max-w-[6rem]" />
                             </div>
                             {[1, 2, 3].map((i) => (
                               <div
                                 key={i}
-                                className="flex w-full gap-4 px-4 py-3 border-b border-border/30 last:border-0"
+                                className={cn(
+                                  'flex w-full gap-4 border-b px-4 py-3 last:border-0',
+                                  theme.border.divider
+                                )}
                               >
                                 <Skeleton className="h-4 w-28 shrink-0" />
                                 <Skeleton className="h-4 flex-1 min-w-0 max-w-[6rem]" />
@@ -123,7 +167,12 @@ export function TrackerPageSkeleton() {
       >
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Tabs defaultValue="preview" className="flex-1 min-h-0 flex flex-col gap-0">
-            <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+            <div
+              className={cn(
+                'shrink-0 border-b px-1 pt-2 pb-2 backdrop-blur bg-background/95',
+                theme.border.subtle
+              )}
+            >
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="preview">Preview</TabsTrigger>
                 <TabsTrigger value="chat" disabled>
@@ -132,8 +181,18 @@ export function TrackerPageSkeleton() {
               </TabsList>
             </div>
             <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
-              <section className="relative h-full bg-background/60 rounded-lg w-full overflow-y-auto px-1 pt-14 pb-2">
-                <div className="absolute top-4 right-1 z-20 flex items-center gap-1.5 rounded-md border border-border/60 bg-background/90 p-1.5 shadow-sm max-w-[calc(100%-0.5rem)]">
+              <section
+                className={cn(
+                  'relative h-full w-full overflow-y-auto bg-background/60 px-1 pt-14 pb-2',
+                  theme.radius.md
+                )}
+              >
+                <div
+                  className={cn(
+                    'absolute top-4 right-1 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded-md border bg-background/90 p-1.5 shadow-sm',
+                    theme.border.subtle
+                  )}
+                >
                   <Skeleton className="h-7 w-10" />
                   <Skeleton className="h-7 w-10" />
                   <Skeleton className="h-8 w-8 rounded-md" />
@@ -153,15 +212,29 @@ export function TrackerPageSkeleton() {
                           <Skeleton className="h-4 flex-1 max-w-[160px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
-                          <div className="w-full min-w-0 rounded-lg border border-border/40 overflow-hidden">
-                            <div className="flex w-full gap-3 px-3 py-2.5 border-b border-border/40 bg-muted/30">
+                          <div
+                            className={cn(
+                              'w-full min-w-0 overflow-hidden border',
+                              theme.radius.md,
+                              theme.border.verySubtle
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                'flex w-full gap-3 border-b bg-muted/30 px-3 py-2.5',
+                                theme.border.verySubtle
+                              )}
+                            >
                               <Skeleton className="h-3.5 w-16 shrink-0" />
                               <Skeleton className="h-3.5 flex-1 min-w-0 max-w-[5rem]" />
                             </div>
                             {[1, 2, 3, 4].map((i) => (
                               <div
                                 key={i}
-                                className="flex w-full gap-3 px-3 py-2.5 border-b border-border/30 last:border-0"
+                                className={cn(
+                                  'flex w-full gap-3 border-b px-3 py-2.5 last:border-0',
+                                  theme.border.divider
+                                )}
                               >
                                 <Skeleton className="h-3.5 w-16 shrink-0" />
                                 <Skeleton className="h-3.5 flex-1 min-w-0 max-w-[5rem]" />

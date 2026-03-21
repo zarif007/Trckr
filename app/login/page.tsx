@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { GoogleSignInButton } from './GoogleSignInButton'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 type Props = { searchParams: Promise<{ callbackUrl?: string }> }
 
@@ -46,7 +48,14 @@ export default async function LoginPage({ searchParams }: Props) {
         </div>
 
         {/* Sign-in card */}
-        <div className="rounded-xl border border-border bg-card p-8 space-y-6">
+        <div
+          className={cn(
+            'space-y-6 border p-8',
+            theme.radius.md,
+            theme.border.default,
+            theme.surface.card
+          )}
+        >
           <div className="text-center space-y-1.5">
             <h1 className="text-xl font-semibold tracking-tight">Sign in to Trckr</h1>
             <p className="text-sm text-muted-foreground">
@@ -59,7 +68,7 @@ export default async function LoginPage({ searchParams }: Props) {
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
+              <div className={cn('w-full border-t', theme.border.default)} />
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-card px-3 text-muted-foreground">or</span>

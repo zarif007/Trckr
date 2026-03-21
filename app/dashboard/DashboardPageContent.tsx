@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
 import { CreateDropdown } from './components/CreateDropdown'
@@ -401,11 +402,20 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
       <Dialog open={createProjectOpen} onOpenChange={setCreateProjectOpen}>
         <DialogContent
           showCloseButton={true}
-          className="sm:max-w-[380px] rounded-xl border-border/60 bg-background/95 shadow-xl backdrop-blur-sm p-0 gap-0 overflow-hidden"
+          className={cn(
+            'gap-0 overflow-hidden bg-background/95 p-0 shadow-xl backdrop-blur-sm sm:max-w-[380px]',
+            theme.radius.md,
+            theme.border.subtle
+          )}
         >
           <div className="flex flex-col">
             <div className="flex items-center gap-4 pt-6 pl-6 pr-12 pb-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/10">
+              <div
+                className={cn(
+                  'flex h-11 w-11 shrink-0 items-center justify-center border border-primary/10 bg-primary/10 text-primary',
+                  theme.radius.md
+                )}
+              >
                 <FolderPlus className="h-5 w-5" />
               </div>
               <DialogHeader className="p-0 gap-1 text-left min-w-0">
@@ -431,10 +441,19 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 onKeyDown={handleCreateProjectKeyDown}
-                className="h-10 rounded-lg border-border/80 bg-muted/30 focus:bg-background transition-colors placeholder:text-muted-foreground/60"
+                className={cn(
+                  'h-10 bg-muted/30 transition-colors placeholder:text-muted-foreground/60 focus:bg-background',
+                  theme.radius.md,
+                  theme.border.emphasis
+                )}
               />
             </div>
-            <DialogFooter className="flex-row gap-2 justify-end px-6 py-4 bg-muted/20 border-t border-border/50">
+            <DialogFooter
+              className={cn(
+                'flex-row justify-end gap-2 border-t bg-muted/20 px-6 py-4',
+                theme.border.subtleAlt
+              )}
+            >
               <Button
                 type="button"
                 variant="ghost"
@@ -466,7 +485,10 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-10 right-6 z-50 bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-lg"
+          className={cn(
+            'fixed right-6 bottom-10 z-50 flex items-center gap-2 border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive shadow-lg',
+            theme.radius.md
+          )}
         >
           <span>{error}</span>
           <button

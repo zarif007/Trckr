@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
+import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 export default function Features() {
   return (
@@ -57,12 +59,21 @@ export default function Features() {
             transition={{ duration: 0.4, delay: idx * 0.1 }}
             className="relative"
           >
-            <LandingAxisFrame contentClassName="p-4 sm:p-6 bg-secondary/30">
+            <LandingAxisFrame
+              contentClassName={cn(
+                theme.surface.secondarySubtle,
+                'p-4 sm:p-6'
+              )}
+            >
               <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <Badge
                     variant="outline"
-                    className="text-[9px] sm:text-[10px] uppercase tracking-widest bg-background/50 border-border/50"
+                    className={cn(
+                      'text-[9px] uppercase tracking-widest sm:text-[10px]',
+                      theme.surface.badgeWash,
+                      theme.border.subtleAlt
+                    )}
                   >
                     {sample.category}
                   </Badge>
@@ -73,7 +84,12 @@ export default function Features() {
                 <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
                   {sample.body}
                 </p>
-                <p className="text-[9px] sm:text-[10px] font-medium text-muted-foreground/60 uppercase tracking-tight pt-3 sm:pt-4 border-t border-border/30">
+                <p
+                  className={cn(
+                    'pt-3 text-[9px] font-medium uppercase tracking-tight text-muted-foreground/60 sm:pt-4 sm:text-[10px] border-t',
+                    theme.border.divider
+                  )}
+                >
                   {sample.footer}
                 </p>
               </div>
