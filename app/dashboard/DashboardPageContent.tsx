@@ -177,7 +177,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-4 py-6">
+        <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
           {(view === 'all' || view === 'projects') && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -186,7 +186,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               className={cn(
                 view === 'projects' && 'h-full',
                 viewMode === 'grid'
-                  ? 'flex flex-wrap gap-4 content-start'
+                  ? 'grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 content-start'
                   : 'flex flex-col gap-1'
               )}
             >
@@ -200,7 +200,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       <Link
                         key={project.id}
                         href={`/project/${project.id}`}
-                        className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)]"
+                        className="min-w-0 w-full"
                       >
                         <motion.div
                           whileHover={{ scale: 1.02 }}
@@ -228,7 +228,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)] flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
+                    className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
                     onClick={handleOpenCreateProject}
                   >
                     <div className="w-14 h-14 rounded-2xl border border-dashed border-border/50 bg-muted/25 flex items-center justify-center">

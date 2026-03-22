@@ -17,12 +17,12 @@ export function DashboardHomeSkeleton() {
         </div>
         <span className="h-3 w-16 rounded bg-muted/40 animate-pulse" />
       </div>
-      <div className="flex-1 overflow-auto px-4 py-6">
-        <div className="flex flex-wrap gap-4 content-start">
+      <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
+        <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 content-start">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
               key={i}
-              className="min-w-[90px] flex-[1_1_90px] max-w-[calc(20%-0.75rem)] flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 animate-pulse"
+              className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 animate-pulse"
             >
               <span className="w-12 h-12 rounded-xl bg-muted/50" />
               <span className="h-3 w-14 rounded bg-muted/40" />
@@ -73,13 +73,13 @@ export function DashboardPageSkeleton({
         </div>
       </div>
 
-      {/* Content: flex wrap card placeholders */}
-      <div className="flex-1 overflow-auto px-4 py-6">
-        <div className="flex flex-wrap gap-6 w-full">
+      {/* Content: grid card placeholders (matches project/module tile layout) */}
+      <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
+        <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 sm:gap-6 content-start">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="flex flex-col items-center gap-2.5 min-w-[6.5rem] flex-[1_1_6.5rem] animate-pulse"
+              className="flex flex-col items-center gap-2.5 min-w-0 w-full animate-pulse"
             >
               <span className="w-12 h-12 rounded-2xl bg-muted/50" />
               <span className="h-3 w-14 rounded bg-muted/40" />

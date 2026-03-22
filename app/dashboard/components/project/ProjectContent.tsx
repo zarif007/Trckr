@@ -518,7 +518,7 @@ export function ProjectContent({
           />
         </div>
 
-        <div className="flex-1 overflow-auto px-4 py-6">
+        <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
           <div className="h-full min-h-0">
             {isEmpty ? (
               <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
@@ -535,7 +535,7 @@ export function ProjectContent({
               </div>
             ) : (
               <div
-                className="flex flex-wrap gap-6 w-fit"
+                className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 sm:gap-6 content-start"
                 aria-label="Project items"
               >
                 {tableRows.map((row) => {
@@ -554,7 +554,7 @@ export function ProjectContent({
                   return (
                     <div
                       key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
-                      className="relative flex flex-col items-center gap-3 w-[7rem] flex-shrink-0 group/card"
+                      className="relative flex flex-col items-center gap-3 min-w-0 w-full group/card"
                     >
                       <button
                         type="button"

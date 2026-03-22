@@ -96,7 +96,7 @@ export function ProjectConfigsContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto px-4 py-6">
+      <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
         {!hasConfigs ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
             <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-dashed border-border/35">
@@ -111,13 +111,16 @@ export function ProjectConfigsContent({
             </Link>
           </div>
         ) : (
-          <div className="flex flex-wrap gap-6 w-fit" aria-label="Project configs">
+          <div
+            className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 sm:gap-6 content-start"
+            aria-label="Project configs"
+          >
             {rows.map((row) => {
               const Icon = row.icon
               return (
                 <div
                   key={row.id}
-                  className="relative flex flex-col items-center gap-3 w-[7rem] flex-shrink-0 group/card"
+                  className="relative flex flex-col items-center gap-3 min-w-0 w-full group/card"
                 >
                   <button
                     type="button"
