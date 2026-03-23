@@ -67,6 +67,7 @@ export async function recordLlmUsage(params: {
   usage: LanguageModelUsage
   projectId?: string | null
   trackerSchemaId?: string | null
+  reportId?: string | null
 }): Promise<void> {
   const counts = tokenCountsFromUsage(params.usage)
   if (!counts) return
@@ -80,6 +81,7 @@ export async function recordLlmUsage(params: {
       totalTokens: counts.totalTokens,
       projectId: params.projectId ?? null,
       trackerSchemaId: params.trackerSchemaId ?? null,
+      reportId: params.reportId ?? null,
     },
   })
 }
@@ -107,10 +109,21 @@ export type LlmUsageByTrackerRow = LlmUsageDashboardRow & {
   projectId: string | null
 }
 
+export type LlmUsageReportDetailRow = LlmUsageDashboardRow & {
+  reportId: string | null
+  reportName: string
+  dataTrackerName: string
+}
+
+export type LlmUsageByTrackerBreakdownRow = LlmUsageByTrackerRow & {
+  otherOnTracker: LlmUsageDashboardRow
+  reportDetails: LlmUsageReportDetailRow[]
+}
+
 export type LlmUsageDashboard = {
   totals: LlmUsageDashboardRow
   byProject: LlmUsageByProjectRow[]
-  byTracker: LlmUsageByTrackerRow[]
+  byTracker: LlmUsageByTrackerBreakdownRow[]
 }
 
 function sumRow(s: {
@@ -141,6 +154,26 @@ export async function getLlmUsageDashboard(userId: string): Promise<LlmUsageDash
     _sum: { totalTokens: true, promptTokens: true, completionTokens: true },
   })
 
+  const otherOnTrackerGroups = await prisma.llmTokenUsage.groupBy({
+    by: ['trackerSchemaId'],
+    where: {
+      userId,
+      trackerSchemaId: { not: null },
+      NOT: { source: { startsWith: 'report-' } },
+    },
+    _sum: { totalTokens: true, promptTokens: true, completionTokens: true },
+  })
+
+  const reportPipelineGroups = await prisma.llmTokenUsage.groupBy({
+    by: ['trackerSchemaId', 'reportId'],
+    where: {
+      userId,
+      trackerSchemaId: { not: null },
+      source: { startsWith: 'report-' },
+    },
+    _sum: { totalTokens: true, promptTokens: true, completionTokens: true },
+  })
+
   const projectIds = projectGroups.map((g) => g.projectId).filter((id): id is string => id != null)
   const projects =
     projectIds.length > 0
@@ -163,6 +196,73 @@ export async function getLlmUsageDashboard(userId: string): Promise<LlmUsageDash
       : []
   const trackerMeta = Object.fromEntries(trackers.map((t) => [t.id, t]))
 
+  const otherByTrackerId = Object.fromEntries(
+    otherOnTrackerGroups
+      .filter((g): g is typeof g & { trackerSchemaId: string } => g.trackerSchemaId != null)
+      .map((g) => [g.trackerSchemaId, sumRow(g)]),
+  )
+
+  const reportIdsForLabels = [
+    ...new Set(
+      reportPipelineGroups
+        .map((g) => g.reportId)
+        .filter((id): id is string => id != null),
+    ),
+  ]
+  const reportsForLabels =
+    reportIdsForLabels.length > 0
+      ? await prisma.report.findMany({
+          where: { id: { in: reportIdsForLabels }, userId },
+          select: {
+            id: true,
+            name: true,
+            trackerSchemaId: true,
+            trackerSchema: { select: { name: true } },
+          },
+        })
+      : []
+  const reportLabelById = Object.fromEntries(
+    reportsForLabels.map((r) => [
+      r.id,
+      {
+        name: r.name?.trim() || 'Untitled report',
+        dataTrackerName: r.trackerSchema?.name?.trim() || 'Untitled tracker',
+      },
+    ]),
+  )
+
+  const reportDetailsByTracker = new Map<string, LlmUsageReportDetailRow[]>()
+  for (const g of reportPipelineGroups) {
+    if (g.trackerSchemaId == null) continue
+    const tid = g.trackerSchemaId
+    const row = sumRow(g)
+    if (row.totalTokens === 0 && row.promptTokens === 0 && row.completionTokens === 0) continue
+
+    let reportName: string
+    let dataTrackerName: string
+    if (g.reportId) {
+      const labels = reportLabelById[g.reportId]
+      reportName = labels?.name ?? 'Report'
+      dataTrackerName =
+        labels?.dataTrackerName ?? (trackerMeta[tid]?.name?.trim() || 'Untitled tracker')
+    } else {
+      reportName = 'Report runs (before per-report tracking)'
+      dataTrackerName = trackerMeta[tid]?.name?.trim() || 'Untitled tracker'
+    }
+
+    const list = reportDetailsByTracker.get(tid) ?? []
+    list.push({
+      reportId: g.reportId,
+      reportName,
+      dataTrackerName,
+      ...row,
+    })
+    reportDetailsByTracker.set(tid, list)
+  }
+  for (const [, list] of reportDetailsByTracker) {
+    list.sort((a, b) => b.totalTokens - a.totalTokens)
+  }
+
   return {
     totals: sumRow({ _sum: overall._sum }),
     byProject: projectGroups
@@ -177,11 +277,19 @@ export async function getLlmUsageDashboard(userId: string): Promise<LlmUsageDash
       .filter((g): g is typeof g & { trackerSchemaId: string } => g.trackerSchemaId != null)
       .map((g) => {
         const t = trackerMeta[g.trackerSchemaId]
+        const totals = sumRow(g)
         return {
           trackerSchemaId: g.trackerSchemaId,
           name: t?.name?.trim() || 'Untitled tracker',
           projectId: t?.projectId ?? null,
-          ...sumRow(g),
+          ...totals,
+          otherOnTracker:
+            otherByTrackerId[g.trackerSchemaId] ?? {
+              totalTokens: 0,
+              promptTokens: 0,
+              completionTokens: 0,
+            },
+          reportDetails: reportDetailsByTracker.get(g.trackerSchemaId) ?? [],
         }
       })
       .sort((a, b) => b.totalTokens - a.totalTokens),

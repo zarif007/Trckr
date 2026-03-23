@@ -150,18 +150,19 @@ enum ReportRunStatus {
 }
 
 model Report {
-  id              String        @id @default(cuid())
+  id              String          @id @default(cuid())
   projectId       String
   moduleId        String?
   userId          String
   name            String
   trackerSchemaId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  module          Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  trackerSchema   TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  llmTokenUsages  LlmTokenUsage[]
+  module          Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trackerSchema   TrackerSchema   @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   definition      ReportDefinition?
   runs            ReportRun[]
 
@@ -222,18 +223,21 @@ model LlmTokenUsage {
   userId           String
   projectId        String?
   trackerSchemaId  String?
+  reportId         String?
   source           String
   promptTokens     Int
   completionTokens Int
   totalTokens      Int
   createdAt        DateTime       @default(now())
   project          Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  report           Report?        @relation(fields: [reportId], references: [id], onDelete: SetNull)
   trackerSchema    TrackerSchema? @relation(fields: [trackerSchemaId], references: [id], onDelete: SetNull)
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([userId, projectId])
   @@index([userId, trackerSchemaId])
+  @@index([userId, trackerSchemaId, reportId])
   @@index([createdAt])
 }
 

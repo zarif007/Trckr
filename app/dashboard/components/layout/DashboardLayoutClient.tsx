@@ -243,7 +243,7 @@ function SidebarReportLink({
 }) {
   const isActive = report.id === currentReportId
   return (
-    <div className="flex items-center gap-1.5 min-w-0 pl-1.5">
+    <div className="flex items-center gap-1.5 min-w-0">
       <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
         <BarChart2 className="h-[18px] w-[18px]" />
       </span>
@@ -735,7 +735,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const isProjectsPage = pathname === '/dashboard/projects'
   const isRecentsPage = pathname === '/dashboard/recents'
-  const isUsagePage = pathname === '/dashboard/usage'
+  const isUsagePage = pathname === '/dashboard/ai-usage'
   const isDashboardHome = pathname === '/dashboard' || pathname === '/dashboard/'
 
   if (status === 'loading' || (status === 'authenticated' && projectsLoading)) {
@@ -1024,7 +1024,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
                 <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
                 <Link
-                  href="/dashboard/usage"
+                  href="/dashboard/ai-usage"
                   className={cn(
                     'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                     isUsagePage
@@ -1188,7 +1188,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
                       <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
                       <Link
-                        href="/dashboard/usage"
+                        href="/dashboard/ai-usage"
                         className={cn(
                           'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                           isUsagePage
@@ -1376,7 +1376,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <div className="flex items-center gap-1 min-w-0 mt-2 pl-1">
                         <BarChart2 className="h-3.5 w-3.5 text-muted-foreground shrink-0 opacity-80" aria-hidden />
                         <Link
-                          href="/dashboard/usage"
+                          href="/dashboard/ai-usage"
                           className={cn(
                             'flex-1 min-w-0 py-1.5 text-[11px] font-semibold uppercase tracking-wider rounded-md truncate',
                             isUsagePage

@@ -112,6 +112,7 @@ function recordUsage(
   usage: LanguageModelUsage,
   projectId: string | null,
   trackerSchemaId: string | null,
+  reportId: string,
 ) {
   scheduleRecordLlmUsage({
     userId,
@@ -119,6 +120,7 @@ function recordUsage(
     usage,
     projectId,
     trackerSchemaId,
+    reportId,
   })
 }
 
@@ -264,7 +266,7 @@ export async function executeReportFullGeneration(params: {
       schema: reportIntentSchema,
       maxOutputTokens: maxTokens,
     })
-    recordUsage(userId, 'report-intent', intentResult.usage, projectId, trackerSchemaId)
+    recordUsage(userId, 'report-intent', intentResult.usage, projectId, trackerSchemaId, report.id)
 
     const intent = intentResult.object
     await forward({ t: 'artifact', phase: 'intent', kind: 'intent', data: intent })
@@ -283,7 +285,7 @@ export async function executeReportFullGeneration(params: {
       schema: queryPlanV1Schema,
       maxOutputTokens: maxTokens,
     })
-    recordUsage(userId, 'report-query-plan', queryResult.usage, projectId, trackerSchemaId)
+    recordUsage(userId, 'report-query-plan', queryResult.usage, projectId, trackerSchemaId, report.id)
 
     const queryPlan = parseQueryPlan(queryResult.object)
     if (!queryPlan) {
@@ -339,7 +341,7 @@ export async function executeReportFullGeneration(params: {
       schema: reportCalcIntentSchema,
       maxOutputTokens: maxTokens,
     })
-    recordUsage(userId, 'report-calc-intent', calcIntentResult.usage, projectId, trackerSchemaId)
+    recordUsage(userId, 'report-calc-intent', calcIntentResult.usage, projectId, trackerSchemaId, report.id)
 
     let calcPlan = emptyCalcPlan()
     const primaryGrid = primaryGridIdForReport(intent, rawResult, catalog.gridIds)
@@ -364,7 +366,7 @@ export async function executeReportFullGeneration(params: {
             primaryGridId: primaryGrid,
             fieldId: `report.calc.${spec.name}`,
           })
-          recordUsage(userId, 'report-calc-expr', gen.usage, projectId, trackerSchemaId)
+          recordUsage(userId, 'report-calc-expr', gen.usage, projectId, trackerSchemaId, report.id)
           built.push({ name: spec.name, expr: gen.expr })
         }
         calcPlan = { version: 1, columns: built }
@@ -414,7 +416,7 @@ export async function executeReportFullGeneration(params: {
       schema: formatterPlanV1Schema,
       maxOutputTokens: maxTokens,
     })
-    recordUsage(userId, 'report-formatter-plan', fmtResult.usage, projectId, trackerSchemaId)
+    recordUsage(userId, 'report-formatter-plan', fmtResult.usage, projectId, trackerSchemaId, report.id)
 
     const formatterPlan = parseFormatterPlan(fmtResult.object)
     if (!formatterPlan) {
