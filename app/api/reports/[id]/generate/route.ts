@@ -8,12 +8,18 @@ import {
   unauthorized,
 } from '@/lib/api/http'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { parseQueryPlan, type QueryPlanV1 } from '@/lib/reports/ast-schemas'
 import { isReplayable, runReportPipeline } from '@/lib/reports/orchestrator'
+import {
+  mergeQueryPlanWithOverrides,
+  replayQueryOverridesSchema,
+} from '@/lib/reports/query-plan-overrides'
 import { getReportForUser } from '@/lib/reports/report-repository'
 
 const bodySchema = z.object({
   prompt: z.string().optional(),
   regenerate: z.boolean().optional(),
+  replayQueryOverrides: replayQueryOverridesSchema.optional(),
 })
 
 export async function POST(
@@ -39,6 +45,19 @@ export async function POST(
     return badRequest('Prompt is required for the first run.')
   }
 
+  let replayQueryPlan: QueryPlanV1 | undefined
+  if (replayable && parsed.data.replayQueryOverrides !== undefined) {
+    const base = parseQueryPlan(report.definition?.queryPlan)
+    if (!base) {
+      return badRequest('Invalid saved recipe.')
+    }
+    const merged = mergeQueryPlanWithOverrides(base, parsed.data.replayQueryOverrides)
+    if (!merged.ok) {
+      return badRequest(merged.error)
+    }
+    replayQueryPlan = merged.plan
+  }
+
   const encoder = new TextEncoder()
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -51,6 +70,7 @@ export async function POST(
           reportId: id,
           userPrompt: prompt || savedPrompt,
           regenerate,
+          replayQueryPlan,
           writeNdjsonLine,
         })
       } catch {

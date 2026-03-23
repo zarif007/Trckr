@@ -125,7 +125,7 @@ export const aggregateMetricSchema = z
 
 export type AggregateMetric = z.infer<typeof aggregateMetricSchema>
 
-const rowTimeFilterSchema = z.object({
+export const rowTimeFilterSchema = z.object({
   field: z.enum(['createdAt', 'updatedAt']),
   preset: timePresetSchema.optional(),
   from: z.string().optional(),

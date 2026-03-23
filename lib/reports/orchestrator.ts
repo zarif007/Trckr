@@ -14,6 +14,7 @@ import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { prisma } from '@/lib/db'
 
 import {
+  type QueryPlanV1,
   type ReportIntent,
   formatterPlanV1Schema,
   parseFormatterPlan,
@@ -165,12 +166,14 @@ function buildMarkdownPreamble(intent: ReportIntent | null, userPrompt: string):
 export async function executeReportReplay(params: {
   report: LoadedReport
   writeNdjsonLine: (line: string) => Promise<void> | void
+  /** When set (e.g. after merging client overrides), used instead of `definition.queryPlan`. */
+  queryPlan?: QueryPlanV1
 }): Promise<void> {
-  const { report, writeNdjsonLine } = params
+  const { report, writeNdjsonLine, queryPlan: queryPlanParam } = params
   const def = report.definition
   if (!def) throw new Error('Missing definition')
 
-  const plan = parseQueryPlan(def.queryPlan)
+  const plan = queryPlanParam ?? parseQueryPlan(def.queryPlan)
   const fmt = parseFormatterPlan(def.formatterPlan)
   if (!plan || !fmt) throw new Error('Invalid saved recipe')
 
@@ -469,6 +472,8 @@ export async function runReportPipeline(params: {
   reportId: string
   userPrompt: string
   regenerate: boolean
+  /** When replaying, merged into the stored query plan before execution (validated by caller). */
+  replayQueryPlan?: QueryPlanV1
   writeNdjsonLine: (line: string) => Promise<void> | void
 }): Promise<void> {
   const report = await getReportForUser(params.reportId, params.userId)
@@ -489,6 +494,7 @@ export async function runReportPipeline(params: {
       await executeReportReplay({
         report,
         writeNdjsonLine: params.writeNdjsonLine,
+        queryPlan: params.replayQueryPlan,
       })
     } else {
       if (!prompt) {

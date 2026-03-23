@@ -159,6 +159,33 @@ export async function finishReportRun(
   })
 }
 
+export async function updateReportNameForUser(
+  reportId: string,
+  userId: string,
+  name: string,
+) {
+  const existing = await prisma.report.findFirst({
+    where: { id: reportId, userId },
+    select: { id: true },
+  })
+  if (!existing) return null
+  const trimmed = name.trim() || 'Untitled report'
+  return prisma.report.update({
+    where: { id: reportId },
+    data: { name: trimmed },
+  })
+}
+
+export async function deleteReportForUser(reportId: string, userId: string) {
+  const existing = await prisma.report.findFirst({
+    where: { id: reportId, userId },
+    select: { id: true },
+  })
+  if (!existing) return false
+  await prisma.report.delete({ where: { id: reportId } })
+  return true
+}
+
 export async function appendReportRunEvent(
   reportRunId: string,
   seq: number,

@@ -142,7 +142,6 @@ export function ModuleContent({
 
   const onRename = useCallback(
     async (kind: ContextMenuItem['kind'], id: string, newName: string) => {
-      const preserveTrackerOrder = mod?.trackerSchemas?.map((t) => t.id) ?? []
       if (kind === 'module') {
         const res = await fetch(`/api/modules/${id}`, {
           method: 'PATCH',
@@ -150,18 +149,25 @@ export function ModuleContent({
           body: JSON.stringify({ name: newName }),
         })
         if (!res.ok) throw new Error('Failed to rename module')
-      } else {
+      } else if (kind === 'tracker') {
         const res = await fetch(`/api/trackers/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: newName }),
         })
         if (!res.ok) throw new Error('Failed to rename tracker')
+      } else if (kind === 'report') {
+        const res = await fetch(`/api/reports/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName }),
+        })
+        if (!res.ok) throw new Error('Failed to rename report')
       }
       invalidateModuleAndProjects()
       await fetchProjects()
     },
-    [mod?.trackerSchemas, invalidateModuleAndProjects, fetchProjects],
+    [invalidateModuleAndProjects, fetchProjects],
   )
 
   const onDelete = useCallback(
@@ -181,9 +187,22 @@ export function ModuleContent({
         if (!res.ok) throw new Error('Failed to delete tracker')
         invalidateModuleAndProjects()
         await fetchProjects()
+      } else if (item.kind === 'report') {
+        const res = await fetch(`/api/reports/${item.id}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error('Failed to delete report')
+        invalidateModuleAndProjects()
+        await fetchProjects()
       }
     },
-    [fetchProjects, invalidateModuleAndProjects, queryClient, router, projectId],
+    [
+      fetchProjects,
+      invalidateModuleAndProjects,
+      queryClient,
+      router,
+      projectId,
+      pathname,
+      moduleId,
+    ],
   )
 
   const optimisticRename = useCallback(
@@ -244,6 +263,29 @@ export function ModuleContent({
                       t.id === id ? { ...t, name } : t,
                     ),
                   })),
+                },
+            ),
+          )
+        } else if (kind === 'report') {
+          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+            prev
+              ? {
+                ...prev,
+                reports: prev.reports.map((r) =>
+                  r.id === id ? { ...r, name } : r,
+                ),
+              }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : {
+                  ...p,
+                  reports: p.reports.map((r) =>
+                    r.id === id ? { ...r, name } : r,
+                  ),
                 },
             ),
           )
@@ -382,8 +424,53 @@ export function ModuleContent({
           )
         }
       }
+      if (item.kind === 'report' && projectForReports) {
+        const report = projectForReports.reports.find((r) => r.id === item.id)
+        if (!report) return
+        queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+          prev
+            ? {
+              ...prev,
+              reports: prev.reports.filter((r) => r.id !== item.id),
+            }
+            : prev,
+        )
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                ...p,
+                reports: p.reports.filter((r) => r.id !== item.id),
+              },
+          ),
+        )
+        return () => {
+          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+            prev
+              ? { ...prev, reports: [...prev.reports, report] }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, reports: [...p.reports, report] },
+            ),
+          )
+        }
+      }
     },
-    [mod, projectId, moduleId, queryClient, setProjects, router],
+    [
+      mod,
+      projectId,
+      moduleId,
+      queryClient,
+      setProjects,
+      router,
+      pathname,
+      projectForReports,
+    ],
   )
 
   const {
@@ -709,7 +796,10 @@ export function ModuleContent({
                     renaming &&
                     renaming.kind === row.kind &&
                     renaming.id === row.id
-                  const canRenameDelete = row.kind === 'module' || row.kind === 'tracker'
+                  const canRenameDelete =
+                    row.kind === 'module' ||
+                    row.kind === 'tracker' ||
+                    row.kind === 'report'
                   return (
                     <div
                       key={
@@ -777,11 +867,14 @@ export function ModuleContent({
                           </span>
                         )}
                       </button>
-                      {row.kind === 'tracker' && !isRenamingThis && (
+                      {(row.kind === 'tracker' || row.kind === 'report') &&
+                        !isRenamingThis && (
                         <button
                           type="button"
                           className="absolute top-1 right-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-muted/80 hover:text-foreground group-hover/card:opacity-100"
-                          aria-label="Tracker actions"
+                          aria-label={
+                            row.kind === 'report' ? 'Report actions' : 'Tracker actions'
+                          }
                           onClick={(e: MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation()
                             openContextMenu(e, contextItem)

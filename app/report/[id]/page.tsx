@@ -16,6 +16,16 @@ import { ArrowLeft, Check, ChevronRight, Loader2, RefreshCw, Sparkles } from 'lu
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/app/components/tracker-display/grids/data-table/data-table'
 import { ReportMultilinePrompt } from '@/app/report/components/ReportMultilinePrompt'
+import {
+  ReportRecipeFilters,
+  type FieldCatalogEntry,
+} from '@/app/report/components/ReportRecipeFilters'
+import {
+  buildReplayQueryOverrides,
+  filterDraftFromQueryPlan,
+  type FilterRowDraft,
+} from '@/app/report/lib/replay-overrides'
+import type { QueryPlanV1 } from '@/lib/reports/ast-schemas'
 import type { ReportStreamEvent } from '@/lib/reports/stream-events'
 import { cn } from '@/lib/utils'
 
@@ -36,6 +46,11 @@ type ReportMeta = {
     lastError: string | null
   } | null
   staleDefinition: boolean
+  fieldCatalog: FieldCatalogEntry[]
+  recipe: {
+    queryPlan: QueryPlanV1
+    formatterOnlyGroupBy: boolean
+  } | null
 }
 
 type ArtifactKind = 'intent' | 'query_plan' | 'formatter_plan' | 'calc_plan'
@@ -147,6 +162,27 @@ export default function ReportPage() {
   const [stepDetailsOpen, setStepDetailsOpen] = useState<Record<number, boolean>>({})
   /** One auto-replay per navigation to this report id (saved recipe = ready + not stale). */
   const didAutoReplayRef = useRef(false)
+  const recipeFingerprintRef = useRef<string | null>(null)
+
+  const [rowTimeFilter, setRowTimeFilter] = useState<
+    QueryPlanV1['load']['rowTimeFilter'] | null
+  >(null)
+  const [filterRows, setFilterRows] = useState<FilterRowDraft[]>([])
+  const [aggregateGroupBy, setAggregateGroupBy] = useState<string[]>([])
+  /** Serialized `replayQueryOverrides` last applied to the report below; `null` until baseline is set. */
+  const [lastAppliedFilterKey, setLastAppliedFilterKey] = useState<string | null>(null)
+
+  const filterApplyKey = useMemo(() => {
+    if (!meta?.recipe) return ''
+    return JSON.stringify(
+      buildReplayQueryOverrides({
+        rowTimeFilter,
+        filterRows,
+        queryPlan: meta.recipe.queryPlan,
+        aggregateGroupBy,
+      }),
+    )
+  }, [meta?.recipe, rowTimeFilter, filterRows, aggregateGroupBy])
 
   const loadMeta = useCallback(async () => {
     setLoadError(null)
@@ -173,6 +209,34 @@ export default function ReportPage() {
   }, [id])
 
   useEffect(() => {
+    recipeFingerprintRef.current = null
+    setLastAppliedFilterKey(null)
+  }, [id])
+
+  useEffect(() => {
+    if (!meta?.recipe) {
+      setRowTimeFilter(null)
+      setFilterRows([])
+      setAggregateGroupBy([])
+      setLastAppliedFilterKey(null)
+      return
+    }
+    const fp = JSON.stringify(meta.recipe.queryPlan)
+    if (recipeFingerprintRef.current === fp) return
+    recipeFingerprintRef.current = fp
+    setLastAppliedFilterKey(null)
+    const d = filterDraftFromQueryPlan(meta.recipe.queryPlan)
+    setRowTimeFilter(d.rowTimeFilter)
+    setFilterRows(d.filterRows)
+    setAggregateGroupBy(d.aggregateGroupBy)
+  }, [meta?.recipe])
+
+  useEffect(() => {
+    if (markdown == null || !meta?.recipe || !filterApplyKey) return
+    setLastAppliedFilterKey((prev) => (prev === null ? filterApplyKey : prev))
+  }, [markdown, meta?.recipe, filterApplyKey])
+
+  useEffect(() => {
     if (running && steps.length > 0) {
       const last = steps.length - 1
       setStepDetailsOpen({ [last]: true })
@@ -185,6 +249,9 @@ export default function ReportPage() {
 
   const runStream = useCallback(
     async (opts: { regenerate: boolean }) => {
+      if (opts.regenerate) {
+        didAutoReplayRef.current = true
+      }
       setRunning(true)
       setStreamError(null)
       setStepDetailsOpen({})
@@ -192,9 +259,25 @@ export default function ReportPage() {
       setMarkdown(null)
       setPreambleMarkdown(null)
       setTableRows(null)
-      const body = {
+      const replayableNow =
+        meta?.definition?.status === 'ready' &&
+        !meta.staleDefinition &&
+        meta.recipe != null
+      const body: {
+        prompt: string
+        regenerate: boolean
+        replayQueryOverrides?: ReturnType<typeof buildReplayQueryOverrides>
+      } = {
         prompt: prompt.trim(),
         regenerate: opts.regenerate,
+      }
+      if (!opts.regenerate && replayableNow && meta.recipe) {
+        body.replayQueryOverrides = buildReplayQueryOverrides({
+          rowTimeFilter,
+          filterRows,
+          queryPlan: meta.recipe.queryPlan,
+          aggregateGroupBy,
+        })
       }
       const res = await fetch(`/api/reports/${id}/generate`, {
         method: 'POST',
@@ -211,6 +294,7 @@ export default function ReportPage() {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let pipelineError: string | null = null
       try {
         while (true) {
           const { done, value } = await reader.read()
@@ -231,6 +315,7 @@ export default function ReportPage() {
               if (ev.preambleMarkdown !== undefined) setPreambleMarkdown(ev.preambleMarkdown)
               if (ev.tableRows !== undefined) setTableRows(ev.tableRows)
             } else if (ev.t === 'error') {
+              pipelineError = ev.message
               setStreamError(ev.message)
             } else {
               setSteps((prev) => applyStreamEvent(prev, ev))
@@ -239,11 +324,28 @@ export default function ReportPage() {
         }
       } finally {
         setRunning(false)
+        if (pipelineError === null && body.replayQueryOverrides !== undefined) {
+          setLastAppliedFilterKey(JSON.stringify(body.replayQueryOverrides))
+        }
         void loadMeta()
       }
     },
-    [id, prompt, loadMeta],
+    [
+      id,
+      prompt,
+      loadMeta,
+      meta?.definition?.status,
+      meta?.staleDefinition,
+      meta?.recipe,
+      rowTimeFilter,
+      filterRows,
+      aggregateGroupBy,
+    ],
   )
+
+  const handleApplyFilters = useCallback(() => {
+    void runStream({ regenerate: false })
+  }, [runStream])
 
   useEffect(() => {
     if (!meta || meta.id !== id || didAutoReplayRef.current) return
@@ -268,7 +370,7 @@ export default function ReportPage() {
       <div className="mx-auto max-w-2xl px-4 py-16 text-center text-sm text-muted-foreground">
         {loadError}
         <div className="mt-4">
-          <Button variant="outline" size="sm" onClick={() => router.push('/dashboard')}>
+          <Button variant="outline" size="sm" className="rounded-md" onClick={() => router.push('/dashboard')}>
             Back to dashboard
           </Button>
         </div>
@@ -285,7 +387,18 @@ export default function ReportPage() {
     )
   }
 
+  /** Saved recipe (from user requirements) + rendered report (table and/or prose). */
+  const showRecipeFilters =
+    meta.recipe != null &&
+    markdown != null &&
+    (showDataTable || proseMarkdown.trim().length > 0)
+
   const canReplay = meta.definition?.status === 'ready' && !meta.staleDefinition
+  const filtersDirty =
+    canReplay &&
+    filterApplyKey.length > 0 &&
+    lastAppliedFilterKey !== null &&
+    filterApplyKey !== lastAppliedFilterKey
   const needsPrompt =
     !meta.definition ||
     meta.definition.status === 'draft' ||
@@ -323,7 +436,7 @@ export default function ReportPage() {
       </div>
 
       {meta.staleDefinition && (
-        <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
+        <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
           The tracker schema changed since this report was generated. Run <strong>Regenerate</strong> to
           rebuild the recipe (intent, query, formatter).
         </div>
@@ -333,7 +446,7 @@ export default function ReportPage() {
         <label className="text-xs font-medium text-muted-foreground" htmlFor="report-prompt">
           What do you want to see?
         </label>
-        <div className="rounded-xl border border-border/50 bg-background shadow-sm overflow-hidden">
+        <div className="rounded-md border border-border/50 bg-background shadow-sm overflow-hidden">
           <div className="flex flex-col">
             <ReportMultilinePrompt
               id="report-prompt"
@@ -352,7 +465,7 @@ export default function ReportPage() {
                   variant="secondary"
                   disabled={running}
                   onClick={() => void runStream({ regenerate: false })}
-                  className="rounded-lg mr-auto"
+                  className="rounded-md mr-auto"
                 >
                   <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
                   Run saved recipe
@@ -363,7 +476,7 @@ export default function ReportPage() {
                 size="default"
                 disabled={!canRunGenerate}
                 onClick={() => void runStream({ regenerate: true })}
-                className="rounded-lg gap-2"
+                className="rounded-md gap-2"
               >
                 {running ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -399,7 +512,7 @@ export default function ReportPage() {
                 <li
                   key={`${s.phase}-${idx}`}
                   className={cn(
-                    'rounded-lg border border-border/40 bg-muted/20 text-sm overflow-hidden',
+                    'rounded-md border border-border/40 bg-muted/20 text-sm overflow-hidden',
                     showSpinner && 'ring-1 ring-primary/20 bg-muted/30',
                   )}
                 >
@@ -492,13 +605,41 @@ export default function ReportPage() {
 
       {markdown && (
         <div className="border-t border-border/40 pt-8 space-y-6">
+          {showRecipeFilters && meta.recipe ? (
+            <div className="space-y-2">
+              <ReportRecipeFilters
+                defaultOpen
+                userRequirementPrompt={meta.definition?.userPrompt}
+                disabled={running || !canReplay}
+                queryPlan={meta.recipe.queryPlan}
+                formatterOnlyGroupBy={meta.recipe.formatterOnlyGroupBy}
+                fieldCatalog={meta.fieldCatalog}
+                rowTimeFilter={rowTimeFilter}
+                onRowTimeFilterChange={setRowTimeFilter}
+                filterRows={filterRows}
+                onFilterRowsChange={setFilterRows}
+                aggregateGroupBy={aggregateGroupBy}
+                onAggregateGroupByChange={setAggregateGroupBy}
+                onApply={handleApplyFilters}
+                applyDisabled={running || !canReplay || !filtersDirty}
+                applying={running}
+                filtersDirty={filtersDirty}
+                filterBaselineReady={lastAppliedFilterKey !== null}
+              />
+              {!canReplay && meta.definition?.status === 'ready' && meta.staleDefinition ? (
+                <p className="text-xs text-muted-foreground px-1">
+                  Regenerate after a schema change to run again with these filters.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {proseMarkdown.trim().length > 0 && (
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <Markdown>{proseMarkdown}</Markdown>
             </div>
           )}
           {showDataTable && tableRows && (
-            <div className="w-full min-w-0">
+            <div className="w-full min-w-0 rounded-md overflow-hidden">
               <DataTable<Record<string, unknown>, unknown>
                 columns={reportColumns}
                 data={tableRows}
