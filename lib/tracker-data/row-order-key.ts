@@ -65,6 +65,11 @@ export function assignOrderKeyAfterRowMove(
   const right =
     movedToIndex < rows.length - 1 ? neighborOrderKey(rows[movedToIndex + 1]!) : null
   const { key, collapsed } = allocateRowIdBetween(left, right)
-  if (collapsed) return renormalizeGridRowIds(rows)
+  if (collapsed) {
+    // Keep existing row_id values stable; only assign a new key to the moved row.
+    const high = maxNumericRowId(rows)
+    const fallback = high == null ? 1 : high + 1
+    return rows.map((row, i) => (i === movedToIndex ? { ...row, row_id: fallback } : row))
+  }
   return rows.map((row, i) => (i === movedToIndex ? { ...row, row_id: key } : row))
 }

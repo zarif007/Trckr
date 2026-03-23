@@ -8,6 +8,8 @@ import { theme } from '@/lib/theme'
 
 interface ToolCallProgressProps {
   toolCalls: ToolCallEntry[]
+  /** Merged onto root; use e.g. `w-full border-0 bg-transparent` when nested in a parent card */
+  className?: string
 }
 
 function StatusIcon({ status }: { status: ToolCallEntry['status'] }) {
@@ -27,7 +29,7 @@ function purposeLabel(purpose: 'validation' | 'calculation') {
   return purpose === 'calculation' ? 'Calculate' : 'Validate'
 }
 
-export function ToolCallProgress({ toolCalls }: ToolCallProgressProps) {
+export function ToolCallProgress({ toolCalls, className }: ToolCallProgressProps) {
   if (!toolCalls.length) return null
 
   const done = toolCalls.filter((t) => t.status === 'done').length
@@ -40,9 +42,10 @@ export function ToolCallProgress({ toolCalls }: ToolCallProgressProps) {
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'min-w-0 space-y-2.5 border bg-muted/30 p-3',
+        'min-w-0 w-full space-y-2.5 border bg-muted/30 p-3',
         theme.radius.md,
-        theme.border.divider
+        theme.border.divider,
+        className,
       )}
     >
       <div className="flex items-center justify-between gap-2">

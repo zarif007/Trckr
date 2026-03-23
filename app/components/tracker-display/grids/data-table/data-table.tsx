@@ -47,6 +47,21 @@ import { resolveTableStyles } from '@/lib/style-utils'
 import type { FieldCalculationRule } from '@/lib/functions/types'
 import type { ReactNode } from 'react'
 
+/** Map a table row back to its index in grid data (selection uses getRowId, not indices). */
+function resolveGridDataRowIndex<TData>(original: TData, data: readonly TData[]): number {
+  const rec = original as Record<string, unknown>
+  const idKey = rec.row_id ?? rec.id
+  if (idKey != null && (typeof idKey === 'number' || typeof idKey === 'string')) {
+    const idx = data.findIndex((r) => {
+      const o = r as Record<string, unknown>
+      return o.row_id === idKey || o.id === idKey
+    })
+    if (idx >= 0) return idx
+  }
+  const byRef = data.indexOf(original)
+  return byRef >= 0 ? byRef : -1
+}
+
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
@@ -150,9 +165,7 @@ export function DataTable<TData, TValue>({
     setTableData((prev) => (prev === data ? prev : data))
   }, [data])
 
-  const selectedRows = Object.keys(rowSelection)
-    .map(Number)
-    .filter((idx) => rowSelection[idx])
+  const selectedRowCount = Object.values(rowSelection).filter(Boolean).length
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
     () => {
       const initialVisibility: VisibilityState = {}
@@ -370,7 +383,11 @@ export function DataTable<TData, TValue>({
   }
 
   const handleDeleteSelected = () => {
-    onDeleteEntries?.(selectedRows)
+    const indices = table
+      .getFilteredSelectedRowModel()
+      .rows.map((row) => resolveGridDataRowIndex(row.original, tableData))
+      .filter((i) => i >= 0)
+    onDeleteEntries?.(indices)
     setRowSelection({})
     setDeleteConfirmOpen(false)
   }
@@ -416,7 +433,7 @@ export function DataTable<TData, TValue>({
                   <Button
                     size="sm"
                     variant="ghost"
-                    disabled={selectedRows.length === 0}
+                    disabled={selectedRowCount === 0}
                     className="h-7 min-w-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
                     aria-label="Bulk actions"
                   >
@@ -434,10 +451,10 @@ export function DataTable<TData, TValue>({
                         setBulkOpen(false)
                         setDeleteConfirmOpen(true)
                       }}
-                      aria-label={`Delete ${selectedRows.length} selected`}
+                      aria-label={`Delete ${selectedRowCount} selected`}
                     >
                       <Trash2 className="h-3.5 w-3.5 shrink-0" />
-                      Delete {selectedRows.length} selected
+                      Delete {selectedRowCount} selected
                     </Button>
                     {/* Add more bulk actions here later, e.g. Duplicate, Export selected */}
                   </div>
@@ -450,8 +467,8 @@ export function DataTable<TData, TValue>({
                   </DialogHeader>
                   <div className="py-4">
                     <p className="text-sm text-muted-foreground">
-                      Are you sure you want to delete {selectedRows.length} row
-                      {selectedRows.length !== 1 ? 's' : ''}? This action cannot be
+                      Are you sure you want to delete {selectedRowCount} row
+                      {selectedRowCount !== 1 ? 's' : ''}? This action cannot be
                       undone.
                     </p>
                   </div>

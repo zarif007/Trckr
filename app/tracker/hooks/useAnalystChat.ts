@@ -198,6 +198,12 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     )
   }
 
+  const setMessageToolsOpen = (idx: number, open: boolean) => {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === idx ? { ...m, isToolsOpen: open } : m)),
+    )
+  }
+
   const isChatEmpty = messages.length === 0 && !isLoading
 
   return {
@@ -210,6 +216,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
     handleSubmit,
     applySuggestion,
     setMessageThinkingOpen,
+    setMessageToolsOpen,
     isLoading,
     error,
     object,

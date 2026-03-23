@@ -6,6 +6,7 @@ import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, autoFixBindings, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
+import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
 import { ensureConversation, persistMessage } from './conversation'
@@ -37,6 +38,9 @@ export interface Message {
   managerData?: MultiAgentSchema['manager']
   errorMessage?: string
   isThinkingOpen?: boolean
+  isToolsOpen?: boolean
+  /** Expression-agent tool calls persisted with this assistant turn */
+  toolCalls?: ToolCallEntry[]
 }
 
 export interface UseTrackerChatOptions {
@@ -111,7 +115,15 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   useEffect(() => {
     if (hasHydratedRef.current || !initialMessages?.length) return
     hasHydratedRef.current = true
-    setMessages(initialMessages)
+    setMessages(
+      initialMessages.map((m) => {
+        const normalized = mapApiToolCallsToEntries(m.toolCalls)
+        return {
+          ...m,
+          ...(normalized?.length ? { toolCalls: normalized } : {}),
+        }
+      }),
+    )
   }, [initialMessages])
   useEffect(() => {
     messagesRef.current = messages
@@ -230,8 +242,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       role: 'assistant',
       trackerData: tracker as TrackerResponse,
       managerData,
+      ...(toolCallsForPersist?.length ? { toolCalls: toolCallsForPersist } : {}),
     }
     setMessages((prev) => [...prev, assistantMessage])
+    if (toolCallsForPersist?.length) {
+      setToolCalls([])
+    }
     const cid = conversationIdRef.current
     if (cid) {
       const payload: Parameters<typeof persistMessage>[1] = {
@@ -569,6 +585,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages(prev => prev.map((m, i) => i === idx ? { ...m, isThinkingOpen: open } : m))
   }
 
+  const setMessageToolsOpen = (idx: number, open: boolean) => {
+    setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isToolsOpen: open } : m)))
+  }
+
   const isChatEmpty = messages.length === 0 && !isLoading
 
   const clearDialogError = () => {
@@ -587,6 +607,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     handleContinue,
     applySuggestion,
     setMessageThinkingOpen,
+    setMessageToolsOpen,
     isLoading,
     error,
     object,

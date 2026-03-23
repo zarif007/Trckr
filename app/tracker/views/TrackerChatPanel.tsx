@@ -28,6 +28,7 @@ interface TrackerChatPanelProps {
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
   messages: Message[]
   setMessageThinkingOpen: (idx: number, open: boolean) => void
+  setMessageToolsOpen: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   object: unknown
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
@@ -57,6 +58,7 @@ export function TrackerChatPanel({
   textareaRef,
   messages,
   setMessageThinkingOpen,
+  setMessageToolsOpen,
   messagesEndRef,
   object,
   onViewTracker,
@@ -152,6 +154,7 @@ export function TrackerChatPanel({
                   isLoading={isLoading}
                   object={object}
                   setMessageThinkingOpen={setMessageThinkingOpen}
+                  setMessageToolsOpen={setMessageToolsOpen}
                   messagesEndRef={messagesEndRef}
                   onViewTracker={onViewTracker}
                   activeTrackerMessageIndex={activeTrackerMessageIndex}

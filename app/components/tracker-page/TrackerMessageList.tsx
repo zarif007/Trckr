@@ -1,7 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye, Wrench } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import type { Message, TrackerResponse, ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
@@ -13,6 +14,7 @@ interface TrackerMessageListProps {
   /** Streamed object from useObject – typed loosely to accept PartialObject from AI SDK */
   object: unknown
   setMessageThinkingOpen: (idx: number, open: boolean) => void
+  setMessageToolsOpen: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   /** Callback when user wants to view a specific message's tracker version */
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
@@ -25,7 +27,7 @@ interface TrackerMessageListProps {
 
 function renderStreamingPreview() {
   return (
-    <div className="w-full rounded-xl border border-border/40 bg-muted/40 px-4 py-3 flex items-center gap-3">
+    <div className="w-full min-w-0 rounded-xl border border-border/40 bg-muted/40 px-4 py-3 flex items-center gap-3">
       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       <p className="text-sm font-medium text-muted-foreground">Streaming tracker…</p>
     </div>
@@ -37,6 +39,7 @@ export function TrackerMessageList({
   isLoading,
   object: streamedObject,
   setMessageThinkingOpen,
+  setMessageToolsOpen,
   messagesEndRef,
   onViewTracker,
   activeTrackerMessageIndex,
@@ -44,6 +47,13 @@ export function TrackerMessageList({
   isResolvingExpressions = false,
   mode = 'schema',
 }: TrackerMessageListProps) {
+  const [previewToolsOpen, setPreviewToolsOpen] = useState(false)
+  useEffect(() => {
+    if (isResolvingExpressions && toolCalls.length > 0) {
+      setPreviewToolsOpen(true)
+    }
+  }, [isResolvingExpressions, toolCalls.length])
+
   const isAnalystMode = mode === 'data'
   const object = streamedObject as {
     manager?: { thinking?: string; prd?: { name?: string; description?: string }; builderTodo?: Array<{ action?: string; target?: string; task?: string }> }
@@ -72,7 +82,7 @@ export function TrackerMessageList({
             </div>
           )}
           <div
-            className={`space-y-2 ${message.role === 'user' ? 'items-end max-w-[88%]' : 'items-start flex-1'} flex flex-col`}
+            className={`space-y-2 ${message.role === 'user' ? 'items-end max-w-[88%]' : 'items-start flex-1 min-w-0 w-full'} flex flex-col`}
           >
             {message.content && (
               <div
@@ -90,59 +100,95 @@ export function TrackerMessageList({
                 )}
               </div>
             )}
-            {message.managerData && (
-              <div className="w-full min-w-0 space-y-2">
-                <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0">
-                  <button
-                    onClick={() => {
-                      setMessageThinkingOpen(idx, !message.isThinkingOpen)
-                    }}
-                    className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Target className="w-3 h-3" />
-                      Manager insights
-                    </div>
-                    {message.isThinkingOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                  </button>
+            {message.role === 'assistant' &&
+              (message.managerData || (message.toolCalls && message.toolCalls.length > 0)) && (
+                <div className="w-full min-w-0 space-y-2">
+                  {message.managerData && (
+                    <div className="w-full min-w-0">
+                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMessageThinkingOpen(idx, !message.isThinkingOpen)
+                          }}
+                          className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Target className="w-3 h-3" />
+                            Manager insights
+                          </div>
+                          {message.isThinkingOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
 
-                  {message.isThinkingOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pt-2 space-y-3 min-w-0">
-                        <p className="text-sm font-medium leading-relaxed italic text-foreground/80 break-words">
-                          &ldquo;{message.managerData.thinking}&rdquo;
-                        </p>
-                        {message.managerData.builderTodo && message.managerData.builderTodo.length > 0 && (
-                          <div className="mt-2 space-y-1.5 min-w-0">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Execution plan</p>
-                            <div className="flex flex-col gap-1">
-                              {message.managerData.builderTodo.map((todo, i) => (
-                                <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded-lg border border-border/20 min-w-0">
-                                  <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-success' :
-                                    todo.action === 'update' ? 'bg-info' :
-                                      todo.action === 'delete' ? 'bg-destructive' : 'bg-muted-foreground'
-                                    }`} />
-                                  <div className="min-w-0 break-words">
-                                    <span className="opacity-60">{todo.action} </span>
-                                    <span className="font-bold">{todo.target}</span>
-                                    <span className="opacity-80">: {todo.task}</span>
+                        {message.isThinkingOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden w-full min-w-0"
+                          >
+                            <div className="pt-2 space-y-3 min-w-0 w-full">
+                              <p className="text-sm font-medium leading-relaxed italic text-foreground/80 break-words">
+                                &ldquo;{message.managerData.thinking}&rdquo;
+                              </p>
+                              {message.managerData.builderTodo && message.managerData.builderTodo.length > 0 && (
+                                <div className="mt-2 space-y-1.5 min-w-0 w-full">
+                                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Execution plan</p>
+                                  <div className="flex flex-col gap-1 w-full min-w-0">
+                                    {message.managerData.builderTodo.map((todo, i) => (
+                                      <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded-lg border border-border/20 min-w-0 w-full">
+                                        <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-success' :
+                                          todo.action === 'update' ? 'bg-info' :
+                                            todo.action === 'delete' ? 'bg-destructive' : 'bg-muted-foreground'
+                                          }`} />
+                                        <div className="min-w-0 break-words">
+                                          <span className="opacity-60">{todo.action} </span>
+                                          <span className="font-bold">{todo.target}</span>
+                                          <span className="opacity-80">: {todo.task}</span>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          </div>
+                          </motion.div>
                         )}
                       </div>
-                    </motion.div>
+                    </div>
+                  )}
+                  {message.toolCalls && message.toolCalls.length > 0 && (
+                    <div className="w-full min-w-0">
+                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                        <button
+                          type="button"
+                          onClick={() => setMessageToolsOpen(idx, !message.isToolsOpen)}
+                          className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Wrench className="w-3 h-3" />
+                            Tools
+                          </div>
+                          {message.isToolsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                        </button>
+                        {message.isToolsOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden w-full min-w-0"
+                          >
+                            <ToolCallProgress
+                              toolCalls={message.toolCalls}
+                              className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
+                            />
+                          </motion.div>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
             {message.trackerData && (
               <div
                 className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
@@ -188,7 +234,7 @@ export function TrackerMessageList({
             <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
-            <div className="flex-1 min-w-0 space-y-3">
+            <div className="flex-1 min-w-0 w-full space-y-3">
               <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground text-sm font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground/70" />
                 <p className="text-sm">
@@ -216,52 +262,84 @@ export function TrackerMessageList({
                 </motion.div>
               )}
 
-              {!isAnalystMode && isLoading && object?.manager && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="p-4 rounded-xl bg-muted/30 border border-border/30 space-y-3 min-w-0"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground/40" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-foreground/60" />
-                    </span>
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Strategy</span>
-                  </div>
+              {!isAnalystMode &&
+                ((isLoading && object?.manager) || toolCalls.length > 0) && (
+                  <div className="w-full min-w-0 space-y-2">
+                    {isLoading && object?.manager && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="p-4 rounded-xl bg-muted/30 border border-border/30 space-y-3 min-w-0 w-full"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-foreground/40" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-foreground/60" />
+                          </span>
+                          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Strategy</span>
+                        </div>
 
-                  {object.manager.thinking && (
-                    <p className="text-sm text-foreground/80 leading-relaxed border-l-2 border-border/50 pl-3 py-0.5 break-words min-w-0">
-                      {object.manager.thinking}
-                    </p>
-                  )}
+                        {object.manager.thinking && (
+                          <p className="text-sm text-foreground/80 leading-relaxed border-l-2 border-border/50 pl-3 py-0.5 break-words min-w-0">
+                            {object.manager.thinking}
+                          </p>
+                        )}
 
-                  {object.manager.builderTodo && object.manager.builderTodo.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="space-y-2 pt-1 min-w-0"
-                    >
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</p>
-                      <div className="flex flex-col gap-1.5">
-                        {object.manager.builderTodo.map((todo, i) => (
-                          <div key={i} className="flex items-center gap-3 text-xs font-medium text-foreground bg-background/40 p-2 rounded-lg border border-border/20 min-w-0">
-                            {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-success animate-pulse shrink-0" />}
-                            {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-info animate-pulse shrink-0" />}
-                            {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />}
-                            {!todo?.action && <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />}
-                            <span className="flex-1 min-w-0 break-words">{todo?.task || "Preparing task..."}</span>
-                          </div>
-                        ))}
+                        {object.manager.builderTodo && object.manager.builderTodo.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-2 pt-1 min-w-0 w-full"
+                          >
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</p>
+                            <div className="flex flex-col gap-1.5 w-full min-w-0">
+                              {object.manager.builderTodo.map((todo, i) => (
+                                <div key={i} className="flex items-center gap-3 text-xs font-medium text-foreground bg-background/40 p-2 rounded-lg border border-border/20 min-w-0 w-full">
+                                  {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-success animate-pulse shrink-0" />}
+                                  {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-info animate-pulse shrink-0" />}
+                                  {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />}
+                                  {!todo?.action && <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />}
+                                  <span className="flex-1 min-w-0 break-words">{todo?.task || "Preparing task..."}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {toolCalls.length > 0 && (
+                      <div className="w-full min-w-0">
+                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                          <button
+                            type="button"
+                            onClick={() => setPreviewToolsOpen((o) => !o)}
+                            className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Wrench className="w-3 h-3" />
+                              Tools
+                            </div>
+                            {previewToolsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+                          {previewToolsOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden w-full min-w-0"
+                            >
+                              <ToolCallProgress
+                                toolCalls={toolCalls}
+                                className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
+                              />
+                            </motion.div>
+                          )}
+                        </div>
                       </div>
-                    </motion.div>
-                  )}
-                </motion.div>
-              )}
-
-              {toolCalls.length > 0 && (
-                <ToolCallProgress toolCalls={toolCalls} />
-              )}
+                    )}
+                  </div>
+                )}
             </div>
           </div>
           {!isAnalystMode && isLoading && object?.tracker && renderStreamingPreview()}

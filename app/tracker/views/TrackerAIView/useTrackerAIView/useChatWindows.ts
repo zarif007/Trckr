@@ -7,6 +7,7 @@ import {
   listConversations,
   persistMessage,
 } from '../../../hooks/conversation'
+import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import { conversationDisplayTitle, firstWords } from '../../../utils/titleFromMessage'
 import type { Message } from '../../../hooks/useTrackerChat'
 import type { TrackerResponse } from '../../../hooks/useTrackerChat'
@@ -195,12 +196,16 @@ export function useChatWindows(
         try {
           const data = await getConversation(trackerId, id, 'BUILDER')
           if (data?.messages) {
-            const msgs: Message[] = data.messages.map((m) => ({
-              role: m.role,
-              content: m.content,
-              trackerData: m.trackerData as TrackerResponse | undefined,
-              managerData: m.managerData as Message['managerData'],
-            }))
+            const msgs: Message[] = data.messages.map((m) => {
+              const toolCalls = mapApiToolCallsToEntries(m.toolCalls)
+              return {
+                role: m.role,
+                content: m.content,
+                trackerData: m.trackerData as TrackerResponse | undefined,
+                managerData: m.managerData as Message['managerData'],
+                ...(toolCalls?.length ? { toolCalls } : {}),
+              }
+            })
             builderWindowStateRef.current[id] = { messages: msgs }
             if (builderFetchTokenRef.current !== fetchToken) return
             setMessages(msgs)
