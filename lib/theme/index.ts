@@ -12,6 +12,7 @@ export { text } from './text'
 export { shadow } from './shadow'
 export { status } from './status'
 export { patterns } from './patterns'
+export { typography } from './typography'
 
 import { border } from './borders'
 import { patterns } from './patterns'
@@ -20,6 +21,7 @@ import { shadow } from './shadow'
 import { status } from './status'
 import { surface } from './surfaces'
 import { text } from './text'
+import { typography } from './typography'
 
 export const theme = {
   surface,
@@ -29,6 +31,7 @@ export const theme = {
   radius,
   status,
   patterns,
+  typography,
 } as const
 
 export type Theme = typeof theme

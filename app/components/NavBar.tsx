@@ -21,9 +21,6 @@ const navLinks = [
   { href: '#demo', label: 'Demo' },
 ]
 
-const navLinkClass =
-  'font-mono text-[9px] font-medium uppercase tracking-[0.16em] transition-colors sm:text-[10px] sm:tracking-[0.18em] md:text-[11px]'
-
 export default function NavBar() {
   const [open, setOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -58,7 +55,7 @@ export default function NavBar() {
                   key={href}
                   href={href}
                   className={cn(
-                    navLinkClass,
+                    theme.typography.segmentedNavLabel,
                     'flex items-center px-3.5 py-2.5 text-muted-foreground hover:bg-muted/40 hover:text-foreground',
                     'outline-none focus-visible:bg-muted/40 focus-visible:text-foreground',
                     'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -164,7 +161,12 @@ export default function NavBar() {
                   )}
                   sideOffset={8}
                 >
-                  <div className="truncate border-b border-border px-3 py-2.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <div
+                    className={cn(
+                      'truncate border-b border-border px-3 py-2.5',
+                      theme.typography.monoOverlineMuted,
+                    )}
+                  >
                     {session.user.email}
                   </div>
                   <div className="flex flex-col gap-0.5 p-1.5">
@@ -285,7 +287,7 @@ export default function NavBar() {
                     href={href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      navLinkClass,
+                      theme.typography.segmentedNavLabel,
                       'px-5 py-4 text-muted-foreground transition-colors hover:bg-muted/35 hover:text-foreground active:bg-muted/50',
                     )}
                   >
@@ -304,7 +306,7 @@ export default function NavBar() {
               >
                 <span
                   className={cn(
-                    navLinkClass,
+                    theme.typography.segmentedNavLabel,
                     'text-foreground',
                   )}
                 >
@@ -350,7 +352,12 @@ export default function NavBar() {
                           {session.user.name ?? session.user.email ?? 'User'}
                         </p>
                         {session.user.email && (
-                          <p className="truncate font-mono text-[10px] text-muted-foreground">
+                          <p
+                            className={cn(
+                              'truncate',
+                              theme.typography.monoCaptionMuted,
+                            )}
+                          >
                             {session.user.email}
                           </p>
                         )}
@@ -386,7 +393,10 @@ export default function NavBar() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-11 rounded-md font-mono text-xs uppercase tracking-wider text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        className={cn(
+                          'h-11 rounded-md hover:bg-muted/50 hover:text-foreground',
+                          theme.typography.monoUppercaseXsMuted,
+                        )}
                         onClick={() => {
                           setOpen(false)
                           signOut({ redirectTo: '/' })
