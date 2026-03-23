@@ -1,7 +1,15 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Plus, ChevronDown, ChevronRight, FilePlus, FolderPlus, FileText } from 'lucide-react'
+import {
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  FolderPlus,
+  FileText,
+  BarChart3,
+} from 'lucide-react'
 import {
   Popover,
   PopoverContent,
@@ -10,6 +18,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { NewModuleButton } from './NewModuleButton'
 import { NewTrackerDialog } from './NewTrackerDialog'
+import { NewReportDialog } from './NewReportDialog'
 import type { SystemFileType } from '../dashboard-context'
 import { SYSTEM_FILE_LABELS } from '../dashboard-context'
 
@@ -25,6 +34,7 @@ type CreateDropdownProjectProps = CreateDropdownBaseProps & {
   moduleId?: never
   availableConfigTypes?: never
   onTrackerCreated?: (trackerId: string) => void
+  onReportCreated?: () => void | Promise<void>
   onAddConfig?: never
 }
 
@@ -32,6 +42,7 @@ type CreateDropdownModuleProps = CreateDropdownBaseProps & {
   moduleId: string
   availableConfigTypes?: SystemFileType[]
   onTrackerCreated?: (trackerId: string) => void
+  onReportCreated?: () => void | Promise<void>
   onAddConfig?: (type: SystemFileType) => void
   addingConfig?: boolean
 }
@@ -62,11 +73,9 @@ function isDashboardProps(
 }
 
 export function CreateDropdown(props: CreateDropdownProps) {
-  const {
-    variant = 'toolbar',
-    onError,
-    onTrackerCreated,
-  } = props
+  const { variant = 'toolbar', onError, onTrackerCreated } = props
+  const onReportCreated =
+    'onReportCreated' in props ? props.onReportCreated : undefined
 
   const projectId = 'projectId' in props ? props.projectId : undefined
   const isDashboard = isDashboardProps(props)
@@ -75,6 +84,7 @@ export function CreateDropdown(props: CreateDropdownProps) {
   const [open, setOpen] = useState(false)
   const [configSubmenuOpen, setConfigSubmenuOpen] = useState(false)
   const [trackerDialogOpen, setTrackerDialogOpen] = useState(false)
+  const [reportDialogOpen, setReportDialogOpen] = useState(false)
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false)
   const isToolbar = variant === 'toolbar'
   const isModule = isModuleProps(props)
@@ -100,6 +110,11 @@ export function CreateDropdown(props: CreateDropdownProps) {
   const handleTrackerClick = useCallback(() => {
     setOpen(false)
     setTrackerDialogOpen(true)
+  }, [])
+
+  const handleReportClick = useCallback(() => {
+    setOpen(false)
+    setReportDialogOpen(true)
   }, [])
 
   const handleModuleClick = useCallback(() => {
@@ -162,6 +177,16 @@ export function CreateDropdown(props: CreateDropdownProps) {
               <FilePlus className="h-3.5 w-3.5 text-muted-foreground" />
               Tracker
             </button>
+            {!isDashboard && projectId && (
+              <button
+                type="button"
+                onClick={handleReportClick}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md hover:bg-muted/60 transition-colors text-left w-full"
+              >
+                <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                Report
+              </button>
+            )}
             {!isDashboard && (
               <button
                 type="button"
@@ -219,6 +244,17 @@ export function CreateDropdown(props: CreateDropdownProps) {
         onCreated={onTrackerCreated}
         onError={onError}
       />
+
+      {!isDashboard && projectId && (
+        <NewReportDialog
+          projectId={projectId}
+          moduleId={isModule ? props.moduleId : undefined}
+          open={reportDialogOpen}
+          onOpenChange={setReportDialogOpen}
+          onError={onError}
+          onCreated={onReportCreated}
+        />
+      )}
 
       {!isDashboard && projectId && (
         <NewModuleButton

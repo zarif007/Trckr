@@ -4,24 +4,33 @@ export interface ExprPromptInputs {
   prompt: string
   gridId: string
   fieldId: string
-  purpose: 'validation' | 'calculation'
+  purpose: 'validation' | 'calculation' | 'report'
   availableFields: AvailableField[]
 }
 
-export function buildSystemPrompt(purpose: 'validation' | 'calculation'): string {
+export function buildSystemPrompt(purpose: ExprPromptInputs['purpose']): string {
   const purposeRules =
-    purpose === 'calculation'
-      ? '- The expression should compute the target field value (number/string/boolean/etc), not a validation boolean unless explicitly requested.'
-      : '- The expression should evaluate to a boolean/truthy result suitable for validation checks.'
+    purpose === 'validation'
+      ? '- The expression should evaluate to a boolean/truthy result suitable for validation checks.'
+      : purpose === 'calculation'
+        ? '- The expression should compute the target field value (number/string/boolean/etc), not a validation boolean unless explicitly requested.'
+        : '- The expression should compute one value **per report row** (e.g. line total = quantity × unit_price, margin, conditional adjustments). Use numeric result when the user asks for totals or amounts.'
+  const taskLabel =
+    purpose === 'validation'
+      ? 'field validation'
+      : purpose === 'calculation'
+        ? 'field calculation'
+        : 'report row calculation'
+
   return `
-You are generating a JSON expression AST for ${purpose === 'calculation' ? 'field calculation' : 'field validation'}.
+You are generating a JSON expression AST for ${taskLabel}.
 
 Rules:
 - Output ONLY valid JSON with a single top-level object: { "expr": <ExprNode> }.
 - "field" nodes must use fieldId in "gridId.fieldId" format from the provided list.
 - Prefer same-grid field references unless explicitly instructed otherwise.
 - Cross-grid references are allowed when the prompt mentions fields from other grids.
-${purposeRules}
+${purpose === 'report' ? '- For reports, each evaluation uses one **flattened grid row**: row values include both bare field ids (e.g. quantity) and "gridId.fieldId" when __gridId is known — prefer "gridId.fieldId" from the available fields list for clarity.\n' : ''}${purposeRules}
 
 Supported operators and their canonical shapes:
 
@@ -85,6 +94,22 @@ function formatAvailableFields(fields: AvailableField[]): string {
 export function buildUserPrompt(inputs: ExprPromptInputs): string {
   const { prompt, gridId, fieldId, purpose, availableFields } = inputs
   const fieldList = formatAvailableFields(availableFields)
+  if (purpose === 'report') {
+    return `
+Report calculation (one ExprNode evaluated once per flattened row).
+
+Primary grid context: ${gridId}
+Label: ${fieldId}
+
+Available fields (use gridId.fieldId in "field" nodes):
+${fieldList}
+
+What to compute:
+${prompt}
+
+Generate the expression AST.
+`.trim()
+  }
   return `
 Mode: ${purpose}
 Target grid: ${gridId}

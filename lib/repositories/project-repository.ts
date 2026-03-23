@@ -24,6 +24,10 @@ export async function listProjectsForUser(userId: string) {
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
       },
+      reports: {
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, name: true, moduleId: true, updatedAt: true },
+      },
       modules: {
         orderBy: { updatedAt: 'desc' },
         include: {
@@ -60,6 +64,10 @@ export async function createProjectForUser(userId: string, name: string) {
         where: { id: project.id },
         include: {
           trackerSchemas: { orderBy: { updatedAt: 'desc' } },
+          reports: {
+            orderBy: { updatedAt: 'desc' },
+            select: { id: true, name: true, moduleId: true, updatedAt: true },
+          },
           modules: {
             orderBy: { updatedAt: 'desc' },
             include: {
@@ -85,6 +93,10 @@ export async function findProjectByIdForUser(projectId: string, userId: string) 
     include: {
       trackerSchemas: {
         orderBy: { updatedAt: 'desc' },
+      },
+      reports: {
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, name: true, moduleId: true, updatedAt: true },
       },
       modules: {
         orderBy: { updatedAt: 'desc' },

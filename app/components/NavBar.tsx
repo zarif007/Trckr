@@ -33,7 +33,7 @@ export default function NavBar() {
   return (
     <header
       className={cn(
-        'fixed left-0 right-0 top-0 z-50 border-b border-border/35 backdrop-blur-md',
+        'fixed left-0 right-0 top-0 z-50',
         'bg-background/88 dark:bg-background/80',
         'shadow-[0_1px_0_0_hsl(var(--border)/0.2)_inset]',
       )}
@@ -139,8 +139,8 @@ export default function NavBar() {
                       <Image
                         src={session.user.image}
                         alt=""
-                        width={26}
-                        height={26}
+                        width={21}
+                        height={21}
                         className="rounded-md ring-1 ring-border/50"
                       />
                     ) : (

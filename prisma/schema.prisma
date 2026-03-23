@@ -10,23 +10,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ---- NextAuth (Auth.js) Prisma adapter models ----
-// https://authjs.dev/reference/adapter/prisma
-
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  accounts             Account[]
-  sessions             Session[]
-  loginEvents          LoginEvent[]
-  projects             Project[]
-  authoredTrackerData  TrackerData[] @relation("TrackerDataAuthor")
-  llmTokenUsages       LlmTokenUsage[]
+  id                  String          @id @default(cuid())
+  name                String?
+  email               String?         @unique
+  emailVerified       DateTime?
+  image               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  accounts            Account[]
+  llmTokenUsages      LlmTokenUsage[]
+  loginEvents         LoginEvent[]
+  projects            Project[]
+  reports             Report[]
+  sessions            Session[]
+  authoredTrackerData TrackerData[]   @relation("TrackerDataAuthor")
 }
 
 model Account {
@@ -41,7 +39,7 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-  user              User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -61,21 +59,252 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
-// ---- App: log where/how user signed in (IP, user agent, etc.) ----
-
 model LoginEvent {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userAgent String?
   ip        String?
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([createdAt])
 }
 
-// ---- App: projects, tracker schemas, data, conversations ----
+model Project {
+  id             String          @id @default(cuid())
+  userId         String
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  llmTokenUsages LlmTokenUsage[]
+  modules        Module[]
+  reports        Report[]
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackerSchemas TrackerSchema[]
+
+  @@index([userId])
+}
+
+model Module {
+  id             String          @id @default(cuid())
+  projectId      String
+  parentId       String?
+  name           String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  parent         Module?         @relation("ModuleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Module[]        @relation("ModuleHierarchy")
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reports        Report[]
+  trackerSchemas TrackerSchema[]
+
+  @@index([projectId])
+  @@index([parentId])
+}
+
+model TrackerSchema {
+  id              String            @id @default(cuid())
+  projectId       String
+  moduleId        String?
+  name            String?
+  type            TrackerSchemaType @default(GENERAL)
+  systemType      SystemFileType?
+  instance        Instance          @default(SINGLE)
+  versionControl  Boolean           @default(false)
+  autoSave        Boolean           @default(true)
+  /// If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance only)
+  listForSchemaId String?           @unique
+  schema          Json
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  conversations   Conversation[]
+  llmTokenUsages  LlmTokenUsage[]
+  reports         Report[]
+  trackerData     TrackerData[]
+  listForSchema   TrackerSchema?    @relation("ListCompanion", fields: [listForSchemaId], references: [id], onDelete: Cascade)
+  listCompanion   TrackerSchema?    @relation("ListCompanion")
+  module          Module?           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, moduleId, systemType])
+  @@index([projectId])
+  @@index([moduleId])
+}
+
+enum ReportDefinitionStatus {
+  draft
+  ready
+  error
+}
+
+enum ReportRunTrigger {
+  initial
+  refresh
+}
+
+enum ReportRunStatus {
+  running
+  completed
+  failed
+}
+
+model Report {
+  id              String        @id @default(cuid())
+  projectId       String
+  moduleId        String?
+  userId          String
+  name            String
+  trackerSchemaId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  module          Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  project         Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  trackerSchema   TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  definition      ReportDefinition?
+  runs            ReportRun[]
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([trackerSchemaId])
+  @@index([moduleId])
+}
+
+model ReportDefinition {
+  id                String                 @id @default(cuid())
+  reportId          String                 @unique
+  userPrompt        String                 @default("")
+  intent            Json?
+  queryPlan         Json?
+  /// Per-row ExprNode-derived columns (report calc agent); replay applies before formatter.
+  calcPlan          Json?
+  formatterPlan     Json?
+  definitionVersion Int                    @default(1)
+  schemaFingerprint String?
+  status            ReportDefinitionStatus @default(draft)
+  readyAt           DateTime?
+  lastError         String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  report            Report                 @relation(fields: [reportId], references: [id], onDelete: Cascade)
+}
+
+model ReportRun {
+  id         String           @id @default(cuid())
+  reportId   String
+  trigger    ReportRunTrigger
+  status     ReportRunStatus  @default(running)
+  startedAt  DateTime         @default(now())
+  finishedAt DateTime?
+  report     Report           @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  events     ReportRunEvent[]
+
+  @@index([reportId])
+}
+
+model ReportRunEvent {
+  id            String    @id @default(cuid())
+  reportRunId   String
+  seq           Int
+  eventType     String
+  phase         String?
+  payload       Json?
+  createdAt     DateTime  @default(now())
+  reportRun     ReportRun @relation(fields: [reportRunId], references: [id], onDelete: Cascade)
+
+  @@unique([reportRunId, seq])
+  @@index([reportRunId])
+}
+
+model LlmTokenUsage {
+  id               String         @id @default(cuid())
+  userId           String
+  projectId        String?
+  trackerSchemaId  String?
+  source           String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  createdAt        DateTime       @default(now())
+  project          Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  trackerSchema    TrackerSchema? @relation(fields: [trackerSchemaId], references: [id], onDelete: SetNull)
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, projectId])
+  @@index([userId, trackerSchemaId])
+  @@index([createdAt])
+}
+
+model TrackerData {
+  id              String        @id @default(cuid())
+  trackerSchemaId String
+  label           String?
+  formStatus      String?
+  data            Json
+  /// Branch name for version-controlled trackers (default "main")
+  branchName      String        @default("main")
+  /// User who created/owns this branch or instance
+  authorId        String?
+  /// For VC branches: which TrackerData record this was branched from
+  basedOnId       String?
+  /// Whether this branch has been merged into main
+  isMerged        Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  author          User?         @relation("TrackerDataAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  basedOn         TrackerData?  @relation("BranchLineage", fields: [basedOnId], references: [id], onDelete: SetNull)
+  derivedBranches TrackerData[] @relation("BranchLineage")
+  trackerSchema   TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+
+  @@index([trackerSchemaId])
+  @@index([authorId])
+  @@index([basedOnId])
+}
+
+model Conversation {
+  id              String           @id @default(cuid())
+  trackerSchemaId String
+  title           String?
+  mode            ConversationMode @default(BUILDER)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  trackerSchema   TrackerSchema    @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+  messages        Message[]
+
+  @@index([trackerSchemaId])
+}
+
+model Message {
+  id                    String       @id @default(cuid())
+  conversationId        String
+  role                  Role
+  content               String
+  trackerSchemaSnapshot Json?
+  managerData           Json?
+  createdAt             DateTime     @default(now())
+  conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  toolCalls             ToolCall[]
+
+  @@index([conversationId])
+}
+
+model ToolCall {
+  id          String         @id @default(cuid())
+  messageId   String
+  purpose     String
+  fieldPath   String
+  description String
+  status      ToolCallStatus @default(pending)
+  error       String?
+  result      Json?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  message     Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+}
 
 enum Instance {
   SINGLE
@@ -104,158 +333,9 @@ enum ConversationMode {
   ANALYST
 }
 
-model Project {
-  id             String        @id @default(cuid())
-  userId         String
-  name           String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trackerSchemas TrackerSchema[]
-  modules        Module[]
-  llmTokenUsages LlmTokenUsage[]
-
-  @@index([userId])
-}
-
-model Module {
-  id             String         @id @default(cuid())
-  projectId      String
-  parentId       String?
-  name           String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent         Module?        @relation("ModuleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children       Module[]       @relation("ModuleHierarchy")
-  trackerSchemas TrackerSchema[]
-
-  @@index([projectId])
-  @@index([parentId])
-}
-
-model TrackerSchema {
-  id               String       @id @default(cuid())
-  projectId        String
-  moduleId         String?
-  name             String?
-  type             TrackerSchemaType @default(GENERAL)
-  systemType       SystemFileType?
-  instance         Instance     @default(SINGLE)
-  versionControl   Boolean      @default(false)
-  autoSave         Boolean      @default(true)
-  /// If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance only)
-  listForSchemaId  String?      @unique
-  schema           Json
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  module           Module?      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  /// The parent schema this is a list companion for (null if this is not a .list schema)
-  listForSchema    TrackerSchema? @relation("ListCompanion", fields: [listForSchemaId], references: [id], onDelete: Cascade)
-  /// The .list companion schema (null if this schema has no list companion)
-  listCompanion    TrackerSchema? @relation("ListCompanion")
-  trackerData      TrackerData[]
-  conversations    Conversation[]
-  llmTokenUsages   LlmTokenUsage[]
-
-  @@index([projectId])
-  @@index([moduleId])
-  @@unique([projectId, moduleId, systemType])
-}
-
-model LlmTokenUsage {
-  id               String         @id @default(cuid())
-  userId           String
-  projectId        String?
-  trackerSchemaId  String?
-  source           String
-  promptTokens     Int
-  completionTokens Int
-  totalTokens      Int
-  createdAt        DateTime       @default(now())
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project          Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  trackerSchema    TrackerSchema? @relation(fields: [trackerSchemaId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([userId, projectId])
-  @@index([userId, trackerSchemaId])
-  @@index([createdAt])
-}
-
-model TrackerData {
-  id               String        @id @default(cuid())
-  trackerSchemaId  String
-  label            String?
-  formStatus       String?
-  data             Json
-  /// Branch name for version-controlled trackers (default "main")
-  branchName       String        @default("main")
-  /// User who created/owns this branch or instance
-  authorId         String?
-  /// For VC branches: which TrackerData record this was branched from
-  basedOnId        String?
-  /// Whether this branch has been merged into main
-  isMerged         Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  trackerSchema    TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
-  author           User?         @relation("TrackerDataAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  basedOn          TrackerData?  @relation("BranchLineage", fields: [basedOnId], references: [id], onDelete: SetNull)
-  derivedBranches  TrackerData[] @relation("BranchLineage")
-
-  @@index([trackerSchemaId])
-  @@index([authorId])
-  @@index([basedOnId])
-}
-
-model Conversation {
-  id               String           @id @default(cuid())
-  trackerSchemaId  String
-  title            String?
-  mode             ConversationMode @default(BUILDER)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  trackerSchema    TrackerSchema    @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
-  messages         Message[]
-
-  @@index([trackerSchemaId])
-}
-
-model Message {
-  id                    String       @id @default(cuid())
-  conversationId        String
-  role                  Role
-  content               String
-  trackerSchemaSnapshot Json?
-  managerData           Json?
-  createdAt             DateTime     @default(now())
-  conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  toolCalls             ToolCall[]
-
-  @@index([conversationId])
-}
-
 enum ToolCallStatus {
   pending
   running
   done
   error
-}
-
-model ToolCall {
-  id          String         @id @default(cuid())
-  messageId  String
-  message    Message        @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  purpose     String         // "validation" | "calculation"
-  fieldPath   String
-  description String
-  status      ToolCallStatus @default(pending)
-  error       String?
-  result      Json?          // resolved expr or validation rule payload for audit
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@index([messageId])
 }

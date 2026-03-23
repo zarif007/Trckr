@@ -12,11 +12,12 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
+  BarChart2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Input } from '@/components/ui/input'
-import type { Module, SystemFileType } from '../../dashboard-context'
+import type { Module, Project, SystemFileType } from '../../dashboard-context'
 import { useDashboard } from '../../dashboard-context'
 import {
   useRenameDeleteContextMenu,
@@ -98,6 +99,22 @@ export function ModuleContent({
     initialData: initialModule,
     staleTime: STALE_TIME_MS,
   })
+
+  const { data: projectForReports } = useQuery({
+    queryKey: dashboardQueryKeys.project(projectId),
+    queryFn: async () => {
+      const res = await fetch(`/api/projects/${projectId}`)
+      if (!res.ok) throw new Error('Failed to load project')
+      return res.json() as Promise<Project>
+    },
+    staleTime: STALE_TIME_MS,
+  })
+
+  const moduleReports = useMemo(
+    () =>
+      (projectForReports?.reports ?? []).filter((r) => r.moduleId === moduleId),
+    [projectForReports?.reports, moduleId],
+  )
 
   useEffect(() => {
     if (isError && (error as Error)?.message === 'Not found') {
@@ -400,7 +417,10 @@ export function ModuleContent({
   const childModules = mod?.children ?? []
   const hasModuleConfigs = moduleSystemFiles.length > 0
   const totalItems =
-    (hasModuleConfigs ? 1 : 0) + trackerSchemas.length + childModules.length
+    (hasModuleConfigs ? 1 : 0) +
+    trackerSchemas.length +
+    childModules.length +
+    moduleReports.length
   const isEmpty = totalItems === 0
 
   const existingFileTypes = new Set(
@@ -444,6 +464,14 @@ export function ModuleContent({
         calculationsHref: string
         dependsOnHref: string
       }
+    } | {
+      kind: 'report'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof BarChart2
+      updatedAt: string
+      href: string
     })[] = []
 
     if (hasModuleConfigs) {
@@ -497,8 +525,26 @@ export function ModuleContent({
         },
       }
     })
-    return [...rows, ...moduleRows, ...trackerRows]
-  }, [pathname, projectId, moduleId, mod, childModules, trackerSchemas, hasModuleConfigs])
+    const reportRows = moduleReports.map((r) => ({
+      kind: 'report' as const,
+      id: r.id,
+      label: r.name?.trim() || 'Untitled report',
+      sublabel: 'Report',
+      icon: BarChart2,
+      updatedAt: r.updatedAt,
+      href: `/report/${r.id}`,
+    }))
+    return [...rows, ...moduleRows, ...trackerRows, ...reportRows]
+  }, [
+    pathname,
+    projectId,
+    moduleId,
+    mod,
+    childModules,
+    trackerSchemas,
+    moduleReports,
+    hasModuleConfigs,
+  ])
 
   const handleTrackerCreated = useCallback(
     async (trackerId: string) => {
@@ -508,6 +554,11 @@ export function ModuleContent({
     },
     [invalidateModuleAndProjects, fetchProjects, router],
   )
+
+  const handleReportCreated = useCallback(async () => {
+    invalidateModuleAndProjects()
+    await fetchProjects()
+  }, [invalidateModuleAndProjects, fetchProjects])
 
   const handleAddConfig = async (type: SystemFileType) => {
     setAddingConfig(true)
@@ -614,6 +665,7 @@ export function ModuleContent({
             variant="toolbar"
             onError={(msg) => setErrorMessage(msg || null)}
             onTrackerCreated={handleTrackerCreated}
+            onReportCreated={handleReportCreated}
             availableConfigTypes={availableFileTypes}
             onAddConfig={handleAddConfig}
             addingConfig={addingConfig}
@@ -634,6 +686,7 @@ export function ModuleContent({
                   variant="empty"
                   onError={(msg) => setErrorMessage(msg || null)}
                   onTrackerCreated={handleTrackerCreated}
+                  onReportCreated={handleReportCreated}
                   availableConfigTypes={availableFileTypes}
                   onAddConfig={handleAddConfig}
                   addingConfig={addingConfig}

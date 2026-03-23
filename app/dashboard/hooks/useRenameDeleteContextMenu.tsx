@@ -20,7 +20,7 @@ import {
   GitBranch,
 } from 'lucide-react'
 
-export type ContextMenuRowKind = 'file' | 'module' | 'tracker' | 'project'
+export type ContextMenuRowKind = 'file' | 'module' | 'tracker' | 'project' | 'report'
 
 export type TrackerHrefs = {
   trackerPageHref: string
@@ -53,6 +53,8 @@ function getDeleteConfirmMessage(item: ContextMenuItem): string {
       return `Delete module "${item.label}"? This will remove the module and all its trackers.`
     case 'tracker':
       return `Delete tracker "${item.label}"?`
+    case 'report':
+      return `Delete report "${item.label}"?`
     default:
       return `Delete "${item.label}"?`
   }

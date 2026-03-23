@@ -1,4 +1,13 @@
 -- CreateEnum
+CREATE TYPE "ReportDefinitionStatus" AS ENUM ('draft', 'ready', 'error');
+
+-- CreateEnum
+CREATE TYPE "ReportRunTrigger" AS ENUM ('initial', 'refresh');
+
+-- CreateEnum
+CREATE TYPE "ReportRunStatus" AS ENUM ('running', 'completed', 'failed');
+
+-- CreateEnum
 CREATE TYPE "Instance" AS ENUM ('SINGLE', 'MULTI');
 
 -- CreateEnum
@@ -116,6 +125,65 @@ CREATE TABLE "TrackerSchema" (
 );
 
 -- CreateTable
+CREATE TABLE "Report" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "moduleId" TEXT,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "trackerSchemaId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Report_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReportDefinition" (
+    "id" TEXT NOT NULL,
+    "reportId" TEXT NOT NULL,
+    "userPrompt" TEXT NOT NULL DEFAULT '',
+    "intent" JSONB,
+    "queryPlan" JSONB,
+    "calcPlan" JSONB,
+    "formatterPlan" JSONB,
+    "definitionVersion" INTEGER NOT NULL DEFAULT 1,
+    "schemaFingerprint" TEXT,
+    "status" "ReportDefinitionStatus" NOT NULL DEFAULT 'draft',
+    "readyAt" TIMESTAMP(3),
+    "lastError" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ReportDefinition_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReportRun" (
+    "id" TEXT NOT NULL,
+    "reportId" TEXT NOT NULL,
+    "trigger" "ReportRunTrigger" NOT NULL,
+    "status" "ReportRunStatus" NOT NULL DEFAULT 'running',
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "finishedAt" TIMESTAMP(3),
+
+    CONSTRAINT "ReportRun_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ReportRunEvent" (
+    "id" TEXT NOT NULL,
+    "reportRunId" TEXT NOT NULL,
+    "seq" INTEGER NOT NULL,
+    "eventType" TEXT NOT NULL,
+    "phase" TEXT,
+    "payload" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ReportRunEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "LlmTokenUsage" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -225,6 +293,30 @@ CREATE INDEX "TrackerSchema_moduleId_idx" ON "TrackerSchema"("moduleId");
 CREATE UNIQUE INDEX "TrackerSchema_projectId_moduleId_systemType_key" ON "TrackerSchema"("projectId", "moduleId", "systemType");
 
 -- CreateIndex
+CREATE INDEX "Report_projectId_idx" ON "Report"("projectId");
+
+-- CreateIndex
+CREATE INDEX "Report_userId_idx" ON "Report"("userId");
+
+-- CreateIndex
+CREATE INDEX "Report_trackerSchemaId_idx" ON "Report"("trackerSchemaId");
+
+-- CreateIndex
+CREATE INDEX "Report_moduleId_idx" ON "Report"("moduleId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ReportDefinition_reportId_key" ON "ReportDefinition"("reportId");
+
+-- CreateIndex
+CREATE INDEX "ReportRun_reportId_idx" ON "ReportRun"("reportId");
+
+-- CreateIndex
+CREATE INDEX "ReportRunEvent_reportRunId_idx" ON "ReportRunEvent"("reportRunId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ReportRunEvent_reportRunId_seq_key" ON "ReportRunEvent"("reportRunId", "seq");
+
+-- CreateIndex
 CREATE INDEX "LlmTokenUsage_userId_idx" ON "LlmTokenUsage"("userId");
 
 -- CreateIndex
@@ -267,22 +359,40 @@ ALTER TABLE "LoginEvent" ADD CONSTRAINT "LoginEvent_userId_fkey" FOREIGN KEY ("u
 ALTER TABLE "Project" ADD CONSTRAINT "Project_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Module" ADD CONSTRAINT "Module_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Module" ADD CONSTRAINT "Module_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Module" ADD CONSTRAINT "Module_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_listForSchemaId_fkey" FOREIGN KEY ("listForSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerSchema" ADD CONSTRAINT "TrackerSchema_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Report" ADD CONSTRAINT "Report_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReportDefinition" ADD CONSTRAINT "ReportDefinition_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReportRun" ADD CONSTRAINT "ReportRun_reportId_fkey" FOREIGN KEY ("reportId") REFERENCES "Report"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ReportRunEvent" ADD CONSTRAINT "ReportRunEvent_reportRunId_fkey" FOREIGN KEY ("reportRunId") REFERENCES "ReportRun"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -291,13 +401,16 @@ ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_projectId_fkey" FOREIG
 ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_basedOnId_fkey" FOREIGN KEY ("basedOnId") REFERENCES "TrackerData"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;

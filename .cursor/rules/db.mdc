@@ -1,0 +1,4 @@
+---
+LLM → schema change ONLY
+Do not add migrations
+---

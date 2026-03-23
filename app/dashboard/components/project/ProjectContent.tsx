@@ -11,6 +11,7 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
+  BarChart2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -355,9 +356,16 @@ export function ProjectContent({
       ),
     [project?.trackerSchemas],
   )
+  const projectLevelReports = useMemo(
+    () => (project?.reports ?? []).filter((r) => r.moduleId == null),
+    [project?.reports],
+  )
   const hasProjectConfigs = projectSystemFiles.length > 0
   const totalItems =
-    (hasProjectConfigs ? 1 : 0) + modules.length + projectLevelTrackers.length
+    (hasProjectConfigs ? 1 : 0) +
+    modules.length +
+    projectLevelTrackers.length +
+    projectLevelReports.length
   const isEmpty = totalItems === 0
 
   const tableRows = useMemo(() => {
@@ -394,6 +402,14 @@ export function ProjectContent({
         calculationsHref: string
         dependsOnHref: string
       }
+    } | {
+      kind: 'report'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof BarChart2
+      updatedAt: string
+      href: string
     })[] = []
 
     if (hasProjectConfigs) {
@@ -447,8 +463,25 @@ export function ProjectContent({
         },
       }
     })
-    return [...rows, ...moduleRows, ...trackerRows]
-  }, [pathname, projectId, project, modules, projectLevelTrackers, hasProjectConfigs])
+    const reportRows = projectLevelReports.map((r) => ({
+      kind: 'report' as const,
+      id: r.id,
+      label: r.name?.trim() || 'Untitled report',
+      sublabel: 'Report',
+      icon: BarChart2,
+      updatedAt: r.updatedAt,
+      href: `/report/${r.id}`,
+    }))
+    return [...rows, ...moduleRows, ...trackerRows, ...reportRows]
+  }, [
+    pathname,
+    projectId,
+    project,
+    modules,
+    projectLevelTrackers,
+    projectLevelReports,
+    hasProjectConfigs,
+  ])
 
   const handleTrackerCreated = useCallback(
     async (trackerId: string) => {
@@ -458,6 +491,11 @@ export function ProjectContent({
     },
     [fetchProjects, invalidateProjectAndProjects, router],
   )
+
+  const handleReportCreated = useCallback(async () => {
+    await fetchProjects()
+    invalidateProjectAndProjects()
+  }, [fetchProjects, invalidateProjectAndProjects])
 
   const displayError = errorMessage ?? (isError && error ? (error as Error).message : null)
 
@@ -515,6 +553,7 @@ export function ProjectContent({
             variant="toolbar"
             onError={(msg) => setErrorMessage(msg || null)}
             onTrackerCreated={handleTrackerCreated}
+            onReportCreated={handleReportCreated}
           />
         </div>
 
@@ -531,6 +570,7 @@ export function ProjectContent({
                   variant="empty"
                   onError={(msg) => setErrorMessage(msg || null)}
                   onTrackerCreated={handleTrackerCreated}
+                  onReportCreated={handleReportCreated}
                 />
               </div>
             ) : (
@@ -550,10 +590,15 @@ export function ProjectContent({
                     renaming &&
                     renaming.kind === row.kind &&
                     renaming.id === row.id
-                  const canRenameDelete = row.kind === 'module' || row.kind === 'tracker'
+                  const canRenameDelete =
+                    row.kind === 'module' || row.kind === 'tracker'
                   return (
                     <div
-                      key={row.kind === 'file' ? `file-${row.id}` : `${row.kind}-${row.id}`}
+                      key={
+                        row.kind === 'file'
+                          ? `file-${row.id}`
+                          : `${row.kind}-${row.id}`
+                      }
                       className="relative flex flex-col items-center gap-3 min-w-0 w-full group/card"
                     >
                       <button
