@@ -75,6 +75,7 @@ model Project {
   id             String          @id @default(cuid())
   userId         String
   name           String?
+  settings       Json?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   llmTokenUsages LlmTokenUsage[]
@@ -91,6 +92,7 @@ model Module {
   projectId      String
   parentId       String?
   name           String?
+  settings       Json?
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   parent         Module?         @relation("ModuleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
