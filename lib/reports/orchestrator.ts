@@ -6,6 +6,10 @@ import { getConfiguredMaxOutputTokens, getDefaultAiProvider, hasDeepSeekApiKey }
 import { buildReportCalcUserPrompt, getReportCalcSystemPrompt } from '@/lib/prompts/report-calc'
 import { buildReportFormatterUserPrompt, getReportFormatterSystemPrompt } from '@/lib/prompts/report-formatter'
 import { buildReportIntentUserPrompt, getReportIntentSystemPrompt } from '@/lib/prompts/report-intent'
+import {
+  reportIntentNumericTotalRetryAddendum,
+  shouldRetryIntentForNumericTotalMismatch,
+} from '@/lib/reports/intent-numeric-total-guard'
 import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { withTracedRun } from '@/lib/insights/with-traced-run'
 import { buildFieldCatalog, formatCatalogForPrompt } from '@/lib/insights-query/field-catalog'
@@ -226,7 +230,7 @@ export async function executeReportFullGeneration(params: {
       text: 'Extracting fields, filters, grouping, sorting, and load rules…',
     })
 
-    const intentResult = await provider.generateObject<ReportIntent>({
+    let intentResult = await provider.generateObject<ReportIntent>({
       system: getReportIntentSystemPrompt({ trackerInstance, versionControl }),
       prompt: buildReportIntentUserPrompt({
         userQuery: userPrompt,
@@ -239,10 +243,36 @@ export async function executeReportFullGeneration(params: {
     })
     recordUsage(userId, 'report-intent', intentResult.usage, projectId, trackerSchemaId, report.id)
 
-    const intent: ReportIntent = {
+    let intent: ReportIntent = {
       ...intentResult.object,
       generationPlan: intentResult.object.generationPlan ?? defaultReportGenerationPlan(),
     }
+
+    if (shouldRetryIntentForNumericTotalMismatch(userPrompt, intent)) {
+      await forward({
+        t: 'phase_delta',
+        phase: 'intent',
+        text: 'Adjusting metrics: numeric totals should use sum/avg on catalog fields, not count…',
+      })
+      intentResult = await provider.generateObject<ReportIntent>({
+        system: getReportIntentSystemPrompt({ trackerInstance, versionControl }),
+        prompt:
+          buildReportIntentUserPrompt({
+            userQuery: userPrompt,
+            catalogText,
+            trackerInstance,
+            versionControl,
+          }) + reportIntentNumericTotalRetryAddendum(),
+        schema: reportIntentSchema,
+        maxOutputTokens: maxTokens,
+      })
+      recordUsage(userId, 'report-intent-retry', intentResult.usage, projectId, trackerSchemaId, report.id)
+      intent = {
+        ...intentResult.object,
+        generationPlan: intentResult.object.generationPlan ?? defaultReportGenerationPlan(),
+      }
+    }
+
     await forward({ t: 'artifact', phase: 'intent', kind: 'intent', data: intent })
     await forward({
       t: 'phase_end',

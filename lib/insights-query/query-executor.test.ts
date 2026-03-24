@@ -112,6 +112,45 @@ describe('executeQueryPlan', () => {
     expect(out[0]!.total_quantity).toBe(15)
     expect(out[0]!.total_value).toBe(12 * 3200 + 3 * 6000)
   })
+
+  it('pools MULTI-style instances: grand total sum across TrackerData rows', () => {
+    const multi: TrackerDataInput[] = [
+      {
+        id: 'inst-a',
+        label: 'Client A',
+        branchName: 'main',
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+        data: {
+          items: [{ qty: 5 }, { qty: 3 }],
+        },
+      },
+      {
+        id: 'inst-b',
+        label: 'Client B',
+        branchName: 'main',
+        createdAt: new Date('2024-01-02'),
+        updatedAt: new Date('2024-01-02'),
+        data: {
+          items: [{ qty: 10 }],
+        },
+      },
+    ]
+    const plan: QueryPlanV1 = {
+      version: 1,
+      load: { maxTrackerDataRows: 500 },
+      flatten: { gridIds: ['items'] },
+      filter: [],
+      sort: [],
+      aggregate: {
+        groupBy: [],
+        metrics: [{ name: 'total_qty', op: 'sum', path: 'qty' }],
+      },
+    }
+    const out = executeQueryPlan(multi, plan)
+    expect(out).toHaveLength(1)
+    expect(out[0]!.total_qty).toBe(18)
+  })
 })
 
 describe('buildTrackerDataWhere', () => {

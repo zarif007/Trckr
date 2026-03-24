@@ -10,6 +10,7 @@ export {
 export { buildFieldCatalog, formatCatalogForPrompt, type FieldCatalog, type FieldCatalogEntry } from './field-catalog'
 export { fingerprintFromCatalog } from './fingerprint'
 export { loadTrackerDataForQueryPlan } from './load-tracker-rows'
+export { needsMultiFairPoolForAggregates } from './multi-load-policy'
 export {
   buildQueryPlanUserPrompt,
   generateQueryPlanV1,
