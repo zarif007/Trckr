@@ -8,6 +8,17 @@ import { useQuery } from '@tanstack/react-query'
 import { dashboardQueryKeys } from '../../query-keys'
 import type { Project, SystemFileType, TrackerSchema } from '../../dashboard-context'
 import { buildConfigRows } from './configRows'
+import {
+  ProjectAreaToolbar,
+  ProjectBreadcrumbNav,
+  ProjectConfigGridTile,
+  ProjectEmptyStatePanel,
+  projectAreaBreadcrumbChevronClass,
+  projectAreaBreadcrumbTrailLinkClass,
+  projectAreaMainClass,
+  projectAreaItemGridClass,
+  projectAreaScrollClass,
+} from '../project-area'
 
 const STALE_TIME_MS = 60 * 1000
 
@@ -77,66 +88,55 @@ export function ProjectConfigsContent({
     return null
   }
 
-  return (
-    <main className="flex-1 flex flex-col min-w-0 min-h-0">
-      <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80">
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-          <Link href="/dashboard" className="hover:text-foreground transition-colors">
-            Dashboard
-          </Link>
-          <ChevronRight className="h-3 w-3 opacity-50" />
-          <Link
-            href={base === '/project' ? `/project/${projectId}` : `/dashboard/${projectId}`}
-            className="hover:text-foreground transition-colors"
-          >
-            {project.name || 'Untitled folder'}
-          </Link>
-          <ChevronRight className="h-3 w-3 opacity-50" />
-          <span className="font-medium text-foreground">Configs</span>
-        </div>
-      </div>
+  const projectHref =
+    base === '/project' ? `/project/${projectId}` : `/dashboard/${projectId}`
 
-      <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
+  return (
+    <main className={projectAreaMainClass}>
+      <ProjectAreaToolbar
+        breadcrumb={
+          <ProjectBreadcrumbNav>
+            <Link href="/dashboard" className={projectAreaBreadcrumbTrailLinkClass}>
+              Dashboard
+            </Link>
+            <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
+            <Link href={projectHref} className={projectAreaBreadcrumbTrailLinkClass}>
+              {project.name || 'Untitled folder'}
+            </Link>
+            <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
+            <span className="shrink-0 font-medium text-foreground">Configs</span>
+          </ProjectBreadcrumbNav>
+        }
+      />
+
+      <div className={projectAreaScrollClass}>
         {!hasConfigs ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-            <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-dashed border-border/35">
-              <FileText className="h-8 w-8 opacity-45" />
-            </div>
-            <p className="text-xs font-medium">No configs yet</p>
+          <ProjectEmptyStatePanel
+            icon={FileText}
+            title="No configs yet"
+            description="System files will appear here when your project defines them."
+          >
             <Link
-              href={base === '/project' ? `/project/${projectId}` : `/dashboard/${projectId}`}
-              className="text-xs text-primary hover:underline"
+              href={projectHref}
+              className="text-xs font-medium text-primary hover:underline"
             >
               Back to project
             </Link>
-          </div>
+          </ProjectEmptyStatePanel>
         ) : (
           <div
-            className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 sm:gap-6 content-start"
+            className={projectAreaItemGridClass}
             aria-label="Project configs"
           >
             {rows.map((row) => {
               const Icon = row.icon
               return (
-                <div
+                <ProjectConfigGridTile
                   key={row.id}
-                  className="relative flex flex-col items-center gap-3 min-w-0 w-full group/card"
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      router.push(row.href)
-                    }}
-                    className="group flex flex-col items-center gap-3 rounded-2xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
-                  >
-                    <div className="w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md">
-                      <Icon className="h-7 w-7 text-foreground/75 transition-colors group-hover:text-primary" />
-                    </div>
-                    <span className="text-sm font-semibold text-center leading-tight truncate w-full">
-                      {row.label}
-                    </span>
-                  </button>
-                </div>
+                  icon={Icon}
+                  label={row.label}
+                  onNavigate={() => router.push(row.href)}
+                />
               )
             })}
           </div>

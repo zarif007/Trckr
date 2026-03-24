@@ -35,11 +35,14 @@ import { CreateDropdown } from './components/CreateDropdown'
 export type DashboardView = 'all' | 'projects' | 'recents'
 
 const DASH_GRID_ICON_SHELL =
-  'relative w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
+  'relative w-14 h-14 rounded-md bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
 const DASH_GRID_ICON = 'h-7 w-7 text-foreground/75 transition-all duration-200 group-hover:text-primary'
 const DASH_LIST_ICON_SHELL =
-  'w-11 h-11 rounded-xl bg-muted/45 border border-border/40 flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-primary/35 group-hover:bg-primary/8'
+  'w-11 h-11 rounded-md bg-muted/45 border border-border/40 flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-primary/35 group-hover:bg-primary/8'
 const DASH_LIST_ICON = 'h-5 w-5 text-foreground/75 transition-colors group-hover:text-primary'
+
+const DASH_LIST_ROW =
+  'flex items-center gap-3 px-3 py-2.5 rounded-md border border-border/35 bg-background/50 shadow-sm hover:border-border/50 hover:bg-muted/40 hover:shadow-md cursor-pointer transition-all duration-150 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -132,25 +135,31 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
         <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             {view !== 'recents' && (
-              <div className="flex rounded-md border border-border/50 overflow-hidden">
+              <div
+                className="flex rounded-md border border-border/45 bg-muted/25 p-0.5 shadow-sm"
+                role="group"
+                aria-label="Layout"
+              >
                 <button
+                  type="button"
                   onClick={() => setViewMode('grid')}
                   className={cn(
-                    'p-1.5 transition-colors',
+                    'rounded-sm px-1.5 py-1 transition-all',
                     viewMode === 'grid'
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/50'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode('list')}
                   className={cn(
-                    'p-1.5 transition-colors',
+                    'rounded-sm px-1.5 py-1 transition-all',
                     viewMode === 'list'
-                      ? 'bg-muted text-foreground'
-                      : 'text-muted-foreground hover:bg-muted/50'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
                   <List className="h-3.5 w-3.5" />
@@ -203,9 +212,9 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                         className="min-w-0 w-full"
                       >
                         <motion.div
-                          whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          className="flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 hover:border-primary/30 hover:bg-primary/5 cursor-pointer transition-all duration-150 group shadow-sm hover:shadow-md"
+                          transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                          className="flex flex-col items-center gap-2 p-3 rounded-md border border-border/40 bg-background/60 hover:border-primary/35 hover:bg-primary/[0.06] cursor-pointer transition-[border-color,box-shadow,background-color] duration-150 group shadow-sm hover:shadow-md"
                         >
                           <div className={DASH_GRID_ICON_SHELL}>
                             <FolderOpen className={DASH_GRID_ICON} />
@@ -226,12 +235,12 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     )
                   })}
                   <motion.div
-                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-xl border border-dashed border-border/50 bg-muted/20 hover:border-primary/40 hover:bg-primary/5 cursor-pointer transition-all duration-150"
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-md border border-dashed border-border/50 bg-muted/25 hover:border-primary/40 hover:bg-primary/[0.06] cursor-pointer transition-[border-color,box-shadow,background-color] duration-150 shadow-sm hover:shadow-md"
                     onClick={handleOpenCreateProject}
                   >
-                    <div className="w-14 h-14 rounded-2xl border border-dashed border-border/50 bg-muted/25 flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-md border border-dashed border-border/50 bg-muted/25 flex items-center justify-center">
                       {creating ? (
                         <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
                       ) : (
@@ -253,7 +262,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       <Link
                         key={project.id}
                         href={`/project/${project.id}`}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                        className={DASH_LIST_ROW}
                       >
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-medium truncate block">
@@ -277,10 +286,11 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     )
                   })}
                   <button
+                    type="button"
                     onClick={handleOpenCreateProject}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-border/50 hover:bg-muted/30 hover:border-primary/30 transition-colors text-muted-foreground"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-dashed border-border/50 bg-muted/15 shadow-sm hover:bg-muted/30 hover:border-primary/35 hover:shadow-md transition-all duration-150 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    <div className="w-11 h-11 rounded-xl border border-dashed border-border/45 bg-muted/25 flex items-center justify-center flex-shrink-0">
+                    <div className="w-11 h-11 rounded-md border border-dashed border-border/45 bg-muted/25 flex items-center justify-center flex-shrink-0">
                       {creating ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
@@ -298,58 +308,13 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.15 }}
-              className="pt-3 mt-3 border-t border-border/50"
+              className="pt-4 mt-4"
             >
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-3">
-                Recent trackers
-              </h2>
-              <div className="flex flex-col gap-1">
-                {recentTrackers.map((tracker) => {
-                  const isListView = tracker.listForSchemaId != null
-                  const TrackerIcon = isListView ? LayoutList : Table2
-                  const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
-                  return (
-                    <Link
-                      key={tracker.id}
-                      href={href}
-                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-semibold truncate block">
-                          {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          Updated{' '}
-                          {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                      <div className={`${DASH_LIST_ICON_SHELL} ${isListView ? 'border-primary/35 bg-primary/8' : ''}`}>
-                        <TrackerIcon className={`${DASH_LIST_ICON} ${isListView ? 'text-primary/80' : ''}`} />
-                      </div>
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </Link>
-                  )
-                })}
-              </div>
-            </motion.div>
-          )}
-          {view === 'recents' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 mb-3">
-                Recent trackers
-              </h2>
-              {recentTrackers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No trackers yet.</p>
-              ) : (
-                <div className="flex flex-col gap-1">
+              <div className="rounded-md border border-border/40 bg-muted/10 p-3 sm:p-4 shadow-sm">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/85 mb-3 px-0.5">
+                  Recent trackers
+                </h2>
+                <div className="flex flex-col gap-1.5">
                   {recentTrackers.map((tracker) => {
                     const isListView = tracker.listForSchemaId != null
                     const TrackerIcon = isListView ? LayoutList : Table2
@@ -358,7 +323,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                       <Link
                         key={tracker.id}
                         href={href}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:bg-muted/50 hover:border-border/40 cursor-pointer transition-colors group"
+                        className={DASH_LIST_ROW}
                       >
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-semibold truncate block">
@@ -380,7 +345,62 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     )
                   })}
                 </div>
-              )}
+              </div>
+            </motion.div>
+          )}
+          {view === 'recents' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.15 }}
+              className="h-full"
+            >
+              <div className="rounded-md border border-border/40 bg-muted/10 p-3 sm:p-4 shadow-sm h-full min-h-[8rem] flex flex-col">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/85 mb-3 px-0.5">
+                  Recent trackers
+                </h2>
+                {recentTrackers.length === 0 ? (
+                  <div className="flex-1 flex flex-col items-center justify-center rounded-md border border-dashed border-border/45 bg-background/40 py-10 px-4 text-center">
+                    <Table2 className="h-8 w-8 text-muted-foreground/35 mb-2" aria-hidden />
+                    <p className="text-sm font-medium text-muted-foreground">No trackers yet</p>
+                    <p className="text-xs text-muted-foreground/80 mt-1 max-w-[220px]">
+                      Open a project and create a tracker to see it here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    {recentTrackers.map((tracker) => {
+                      const isListView = tracker.listForSchemaId != null
+                      const TrackerIcon = isListView ? LayoutList : Table2
+                      const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+                      return (
+                        <Link
+                          key={tracker.id}
+                          href={href}
+                          className={DASH_LIST_ROW}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-semibold truncate block">
+                              {getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                              Updated{' '}
+                              {new Date(tracker.updatedAt).toLocaleDateString(undefined, {
+                                month: 'short',
+                                day: 'numeric',
+                              })}
+                            </span>
+                          </div>
+                          <div className={`${DASH_LIST_ICON_SHELL} ${isListView ? 'border-primary/35 bg-primary/8' : ''}`}>
+                            <TrackerIcon className={`${DASH_LIST_ICON} ${isListView ? 'text-primary/80' : ''}`} />
+                          </div>
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </div>
@@ -492,8 +512,9 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
         >
           <span>{error}</span>
           <button
+            type="button"
             onClick={() => setError(null)}
-            className="p-0.5 rounded hover:bg-destructive/20"
+            className="rounded-md p-0.5 hover:bg-destructive/20"
           >
             <X className="h-3.5 w-3.5" />
           </button>

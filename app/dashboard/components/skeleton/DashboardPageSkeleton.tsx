@@ -22,9 +22,9 @@ export function DashboardHomeSkeleton() {
           {Array.from({ length: 12 }).map((_, i) => (
             <div
               key={i}
-              className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-xl border border-border/40 bg-background/60 animate-pulse"
+              className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-md border border-border/40 bg-background/60 animate-pulse"
             >
-              <span className="w-12 h-12 rounded-xl bg-muted/50" />
+              <span className="w-12 h-12 rounded-md bg-muted/50" />
               <span className="h-3 w-14 rounded bg-muted/40" />
             </div>
           ))}
@@ -81,7 +81,7 @@ export function DashboardPageSkeleton({
               key={i}
               className="flex flex-col items-center gap-2.5 min-w-0 w-full animate-pulse"
             >
-              <span className="w-12 h-12 rounded-2xl bg-muted/50" />
+              <span className="w-12 h-12 rounded-md bg-muted/50" />
               <span className="h-3 w-14 rounded bg-muted/40" />
             </div>
           ))}

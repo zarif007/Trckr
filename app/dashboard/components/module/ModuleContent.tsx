@@ -6,7 +6,6 @@ import { usePathname, useRouter, useParams } from 'next/navigation'
 import {
   Loader2,
   X,
-  FilePlus,
   FileText,
   BarChart2,
   Table2,
@@ -28,13 +27,30 @@ import {
 import { dashboardQueryKeys } from '../../query-keys'
 import { CreateDropdown } from '../CreateDropdown'
 import { type ConfigTileRow } from '../configs/configRows'
+import {
+  ProjectAreaToolbar,
+  ProjectBreadcrumbNav,
+  ProjectEmptyStatePanel,
+  ProjectFolderTileIcon,
+  projectAreaBreadcrumbChevronClass,
+  projectAreaBreadcrumbCrumbClass,
+  projectAreaBreadcrumbInputClass,
+  projectAreaBreadcrumbTrailLinkClass,
+  projectAreaErrorDismissClass,
+  projectAreaErrorToastClass,
+  projectAreaFooterClass,
+  projectAreaItemGridClass,
+  projectAreaMainClass,
+  projectAreaScrollClass,
+  projectAreaTileButtonMotion,
+  projectAreaTileCardClass,
+  projectAreaTileMotionButtonClass,
+  projectAreaTileOverflowButtonClass,
+} from '../project-area'
 
 const ALL_FILE_TYPES: SystemFileType[] = ['TEAMS', 'SETTINGS', 'RULES', 'CONNECTIONS']
 
 const STALE_TIME_MS = 60 * 1000
-const TILE_ICON_SHELL =
-  'w-14 h-14 rounded-2xl bg-muted/45 border border-border/40 shadow-sm flex items-center justify-center flex-shrink-0 transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:shadow-md'
-const TILE_ICON = 'h-7 w-7 text-foreground/75 transition-colors group-hover:text-primary'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -787,39 +803,42 @@ export function ModuleContent({
 
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
-            <Link href="/dashboard" className="hover:text-foreground transition-colors flex-shrink-0">
+      <main className={projectAreaMainClass}>
+        <ProjectAreaToolbar
+          breadcrumb={
+            <ProjectBreadcrumbNav>
+            <Link href="/dashboard" className={projectAreaBreadcrumbTrailLinkClass}>
               Dashboard
             </Link>
-            <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
+            <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
             <Link
               href={pathname.startsWith('/project/') ? `/project/${projectId}` : `/dashboard/${projectId}`}
-              className="hover:text-foreground transition-colors flex-shrink-0"
+              className={projectAreaBreadcrumbTrailLinkClass}
             >
               {projectName || 'Untitled folder'}
             </Link>
-            {breadcrumb.length > 0 && (
+            {breadcrumb.length > 0 ? (
               <>
                 {breadcrumb.slice(0, -1).map((item) => (
-                  <span key={item.id} className="flex items-center gap-2 flex-shrink-0">
-                    <ChevronRight className="h-3 w-3 opacity-50" />
+                  <span key={item.id} className="flex shrink-0 items-center gap-2">
+                    <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
                     <Link
                       href={pathname.startsWith('/project/') ? `/project/${projectId}/module/${item.id}` : `/dashboard/${projectId}/module/${item.id}`}
-                      className="hover:text-foreground transition-colors"
+                      className={projectAreaBreadcrumbTrailLinkClass}
                     >
                       {item.name}
                     </Link>
                   </span>
                 ))}
-                <ChevronRight className="h-3 w-3 opacity-50 flex-shrink-0" />
+                <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
               </>
+            ) : (
+              <ChevronRight className={projectAreaBreadcrumbChevronClass} aria-hidden />
             )}
             {renaming?.kind === 'module' && renaming.id === mod.id ? (
               <Input
                 ref={renameInputRef}
-                className="h-6 text-[11px] font-medium w-40 max-w-[50vw]"
+                className={projectAreaBreadcrumbInputClass}
                 defaultValue={renaming.currentName}
                 onBlur={(e) => submitRename(e.target.value)}
                 onKeyDown={handleRenameKeyDown}
@@ -827,7 +846,7 @@ export function ModuleContent({
               />
             ) : (
               <span
-                className="font-medium text-foreground truncate cursor-default select-none rounded px-1 -mx-1 py-0.5 hover:bg-muted/50"
+                className={projectAreaBreadcrumbCrumbClass}
                 onContextMenu={(e) =>
                   openContextMenu(e, {
                     kind: 'module',
@@ -847,29 +866,32 @@ export function ModuleContent({
                 {mod.name || 'Untitled module'}
               </span>
             )}
-          </div>
-          <CreateDropdown
-            projectId={projectId}
-            moduleId={moduleId}
-            variant="toolbar"
-            onError={(msg) => setErrorMessage(msg || null)}
-            onTrackerCreated={handleTrackerCreated}
-            onReportCreated={handleReportCreated}
-            onAnalysisCreated={handleAnalysisCreated}
-            availableConfigTypes={availableFileTypes}
-            onAddConfig={handleAddConfig}
-            addingConfig={addingConfig}
-          />
-        </div>
+            </ProjectBreadcrumbNav>
+          }
+          actions={
+            <CreateDropdown
+              projectId={projectId}
+              moduleId={moduleId}
+              variant="toolbar"
+              onError={(msg) => setErrorMessage(msg || null)}
+              onTrackerCreated={handleTrackerCreated}
+              onReportCreated={handleReportCreated}
+              onAnalysisCreated={handleAnalysisCreated}
+              availableConfigTypes={availableFileTypes}
+              onAddConfig={handleAddConfig}
+              addingConfig={addingConfig}
+            />
+          }
+        />
 
-        <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
+        <div className={projectAreaScrollClass}>
           <div className="h-full min-h-0">
             {isEmpty ? (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
-                <div className="w-16 h-16 rounded-2xl bg-muted/30 flex items-center justify-center border border-dashed border-border/35">
-                  <FileText className="h-8 w-8 opacity-45" />
-                </div>
-                <p className="text-xs font-medium">This module is empty</p>
+              <ProjectEmptyStatePanel
+                icon={FileText}
+                title="This module is empty"
+                description="Add trackers, nested modules, or reports from the menu above."
+              >
                 <CreateDropdown
                   projectId={projectId}
                   moduleId={moduleId}
@@ -882,10 +904,10 @@ export function ModuleContent({
                   onAddConfig={handleAddConfig}
                   addingConfig={addingConfig}
                 />
-              </div>
+              </ProjectEmptyStatePanel>
             ) : (
               <div
-                className="grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 sm:gap-6 content-start"
+                className={projectAreaItemGridClass}
                 aria-label="Module items"
               >
                 {tableRows.map((row) => {
@@ -912,10 +934,11 @@ export function ModuleContent({
                           ? `file-${row.id}`
                           : `${row.kind}-${row.id}`
                       }
-                      className="relative flex flex-col items-center gap-3 min-w-0 w-full group/card"
+                      className={projectAreaTileCardClass}
                     >
-                      <button
+                      <motion.button
                         type="button"
+                        {...projectAreaTileButtonMotion}
                         onClick={() => {
                           if (isRenamingThis) return
                           if (clickNavigateTimeoutRef.current)
@@ -940,23 +963,14 @@ export function ModuleContent({
                             ? (e) => openContextMenu(e, contextItem)
                             : undefined
                         }
-                        className="group flex flex-col items-center gap-3 rounded-2xl p-4 w-full hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 transition-colors"
+                        className={projectAreaTileMotionButtonClass}
                       >
-                        <div
-                          className={`${TILE_ICON_SHELL} ${
+                        <ProjectFolderTileIcon
+                          icon={Icon}
+                          listHighlight={
                             'trackerView' in row && row.trackerView === 'list'
-                              ? 'border-primary/35 bg-primary/8'
-                              : ''
-                          }`}
-                        >
-                          <Icon
-                            className={`${TILE_ICON} ${
-                              'trackerView' in row && row.trackerView === 'list'
-                                ? 'text-primary/80'
-                                : ''
-                            }`}
-                          />
-                        </div>
+                          }
+                        />
                         {isRenamingThis ? (
                           <Input
                             ref={renameInputRef}
@@ -971,14 +985,14 @@ export function ModuleContent({
                             {row.label}
                           </span>
                         )}
-                      </button>
+                      </motion.button>
                       {(row.kind === 'tracker' ||
                         row.kind === 'report' ||
                         row.kind === 'analysis') &&
                         !isRenamingThis && (
                         <button
                           type="button"
-                          className="absolute top-1 right-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-muted/80 hover:text-foreground group-hover/card:opacity-100"
+                          className={projectAreaTileOverflowButtonClass}
                           aria-label={
                             row.kind === 'report'
                               ? 'Report actions'
@@ -1003,8 +1017,8 @@ export function ModuleContent({
         </div>
       </main>
 
-      <div className="h-6 flex-shrink-0 border-t border-border/50 flex items-center justify-between px-3 text-[10px] text-muted-foreground bg-muted/20">
-        <span>
+      <div className={projectAreaFooterClass}>
+        <span className="tabular-nums">
           {totalItems} item
           {totalItems !== 1 ? 's' : ''}
         </span>
@@ -1027,12 +1041,13 @@ export function ModuleContent({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="fixed bottom-10 right-6 z-50 bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-lg"
+          className={projectAreaErrorToastClass}
         >
           <span>{displayError}</span>
           <button
+            type="button"
             onClick={() => setErrorMessage(null)}
-            className="p-0.5 rounded hover:bg-destructive/20"
+            className={projectAreaErrorDismissClass}
           >
             <X className="h-3.5 w-3.5" />
           </button>
