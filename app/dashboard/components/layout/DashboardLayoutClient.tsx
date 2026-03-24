@@ -25,7 +25,6 @@ import {
   FunctionSquare,
   GitBranch,
   BarChart2,
-  LineChart,
 } from 'lucide-react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
@@ -287,7 +286,7 @@ function SidebarAnalysisLink({
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
-        <LineChart className="h-[18px] w-[18px]" />
+        <BarChart2 className="h-[18px] w-[18px]" />
       </span>
       <Link
         href={`/analysis/${analysis.id}`}

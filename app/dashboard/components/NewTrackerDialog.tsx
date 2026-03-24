@@ -288,8 +288,10 @@ export function NewTrackerDialog({
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                    versionControl && instance === 'SINGLE' ? 'translate-x-4' : 'translate-x-0.5',
+                    'pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-primary-foreground shadow-sm transition-[left] duration-200 ease-out',
+                    versionControl && instance === 'SINGLE'
+                      ? 'left-[calc(100%-1rem-0.125rem)]'
+                      : 'left-0.5',
                   )}
                 />
               </div>
@@ -359,8 +361,10 @@ export function NewTrackerDialog({
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200',
-                    autoSave && instance === 'SINGLE' && !versionControl ? 'translate-x-4' : 'translate-x-0.5',
+                    'pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-primary-foreground shadow-sm transition-[left] duration-200 ease-out',
+                    autoSave && instance === 'SINGLE' && !versionControl
+                      ? 'left-[calc(100%-1rem-0.125rem)]'
+                      : 'left-0.5',
                   )}
                 />
               </div>
