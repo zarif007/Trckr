@@ -13,8 +13,15 @@ export default function NavBarWrapper() {
   const isDashboardPage = pathname?.startsWith('/dashboard') ?? false
   const isProjectPage = pathname?.startsWith('/project') ?? false
   const isReportPage = pathname?.startsWith('/report') ?? false
+  const isAnalysisPage = pathname?.startsWith('/analysis') ?? false
 
-  if (isTrackerPage || isDashboardPage || isProjectPage || isReportPage) {
+  if (
+    isTrackerPage ||
+    isDashboardPage ||
+    isProjectPage ||
+    isReportPage ||
+    isAnalysisPage
+  ) {
     return null
   }
 

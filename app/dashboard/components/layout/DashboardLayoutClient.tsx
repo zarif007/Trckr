@@ -25,6 +25,7 @@ import {
   FunctionSquare,
   GitBranch,
   BarChart2,
+  LineChart,
 } from 'lucide-react'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ import {
   type Module,
   type TrackerSchema,
   type ReportSummary,
+  type AnalysisSummary,
 } from '../../dashboard-context'
 import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 import { ClaiProvider } from '../clai'
@@ -68,6 +70,8 @@ function moduleContainsActive(
   currentTrackerId: string | null,
   projectReports: ReportSummary[],
   currentReportId: string | null,
+  projectAnalyses: AnalysisSummary[],
+  currentAnalysisId: string | null,
 ): boolean {
   if (currentModuleId === mod.id) return true
   if (
@@ -80,6 +84,11 @@ function moduleContainsActive(
     projectReports.some((r) => r.id === currentReportId && r.moduleId === mod.id)
   )
     return true
+  if (
+    currentAnalysisId != null &&
+    projectAnalyses.some((a) => a.id === currentAnalysisId && a.moduleId === mod.id)
+  )
+    return true
   return (mod.children ?? []).some((c) =>
     moduleContainsActive(
       c,
@@ -87,6 +96,8 @@ function moduleContainsActive(
       currentTrackerId,
       projectReports,
       currentReportId,
+      projectAnalyses,
+      currentAnalysisId,
     ),
   )
 }
@@ -265,23 +276,58 @@ function SidebarReportLink({
   )
 }
 
+function SidebarAnalysisLink({
+  analysis,
+  currentAnalysisId,
+}: {
+  analysis: AnalysisSummary
+  currentAnalysisId: string | null
+}) {
+  const isActive = analysis.id === currentAnalysisId
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
+        <LineChart className="h-[18px] w-[18px]" />
+      </span>
+      <Link
+        href={`/analysis/${analysis.id}`}
+        className={cn(
+          'flex items-center gap-2.5 pl-1.5 pr-2.5 py-1.5 rounded-md text-left transition-colors min-w-0 flex-1 overflow-hidden group/item',
+          isActive
+            ? 'bg-primary/10 text-primary font-medium'
+            : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+        )}
+      >
+        <span className="text-sm leading-5 truncate flex-1 min-w-0">
+          {analysis.name?.trim() || 'Untitled analysis'}
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity duration-150 group-hover/item:opacity-70" />
+      </Link>
+    </div>
+  )
+}
+
 function SidebarModule({
   projectId,
   module: mod,
   projectReports,
+  projectAnalyses,
   currentProjectId,
   currentModuleId,
   currentTrackerId,
   currentReportId,
+  currentAnalysisId,
   onContextMenu,
 }: {
   projectId: string
   module: Module
   projectReports: ReportSummary[]
+  projectAnalyses: AnalysisSummary[]
   currentProjectId: string | null
   currentModuleId: string | null
   currentTrackerId: string | null
   currentReportId: string | null
+  currentAnalysisId: string | null
   onContextMenu: (e: React.MouseEvent, item: SidebarContextItem) => void
 }) {
   const isModuleActive =
@@ -290,12 +336,14 @@ function SidebarModule({
     (t) => t.type === 'GENERAL',
   )
   const moduleReports = projectReports.filter((r) => r.moduleId === mod.id)
+  const moduleAnalyses = projectAnalyses.filter((a) => a.moduleId === mod.id)
   const children = mod.children ?? []
   const hasTrackers = trackers.length > 0
   const hasChildModules = children.length > 0
   const hasReports = moduleReports.length > 0
+  const hasAnalyses = moduleAnalyses.length > 0
   const hasExpandableContent =
-    hasTrackers || hasChildModules || hasReports
+    hasTrackers || hasChildModules || hasReports || hasAnalyses
   const containsActive =
     isModuleActive ||
     moduleContainsActive(
@@ -304,6 +352,8 @@ function SidebarModule({
       currentTrackerId,
       projectReports,
       currentReportId,
+      projectAnalyses,
+      currentAnalysisId,
     )
   const [expanded, setExpanded] = useState(
     containsActive || (hasExpandableContent && isModuleActive),
@@ -359,9 +409,12 @@ function SidebarModule({
           <span className="text-sm leading-5 truncate flex-1 min-w-0">
             {mod.name || 'Untitled module'}
           </span>
-          {(trackers.length > 0 || children.length > 0 || moduleReports.length > 0) && (
+          {(trackers.length > 0 ||
+            children.length > 0 ||
+            moduleReports.length > 0 ||
+            moduleAnalyses.length > 0) && (
             <span className="text-xs text-muted-foreground/60 tabular-nums flex-shrink-0 w-9 text-right ml-auto">
-              {trackers.length + children.length + moduleReports.length}
+              {trackers.length + children.length + moduleReports.length + moduleAnalyses.length}
             </span>
           )}
         </Link>
@@ -374,10 +427,12 @@ function SidebarModule({
               projectId={projectId}
               module={child}
               projectReports={projectReports}
+              projectAnalyses={projectAnalyses}
               currentProjectId={currentProjectId}
               currentModuleId={currentModuleId}
               currentTrackerId={currentTrackerId}
               currentReportId={currentReportId}
+              currentAnalysisId={currentAnalysisId}
               onContextMenu={onContextMenu}
             />
           ))}
@@ -397,6 +452,13 @@ function SidebarModule({
               currentReportId={currentReportId}
             />
           ))}
+          {moduleAnalyses.map((a) => (
+            <SidebarAnalysisLink
+              key={a.id}
+              analysis={a}
+              currentAnalysisId={currentAnalysisId}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -409,6 +471,7 @@ function SidebarProject({
   currentModuleId,
   currentTrackerId,
   currentReportId,
+  currentAnalysisId,
   onContextMenu,
 }: {
   project: Project
@@ -416,11 +479,14 @@ function SidebarProject({
   currentModuleId: string | null
   currentTrackerId: string | null
   currentReportId: string | null
+  currentAnalysisId: string | null
   onContextMenu: (e: React.MouseEvent, item: SidebarContextItem) => void
 }) {
   const isActive = project.id === currentProjectId && !currentModuleId
   const projectReports = project.reports ?? []
+  const projectAnalyses = project.analyses ?? []
   const projectLevelReports = projectReports.filter((r) => r.moduleId == null)
+  const projectLevelAnalyses = projectAnalyses.filter((a) => a.moduleId == null)
   const projectLevelTrackers = (project.trackerSchemas ?? []).filter(
     (t) => !t.moduleId && t.type === 'GENERAL',
   )
@@ -430,13 +496,19 @@ function SidebarProject({
   const hasModules = project.modules.length > 0
   const hasProjectTrackers = projectLevelTrackers.length > 0
   const hasProjectReports = projectLevelReports.length > 0
+  const hasProjectAnalyses = projectLevelAnalyses.length > 0
   const hasChildren =
-    hasModules || hasProjectTrackers || hasProjectReports
+    hasModules || hasProjectTrackers || hasProjectReports || hasProjectAnalyses
   const activeReportBelongsToProject =
     currentReportId != null &&
     projectReports.some((r) => r.id === currentReportId)
+  const activeAnalysisBelongsToProject =
+    currentAnalysisId != null &&
+    projectAnalyses.some((a) => a.id === currentAnalysisId)
   const containsActive =
-    project.id === currentProjectId || activeReportBelongsToProject
+    project.id === currentProjectId ||
+    activeReportBelongsToProject ||
+    activeAnalysisBelongsToProject
   const [expanded, setExpanded] = useState(containsActive && hasChildren)
 
   useEffect(() => {
@@ -446,6 +518,7 @@ function SidebarProject({
   const itemCount =
     projectLevelTrackers.length +
     projectLevelReports.length +
+    projectLevelAnalyses.length +
     project.modules.length +
     (hasProjectConfigs ? 1 : 0)
 
@@ -510,10 +583,12 @@ function SidebarProject({
               projectId={project.id}
               module={mod}
               projectReports={projectReports}
+              projectAnalyses={projectAnalyses}
               currentProjectId={currentProjectId}
               currentModuleId={currentModuleId}
               currentTrackerId={currentTrackerId}
               currentReportId={currentReportId}
+              currentAnalysisId={currentAnalysisId}
               onContextMenu={onContextMenu}
             />
           ))}
@@ -531,6 +606,13 @@ function SidebarProject({
               key={r.id}
               report={r}
               currentReportId={currentReportId}
+            />
+          ))}
+          {projectLevelAnalyses.map((a) => (
+            <SidebarAnalysisLink
+              key={a.id}
+              analysis={a}
+              currentAnalysisId={currentAnalysisId}
             />
           ))}
         </div>
@@ -710,6 +792,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const isReportPage = pathname.startsWith('/report/')
   const currentReportId =
     isReportPage && pathSegments[2] ? pathSegments[2]! : null
+  const isAnalysisPage = pathname.startsWith('/analysis/')
+  const currentAnalysisId =
+    isAnalysisPage && pathSegments[2] ? pathSegments[2]! : null
 
   const allTrackers = projects.flatMap((p) => [
     ...(p.trackerSchemas ?? []).filter(
@@ -983,6 +1068,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     currentModuleId={currentModuleId}
                     currentTrackerId={currentTrackerId}
                     currentReportId={currentReportId}
+                    currentAnalysisId={currentAnalysisId}
                     onContextMenu={openSidebarContextMenu}
                   />
                 ))}
@@ -1147,6 +1233,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                           currentModuleId={currentModuleId}
                           currentTrackerId={currentTrackerId}
                           currentReportId={currentReportId}
+                          currentAnalysisId={currentAnalysisId}
                           onContextMenu={openSidebarContextMenu}
                         />
                       ))}
@@ -1335,6 +1422,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                             currentModuleId={currentModuleId}
                             currentTrackerId={currentTrackerId}
                             currentReportId={currentReportId}
+                            currentAnalysisId={currentAnalysisId}
                             onContextMenu={openSidebarContextMenu}
                           />
                         ))}

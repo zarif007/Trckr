@@ -40,6 +40,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     primaryNavAction = null,
     showPanelUtilities = true,
     schemaAutoSave = false,
+    ownerScopeSettingsBanner,
   } = props
 
   const isDataPage = pageMode === 'data'
@@ -711,5 +712,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     dataSaveStatus,
     chatPanelProps,
     reportForeignBindingNav,
+    ownerScopeSettingsBanner,
   }
 }

@@ -7,6 +7,7 @@ import {
   X,
   FilePlus,
   FileText,
+  BarChart2,
   Table2,
   LayoutList,
   Folder,
@@ -148,6 +149,13 @@ export function ProjectContent({
           body: JSON.stringify({ name: newName }),
         })
         if (!res.ok) throw new Error('Failed to rename report')
+      } else if (kind === 'analysis') {
+        const res = await fetch(`/api/analyses/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName }),
+        })
+        if (!res.ok) throw new Error('Failed to rename analysis')
       }
       await fetchProjects()
       invalidateProjectAndProjects()
@@ -180,6 +188,14 @@ export function ProjectContent({
               ),
             }
           }
+          if (kind === 'analysis') {
+            return {
+              ...prev,
+              analyses: (prev.analyses ?? []).map((a) =>
+                a.id === id ? { ...a, name } : a,
+              ),
+            }
+          }
           return {
             ...prev,
             trackerSchemas: prev.trackerSchemas.map((t) =>
@@ -202,6 +218,14 @@ export function ProjectContent({
                 ...p,
                 reports: p.reports.map((r) =>
                   r.id === id ? { ...r, name } : r,
+                ),
+              }
+            }
+            if (kind === 'analysis') {
+              return {
+                ...p,
+                analyses: (p.analyses ?? []).map((a) =>
+                  a.id === id ? { ...a, name } : a,
                 ),
               }
             }
@@ -242,6 +266,11 @@ export function ProjectContent({
       } else if (item.kind === 'report') {
         const res = await fetch(`/api/reports/${item.id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('Failed to delete report')
+        invalidateProjectAndProjects()
+        await fetchProjects()
+      } else if (item.kind === 'analysis') {
+        const res = await fetch(`/api/analyses/${item.id}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error('Failed to delete analysis')
         invalidateProjectAndProjects()
         await fetchProjects()
       }
@@ -382,6 +411,42 @@ export function ProjectContent({
           )
         }
       }
+      if (item.kind === 'analysis' && project) {
+        const analysis = (project.analyses ?? []).find((a) => a.id === item.id)
+        if (!analysis) return
+        queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+          prev
+            ? {
+              ...prev,
+              analyses: (prev.analyses ?? []).filter((a) => a.id !== item.id),
+            }
+            : prev,
+        )
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                ...p,
+                analyses: (p.analyses ?? []).filter((a) => a.id !== item.id),
+              },
+          ),
+        )
+        return () => {
+          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+            prev
+              ? { ...prev, analyses: [...(prev.analyses ?? []), analysis] }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, analyses: [...(p.analyses ?? []), analysis] },
+            ),
+          )
+        }
+      }
     },
     [project, projectId, queryClient, setProjects, router, pathname],
   )
@@ -424,12 +489,17 @@ export function ProjectContent({
     () => (project?.reports ?? []).filter((r) => r.moduleId == null),
     [project?.reports],
   )
+  const projectLevelAnalyses = useMemo(
+    () => (project?.analyses ?? []).filter((a) => a.moduleId == null),
+    [project?.analyses],
+  )
   const hasProjectConfigs = projectSystemFiles.length > 0
   const totalItems =
     (hasProjectConfigs ? 1 : 0) +
     modules.length +
     projectLevelTrackers.length +
-    projectLevelReports.length
+    projectLevelReports.length +
+    projectLevelAnalyses.length
   const isEmpty = totalItems === 0
 
   const tableRows = useMemo(() => {
@@ -472,6 +542,14 @@ export function ProjectContent({
       label: string
       sublabel: string
       icon: typeof FileText
+      updatedAt: string
+      href: string
+    } | {
+      kind: 'analysis'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof BarChart2
       updatedAt: string
       href: string
     })[] = []
@@ -536,7 +614,16 @@ export function ProjectContent({
       updatedAt: r.updatedAt,
       href: `/report/${r.id}`,
     }))
-    return [...rows, ...moduleRows, ...trackerRows, ...reportRows]
+    const analysisRows = projectLevelAnalyses.map((a) => ({
+      kind: 'analysis' as const,
+      id: a.id,
+      label: a.name?.trim() || 'Untitled analysis',
+      sublabel: 'Analysis',
+      icon: BarChart2,
+      updatedAt: a.updatedAt,
+      href: `/analysis/${a.id}`,
+    }))
+    return [...rows, ...moduleRows, ...trackerRows, ...reportRows, ...analysisRows]
   }, [
     pathname,
     projectId,
@@ -544,6 +631,7 @@ export function ProjectContent({
     modules,
     projectLevelTrackers,
     projectLevelReports,
+    projectLevelAnalyses,
     hasProjectConfigs,
   ])
 
@@ -557,6 +645,11 @@ export function ProjectContent({
   )
 
   const handleReportCreated = useCallback(async () => {
+    await fetchProjects()
+    invalidateProjectAndProjects()
+  }, [fetchProjects, invalidateProjectAndProjects])
+
+  const handleAnalysisCreated = useCallback(async () => {
     await fetchProjects()
     invalidateProjectAndProjects()
   }, [fetchProjects, invalidateProjectAndProjects])
@@ -618,6 +711,7 @@ export function ProjectContent({
             onError={(msg) => setErrorMessage(msg || null)}
             onTrackerCreated={handleTrackerCreated}
             onReportCreated={handleReportCreated}
+            onAnalysisCreated={handleAnalysisCreated}
           />
         </div>
 
@@ -635,6 +729,7 @@ export function ProjectContent({
                   onError={(msg) => setErrorMessage(msg || null)}
                   onTrackerCreated={handleTrackerCreated}
                   onReportCreated={handleReportCreated}
+                  onAnalysisCreated={handleAnalysisCreated}
                 />
               </div>
             ) : (
@@ -657,7 +752,8 @@ export function ProjectContent({
                   const canRenameDelete =
                     row.kind === 'module' ||
                     row.kind === 'tracker' ||
-                    row.kind === 'report'
+                    row.kind === 'report' ||
+                    row.kind === 'analysis'
                   return (
                     <div
                       key={
@@ -725,13 +821,19 @@ export function ProjectContent({
                           </span>
                         )}
                       </button>
-                      {(row.kind === 'tracker' || row.kind === 'report') &&
+                      {(row.kind === 'tracker' ||
+                        row.kind === 'report' ||
+                        row.kind === 'analysis') &&
                         !isRenamingThis && (
                         <button
                           type="button"
                           className="absolute top-1 right-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-muted/80 hover:text-foreground group-hover/card:opacity-100"
                           aria-label={
-                            row.kind === 'report' ? 'Report actions' : 'Tracker actions'
+                            row.kind === 'report'
+                              ? 'Report actions'
+                              : row.kind === 'analysis'
+                                ? 'Analysis actions'
+                                : 'Tracker actions'
                           }
                           onClick={(e: MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation()

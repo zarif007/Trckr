@@ -46,6 +46,13 @@ export type ReportSummary = {
   updatedAt: string
 }
 
+export type AnalysisSummary = {
+  id: string
+  name: string
+  moduleId: string | null
+  updatedAt: string
+}
+
 export type Module = {
   id: string
   projectId: string
@@ -65,6 +72,7 @@ export type Project = {
   updatedAt: string
   trackerSchemas: TrackerSchema[]
   reports: ReportSummary[]
+  analyses: AnalysisSummary[]
   modules: Module[]
 }
 

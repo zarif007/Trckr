@@ -6,12 +6,9 @@ import { getConfiguredMaxOutputTokens, getDefaultAiProvider, hasDeepSeekApiKey }
 import { buildReportCalcUserPrompt, getReportCalcSystemPrompt } from '@/lib/prompts/report-calc'
 import { buildReportFormatterUserPrompt, getReportFormatterSystemPrompt } from '@/lib/prompts/report-formatter'
 import { buildReportIntentUserPrompt, getReportIntentSystemPrompt } from '@/lib/prompts/report-intent'
-import {
-  buildReportQueryPlanUserPrompt,
-  getReportQueryPlanSystemPrompt,
-} from '@/lib/prompts/report-query-plan'
 import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { prisma } from '@/lib/db'
+import { withTracedRun } from '@/lib/insights/with-traced-run'
 
 import {
   type QueryPlanV1,
@@ -19,9 +16,9 @@ import {
   formatterPlanV1Schema,
   parseFormatterPlan,
   parseQueryPlan,
-  queryPlanV1Schema,
   reportIntentSchema,
 } from './ast-schemas'
+import { generateQueryPlanV1 } from './query-plan-agent'
 import {
   applyCalcPlanToRows,
   emptyCalcPlan,
@@ -89,22 +86,15 @@ async function withRun(
   writeNdjsonLine: (line: string) => Promise<void> | void,
   fn: (forward: Forward) => Promise<void>,
 ): Promise<void> {
-  const run = await createReportRun(reportId, trigger)
-  let seq = 0
-  const forward: Forward = async (event) => {
-    await writeNdjsonLine(encodeNdjsonLine(event))
-    await appendReportRunEvent(run.id, seq, event)
-    seq += 1
-  }
-  try {
-    await fn(forward)
-    await finishReportRun(run.id, 'completed')
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Report run failed'
-    await forward({ t: 'error', message })
-    await finishReportRun(run.id, 'failed')
-    throw e
-  }
+  await withTracedRun<ReportStreamEvent>({
+    writeNdjsonLine,
+    encodeLine: encodeNdjsonLine,
+    createRun: () => createReportRun(reportId, trigger),
+    appendEvent: appendReportRunEvent,
+    finishRun: finishReportRun,
+    buildErrorEvent: (message) => ({ t: 'error', message }),
+    fn,
+  })
 }
 
 function recordUsage(
@@ -278,22 +268,17 @@ export async function executeReportFullGeneration(params: {
     await forward({ t: 'phase_start', phase: 'query_plan', label: 'Building query plan' })
     await forward({ t: 'phase_delta', phase: 'query_plan', text: 'Mapping to safe query AST…' })
 
-    const queryResult = await provider.generateObject({
-      system: getReportQueryPlanSystemPrompt(),
-      prompt: buildReportQueryPlanUserPrompt({
+    const { queryPlan, usage: queryPlanUsage } = await generateQueryPlanV1({
+      provider,
+      maxOutputTokens: maxTokens,
+      userPromptContext: {
+        mode: 'report',
         intent,
         catalogText,
         userQuery: userPrompt,
-      }),
-      schema: queryPlanV1Schema,
-      maxOutputTokens: maxTokens,
+      },
     })
-    recordUsage(userId, 'report-query-plan', queryResult.usage, projectId, trackerSchemaId, report.id)
-
-    const queryPlan = parseQueryPlan(queryResult.object)
-    if (!queryPlan) {
-      throw new Error('Model returned an invalid query plan.')
-    }
+    recordUsage(userId, 'report-query-plan', queryPlanUsage, projectId, trackerSchemaId, report.id)
 
     await forward({
       t: 'artifact',

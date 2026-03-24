@@ -68,6 +68,7 @@ export async function recordLlmUsage(params: {
   projectId?: string | null
   trackerSchemaId?: string | null
   reportId?: string | null
+  analysisId?: string | null
 }): Promise<void> {
   const counts = tokenCountsFromUsage(params.usage)
   if (!counts) return
@@ -82,6 +83,7 @@ export async function recordLlmUsage(params: {
       projectId: params.projectId ?? null,
       trackerSchemaId: params.trackerSchemaId ?? null,
       reportId: params.reportId ?? null,
+      analysisId: params.analysisId ?? null,
     },
   })
 }

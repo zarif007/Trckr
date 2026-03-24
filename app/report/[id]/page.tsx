@@ -8,13 +8,21 @@ import {
   useState,
   type KeyboardEvent,
 } from 'react'
-import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import Markdown from 'react-markdown'
 import type { ColumnDef } from '@tanstack/react-table'
-import { ArrowLeft, Check, ChevronRight, Loader2, RefreshCw, Sparkles } from 'lucide-react'
+import { FileDown, Loader2, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DataTable } from '@/app/components/tracker-display/grids/data-table/data-table'
+import { GenerationTimeline, GenerationTimelineStarting } from '@/app/insights/components/GenerationTimeline'
+import { InsightPageHeader } from '@/app/insights/components/InsightPageHeader'
+import { InsightPromptCard } from '@/app/insights/components/InsightPromptCard'
+import { StaleDefinitionBanner } from '@/app/insights/components/StaleDefinitionBanner'
+import {
+  applyPhaseStreamEvent,
+  consumeInsightNdjsonStream,
+  type GenerationTimelineStep,
+} from '@/app/insights/lib/ndjson-timeline'
 import { ReportMultilinePrompt } from '@/app/report/components/ReportMultilinePrompt'
 import {
   ReportRecipeFilters,
@@ -27,7 +35,11 @@ import {
 } from '@/app/report/lib/replay-overrides'
 import type { QueryPlanV1 } from '@/lib/reports/ast-schemas'
 import type { ReportStreamEvent } from '@/lib/reports/stream-events'
-import { cn } from '@/lib/utils'
+import {
+  downloadTextFile,
+  sanitizeDownloadBasename,
+  tableRowsToCsv,
+} from '@/lib/preview-download'
 
 type ReportMeta = {
   id: string
@@ -62,67 +74,6 @@ const ARTIFACT_SAVED_LABEL: Record<ArtifactKind, string> = {
   calc_plan: 'Calculations configured',
 }
 
-type TimelineStep = {
-  phase: string
-  label?: string
-  deltas: string[]
-  summary?: string
-  artifactKind?: ArtifactKind
-  rowCount?: number
-  columns?: string[]
-}
-
-function applyStreamEvent(steps: TimelineStep[], ev: ReportStreamEvent): TimelineStep[] {
-  const next = [...steps]
-  const lastIdxForPhase = (phase: string) => {
-    for (let j = next.length - 1; j >= 0; j--) {
-      if (next[j]!.phase === phase) return j
-    }
-    return -1
-  }
-
-  switch (ev.t) {
-    case 'phase_start':
-      next.push({ phase: ev.phase, label: ev.label, deltas: [] })
-      break
-    case 'phase_delta': {
-      const i = lastIdxForPhase(ev.phase)
-      if (i >= 0) {
-        const s = next[i]!
-        next[i] = { ...s, deltas: [...s.deltas, ev.text] }
-      }
-      break
-    }
-    case 'phase_end': {
-      const i = lastIdxForPhase(ev.phase)
-      if (i >= 0) {
-        const s = next[i]!
-        next[i] = { ...s, summary: ev.summary }
-      }
-      break
-    }
-    case 'artifact': {
-      const i = lastIdxForPhase(ev.phase)
-      if (i >= 0) {
-        const s = next[i]!
-        next[i] = { ...s, artifactKind: ev.kind }
-      }
-      break
-    }
-    case 'data_preview': {
-      const i = next.length - 1
-      if (i >= 0) {
-        const s = next[i]!
-        next[i] = { ...s, rowCount: ev.rowCount, columns: ev.columns }
-      }
-      break
-    }
-    default:
-      break
-  }
-  return next
-}
-
 function reportTableColumnKeys(rows: Record<string, unknown>[]): string[] {
   const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((k) => !k.startsWith('__'))
   return keys
@@ -152,7 +103,7 @@ export default function ReportPage() {
   const [meta, setMeta] = useState<ReportMeta | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
-  const [steps, setSteps] = useState<TimelineStep[]>([])
+  const [steps, setSteps] = useState<GenerationTimelineStep[]>([])
   const [markdown, setMarkdown] = useState<string | null>(null)
   const [preambleMarkdown, setPreambleMarkdown] = useState<string | null>(null)
   const [tableRows, setTableRows] = useState<Record<string, unknown>[] | null>(null)
@@ -247,6 +198,10 @@ export default function ReportPage() {
     if (!running && markdown !== null) setStepDetailsOpen({})
   }, [running, markdown])
 
+  const handleStepDetailsOpenChange = useCallback((idx: number, open: boolean) => {
+    setStepDetailsOpen((prev) => ({ ...prev, [idx]: open }))
+  }, [])
+
   const runStream = useCallback(
     async (opts: { regenerate: boolean }) => {
       if (opts.regenerate) {
@@ -291,37 +246,23 @@ export default function ReportPage() {
         return
       }
 
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
       let pipelineError: string | null = null
       try {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const lines = buffer.split('\n')
-          buffer = lines.pop() ?? ''
-          for (const line of lines) {
-            if (!line.trim()) continue
-            let ev: ReportStreamEvent
-            try {
-              ev = JSON.parse(line) as ReportStreamEvent
-            } catch {
-              continue
-            }
-            if (ev.t === 'final') {
-              setMarkdown(ev.markdown)
-              if (ev.preambleMarkdown !== undefined) setPreambleMarkdown(ev.preambleMarkdown)
-              if (ev.tableRows !== undefined) setTableRows(ev.tableRows)
-            } else if (ev.t === 'error') {
-              pipelineError = ev.message
-              setStreamError(ev.message)
-            } else {
-              setSteps((prev) => applyStreamEvent(prev, ev))
-            }
-          }
-        }
+        await consumeInsightNdjsonStream({
+          body: res.body,
+          onPhaseEvent: (ev) => setSteps((prev) => applyPhaseStreamEvent(prev, ev)),
+          onFinal: (raw) => {
+            const ev = raw as ReportStreamEvent
+            if (ev.t !== 'final') return
+            setMarkdown(ev.markdown)
+            if (ev.preambleMarkdown !== undefined) setPreambleMarkdown(ev.preambleMarkdown)
+            if (ev.tableRows !== undefined) setTableRows(ev.tableRows)
+          },
+          onStreamError: (message) => {
+            pipelineError = message
+            setStreamError(message)
+          },
+        })
       } finally {
         setRunning(false)
         if (pipelineError === null && body.replayQueryOverrides !== undefined) {
@@ -346,6 +287,15 @@ export default function ReportPage() {
   const handleApplyFilters = useCallback(() => {
     void runStream({ regenerate: false })
   }, [runStream])
+
+  const handleDownloadSpreadsheet = useCallback(() => {
+    if (!meta || !tableRows?.length) return
+    const keys = reportTableColumnKeys(tableRows)
+    const cols = keys.length > 0 ? keys : Object.keys(tableRows[0]!)
+    const csv = tableRowsToCsv(tableRows, cols)
+    const base = sanitizeDownloadBasename(meta.name)
+    downloadTextFile(`${base}.csv`, csv, 'text/csv;charset=utf-8')
+  }, [tableRows, meta])
 
   useEffect(() => {
     if (!meta || meta.id !== id || didAutoReplayRef.current) return
@@ -418,193 +368,96 @@ export default function ReportPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 pb-20">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <Link
-            href={backHref}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground mb-2"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            {meta.projectName ?? 'Project'}
-            {meta.moduleName ? ` / ${meta.moduleName}` : ''}
-          </Link>
-          <h1 className="text-xl font-semibold tracking-tight">{meta.name}</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Tracker: {meta.trackerName?.trim() || 'Untitled'}
-          </p>
-        </div>
-      </div>
+      <InsightPageHeader
+        backHref={backHref}
+        title={meta.name}
+        trackerName={meta.trackerName}
+        projectName={meta.projectName}
+        moduleName={meta.moduleName}
+      />
 
-      {meta.staleDefinition && (
-        <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:text-amber-100">
-          The tracker schema changed since this report was generated. Run <strong>Regenerate</strong> to
-          rebuild the recipe (intent, query, formatter).
-        </div>
-      )}
+      {meta.staleDefinition && <StaleDefinitionBanner variant="report" />}
 
-      <div className="mb-6 space-y-2">
-        <label className="text-xs font-medium text-muted-foreground" htmlFor="report-prompt">
-          What do you want to see?
-        </label>
-        <div className="rounded-md border border-border/50 bg-background shadow-sm overflow-hidden">
-          <div className="flex flex-col">
-            <ReportMultilinePrompt
-              id="report-prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handlePromptKeyDown}
-              placeholder="e.g. Total sales from last month, grouped by region (Shift+Enter for a new line)"
-              className="shrink-0"
-              disabled={running}
-            />
-            <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-border/40 bg-muted/20">
-              {canReplay && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={running}
-                  onClick={() => void runStream({ regenerate: false })}
-                  className="rounded-md mr-auto"
-                >
-                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                  Run saved recipe
-                </Button>
-              )}
+      <InsightPromptCard
+        label="What do you want to see?"
+        labelHtmlFor="report-prompt"
+        prompt={
+          <ReportMultilinePrompt
+            id="report-prompt"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onKeyDown={handlePromptKeyDown}
+            placeholder="e.g. Total sales from last month, grouped by region (Shift+Enter for a new line)"
+            className="shrink-0"
+            disabled={running}
+          />
+        }
+        footer={
+          <>
+            {canReplay && (
               <Button
                 type="button"
-                size="default"
-                disabled={!canRunGenerate}
-                onClick={() => void runStream({ regenerate: true })}
-                className="rounded-md gap-2"
+                size="sm"
+                variant="secondary"
+                disabled={running}
+                onClick={() => void runStream({ regenerate: false })}
+                className="rounded-md mr-auto"
               >
-                {running ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                {needsPrompt ? 'Generate' : 'Regenerate'}
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                Run saved recipe
               </Button>
-            </div>
-          </div>
-        </div>
-        {meta.definition?.lastError && !running && (
-          <p className="text-xs text-destructive">Last error: {meta.definition.lastError}</p>
-        )}
-        {streamError && <p className="text-xs text-destructive">{streamError}</p>}
-      </div>
+            )}
+            <Button
+              type="button"
+              size="default"
+              disabled={!canRunGenerate}
+              onClick={() => void runStream({ regenerate: true })}
+              className="rounded-md gap-2"
+            >
+              {running ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              {needsPrompt ? 'Generate' : 'Regenerate'}
+            </Button>
+          </>
+        }
+        belowCard={
+          <>
+            {meta.definition?.lastError && !running && (
+              <p className="text-xs text-destructive">Last error: {meta.definition.lastError}</p>
+            )}
+            {streamError && <p className="text-xs text-destructive">{streamError}</p>}
+          </>
+        }
+      />
 
-      {steps.length > 0 && (
-        <div className="mb-8 space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Generation details
-          </h2>
-          <ol className="space-y-2">
-            {steps.map((s, idx) => {
-              const isLast = idx === steps.length - 1
-              const showSpinner = running && isLast
-              const detailsOpen = stepDetailsOpen[idx] ?? false
-              const hasBody =
-                s.deltas.length > 0 ||
-                s.rowCount !== undefined ||
-                s.artifactKind !== undefined
-              return (
-                <li
-                  key={`${s.phase}-${idx}`}
-                  className={cn(
-                    'rounded-md border border-border/40 bg-muted/20 text-sm overflow-hidden',
-                    showSpinner && 'ring-1 ring-primary/20 bg-muted/30',
-                  )}
-                >
-                  <details
-                    open={detailsOpen}
-                    onToggle={(e) => {
-                      const el = e.currentTarget
-                      setStepDetailsOpen((prev) => ({ ...prev, [idx]: el.open }))
-                    }}
-                  >
-                    <summary
-                      className={cn(
-                        'cursor-pointer list-none flex items-start gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden',
-                        hasBody ? 'hover:bg-muted/40' : 'cursor-default',
-                      )}
-                      onClick={(e) => {
-                        if (!hasBody) e.preventDefault()
-                      }}
-                    >
-                      <ChevronRight
-                        className={cn(
-                          'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform',
-                          detailsOpen && 'rotate-90',
-                          !hasBody && 'opacity-0 pointer-events-none',
-                        )}
-                        aria-hidden
-                      />
-                      <span className="mt-0.5 shrink-0 text-muted-foreground">
-                        {showSpinner ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        ) : (
-                          <Check className="h-4 w-4 text-emerald-600/80 dark:text-emerald-400/90" />
-                        )}
-                      </span>
-                      <div className="min-w-0 flex-1 text-left">
-                        <div className="font-medium text-foreground/90 font-mono text-xs tracking-tight">
-                          {s.label ?? s.phase}
-                        </div>
-                        {s.summary ? (
-                          <p className="mt-0.5 text-xs text-muted-foreground font-sans font-normal line-clamp-2">
-                            {s.summary}
-                          </p>
-                        ) : null}
-                      </div>
-                    </summary>
-                    {hasBody && (
-                      <div className="border-t border-border/30 bg-muted/10 px-3 py-2.5 pl-[2.75rem] space-y-2">
-                        {s.deltas.length > 0 && (
-                          <ul className="space-y-0.5 text-xs text-muted-foreground list-none pl-0 font-mono leading-snug opacity-90">
-                            {s.deltas.map((d, i) => (
-                              <li key={i} className="border-l-2 border-primary/25 pl-2">
-                                {d}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        {s.rowCount !== undefined && (
-                          <p
-                            className="text-xs text-muted-foreground"
-                            title={
-                              s.columns && s.columns.length > 0 ? s.columns.join(', ') : undefined
-                            }
-                          >
-                            Prepared <strong className="font-medium text-foreground/80">{s.rowCount}</strong>{' '}
-                            row{s.rowCount === 1 ? '' : 's'}
-                            {s.columns && s.columns.length > 0 ? (
-                              <span className="text-muted-foreground/70"> · hover for fields</span>
-                            ) : null}
-                          </p>
-                        )}
-                        {s.artifactKind !== undefined && (
-                          <p className="text-xs text-primary/90">{ARTIFACT_SAVED_LABEL[s.artifactKind]}</p>
-                        )}
-                      </div>
-                    )}
-                  </details>
-                </li>
-              )
-            })}
-          </ol>
-        </div>
-      )}
-
-      {running && steps.length === 0 && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          Starting…
-        </div>
-      )}
+      <GenerationTimeline
+        steps={steps}
+        running={running}
+        artifactLabels={ARTIFACT_SAVED_LABEL}
+        stepDetailsOpen={stepDetailsOpen}
+        onStepDetailsOpenChange={handleStepDetailsOpenChange}
+      />
+      <GenerationTimelineStarting running={running} emptySteps={steps.length === 0} />
 
       {markdown && (
         <div className="border-t border-border/40 pt-8 space-y-6">
+          {showDataTable ? (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-md gap-1.5"
+                onClick={handleDownloadSpreadsheet}
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                Download spreadsheet
+              </Button>
+            </div>
+          ) : null}
           {showRecipeFilters && meta.recipe ? (
             <div className="space-y-2">
               <ReportRecipeFilters

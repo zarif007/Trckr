@@ -5,7 +5,12 @@ import {
   findProjectByIdForUser,
 } from '@/lib/repositories/project-repository'
 import { findModuleByIdForUser } from '@/lib/repositories/module-repository'
-import type { Project, Module, ReportSummary } from '@/app/dashboard/dashboard-context'
+import type {
+  Project,
+  Module,
+  ReportSummary,
+  AnalysisSummary,
+} from '@/app/dashboard/dashboard-context'
 
 type ProjectFromDb = NonNullable<
   Awaited<ReturnType<typeof findProjectByIdForUser>>
@@ -27,6 +32,22 @@ function serializeReports(
     name: r.name,
     moduleId: r.moduleId,
     updatedAt: r.updatedAt.toISOString(),
+  }))
+}
+
+function serializeAnalyses(
+  analyses: {
+    id: string
+    name: string
+    moduleId: string | null
+    updatedAt: Date
+  }[],
+): AnalysisSummary[] {
+  return analyses.map((a) => ({
+    id: a.id,
+    name: a.name,
+    moduleId: a.moduleId,
+    updatedAt: a.updatedAt.toISOString(),
   }))
 }
 
@@ -93,6 +114,7 @@ function serializeProject(p: ProjectFromDb): Project | null {
       updatedAt: t.updatedAt.toISOString(),
     })),
     reports: serializeReports(p.reports ?? []),
+    analyses: serializeAnalyses(p.analyses ?? []),
     modules: buildModuleTree(flatModules),
   }
 }
@@ -168,6 +190,7 @@ function serializeProjectFromList(p: ProjectFromList): Project {
       updatedAt: t.updatedAt.toISOString(),
     })),
     reports: serializeReports(p.reports ?? []),
+    analyses: serializeAnalyses(p.analyses ?? []),
     modules: buildModuleTree(flatModules),
   }
 }

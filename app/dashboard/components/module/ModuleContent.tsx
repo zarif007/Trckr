@@ -8,6 +8,7 @@ import {
   X,
   FilePlus,
   FileText,
+  BarChart2,
   Table2,
   LayoutList,
   Folder,
@@ -116,6 +117,12 @@ export function ModuleContent({
     [projectForReports?.reports, moduleId],
   )
 
+  const moduleAnalyses = useMemo(
+    () =>
+      (projectForReports?.analyses ?? []).filter((a) => a.moduleId === moduleId),
+    [projectForReports?.analyses, moduleId],
+  )
+
   useEffect(() => {
     if (isError && (error as Error)?.message === 'Not found') {
       const base = pathname.startsWith('/project/') ? '/project' : '/dashboard'
@@ -163,6 +170,13 @@ export function ModuleContent({
           body: JSON.stringify({ name: newName }),
         })
         if (!res.ok) throw new Error('Failed to rename report')
+      } else if (kind === 'analysis') {
+        const res = await fetch(`/api/analyses/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: newName }),
+        })
+        if (!res.ok) throw new Error('Failed to rename analysis')
       }
       invalidateModuleAndProjects()
       await fetchProjects()
@@ -190,6 +204,11 @@ export function ModuleContent({
       } else if (item.kind === 'report') {
         const res = await fetch(`/api/reports/${item.id}`, { method: 'DELETE' })
         if (!res.ok) throw new Error('Failed to delete report')
+        invalidateModuleAndProjects()
+        await fetchProjects()
+      } else if (item.kind === 'analysis') {
+        const res = await fetch(`/api/analyses/${item.id}`, { method: 'DELETE' })
+        if (!res.ok) throw new Error('Failed to delete analysis')
         invalidateModuleAndProjects()
         await fetchProjects()
       }
@@ -285,6 +304,29 @@ export function ModuleContent({
                   ...p,
                   reports: p.reports.map((r) =>
                     r.id === id ? { ...r, name } : r,
+                  ),
+                },
+            ),
+          )
+        } else if (kind === 'analysis') {
+          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+            prev
+              ? {
+                ...prev,
+                analyses: (prev.analyses ?? []).map((a) =>
+                  a.id === id ? { ...a, name } : a,
+                ),
+              }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : {
+                  ...p,
+                  analyses: (p.analyses ?? []).map((a) =>
+                    a.id === id ? { ...a, name } : a,
                   ),
                 },
             ),
@@ -460,6 +502,42 @@ export function ModuleContent({
           )
         }
       }
+      if (item.kind === 'analysis' && projectForReports) {
+        const analysis = (projectForReports.analyses ?? []).find((a) => a.id === item.id)
+        if (!analysis) return
+        queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+          prev
+            ? {
+              ...prev,
+              analyses: (prev.analyses ?? []).filter((a) => a.id !== item.id),
+            }
+            : prev,
+        )
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                ...p,
+                analyses: (p.analyses ?? []).filter((a) => a.id !== item.id),
+              },
+          ),
+        )
+        return () => {
+          queryClient.setQueryData<Project>(dashboardQueryKeys.project(projectId), (prev) =>
+            prev
+              ? { ...prev, analyses: [...(prev.analyses ?? []), analysis] }
+              : prev,
+          )
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, analyses: [...(p.analyses ?? []), analysis] },
+            ),
+          )
+        }
+      }
     },
     [
       mod,
@@ -507,7 +585,8 @@ export function ModuleContent({
     (hasModuleConfigs ? 1 : 0) +
     trackerSchemas.length +
     childModules.length +
-    moduleReports.length
+    moduleReports.length +
+    moduleAnalyses.length
   const isEmpty = totalItems === 0
 
   const existingFileTypes = new Set(
@@ -557,6 +636,14 @@ export function ModuleContent({
       label: string
       sublabel: string
       icon: typeof FileText
+      updatedAt: string
+      href: string
+    } | {
+      kind: 'analysis'
+      id: string
+      label: string
+      sublabel: string
+      icon: typeof BarChart2
       updatedAt: string
       href: string
     })[] = []
@@ -621,7 +708,16 @@ export function ModuleContent({
       updatedAt: r.updatedAt,
       href: `/report/${r.id}`,
     }))
-    return [...rows, ...moduleRows, ...trackerRows, ...reportRows]
+    const analysisRows = moduleAnalyses.map((a) => ({
+      kind: 'analysis' as const,
+      id: a.id,
+      label: a.name?.trim() || 'Untitled analysis',
+      sublabel: 'Analysis',
+      icon: BarChart2,
+      updatedAt: a.updatedAt,
+      href: `/analysis/${a.id}`,
+    }))
+    return [...rows, ...moduleRows, ...trackerRows, ...reportRows, ...analysisRows]
   }, [
     pathname,
     projectId,
@@ -630,6 +726,7 @@ export function ModuleContent({
     childModules,
     trackerSchemas,
     moduleReports,
+    moduleAnalyses,
     hasModuleConfigs,
   ])
 
@@ -643,6 +740,11 @@ export function ModuleContent({
   )
 
   const handleReportCreated = useCallback(async () => {
+    invalidateModuleAndProjects()
+    await fetchProjects()
+  }, [invalidateModuleAndProjects, fetchProjects])
+
+  const handleAnalysisCreated = useCallback(async () => {
     invalidateModuleAndProjects()
     await fetchProjects()
   }, [invalidateModuleAndProjects, fetchProjects])
@@ -753,6 +855,7 @@ export function ModuleContent({
             onError={(msg) => setErrorMessage(msg || null)}
             onTrackerCreated={handleTrackerCreated}
             onReportCreated={handleReportCreated}
+            onAnalysisCreated={handleAnalysisCreated}
             availableConfigTypes={availableFileTypes}
             onAddConfig={handleAddConfig}
             addingConfig={addingConfig}
@@ -774,6 +877,7 @@ export function ModuleContent({
                   onError={(msg) => setErrorMessage(msg || null)}
                   onTrackerCreated={handleTrackerCreated}
                   onReportCreated={handleReportCreated}
+                  onAnalysisCreated={handleAnalysisCreated}
                   availableConfigTypes={availableFileTypes}
                   onAddConfig={handleAddConfig}
                   addingConfig={addingConfig}
@@ -799,7 +903,8 @@ export function ModuleContent({
                   const canRenameDelete =
                     row.kind === 'module' ||
                     row.kind === 'tracker' ||
-                    row.kind === 'report'
+                    row.kind === 'report' ||
+                    row.kind === 'analysis'
                   return (
                     <div
                       key={
@@ -867,13 +972,19 @@ export function ModuleContent({
                           </span>
                         )}
                       </button>
-                      {(row.kind === 'tracker' || row.kind === 'report') &&
+                      {(row.kind === 'tracker' ||
+                        row.kind === 'report' ||
+                        row.kind === 'analysis') &&
                         !isRenamingThis && (
                         <button
                           type="button"
                           className="absolute top-1 right-1 z-20 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-all hover:bg-muted/80 hover:text-foreground group-hover/card:opacity-100"
                           aria-label={
-                            row.kind === 'report' ? 'Report actions' : 'Tracker actions'
+                            row.kind === 'report'
+                              ? 'Report actions'
+                              : row.kind === 'analysis'
+                                ? 'Analysis actions'
+                                : 'Tracker actions'
                           }
                           onClick={(e: MouseEvent<HTMLButtonElement>) => {
                             e.stopPropagation()
