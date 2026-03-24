@@ -1,4 +1,4 @@
-import { getAtPath } from '@/lib/reports/compute-expr'
+import { getAtPath } from '@/lib/insights-query/compute-expr'
 
 import type { AnalysisBlock, AnalysisChartSpec } from './analysis-schemas'
 

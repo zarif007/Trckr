@@ -16,9 +16,9 @@ import {
   getAnalysisForUser,
   updateAnalysisNameForUser,
 } from '@/lib/analysis/analysis-repository'
-import { buildFieldCatalog } from '@/lib/reports/field-catalog'
-import { fingerprintFromCatalog } from '@/lib/reports/fingerprint'
-import { parseQueryPlan } from '@/lib/reports/ast-schemas'
+import { buildFieldCatalog } from '@/lib/insights-query/field-catalog'
+import { fingerprintFromCatalog } from '@/lib/insights-query/fingerprint'
+import { parseQueryPlan } from '@/lib/insights-query/schemas'
 
 const patchBodySchema = z.object({
   name: z.string(),

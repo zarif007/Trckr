@@ -1,6 +1,6 @@
 /**
  * Derive a stable field catalog from TrackerSchema.schema JSON for LLM context
- * and fingerprinting (same grid/field walk as generate-analysis context).
+ * and fingerprinting (reports and analyses).
  */
 
 export type FieldCatalogEntry = {

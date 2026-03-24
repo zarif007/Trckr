@@ -23,7 +23,7 @@ import {
   consumeInsightNdjsonStream,
   type GenerationTimelineStep,
 } from '@/app/insights/lib/ndjson-timeline'
-import { ReportMultilinePrompt } from '@/app/report/components/ReportMultilinePrompt'
+import { InsightMultilinePrompt } from '@/app/insights/components/InsightMultilinePrompt'
 import {
   ReportRecipeFilters,
   type FieldCatalogEntry,
@@ -382,12 +382,12 @@ export default function ReportPage() {
         label="What do you want to see?"
         labelHtmlFor="report-prompt"
         prompt={
-          <ReportMultilinePrompt
+          <InsightMultilinePrompt
             id="report-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handlePromptKeyDown}
-            placeholder="e.g. Total sales from last month, grouped by region (Shift+Enter for a new line)"
+            placeholder="e.g. Open tasks with title and due date, sorted by deadline; group spend by category (Shift+Enter for a new line)"
             className="shrink-0"
             disabled={running}
           />

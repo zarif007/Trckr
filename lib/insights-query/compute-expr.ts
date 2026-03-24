@@ -1,4 +1,4 @@
-import type { FormatterComputeExpression, FormatterValueRef } from './ast-schemas'
+import type { FormatterComputeExpression, FormatterValueRef } from './schemas'
 
 export function getAtPath(row: Record<string, unknown>, path: string): unknown {
   const parts = path.split('.')

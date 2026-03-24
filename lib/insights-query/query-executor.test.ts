@@ -6,7 +6,7 @@ import {
   executeQueryPlan,
   type TrackerDataInput,
 } from './query-executor'
-import type { QueryPlanV1 } from './ast-schemas'
+import type { QueryPlanV1 } from './schemas'
 
 describe('compareValues', () => {
   it('compares eq and in', () => {

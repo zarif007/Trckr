@@ -1,6 +1,7 @@
+import { evalComputeExpression, getAtPath, toNumeric } from '@/lib/insights-query/compute-expr'
+import { compareValues } from '@/lib/insights-query/query-executor'
+
 import type { ComparisonOp, FormatterOp, FormatterPlanV1 } from './ast-schemas'
-import { evalComputeExpression, getAtPath, toNumeric } from './compute-expr'
-import { compareValues } from './query-executor'
 
 function cloneRow(r: Record<string, unknown>): Record<string, unknown> {
   return { ...r }
@@ -132,6 +133,31 @@ function escapeCell(v: unknown): string {
   return s.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
 }
 
+function rowsToSegmentedMarkdownTables(
+  rows: Record<string, unknown>[],
+  segmentBy: string,
+): string {
+  const order: string[] = []
+  const map = new Map<string, Record<string, unknown>[]>()
+  for (const r of rows) {
+    const key = String(getAtPath(r, segmentBy) ?? '')
+    if (!map.has(key)) {
+      order.push(key)
+      map.set(key, [])
+    }
+    map.get(key)!.push(r)
+  }
+  if (order.length <= 1) {
+    return rowsToMarkdownTable(rows)
+  }
+  return order
+    .map((k) => {
+      const label = k.trim() === '' ? '(empty)' : escapeCell(k)
+      return `### ${label}\n\n${rowsToMarkdownTable(map.get(k)!)}`
+    })
+    .join('\n\n')
+}
+
 export function rowsToMarkdownTable(rows: Record<string, unknown>[]): string {
   if (rows.length === 0) return '_No rows._'
   const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((k) => !k.startsWith('__'))
@@ -160,7 +186,12 @@ export function rowsToMarkdownSummary(rows: Record<string, unknown>[]): string {
 export function formatOutputMarkdown(
   rows: Record<string, unknown>[],
   style: FormatterPlanV1['outputStyle'],
+  opts?: { segmentBy?: string | null },
 ): string {
+  const seg = opts?.segmentBy?.trim()
+  if (seg && rows.length > 0) {
+    return rowsToSegmentedMarkdownTables(rows, seg)
+  }
   if (style === 'markdown_table') return rowsToMarkdownTable(rows)
   if (style === 'markdown_summary') return rowsToMarkdownSummary(rows)
   return `${rowsToMarkdownSummary(rows)}\n\n---\n\n${rowsToMarkdownTable(rows)}`

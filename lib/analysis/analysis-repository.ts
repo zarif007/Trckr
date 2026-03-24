@@ -60,7 +60,16 @@ export async function getAnalysisForUser(analysisId: string, userId: string) {
     where: { id: analysisId, userId },
     include: {
       definition: true,
-      trackerSchema: { select: { id: true, name: true, schema: true, projectId: true } },
+      trackerSchema: {
+        select: {
+          id: true,
+          name: true,
+          schema: true,
+          projectId: true,
+          instance: true,
+          versionControl: true,
+        },
+      },
       project: { select: { id: true, name: true } },
       module: { select: { id: true, name: true } },
     },

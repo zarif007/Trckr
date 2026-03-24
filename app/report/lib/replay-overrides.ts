@@ -41,7 +41,7 @@ export function buildReplayQueryOverrides(params: {
       .map((r) => ({
         path: r.path.trim(),
         op: r.op,
-        value: parseFilterValueRaw(r.valueRaw),
+        value: parseFilterValueRaw(r.valueRaw) as QueryPlanV1['filter'][number]['value'],
       })),
   }
   if (queryPlan.aggregate) {

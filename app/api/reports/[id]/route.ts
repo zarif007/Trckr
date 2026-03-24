@@ -9,9 +9,9 @@ import {
   unauthorized,
 } from '@/lib/api/http'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
+import { buildFieldCatalog, type FieldCatalog } from '@/lib/insights-query/field-catalog'
+import { fingerprintFromCatalog } from '@/lib/insights-query/fingerprint'
 import { parseFormatterPlan, parseQueryPlan } from '@/lib/reports/ast-schemas'
-import { buildFieldCatalog } from '@/lib/reports/field-catalog'
-import { fingerprintFromCatalog } from '@/lib/reports/fingerprint'
 import {
   deleteReportForUser,
   getReportForUser,
@@ -33,7 +33,7 @@ export async function GET(
   const report = await getReportForUser(id, auth.user.id)
   if (!report) return notFound('Report not found.')
 
-  const catalog = buildFieldCatalog(report.trackerSchema.schema)
+  const catalog: FieldCatalog = buildFieldCatalog(report.trackerSchema.schema)
   const fingerprintNow = fingerprintFromCatalog(catalog)
   const def = report.definition
   const staleDefinition = Boolean(
@@ -65,6 +65,7 @@ export async function GET(
     projectId: report.projectId,
     moduleId: report.moduleId,
     trackerSchemaId: report.trackerSchemaId,
+    trackerInstance: report.trackerSchema.instance,
     trackerName: report.trackerSchema.name,
     projectName: report.project.name,
     moduleName: report.module?.name ?? null,

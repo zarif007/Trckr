@@ -1,6 +1,6 @@
 import { badRequest, jsonOk, unauthorized } from '@/lib/api/http'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { listTrackersForScope } from '@/lib/reports/report-repository'
+import { listTrackersForScope } from '@/lib/insights-query/tracker-list'
 
 export async function GET(request: Request) {
   const auth = await requireAuthenticatedUser()

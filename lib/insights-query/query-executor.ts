@@ -1,6 +1,6 @@
 import type { Prisma } from '@prisma/client'
 
-import type { QueryPlanV1 } from './ast-schemas'
+import type { QueryPlanV1 } from './schemas'
 import { evalComputeExpression, getAtPath, toNumeric } from './compute-expr'
 
 export type TrackerDataInput = {
@@ -143,10 +143,7 @@ function discoverGridIds(rows: TrackerDataInput[]): string[] {
   return [...set]
 }
 
-function flattenRows(
-  rows: TrackerDataInput[],
-  gridIds: string[],
-): Record<string, unknown>[] {
+function flattenRows(rows: TrackerDataInput[], gridIds: string[]): Record<string, unknown>[] {
   const useGrids = gridIds.length > 0 ? gridIds : discoverGridIds(rows)
   const out: Record<string, unknown>[] = []
 
@@ -229,10 +226,7 @@ function aggregateRows(
   return result
 }
 
-function sortRows(
-  rows: Record<string, unknown>[],
-  sort: QueryPlanV1['sort'],
-): Record<string, unknown>[] {
+function sortRows(rows: Record<string, unknown>[], sort: QueryPlanV1['sort']): Record<string, unknown>[] {
   if (sort.length === 0) return rows
   const copy = [...rows]
   copy.sort((a, b) => {

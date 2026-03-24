@@ -60,37 +60,19 @@ export async function getReportForUser(reportId: string, userId: string) {
     where: { id: reportId, userId },
     include: {
       definition: true,
-      trackerSchema: { select: { id: true, name: true, schema: true, projectId: true } },
+      trackerSchema: {
+        select: {
+          id: true,
+          name: true,
+          schema: true,
+          projectId: true,
+          instance: true,
+          versionControl: true,
+        },
+      },
       project: { select: { id: true, name: true } },
       module: { select: { id: true, name: true } },
     },
-  })
-}
-
-export async function listTrackersForScope(
-  userId: string,
-  projectId: string,
-  moduleId?: string | null,
-) {
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId },
-    select: { id: true },
-  })
-  if (!project) return null
-
-  return prisma.trackerSchema.findMany({
-    where: {
-      projectId,
-      type: 'GENERAL',
-      ...(moduleId != null ? { moduleId } : {}),
-    },
-    select: {
-      id: true,
-      name: true,
-      instance: true,
-      moduleId: true,
-    },
-    orderBy: { updatedAt: 'desc' },
   })
 }
 

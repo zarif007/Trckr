@@ -15,16 +15,16 @@ import {
 import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { prisma } from '@/lib/db'
 import { withTracedRun } from '@/lib/insights/with-traced-run'
-import { parseQueryPlan, type QueryPlanV1 } from '@/lib/reports/ast-schemas'
-import { buildFieldCatalog, formatCatalogForPrompt } from '@/lib/reports/field-catalog'
-import { fingerprintFromCatalog } from '@/lib/reports/fingerprint'
+import { buildFieldCatalog, formatCatalogForPrompt } from '@/lib/insights-query/field-catalog'
+import { fingerprintFromCatalog } from '@/lib/insights-query/fingerprint'
+import { loadTrackerDataForQueryPlan } from '@/lib/insights-query/load-tracker-rows'
+import { generateQueryPlanV1 } from '@/lib/insights-query/query-plan-agent'
 import {
-  buildTrackerDataWhere,
   executeQueryPlan,
   resultSchemaFromRows,
   type TrackerDataInput,
-} from '@/lib/reports/query-executor'
-import { generateQueryPlanV1 } from '@/lib/reports/query-plan-agent'
+} from '@/lib/insights-query/query-executor'
+import { parseQueryPlan, type QueryPlanV1 } from '@/lib/insights-query/schemas'
 
 import {
   analysisOutlinePayloadSchema,
@@ -52,34 +52,6 @@ import { encodeNdjsonLine, type AnalysisStreamEvent } from './stream-events'
 export type LoadedAnalysis = NonNullable<Awaited<ReturnType<typeof getAnalysisForUser>>>
 
 type Forward = (event: AnalysisStreamEvent) => Promise<void>
-
-async function loadTrackerRows(
-  trackerSchemaId: string,
-  plan: NonNullable<ReturnType<typeof parseQueryPlan>>,
-): Promise<TrackerDataInput[]> {
-  const where = buildTrackerDataWhere(trackerSchemaId, plan.load)
-  const rows = await prisma.trackerData.findMany({
-    where,
-    orderBy: { updatedAt: 'desc' },
-    take: plan.load.maxTrackerDataRows,
-    select: {
-      id: true,
-      label: true,
-      branchName: true,
-      createdAt: true,
-      updatedAt: true,
-      data: true,
-    },
-  })
-  return rows.map((r) => ({
-    id: r.id,
-    label: r.label,
-    branchName: r.branchName,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    data: r.data as Record<string, unknown>,
-  }))
-}
 
 function buildProvenance(
   rawRows: Record<string, unknown>[],
@@ -181,7 +153,11 @@ export async function executeAnalysisReplay(params: {
       text: 'Loading tracker rows and executing saved query plan…',
     })
 
-    const trackerRows = await loadTrackerRows(analysis.trackerSchemaId, plan)
+    const trackerRows = await loadTrackerDataForQueryPlan({
+      trackerSchemaId: analysis.trackerSchemaId,
+      plan,
+      trackerInstance: analysis.trackerSchema.instance,
+    })
     const rawResult = executeQueryPlan(trackerRows, plan)
     const schema = resultSchemaFromRows(rawResult, 20)
 
@@ -310,7 +286,11 @@ export async function executeAnalysisFullGeneration(params: {
       text: 'Fetching tracker data…',
     })
 
-    const trackerRows = await loadTrackerRows(analysis.trackerSchemaId, queryPlan)
+    const trackerRows = await loadTrackerDataForQueryPlan({
+      trackerSchemaId: analysis.trackerSchemaId,
+      plan: queryPlan,
+      trackerInstance: analysis.trackerSchema.instance,
+    })
     const rawResult = executeQueryPlan(trackerRows, queryPlan)
     const preSchema = resultSchemaFromRows(rawResult, 25)
 

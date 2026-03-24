@@ -1,24 +1,61 @@
-export function getReportIntentSystemPrompt(): string {
-  return `You are an analyst assistant. The user describes what they want from a tracker (tabular business data stored as JSON per tracker row).
+export function getReportIntentSystemPrompt(params: {
+  trackerInstance: 'SINGLE' | 'MULTI'
+  versionControl: boolean
+}): string {
+  const dataSource = (() => {
+    if (params.trackerInstance === 'MULTI') {
+      return `- **Data source:** MULTI tracker — include rows from **all instances** (each TrackerData row is one instance). The load step uses fair per-instance caps. After flatten, instance identity is \`__label\` / \`__dataId\` when needed for grouping or filters.`
+    }
+    if (params.versionControl) {
+      return `- **Data source:** SINGLE tracker with **version control** — default to **main branch only** (omit load.branchName in the query plan unless the user explicitly asks for other branches or all branches).`
+    }
+    return `- **Data source:** SINGLE tracker **without** version control — standard TrackerData rows (main branch).`
+  })()
 
-Output a single structured object matching the schema. Rules:
-- fieldPath values must match field ids from the catalog (not display labels).
-- gridIds: use exact grid ids from the catalog; [] means include every grid that has table rows.
-- filters: only include filters the user clearly asked for; use concrete values when you can infer them (e.g. status equals "done").
-- timeRange.kind "relative" with preset when the user mentions last week/month; "absolute" with fromIso/toIso only if they give explicit dates (ISO-8601).
-- timeRange.applyToRow: prefer createdAt unless they ask about updates.
-- metrics with aggregation "none" mean they want raw rows/columns, not a rollup.
-- For **total inventory or line value** (quantity × unit price), mention both field ids in metrics or narrative so the query plan can use an expression aggregate (sum of products), not summing unit_price alone.
-- outputStyle: table for comparisons; summary for single KPIs; both when they want narrative plus a table.`
+  const instancePlan =
+    params.trackerInstance === 'MULTI'
+      ? `
+- **generationPlan.instancePolicy:** \`combined_all\` = one table of pooled rows; \`per_instance_breakdown\` = keep or group by \`__label\` / \`__dataId\`; \`filter_specific_instance\` = user named one instance; \`not_applicable\` only if the request ignores instance identity entirely.
+- Put grouping/sorting needs in **groupByFieldPaths**, **metrics**, and **generationPlan.keyComparisons** (technical phrases). For multiple grids in one report, mention \`__gridId\` in keyComparisons so the formatter can set segmentMarkdownTablesByColumn.`
+      : `
+- Set **generationPlan.instancePolicy** to \`not_applicable\`.`
+
+  return `You map a user's natural-language request into a **structured data specification** for a report.
+
+A report is **only curated tabular data** (what to load, filter, aggregate, sort)—not commentary, objectives, or analysis for the reader.
+
+Output one object matching the schema. Rules:
+- **narrative:** one short technical line for logs (e.g. "Tasks filtered status≠done, sorted by due date").
+- **generationPlan (required):** Internal pipeline contract only—never user-facing prose.
+  - **objectives:** terse bullets of **what data** must appear (fields, filters, counts)—not "why" or interpretive goals.
+  - **keyComparisons:** group-by dimensions, sort keys, multi-grid / multi-instance layout hints.
+  - **formatterGuidance:** layout only: column order, renames, outputStyle (markdown_table vs markdown_summary vs both), and when to set **segmentMarkdownTablesByColumn** to \`__gridId\` (separate table per grid) or \`__label\` (per instance).
+  - **caveats:** leave empty unless an internal constraint matters for the query plan; never surface to the user.
+- **filters.fieldPath:** catalog field ids only (not __label); instance filters belong in the query plan via filter paths, guided by keyComparisons / instancePolicy.
+${dataSource}
+${instancePlan}
+- gridIds: exact ids from the catalog; [] = all grids with row arrays.
+- timeRange: align with user wording; applyToRow defaults to createdAt unless they ask about updates.
+- metrics aggregation "none" = detail rows, not rollups.
+- For line totals (qty × price), name both field ids in metrics so the query plan can use an expression aggregate.
+- outputStyle: table for tabular data; summary only for a single-row KPI set; both rarely—prefer one clean table.`
 }
 
 export function buildReportIntentUserPrompt(params: {
   userQuery: string
   catalogText: string
+  trackerInstance: 'SINGLE' | 'MULTI'
+  versionControl: boolean
 }): string {
+  const vc = params.versionControl ? 'version control: on' : 'version control: off'
+  const inst = params.trackerInstance === 'MULTI' ? 'MULTI (all instances)' : 'SINGLE'
   return `## Field catalog
 ${params.catalogText}
 
-## User request
+## Tracker
+- Instance mode: **${inst}**
+- ${vc}
+
+## User request (produce the data they asked for—no extra analysis)
 ${params.userQuery}`
 }

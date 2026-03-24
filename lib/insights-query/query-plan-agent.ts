@@ -7,13 +7,12 @@ import {
   buildReportQueryPlanUserPrompt,
   getReportQueryPlanSystemPrompt,
 } from '@/lib/prompts/report-query-plan'
+import type { ReportIntent } from '@/lib/reports/report-schemas'
 
-import { parseQueryPlan, queryPlanV1Schema, type QueryPlanV1, type ReportIntent } from './ast-schemas'
+import { parseQueryPlan, queryPlanV1Schema, type QueryPlanV1 } from './schemas'
 
 /**
- * Analysis outline shape needed to build a user message for the shared query-plan LLM.
- * Matches {@link AnalysisOutlinePayload} in `lib/analysis` without importing that module
- * (keeps `lib/reports` free of a dependency on `lib/analysis`).
+ * Analysis outline shape for the shared query-plan LLM (mirrors `AnalysisOutlinePayload` in `lib/analysis`).
  */
 export type AnalysisOutlineForQueryPlan = {
   version: 1
@@ -28,7 +27,14 @@ export type AnalysisOutlineForQueryPlan = {
 }
 
 export type QueryPlanUserContext =
-  | { mode: 'report'; intent: ReportIntent; userQuery: string; catalogText: string }
+  | {
+      mode: 'report'
+      intent: ReportIntent
+      userQuery: string
+      catalogText: string
+      trackerInstance: 'SINGLE' | 'MULTI'
+      versionControl: boolean
+    }
   | {
       mode: 'analysis'
       outline: AnalysisOutlineForQueryPlan
@@ -36,19 +42,14 @@ export type QueryPlanUserContext =
       catalogText: string
     }
 
-/**
- * User message for the query-plan model. Report mode delegates to the existing report prompt;
- * analysis mode supplies the outline JSON so one shared system prompt (`getReportQueryPlanSystemPrompt`)
- * governs all `QueryPlanV1` output.
- *
- * See `lib/insights/README.md` for pipeline overview.
- */
 export function buildQueryPlanUserPrompt(ctx: QueryPlanUserContext): string {
   if (ctx.mode === 'report') {
     return buildReportQueryPlanUserPrompt({
       intent: ctx.intent,
       catalogText: ctx.catalogText,
       userQuery: ctx.userQuery,
+      trackerInstance: ctx.trackerInstance,
+      versionControl: ctx.versionControl,
     })
   }
   return `## Field catalog
@@ -67,8 +68,7 @@ export type GenerateQueryPlanV1Result = {
 }
 
 /**
- * Single LLM call that produces a validated `QueryPlanV1`, shared by Report and Analysis pipelines.
- * Uses {@link getReportQueryPlanSystemPrompt} as the only source of query AST rules.
+ * Single LLM call producing `QueryPlanV1` for reports and analyses.
  */
 export async function generateQueryPlanV1(params: {
   provider: StructuredAiProvider

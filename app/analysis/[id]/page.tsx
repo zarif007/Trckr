@@ -19,7 +19,7 @@ import {
   consumeInsightNdjsonStream,
   type GenerationTimelineStep,
 } from '@/app/insights/lib/ndjson-timeline'
-import { ReportMultilinePrompt } from '@/app/report/components/ReportMultilinePrompt'
+import { InsightMultilinePrompt } from '@/app/insights/components/InsightMultilinePrompt'
 import type { AnalysisDocumentV1 } from '@/lib/analysis/analysis-schemas'
 import type { AnalysisStreamEvent } from '@/lib/analysis/stream-events'
 import {
@@ -246,7 +246,7 @@ export default function AnalysisPage() {
         label="What should this analysis cover?"
         labelHtmlFor="analysis-prompt"
         prompt={
-          <ReportMultilinePrompt
+          <InsightMultilinePrompt
             id="analysis-prompt"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}

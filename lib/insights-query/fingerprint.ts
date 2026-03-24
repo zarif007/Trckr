@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import type { FieldCatalog } from './field-catalog'
 
 /**
- * Stable hash when tracker field layout changes; invalidates cached report definitions.
+ * Stable hash when tracker field layout changes; invalidates cached report/analysis definitions.
  */
 export function fingerprintFromCatalog(catalog: FieldCatalog): string {
   const payload = {

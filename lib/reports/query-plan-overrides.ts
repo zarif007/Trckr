@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   comparisonOpSchema,
   queryPlanV1Schema,
+  reportStructuredJsonValueSchema,
   rowTimeFilterSchema,
   type QueryPlanV1,
 } from './ast-schemas'
@@ -22,7 +23,7 @@ export const replayQueryOverridesSchema = z
         z.object({
           path: z.string(),
           op: comparisonOpSchema,
-          value: z.unknown(),
+          value: reportStructuredJsonValueSchema,
         }),
       )
       .optional(),

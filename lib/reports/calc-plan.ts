@@ -7,22 +7,23 @@ import { evaluateReportExprOnRow } from './report-expr'
 
 /** LLM output: which derived columns to build via generate-expr (before formatter). */
 export const reportCalcIntentSchema = z.object({
-  columns: z
-    .array(
-      z.object({
-        name: z
-          .string()
-          .min(1)
-          .describe('Unique column id, e.g. line_total or margin_pct'),
-        instruction: z
-          .string()
-          .min(1)
-          .describe('One clear sentence: what to compute from which fields (tracker expr AST will be generated).'),
-      }),
-    )
-    .max(6)
-    .default([])
-    .describe('Empty if query output already has everything needed; otherwise new per-row columns.'),
+  columns: z.preprocess(
+    (v) => (Array.isArray(v) ? v : []),
+    z
+      .array(
+        z.object({
+          name: z
+            .string()
+            .min(1)
+            .describe('Unique column id, e.g. line_total or margin_pct'),
+          instruction: z
+            .string()
+            .min(1)
+            .describe('One clear sentence: what to compute from which fields (tracker expr AST will be generated).'),
+        }),
+      )
+      .max(6),
+  ),
 })
 
 export type ReportCalcIntent = z.infer<typeof reportCalcIntentSchema>

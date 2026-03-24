@@ -7,18 +7,23 @@ import { buildReportCalcUserPrompt, getReportCalcSystemPrompt } from '@/lib/prom
 import { buildReportFormatterUserPrompt, getReportFormatterSystemPrompt } from '@/lib/prompts/report-formatter'
 import { buildReportIntentUserPrompt, getReportIntentSystemPrompt } from '@/lib/prompts/report-intent'
 import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
-import { prisma } from '@/lib/db'
 import { withTracedRun } from '@/lib/insights/with-traced-run'
+import { buildFieldCatalog, formatCatalogForPrompt } from '@/lib/insights-query/field-catalog'
+import { fingerprintFromCatalog } from '@/lib/insights-query/fingerprint'
+import { loadTrackerDataForQueryPlan } from '@/lib/insights-query/load-tracker-rows'
+import { generateQueryPlanV1 } from '@/lib/insights-query/query-plan-agent'
+import { executeQueryPlan, resultSchemaFromRows } from '@/lib/insights-query/query-executor'
 
 import {
+  defaultReportGenerationPlan,
   type QueryPlanV1,
   type ReportIntent,
   formatterPlanV1Schema,
+  normalizeReportIntent,
   parseFormatterPlan,
   parseQueryPlan,
   reportIntentSchema,
 } from './ast-schemas'
-import { generateQueryPlanV1 } from './query-plan-agent'
 import {
   applyCalcPlanToRows,
   emptyCalcPlan,
@@ -26,18 +31,10 @@ import {
   type ReportCalcIntent,
   reportCalcIntentSchema,
 } from './calc-plan'
-import { buildFieldCatalog, formatCatalogForPrompt } from './field-catalog'
-import { fingerprintFromCatalog } from './fingerprint'
 import {
   applyFormatterPlan,
   formatOutputMarkdown,
 } from './formatter-engine'
-import {
-  buildTrackerDataWhere,
-  executeQueryPlan,
-  resultSchemaFromRows,
-  type TrackerDataInput,
-} from './query-executor'
 import {
   appendReportRunEvent,
   createReportRun,
@@ -115,41 +112,8 @@ function recordUsage(
   })
 }
 
-async function loadTrackerRows(
-  trackerSchemaId: string,
-  plan: NonNullable<ReturnType<typeof parseQueryPlan>>,
-): Promise<TrackerDataInput[]> {
-  const where = buildTrackerDataWhere(trackerSchemaId, plan.load)
-  const rows = await prisma.trackerData.findMany({
-    where,
-    orderBy: { updatedAt: 'desc' },
-    take: plan.load.maxTrackerDataRows,
-    select: {
-      id: true,
-      label: true,
-      branchName: true,
-      createdAt: true,
-      updatedAt: true,
-      data: true,
-    },
-  })
-  return rows.map((r) => ({
-    id: r.id,
-    label: r.label,
-    branchName: r.branchName,
-    createdAt: r.createdAt,
-    updatedAt: r.updatedAt,
-    data: r.data as Record<string, unknown>,
-  }))
-}
-
-function buildMarkdownPreamble(intent: ReportIntent | null, userPrompt: string): string {
-  if (intent?.narrative) {
-    return `## ${intent.narrative}\n\n`
-  }
-  if (userPrompt) {
-    return `## Report\n\n_${userPrompt}_\n\n`
-  }
+/** Reports are data-only: tables/spreadsheet come from the formatter; no prose preamble. */
+function buildMarkdownPreamble(_intent: ReportIntent | null, _userPrompt: string): string {
   return ''
 }
 
@@ -181,7 +145,11 @@ export async function executeReportReplay(params: {
       text: 'Loading tracker rows and executing query plan…',
     })
 
-    const trackerRows = await loadTrackerRows(report.trackerSchemaId, plan)
+    const trackerRows = await loadTrackerDataForQueryPlan({
+      trackerSchemaId: report.trackerSchemaId,
+      plan,
+      trackerInstance: report.trackerSchema.instance,
+    })
     const rawResult = executeQueryPlan(trackerRows, plan)
     const effectiveCalc =
       def.calcPlan == null ? emptyCalcPlan() : parseCalcPlan(def.calcPlan)
@@ -204,10 +172,13 @@ export async function executeReportReplay(params: {
       text: 'Applying saved calculations and formatter…',
     })
 
-    const preambleMarkdown = buildMarkdownPreamble(null, def.userPrompt)
+    const storedIntent = normalizeReportIntent(def.intent)
+    const preambleMarkdown = buildMarkdownPreamble(storedIntent, def.userPrompt)
     const md =
       preambleMarkdown +
-      formatOutputMarkdown(formattedRows, fmt.outputStyle ?? 'markdown_table')
+      formatOutputMarkdown(formattedRows, fmt.outputStyle ?? 'markdown_table', {
+        segmentBy: fmt.segmentMarkdownTablesByColumn,
+      })
 
     await forward({ t: 'phase_end', phase: 'replay', summary: 'Done.' })
     await forward({
@@ -236,6 +207,8 @@ export async function executeReportFullGeneration(params: {
   const fp = fingerprintFromCatalog(catalog)
   const projectId = report.projectId
   const trackerSchemaId = report.trackerSchemaId
+  const trackerInstance = report.trackerSchema.instance
+  const versionControl = report.trackerSchema.versionControl
 
   const provider = getDefaultAiProvider()
   const maxTokens = getConfiguredMaxOutputTokens()
@@ -246,24 +219,36 @@ export async function executeReportFullGeneration(params: {
   await withRun(report.id, trigger, writeNdjsonLine, async (forward) => {
     await updateDefinitionPrompt(report.id, userPrompt)
 
-    await forward({ t: 'phase_start', phase: 'intent', label: 'Understanding your request' })
+    await forward({ t: 'phase_start', phase: 'intent', label: 'Mapping data requirements' })
     await forward({
       t: 'phase_delta',
       phase: 'intent',
-      text: 'Parsing intent (fields, time range, metrics)…',
+      text: 'Extracting fields, filters, grouping, sorting, and load rules…',
     })
 
     const intentResult = await provider.generateObject<ReportIntent>({
-      system: getReportIntentSystemPrompt(),
-      prompt: buildReportIntentUserPrompt({ userQuery: userPrompt, catalogText }),
+      system: getReportIntentSystemPrompt({ trackerInstance, versionControl }),
+      prompt: buildReportIntentUserPrompt({
+        userQuery: userPrompt,
+        catalogText,
+        trackerInstance,
+        versionControl,
+      }),
       schema: reportIntentSchema,
       maxOutputTokens: maxTokens,
     })
     recordUsage(userId, 'report-intent', intentResult.usage, projectId, trackerSchemaId, report.id)
 
-    const intent = intentResult.object
+    const intent: ReportIntent = {
+      ...intentResult.object,
+      generationPlan: intentResult.object.generationPlan ?? defaultReportGenerationPlan(),
+    }
     await forward({ t: 'artifact', phase: 'intent', kind: 'intent', data: intent })
-    await forward({ t: 'phase_end', phase: 'intent', summary: intent.narrative })
+    await forward({
+      t: 'phase_end',
+      phase: 'intent',
+      summary: intent.narrative,
+    })
 
     await forward({ t: 'phase_start', phase: 'query_plan', label: 'Building query plan' })
     await forward({ t: 'phase_delta', phase: 'query_plan', text: 'Mapping to safe query AST…' })
@@ -276,6 +261,8 @@ export async function executeReportFullGeneration(params: {
         intent,
         catalogText,
         userQuery: userPrompt,
+        trackerInstance,
+        versionControl,
       },
     })
     recordUsage(userId, 'report-query-plan', queryPlanUsage, projectId, trackerSchemaId, report.id)
@@ -295,7 +282,11 @@ export async function executeReportFullGeneration(params: {
       text: 'Fetching tracker data and applying filters…',
     })
 
-    const trackerRows = await loadTrackerRows(report.trackerSchemaId, queryPlan)
+    const trackerRows = await loadTrackerDataForQueryPlan({
+      trackerSchemaId: report.trackerSchemaId,
+      plan: queryPlan,
+      trackerInstance,
+    })
     const rawResult = executeQueryPlan(trackerRows, queryPlan)
     const preCalcSchema = resultSchemaFromRows(rawResult, 20)
 
@@ -325,6 +316,7 @@ export async function executeReportFullGeneration(params: {
         userQuery: userPrompt,
         columnKeys: preCalcSchema.columns.map((c) => c.key),
         sampleRowsJson: preCalcSampleJson,
+        generationPlan: intent.generationPlan,
       }),
       schema: reportCalcIntentSchema,
       maxOutputTokens: maxTokens,
@@ -400,6 +392,7 @@ export async function executeReportFullGeneration(params: {
         userQuery: userPrompt,
         columns: schema.columns,
         sampleRowsJson: sampleJson,
+        generationPlan: intent.generationPlan,
       }),
       schema: formatterPlanV1Schema,
       maxOutputTokens: maxTokens,
@@ -424,7 +417,9 @@ export async function executeReportFullGeneration(params: {
     const preambleMarkdown = buildMarkdownPreamble(intent, userPrompt)
     const md =
       preambleMarkdown +
-      formatOutputMarkdown(formattedRows, formatterPlan.outputStyle ?? 'markdown_table')
+      formatOutputMarkdown(formattedRows, formatterPlan.outputStyle ?? 'markdown_table', {
+        segmentBy: formatterPlan.segmentMarkdownTablesByColumn,
+      })
     await forward({
       t: 'phase_end',
       phase: 'apply',
