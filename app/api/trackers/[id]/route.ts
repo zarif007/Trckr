@@ -5,6 +5,7 @@ import {
   findTrackerByIdForUser,
   updateTrackerByIdForUser,
   deleteTrackerByIdForUser,
+  ownerScopeJsonForSettingsTracker,
 } from '@/lib/repositories'
 
 const patchTrackerBodySchema = z
@@ -35,7 +36,8 @@ export async function GET(
     return notFound('Tracker not found')
   }
 
-  return jsonOk(tracker)
+  const owner = await ownerScopeJsonForSettingsTracker(tracker, authResult.user.id)
+  return jsonOk(owner ? { ...tracker, ...owner } : tracker)
 }
 
 /**
@@ -74,13 +76,15 @@ export async function PATCH(
   }
 
   if (Object.keys(updateData).length === 0) {
-    return jsonOk(tracker)
+    const ownerIdle = await ownerScopeJsonForSettingsTracker(tracker, authResult.user.id)
+    return jsonOk(ownerIdle ? { ...tracker, ...ownerIdle } : tracker)
   }
 
   const updated = await updateTrackerByIdForUser(trackerId, authResult.user.id, updateData)
   if (!updated) return notFound('Tracker not found')
 
-  return jsonOk(updated)
+  const owner = await ownerScopeJsonForSettingsTracker(updated, authResult.user.id)
+  return jsonOk(owner ? { ...updated, ...owner } : updated)
 }
 
 /**

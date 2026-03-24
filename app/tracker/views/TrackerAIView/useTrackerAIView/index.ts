@@ -49,11 +49,11 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const builderMessagesRef = useRef<{ messages: Message[]; setMessages: (m: Message[] | ((prev: Message[]) => Message[])) => void }>({
     messages: [],
-    setMessages: () => {},
+    setMessages: () => { },
   })
   const analystMessagesRef = useRef<{ messages: Message[]; setMessages: (m: Message[]) => void }>({
     messages: [],
-    setMessages: () => {},
+    setMessages: () => { },
   })
 
   const chatWindows = useChatWindows(
@@ -116,8 +116,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     conversationId: isDataPage
       ? undefined
       : (activeBuilderWindowId?.startsWith('draft-')
-          ? null
-          : (activeBuilderWindowId || initialConversationId) ?? undefined),
+        ? null
+        : (activeBuilderWindowId || initialConversationId) ?? undefined),
     initialMessages: isDataPage ? undefined : initialMessages,
     onConversationCreate:
       !isDataPage && activeBuilderWindowId?.startsWith('draft-')
@@ -131,8 +131,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     trackerId: trackerId ?? undefined,
     conversationId: isDataPage
       ? (activeAnalystWindowId?.startsWith('draft-')
-          ? null
-          : (activeAnalystWindowId || initialConversationId) ?? undefined)
+        ? null
+        : (activeAnalystWindowId || initialConversationId) ?? undefined)
       : undefined,
     initialMessages: isDataPage ? initialMessages : undefined,
     trackerSchema: (initialSchema ?? activeTrackerData) as TrackerResponse | null,
@@ -188,7 +188,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   const trackerNavCtx = useTrackerNav()
   const setTrackerNav = trackerNavCtx?.setTrackerNav ?? null
   const setSaveState = trackerNavCtx?.setSaveState ?? null
-  const saveDataRef = useRef<() => Promise<void>>(async () => {})
+  const saveDataRef = useRef<() => Promise<void>>(async () => { })
   const setTrackerNavRef = useRef(setTrackerNav)
   setTrackerNavRef.current = setTrackerNav
   const lastSyncedTrackerRef = useRef<TrackerResponse | null>(null)
@@ -615,61 +615,61 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
 
   const chatPanelProps = isDataPage
     ? {
-        showStatusPanel: Boolean(analyst.error),
-        statusPanelProps: chatStatusPanelProps,
-        input: analyst.input,
-        setInput: analyst.setInput,
-        isFocused: analyst.isFocused,
-        setIsFocused: analyst.setIsFocused,
-        handleSubmit: handleAnalystSubmitWithTitle,
-        applySuggestion: analyst.applySuggestion,
-        isLoading: analyst.isLoading,
-        isChatEmpty: analyst.isChatEmpty,
-        textareaRef: analyst.textareaRef,
-        messages: analyst.messages,
-        setMessageThinkingOpen: analyst.setMessageThinkingOpen,
-        setMessageToolsOpen: analyst.setMessageToolsOpen,
-        messagesEndRef: analyst.messagesEndRef,
-        object: analyst.object,
-        onViewTracker: undefined,
-        activeTrackerMessageIndex: undefined,
-        toolCalls: undefined,
-        isResolvingExpressions: false,
-        mode: 'data' as const,
-        isConversationLoading: analystConversationLoading,
-        conversationWindows: analystChatWindows,
-        activeConversationId: activeAnalystWindowId,
-        onSelectConversation: handleAnalystWindowSelect,
-        onCreateConversation: handleAnalystWindowCreate,
-      }
+      showStatusPanel: Boolean(analyst.error),
+      statusPanelProps: chatStatusPanelProps,
+      input: analyst.input,
+      setInput: analyst.setInput,
+      isFocused: analyst.isFocused,
+      setIsFocused: analyst.setIsFocused,
+      handleSubmit: handleAnalystSubmitWithTitle,
+      applySuggestion: analyst.applySuggestion,
+      isLoading: analyst.isLoading,
+      isChatEmpty: analyst.isChatEmpty,
+      textareaRef: analyst.textareaRef,
+      messages: analyst.messages,
+      setMessageThinkingOpen: analyst.setMessageThinkingOpen,
+      setMessageToolsOpen: analyst.setMessageToolsOpen,
+      messagesEndRef: analyst.messagesEndRef,
+      object: analyst.object,
+      onViewTracker: undefined,
+      activeTrackerMessageIndex: undefined,
+      toolCalls: undefined,
+      isResolvingExpressions: false,
+      mode: 'data' as const,
+      isConversationLoading: analystConversationLoading,
+      conversationWindows: analystChatWindows,
+      activeConversationId: activeAnalystWindowId,
+      onSelectConversation: handleAnalystWindowSelect,
+      onCreateConversation: handleAnalystWindowCreate,
+    }
     : {
-        showStatusPanel,
-        statusPanelProps: chatStatusPanelProps,
-        input,
-        setInput,
-        isFocused,
-        setIsFocused,
-        handleSubmit: handleSubmitWithReset,
-        applySuggestion,
-        isLoading,
-        isChatEmpty,
-        textareaRef,
-        messages,
-        setMessageThinkingOpen,
-        setMessageToolsOpen,
-        messagesEndRef,
-        object,
-        onViewTracker: handleViewHistoricalTracker,
-        activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
-        toolCalls,
-        isResolvingExpressions,
-        mode: 'schema' as const,
-        isConversationLoading: builderConversationLoading,
-        conversationWindows: builderChatWindows,
-        activeConversationId: activeBuilderWindowId,
-        onSelectConversation: handleBuilderWindowSelect,
-        onCreateConversation: handleBuilderWindowCreate,
-      }
+      showStatusPanel,
+      statusPanelProps: chatStatusPanelProps,
+      input,
+      setInput,
+      isFocused,
+      setIsFocused,
+      handleSubmit: handleSubmitWithReset,
+      applySuggestion,
+      isLoading,
+      isChatEmpty,
+      textareaRef,
+      messages,
+      setMessageThinkingOpen,
+      setMessageToolsOpen,
+      messagesEndRef,
+      object,
+      onViewTracker: handleViewHistoricalTracker,
+      activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
+      toolCalls,
+      isResolvingExpressions,
+      mode: 'schema' as const,
+      isConversationLoading: builderConversationLoading,
+      conversationWindows: builderChatWindows,
+      activeConversationId: activeBuilderWindowId,
+      onSelectConversation: handleBuilderWindowSelect,
+      onCreateConversation: handleBuilderWindowCreate,
+    }
 
   return {
     isDesktop,

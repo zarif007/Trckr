@@ -7,11 +7,11 @@ import {
   X,
   FilePlus,
   FileText,
+  Table2,
   LayoutList,
   Folder,
   ChevronRight,
   MoreHorizontal,
-  BarChart2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -453,7 +453,7 @@ export function ProjectContent({
       id: string
       label: string
       sublabel: string
-      icon: typeof FileText | typeof LayoutList
+      icon: typeof Table2 | typeof LayoutList
       trackerView: 'list' | 'detail'
       updatedAt: string
       href: string
@@ -471,7 +471,7 @@ export function ProjectContent({
       id: string
       label: string
       sublabel: string
-      icon: typeof BarChart2
+      icon: typeof FileText
       updatedAt: string
       href: string
     })[] = []
@@ -512,7 +512,7 @@ export function ProjectContent({
         id: tracker.id,
         label: getTrackerDisplayName(tracker.name, tracker.listForSchemaId != null),
         sublabel: 'Tracker',
-        icon: isListView ? LayoutList : FileText,
+        icon: isListView ? LayoutList : Table2,
         trackerView: isListView ? 'list' as const : 'detail' as const,
         updatedAt: tracker.updatedAt,
         href: tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`,
@@ -532,7 +532,7 @@ export function ProjectContent({
       id: r.id,
       label: r.name?.trim() || 'Untitled report',
       sublabel: 'Report',
-      icon: BarChart2,
+      icon: FileText,
       updatedAt: r.updatedAt,
       href: `/report/${r.id}`,
     }))

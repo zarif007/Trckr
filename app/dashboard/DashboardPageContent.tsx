@@ -12,7 +12,7 @@ import {
   LayoutGrid,
   List,
   LayoutList,
-  FileText,
+  Table2,
   Sparkles,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -306,7 +306,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               <div className="flex flex-col gap-1">
                 {recentTrackers.map((tracker) => {
                   const isListView = tracker.listForSchemaId != null
-                  const TrackerIcon = isListView ? LayoutList : FileText
+                  const TrackerIcon = isListView ? LayoutList : Table2
                   const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
                   return (
                     <Link
@@ -352,7 +352,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 <div className="flex flex-col gap-1">
                   {recentTrackers.map((tracker) => {
                     const isListView = tracker.listForSchemaId != null
-                    const TrackerIcon = isListView ? LayoutList : FileText
+                    const TrackerIcon = isListView ? LayoutList : Table2
                     const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
                     return (
                       <Link

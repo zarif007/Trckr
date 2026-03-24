@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, FilePlus, GitBranch, Layers, Info, FileText } from 'lucide-react'
+import { Loader2, FilePlus, GitBranch, Layers, Info, FileText, Table2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -29,13 +29,13 @@ type InstanceType = 'SINGLE' | 'MULTI'
 const INSTANCE_OPTIONS: Array<{
   value: InstanceType
   label: string
-  icon: typeof FileText
+  icon: typeof Table2 | typeof Layers
   description: string
 }> = [
   {
     value: 'SINGLE',
     label: 'Single',
-    icon: FileText,
+    icon: Table2,
     description: 'One shared tracker with a single dataset. Supports optional version control with branches, diffs, and merging.',
   },
   {

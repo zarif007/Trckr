@@ -5,10 +5,9 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  FilePlus,
+  Table2,
   FolderPlus,
   FileText,
-  BarChart3,
 } from 'lucide-react'
 import {
   Popover,
@@ -174,7 +173,7 @@ export function CreateDropdown(props: CreateDropdownProps) {
               onClick={handleTrackerClick}
               className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md hover:bg-muted/60 transition-colors text-left w-full"
             >
-              <FilePlus className="h-3.5 w-3.5 text-muted-foreground" />
+              <Table2 className="h-3.5 w-3.5 text-muted-foreground" />
               Tracker
             </button>
             {!isDashboard && projectId && (
@@ -183,7 +182,7 @@ export function CreateDropdown(props: CreateDropdownProps) {
                 onClick={handleReportClick}
                 className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-md hover:bg-muted/60 transition-colors text-left w-full"
               >
-                <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 Report
               </button>
             )}

@@ -42,6 +42,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     dataSaveStatus,
     chatPanelProps,
     reportForeignBindingNav,
+    ownerScopeSettingsBanner,
   } = state
 
   return (
@@ -82,6 +83,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           onPreviewSave={onPreviewSave}
           previewSaveStatus={dataSaveStatus}
           onForeignBindingNavUiChange={reportForeignBindingNav}
+          ownerScopeSettingsBanner={ownerScopeSettingsBanner}
         />
 
         {isChatOpen && (

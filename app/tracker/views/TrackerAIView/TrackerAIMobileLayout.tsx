@@ -43,6 +43,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     dataSaveStatus,
     chatPanelProps,
     reportForeignBindingNav,
+    ownerScopeSettingsBanner,
   } = state
 
   return (
@@ -100,6 +101,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               onPreviewSave={onPreviewSave}
               previewSaveStatus={dataSaveStatus}
               onForeignBindingNavUiChange={reportForeignBindingNav}
+              ownerScopeSettingsBanner={ownerScopeSettingsBanner}
             />
           </TabsContent>
           <TabsContent

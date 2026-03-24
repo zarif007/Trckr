@@ -23,10 +23,44 @@ import { TrackerBranchPanel } from '@/app/components/tracker-page/TrackerBranchP
 import type { BranchRecord } from '@/app/components/tracker-page/TrackerBranchPanel'
 import type { TrackerResponse } from '../hooks/useTrackerChat'
 import type { ForeignBindingNavUiState } from '@/app/components/tracker-display/types'
+import type { OwnerScopeSettingsBanner } from '@/app/tracker/views/TrackerAIView/types'
+import { parseProjectModuleSettings } from '@/lib/master-data-scope'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 
 const DEFAULT_LEFT_RATIO = 0.75
+
+function OwnerScopeSettingsReadout({ banner }: { banner: OwnerScopeSettingsBanner }) {
+  const title = banner.source === 'project' ? 'Project settings' : 'Module settings'
+  const parsed = parseProjectModuleSettings(banner.settings)
+  const scopeHint = parsed.masterDataDefaultScope
+
+  return (
+    <div
+      className="mb-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
+      role="region"
+      aria-label={title}
+    >
+      <p className="text-xs font-semibold text-foreground">{title}</p>
+      <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+        Stored on this {banner.source} in the database (<code className="text-[10px]">settings</code>{' '}
+        column), separate from the tracker form below.
+      </p>
+      {scopeHint ? (
+        <p className="text-xs text-foreground mt-2">
+          Default master data scope: <span className="font-medium">{scopeHint}</span>
+        </p>
+      ) : null}
+      {banner.settings == null ? (
+        <p className="text-xs text-muted-foreground mt-2">No JSON is stored yet.</p>
+      ) : (
+        <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border/50 bg-muted/40 p-3 text-[11px] font-mono leading-relaxed whitespace-pre-wrap break-words">
+          {JSON.stringify(banner.settings, null, 2)}
+        </pre>
+      )}
+    </div>
+  )
+}
 
 export type GridDataSnapshot = Record<string, Array<Record<string, unknown>>>
 
@@ -66,6 +100,7 @@ interface TrackerPanelProps {
   onPreviewSave?: () => void | Promise<void>
   previewSaveStatus?: 'idle' | 'saving' | 'saved' | 'error'
   onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void
+  ownerScopeSettingsBanner?: OwnerScopeSettingsBanner
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -101,6 +136,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   onPreviewSave,
   previewSaveStatus = 'idle',
   onForeignBindingNavUiChange,
+  ownerScopeSettingsBanner,
 }: TrackerPanelProps) {
   const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
@@ -348,6 +384,9 @@ export const TrackerPanel = memo(function TrackerPanel({
           : 'px-4 pt-16 pb-6'
           }`}
       >
+        {ownerScopeSettingsBanner && (
+          <OwnerScopeSettingsReadout banner={ownerScopeSettingsBanner} />
+        )}
         <TrackerDisplayErrorBoundary key={displayKey}>
           {isStreamingTracker ? (
             <TrackerDisplay

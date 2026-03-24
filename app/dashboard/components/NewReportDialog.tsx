@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, BarChart3 } from 'lucide-react'
+import { Loader2, FileText } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -150,7 +150,7 @@ export function NewReportDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
+            <FileText className="h-4 w-4" />
             New report
           </DialogTitle>
         </DialogHeader>

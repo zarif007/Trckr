@@ -8,6 +8,12 @@ export const MIN_LEFT_PX = 320
 export const MIN_RIGHT_PX = 360
 export const DRAFT_STATUS_TAG = 'Draft'
 
+/** DB `Project.settings` / `Module.settings` surfaced on the SYSTEM Settings config tracker */
+export type OwnerScopeSettingsBanner = {
+  source: 'project' | 'module'
+  settings: unknown
+}
+
 export interface TrackerEditorViewProps {
   initialSchema?: TrackerResponse
   initialGridData?: GridDataSnapshot | null
@@ -30,6 +36,8 @@ export interface TrackerEditorViewProps {
   primaryNavAction?: { label: string; href: string } | null
   showPanelUtilities?: boolean
   schemaAutoSave?: boolean
+  /** When this tracker is the Settings system file, show owning project/module JSON settings */
+  ownerScopeSettingsBanner?: OwnerScopeSettingsBanner
 }
 
 export type ChatWindow = { id: string; title: string }

@@ -18,6 +18,7 @@ import {
   Pencil,
   Trash2,
   FileText,
+  Table2,
   LayoutList,
   Link2,
   ShieldCheck,
@@ -102,8 +103,7 @@ function updateModuleInTree(
 
 /**
  * Renders a single tracker link in the sidebar.
- * All trackers (single, multi, version controlled) use the same FileText icon.
- * List companions (listForSchemaId != null) use LayoutList icon.
+ * Non-list trackers use Table2; list companions (listForSchemaId != null) use LayoutList.
  */
 function buildTrackerHrefs(tracker: TrackerSchema) {
   const parentId = tracker.listForSchemaId ?? tracker.id
@@ -139,7 +139,7 @@ function SidebarTrackerLink({
   return (
     <div className={cn('flex items-center gap-1.5 min-w-0', indent && 'pl-1.5')}>
       <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
-        {isList ? <LayoutList className="h-[18px] w-[18px]" /> : <FileText className="h-[18px] w-[18px]" />}
+        {isList ? <LayoutList className="h-[18px] w-[18px]" /> : <Table2 className="h-[18px] w-[18px]" />}
       </span>
       <Link
         href={dataHref}
@@ -245,7 +245,7 @@ function SidebarReportLink({
   return (
     <div className="flex items-center gap-1.5 min-w-0">
       <span className="group/icon inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground">
-        <BarChart2 className="h-[18px] w-[18px]" />
+        <FileText className="h-[18px] w-[18px]" />
       </span>
       <Link
         href={`/report/${report.id}`}
@@ -790,7 +790,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <>
                   <div className="px-3 pb-2 pt-1.5 border-b border-border/60">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <Table2 className="h-4 w-4 text-muted-foreground" />
                       <div className="flex flex-col min-w-0">
                         <span className="text-[11px] font-medium truncate">{sidebarContextMenu.item.label}</span>
                         <span className="text-[10px] text-muted-foreground/70">Tracker</span>
@@ -799,7 +799,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   </div>
                   <div className={sectionCls}>Navigate</div>
                   <Link href={hrefs.trackerPageHref} className={linkCls} role="menuitem">
-                    <FileText className="h-3.5 w-3.5" /> Open Tracker
+                    <Table2 className="h-3.5 w-3.5" /> Open Tracker
                   </Link>
                   <Link href={hrefs.schemaEditHref} className={linkCls} role="menuitem">
                     <Pencil className="h-3.5 w-3.5" /> Edit Schema

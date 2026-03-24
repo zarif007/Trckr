@@ -10,7 +10,7 @@ import {
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import {
-  FileText,
+  Table2,
   Pencil,
   Trash2,
   LayoutList,
@@ -234,7 +234,7 @@ export function RenameDeleteContextMenuPortal({
         <>
           <div className={sectionLabelClass}>Navigate</div>
           <Link href={hrefs.trackerPageHref} className={menuLinkClass} role="menuitem">
-            <FileText className="h-3.5 w-3.5" />
+            <Table2 className="h-3.5 w-3.5" />
             Open Tracker
           </Link>
           <Link href={hrefs.schemaEditHref} className={menuLinkClass} role="menuitem">

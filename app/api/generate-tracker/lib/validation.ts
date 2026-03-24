@@ -6,13 +6,13 @@ import { hasDeepSeekApiKey } from '@/lib/ai'
 
 export type ParseResult =
   | {
-      ok: true
-      query: string
-      messages: unknown[]
-      currentTracker: unknown
-      trackerSchemaId?: string
-      projectId?: string
-    }
+    ok: true
+    query: string
+    messages: unknown[]
+    currentTracker: unknown
+    trackerSchemaId?: string
+    projectId?: string
+  }
   | { ok: false; error: string; status: number }
 
 function optionalId(value: unknown): string | undefined {

@@ -14,6 +14,35 @@ export async function findTrackerByIdForUser(trackerId: string, userId: string) 
   })
 }
 
+/**
+ * For the SETTINGS system tracker, attach owning project or module `settings` JSON
+ * (`ownerScopeSettings`) so the editor can show the same DB column the form edits.
+ */
+export async function ownerScopeJsonForSettingsTracker(
+  tracker: {
+    systemType: SystemFileType | null
+    projectId: string
+    moduleId: string | null
+  },
+  userId: string,
+): Promise<{ ownerScopeSettings: unknown } | null> {
+  if (tracker.systemType !== SystemFileType.SETTINGS) return null
+
+  if (tracker.moduleId) {
+    const row = await prisma.module.findFirst({
+      where: { id: tracker.moduleId, project: { userId } },
+      select: { settings: true },
+    })
+    return { ownerScopeSettings: row?.settings ?? null }
+  }
+
+  const row = await prisma.project.findFirst({
+    where: { id: tracker.projectId, userId },
+    select: { settings: true },
+  })
+  return { ownerScopeSettings: row?.settings ?? null }
+}
+
 /** Minimal tracker list for a project (bindings picker). Returns null if project not owned by user. */
 export async function listTrackerSchemasForProjectForUser(projectId: string, userId: string) {
   const owned = await prisma.project.findFirst({

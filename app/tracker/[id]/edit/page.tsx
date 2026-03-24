@@ -7,6 +7,7 @@ import { TrackerAIView } from '../../page'
 import { TrackerPageSkeleton } from '../TrackerPageSkeleton'
 import { TrackerInstanceListView } from '../../views/TrackerInstanceListView'
 import type { TrackerResponse, Message } from '../../hooks/useTrackerChat'
+import { ownerScopeSettingsBannerFromTracker } from '../../utils/ownerScopeSettingsBanner'
 
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
 
@@ -15,10 +16,14 @@ type TrackerRecord = {
   name: string | null
   schema: unknown
   projectId?: string
+  moduleId?: string | null
+  type?: string
+  systemType?: string | null
   instance?: string
   versionControl?: boolean
   autoSave?: boolean
   listForSchemaId?: string | null
+  ownerScopeSettings?: unknown
 }
 
 type ConversationState = {
@@ -222,6 +227,7 @@ function TrackerByIdEditContent({
       schemaAutoSave
       primaryNavAction={primaryNavAction}
       autoSave={state.tracker?.autoSave ?? true}
+      ownerScopeSettingsBanner={ownerScopeSettingsBannerFromTracker(state.tracker)}
     />
   )
 }
