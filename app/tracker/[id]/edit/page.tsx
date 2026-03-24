@@ -107,7 +107,7 @@ function TrackerByIdEditContent({
   conversationIdParam: string | null
 }) {
   const initial = use(getTrackerResource(id, instanceId))
-  const [state, setState] = useState<TrackerResource>(initial)
+  const [state] = useState<TrackerResource>(initial)
   const [conversation, setConversation] = useState<ConversationState>({
     conversationId: null,
     messages: [],
@@ -177,6 +177,11 @@ function TrackerByIdEditContent({
     [id, instanceId, state.tracker?.name]
   )
 
+  const primaryNavAction = useMemo(
+    () => ({ label: 'Open Tracker', href: `/tracker/${id}` }),
+    [id]
+  )
+
   const schema = state.schema
   const hasValidSchema =
     schema &&
@@ -206,11 +211,6 @@ function TrackerByIdEditContent({
       />
     )
   }
-
-  const primaryNavAction = useMemo(
-    () => ({ label: 'Open Tracker', href: `/tracker/${id}` }),
-    [id]
-  )
 
   return (
     <TrackerAIView

@@ -36,8 +36,8 @@ export async function POST(request: Request) {
         const modules = parsed.plan.modules ?? []
         const createdModules: Array<{ name: string; id: string }> = []
 
-        for (const module of modules) {
-          const name = module.name?.trim()
+        for (const planModule of modules) {
+          const name = planModule.name?.trim()
           if (!name) continue
 
           controller.enqueue(encoder.encode(JSON.stringify({ type: 'progress', step: 'module', name, message: `Creating module: ${name}` }) + '\n'))

@@ -16,7 +16,7 @@ Rules:
 - Each column needs a **unique snake_case or simple id** (name) and a short **instruction** the expression generator will use (which fields, what operation).
 - At most 6 columns. Prefer fewer.
 - Do not duplicate a column that already exists with the same meaning (same name or obvious synonym).
-- Instructions must reference tracker **field paths** as they appear in the column list (flattened keys like \`items.quantity\`, or meta keys like \`__label\` when present).`
+- Instructions must reference **catalog field paths** as they appear in the column list (e.g. \`items.quantity\`). Reference \`__label\` / \`__dataId\` **only** when **generationPlan.instancePolicy** is \`per_instance_breakdown\` or \`filter_specific_instance\` and those columns are listed.`
 }
 
 export function buildReportCalcUserPrompt(params: {

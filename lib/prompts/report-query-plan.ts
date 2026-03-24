@@ -15,9 +15,10 @@ Rules:
 - load.maxTrackerDataRows: 1–500 (default 500 unless fewer is clearly enough).
 - load.branchName: **omit** = **main only**. Use **null** only when the user explicitly wants all branches. Use a string for a named branch.
 - flatten.gridIds: from intent; [] = auto-discover grids with row arrays.
-- filter paths: catalog field ids or __createdAt / __updatedAt / __gridId / __label / __dataId.
+- **Paths (default to catalog):** Prefer **catalog field ids** for filter, sort, aggregate groupBy, and metric **path** values. Use row timestamps **__createdAt** / **__updatedAt** only when the user or generation plan scopes data by row time. Use **__gridId** only when multiple grids matter (separate segments or grid-specific filters). Use **__branchName** only when the user asked for a non-default branch.
+- **Instance identity (__label / __dataId):** Use **only** when the parsed intent’s **generationPlan.instancePolicy** is \`per_instance_breakdown\` or \`filter_specific_instance\`, or the user explicitly names or compares tracker instances. For \`combined_all\`, \`not_applicable\`, or pooled MULTI tables, do **not** group, sort, or filter on \`__label\` / \`__dataId\` unless the user explicitly required instance columns.
 - **sort:** use intent + generation plan to implement user-requested ordering (multiple sort keys allowed).
-- **aggregate:** groupBy + metrics for rollups; groupBy paths are flattened field ids or meta keys when specified.
+- **aggregate:** groupBy + metrics for rollups; groupBy should use catalog field ids unless instancePolicy or the user requires \`__label\` / \`__dataId\` / \`__gridId\`.
 - **Critical — monetary "total value":** sum of (quantity × unit price) per line via metric **expression**, not sum(unit_price).
 - Each sum/avg/min/max metric has exactly one of path or expression; count has neither.
 - Never output SQL or JavaScript strings—only this JSON AST.
@@ -38,6 +39,8 @@ export function buildReportQueryPlanUserPrompt(params: {
         ? 'Instance rule: load across instances; branch default remains main per row unless user asked otherwise.'
         : 'Single tracker, no version control: main branch rows.'
 
+  const instanceRule = `**generationPlan.instancePolicy** (must follow for __label / __dataId): \`${params.intent.generationPlan.instancePolicy}\``
+
   return `## Field catalog
 ${params.catalogText}
 
@@ -45,6 +48,8 @@ ${params.catalogText}
 ${params.userQuery}
 
 ## ${branchRule}
+
+## ${instanceRule}
 
 ## Data plan (internal — implement exactly)
 ${formatGenerationPlanForPrompt(params.intent.generationPlan)}
