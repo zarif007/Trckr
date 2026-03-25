@@ -98,7 +98,7 @@ export function AnalysisDocumentView({
               </div>
 
               {hasChart && block.chartSpec && block.chartData ? (
-                <figure className="mt-6 overflow-hidden rounded-lg border border-border/70 bg-gradient-to-b from-muted/30 to-background p-4 shadow-sm dark:from-muted/15 sm:p-5">
+                <figure className="mt-6 overflow-hidden rounded-md border border-border/70 bg-gradient-to-b from-muted/30 to-background p-4 shadow-sm dark:from-muted/15 sm:p-5">
                   {block.title ? (
                     <figcaption className="mb-3 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                       Figure — {block.title}

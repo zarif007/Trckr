@@ -2,6 +2,8 @@
  * Parse `Project.settings` / `Module.settings` JSON for display (Settings system tracker).
  */
 
+export type MasterDataScope = 'tracker' | 'module' | 'project'
+
 export type ParsedProjectModuleSettings = {
   masterDataDefaultScope: string | null
 }

@@ -37,7 +37,7 @@ function OwnerScopeSettingsReadout({ banner }: { banner: OwnerScopeSettingsBanne
 
   return (
     <div
-      className="mb-4 rounded-lg border border-border/60 bg-muted/20 px-4 py-3"
+      className="mb-4 rounded-md border border-border/60 bg-muted/20 px-4 py-3"
       role="region"
       aria-label={title}
     >

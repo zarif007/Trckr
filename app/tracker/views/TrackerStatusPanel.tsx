@@ -34,7 +34,7 @@ export function TrackerStatusPanel({
     <div className="space-y-3">
       {validationErrors.length > 0 && (
         <div
-          className="flex items-start gap-3 rounded-lg border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3"
+          className="flex items-start gap-3 rounded-md border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3"
           role="alert"
         >
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
@@ -51,7 +51,7 @@ export function TrackerStatusPanel({
       )}
 
       {error && !isLoading && (
-        <div className="flex items-start gap-3 rounded-lg border-l-2 border-red-500/80 bg-red-500/5 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-md border-l-2 border-red-500/80 bg-red-500/5 px-4 py-3">
           <AlertTriangle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -68,7 +68,7 @@ export function TrackerStatusPanel({
       )}
 
       {showNoTracker && !error && (
-        <div className="flex items-start gap-3 rounded-lg border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-md border-l-2 border-amber-500/80 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">No tracker generated</p>

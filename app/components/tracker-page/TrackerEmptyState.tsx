@@ -33,7 +33,7 @@ export function TrackerEmptyState({
       className="flex flex-col items-center justify-center min-h-[60vh] space-y-10 md:space-y-12"
     >
       <div className="relative">
-        <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-foreground shadow-lg">
+        <div className="w-14 h-14 rounded-md flex items-center justify-center bg-foreground shadow-lg">
           <Sparkles className="w-7 h-7 text-background" />
         </div>
       </div>
@@ -64,7 +64,7 @@ export function TrackerEmptyState({
           <button
             key={suggestion.title}
             onClick={() => onApplySuggestion(suggestion.query)}
-            className="group flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-background/80 hover:bg-muted/50 hover:border-foreground/15 transition-all text-left"
+            className="group flex items-center gap-2 px-3 py-2 rounded-md border border-border/50 bg-background/80 hover:bg-muted/50 hover:border-foreground/15 transition-all text-left"
           >
             <span className={`text-xs ${suggestion.iconColor}`}>
               <suggestion.icon className="w-3.5 h-3.5" />

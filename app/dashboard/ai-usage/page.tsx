@@ -43,7 +43,7 @@ export default async function DashboardAiUsagePage() {
         </p>
       </div>
 
-      <section className="rounded-lg border border-border/60 bg-card p-6 shadow-sm">
+      <section className="rounded-md border border-border/60 bg-card p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Your account total
         </h2>
@@ -69,7 +69,7 @@ export default async function DashboardAiUsagePage() {
         </dl>
       </section>
 
-      <section className="rounded-lg border border-border/60 bg-card p-6 shadow-sm">
+      <section className="rounded-md border border-border/60 bg-card p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           By project
         </h2>
@@ -108,7 +108,7 @@ export default async function DashboardAiUsagePage() {
         )}
       </section>
 
-      <section className="rounded-lg border border-border/60 bg-card p-6 shadow-sm">
+      <section className="rounded-md border border-border/60 bg-card p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           By tracker
         </h2>

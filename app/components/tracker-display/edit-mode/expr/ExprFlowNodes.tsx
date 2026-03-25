@@ -510,7 +510,7 @@ function LogicNode({ id, data }: { id: string; data: FlowNodeData }) {
             <span className="text-[10px] text-muted-foreground">{inputCount} inputs</span>
             <button
               type="button"
-              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded bg-indigo-500/20 text-indigo-600 hover:bg-indigo-500/30 transition-colors"
+              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-500/20 text-indigo-600 hover:bg-indigo-500/30 transition-colors"
               onClick={() => data.onChange?.(id, { inputCount: inputCount + 1 })}
               aria-label="Add input"
             >
@@ -519,7 +519,7 @@ function LogicNode({ id, data }: { id: string; data: FlowNodeData }) {
             {inputCount > 2 && (
               <button
                 type="button"
-                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
+                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
                 onClick={() => data.onChange?.(id, { inputCount: inputCount - 1 })}
                 aria-label="Remove input"
               >
@@ -595,7 +595,7 @@ function MathNode({ id, data }: { id: string; data: FlowNodeData }) {
             <span className="text-[10px] text-muted-foreground">{inputCount} inputs</span>
             <button
               type="button"
-              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded bg-orange-500/20 text-orange-600 hover:bg-orange-500/30 transition-colors"
+              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md bg-orange-500/20 text-orange-600 hover:bg-orange-500/30 transition-colors"
               onClick={() => data.onChange?.(id, { inputCount: inputCount + 1 })}
               aria-label="Add input"
             >
@@ -604,7 +604,7 @@ function MathNode({ id, data }: { id: string; data: FlowNodeData }) {
             {inputCount > 2 && (
               <button
                 type="button"
-                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
+                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
                 onClick={() => data.onChange?.(id, { inputCount: inputCount - 1 })}
                 aria-label="Remove input"
               >
@@ -684,7 +684,7 @@ function StringNode({ id, data }: { id: string; data: FlowNodeData }) {
             <span className="text-[10px] text-muted-foreground">{inputCount} parts</span>
             <button
               type="button"
-              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
+              className="nodrag ml-auto inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
               onClick={() => data.onChange?.(id, { inputCount: inputCount + 1 })}
               aria-label="Add input"
             >
@@ -693,7 +693,7 @@ function StringNode({ id, data }: { id: string; data: FlowNodeData }) {
             {inputCount > 2 && (
               <button
                 type="button"
-                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
+                className="nodrag inline-flex h-5 w-5 items-center justify-center rounded-md bg-rose-500/20 text-rose-600 hover:bg-rose-500/30 transition-colors"
                 onClick={() => data.onChange?.(id, { inputCount: inputCount - 1 })}
                 aria-label="Remove input"
               >

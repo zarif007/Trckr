@@ -56,7 +56,7 @@ export default function Hero() {
               <span className="mt-2 block text-[clamp(2.875rem,10.5vw,3.35rem)] sm:mt-2 sm:text-[2.85rem] md:text-[3.5rem] lg:text-[4.25rem] xl:text-[5rem]">
                 <span className="relative inline-block px-1 sm:px-1.5">
                   <span
-                    className="absolute inset-x-0 bottom-[0.1em] top-[0.1em] rounded-[3px] bg-foreground sm:rounded-sm"
+                    className="absolute inset-x-0 bottom-[0.1em] top-[0.1em] rounded-md bg-foreground"
                     aria-hidden
                   />
                   <span className="relative font-medium text-background">

@@ -76,7 +76,7 @@ function StatusChip({ status }: { status: PanelStatus }) {
   const s = map[status]
   return (
     <span
-      className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] tracking-wide"
+      className="inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-[11px] tracking-wide"
       style={{ color: s.fg, backgroundColor: s.bg, borderColor: s.border }}
     >
       <span
@@ -119,7 +119,7 @@ function CardShell({
   className?: string
 }) {
   return (
-    <div className={cn('rounded-lg border', className)} style={{ borderColor: cli.border, backgroundColor: cli.panelBg }}>
+    <div className={cn('rounded-md border', className)} style={{ borderColor: cli.border, backgroundColor: cli.panelBg }}>
       <div className="flex gap-3 px-4 py-3">
         <div className="w-[2px] shrink-0 rounded-full" style={{ backgroundColor: accent ?? 'transparent' }} />
         <div className="min-w-0 flex-1">{children}</div>
@@ -170,7 +170,7 @@ function LineBlock({ line }: { line: ClaiLine }) {
     return (
       <div className="animate-in fade-in duration-200">
         <div
-          className="rounded-lg border px-4 py-3"
+          className="rounded-md border px-4 py-3"
           style={{
             color: cli.error,
             backgroundColor: cli.errorBg,
@@ -194,7 +194,7 @@ function LineBlock({ line }: { line: ClaiLine }) {
     return (
       <div className="animate-in fade-in duration-200">
         <div
-          className="rounded-lg border px-4 py-4"
+          className="rounded-md border px-4 py-4"
           style={{
             color: cli.text,
             backgroundColor: cli.panelBg,
@@ -217,7 +217,7 @@ function LineBlock({ line }: { line: ClaiLine }) {
                   <dd className="flex shrink-0 items-center gap-2">
                     {statusish && (
                       <span
-                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]"
+                        className="inline-flex items-center rounded-md border px-2 py-0.5 text-[11px]"
                         style={{
                           color: cli.success,
                           borderColor: 'rgba(34,197,94,0.25)',
@@ -244,7 +244,7 @@ function LineBlock({ line }: { line: ClaiLine }) {
   return (
     <div className="animate-in fade-in duration-200">
       <div
-        className="rounded-lg border px-4 py-4 font-mono text-[13px] leading-[1.65]"
+        className="rounded-md border px-4 py-4 font-mono text-[13px] leading-[1.65]"
         style={{
           color: cli.text,
           backgroundColor: cli.panelBg,
@@ -285,7 +285,7 @@ export function ClaiPanel({ lines, location, onSubmit, className }: ClaiPanelPro
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-col overflow-hidden rounded-b-xl',
+        'flex h-full w-full flex-col overflow-hidden rounded-b-md',
         'text-[13px] antialiased',
         className
       )}
@@ -314,7 +314,7 @@ export function ClaiPanel({ lines, location, onSubmit, className }: ClaiPanelPro
       >
         <form onSubmit={handleSubmit} className="flex flex-col gap-2">
           <div
-            className="flex items-center gap-2 rounded-lg border px-3 py-2 transition-colors"
+            className="flex items-center gap-2 rounded-md border px-3 py-2 transition-colors"
             style={{ borderColor: cli.border, backgroundColor: 'rgba(255,255,255,0.02)' }}
           >
             <Input

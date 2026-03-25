@@ -20,9 +20,9 @@ className={cn(theme.surface.card, theme.border.default, theme.shadow.sm)}
 - `theme.text` – foreground, muted, primary, success, warning, destructive, info
 - `theme.border` – default, subtle, subtleAlt, verySubtle, input, ring, hover
 - `theme.shadow` – xs, sm, md, lg, xl
-- `theme.radius` – sm, md, lg, full
+- `theme.radius` – **use `md` for all boxed UI**; `full` only for true circles (spinners, `animate-ping`, circular loaders). `sm` / `lg` are deprecated.
 - `theme.status` – success/warning/destructive/info each with .bg, .border, .text
-- `theme.patterns` – inputBase, card, interactive, hoverPrimary
+- `theme.patterns` – inputBase, card, interactive, hoverPrimary, menuPanel, menuItem
 
 ## Shadows
 
@@ -34,9 +34,11 @@ className={cn(theme.surface.card, theme.border.default, theme.shadow.sm)}
 
 ## Border Radius
 
-- `rounded-md` – default for most components
-- `rounded-lg` – larger containers
-- `rounded-full` – pills, avatars, icons
+- **Default:** `theme.radius.md` (`rounded-md`) for cards, inputs, buttons, badges, panels, chat bubbles, menus, and icon hit targets.
+- **Do not** use `rounded-sm`, `rounded-lg`, `rounded-xl`, or `rounded-2xl` for product UI — use `theme.radius.md` or `theme.patterns.*` that already include it.
+- **`theme.radius.full`:** only when geometry or motion requires a circle (e.g. border-trick `animate-spin` loaders, `animate-ping` ripples, sub-pixel pulse dots).
+- **`rounded-none`:** only for flush alignment (table cell inputs, segmented controls, calendar range strips, blueprint frames like `LandingAxisFrame`).
+- **Reusable menus:** `theme.patterns.menuPanel` + `theme.patterns.menuItem` for portal context menus; override padding with `cn(theme.patterns.menuItem, 'py-2')` if needed.
 
 ## Borders
 

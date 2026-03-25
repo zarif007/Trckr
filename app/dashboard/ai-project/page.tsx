@@ -878,7 +878,7 @@ export default function AiProjectBuilderPage() {
               questionsError={questionsError ?? null}
             />
           ) : (
-            <div className="rounded-xl border border-border/50 bg-background shadow-sm overflow-hidden">
+            <div className="rounded-md border border-border/50 bg-background shadow-sm overflow-hidden">
               <div className="flex flex-col">
                 <Textarea
                   value={input}
@@ -893,7 +893,7 @@ export default function AiProjectBuilderPage() {
                   <Button
                     onClick={handleSend}
                     disabled={!canSend}
-                    className="rounded-lg gap-2"
+                    className="rounded-md gap-2"
                     size="default"
                   >
                     {busy ? (

@@ -111,7 +111,7 @@ function PipelineHeader({ currentStage, stage }: PipelineHeaderProps) {
   const currentIdx = PIPELINE_STAGES.findIndex((s) => s.key === currentStage)
 
   return (
-    <div className="flex items-center gap-1 rounded-xl border border-border/40 bg-muted/30 px-4 py-3">
+    <div className="flex items-center gap-1 rounded-md border border-border/40 bg-muted/30 px-4 py-3">
       {PIPELINE_STAGES.map(({ key, label, icon: Icon }, idx) => {
         const isActive = key === currentStage
         const isPast = currentIdx > idx
@@ -121,7 +121,7 @@ function PipelineHeader({ currentStage, stage }: PipelineHeaderProps) {
           <div key={key} className="flex items-center gap-1 min-w-0">
             <div
               className={cn(
-                'flex items-center gap-2 rounded-lg px-3 py-1.5 transition-colors',
+                'flex items-center gap-2 rounded-md px-3 py-1.5 transition-colors',
                 isActive && 'bg-background border border-border/60 shadow-sm',
                 isPast && 'text-muted-foreground',
                 isFuture && 'text-muted-foreground/60',
@@ -177,7 +177,7 @@ function PhaseCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
       className={cn(
-        'rounded-xl border border-border/40 overflow-hidden',
+        'rounded-md border border-border/40 overflow-hidden',
         !isUser && 'border-l-4',
         !isUser && accent,
       )}
@@ -185,7 +185,7 @@ function PhaseCard({
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30 bg-background/50">
         <div
           className={cn(
-            'flex h-10 w-10 items-center justify-center rounded-lg',
+            'flex h-10 w-10 items-center justify-center rounded-md',
             isUser ? 'bg-muted/60' : 'bg-background border border-border/40',
           )}
         >
@@ -224,7 +224,7 @@ function PhaseCard({
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors',
                   isUser
                     ? 'bg-background/20 text-background hover:bg-background/30'
                     : 'bg-foreground/10 text-foreground hover:bg-foreground/20',
@@ -244,7 +244,7 @@ function PhaseCard({
                   <Button
                     key={`${message.id}-confirm-${idx}`}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={onConfirmBuild}
                     disabled={busy}
                   >
@@ -258,7 +258,7 @@ function PhaseCard({
                     key={`${message.id}-edit-${idx}`}
                     size="sm"
                     variant="outline"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={onEditAnswers}
                     disabled={busy}
                   >
@@ -272,7 +272,7 @@ function PhaseCard({
                     key={`${message.id}-retry-${idx}`}
                     size="sm"
                     variant="outline"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={() => onRetryTracker(action.index)}
                     disabled={busy}
                   >
@@ -286,7 +286,7 @@ function PhaseCard({
                     key={`${message.id}-retry-plan-${idx}`}
                     size="sm"
                     variant="outline"
-                    className="rounded-lg"
+                    className="rounded-md"
                     onClick={onRetryPlan}
                     disabled={busy}
                   >
@@ -312,7 +312,7 @@ function BuildPhaseItem({ item, onRetry }: BuildPhaseItemProps) {
   return (
     <div
       className={cn(
-        'flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm transition-colors',
+        'flex items-center justify-between gap-3 rounded-md border px-4 py-2.5 text-sm transition-colors',
         item.status === 'pending' && 'border-border/40 bg-muted/20 text-muted-foreground',
         item.status === 'working' && 'border-amber-500/40 bg-amber-500/10 text-foreground',
         item.status === 'done' && 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400',
@@ -347,7 +347,7 @@ function BuildPhaseItem({ item, onRetry }: BuildPhaseItemProps) {
           </Link>
         )}
         {item.status === 'error' && (
-          <Button size="sm" variant="outline" className="rounded-lg h-7" onClick={onRetry}>
+          <Button size="sm" variant="outline" className="rounded-md h-7" onClick={onRetry}>
             Retry
           </Button>
         )}
@@ -405,10 +405,10 @@ export function AgentTimeline({
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className="rounded-xl border-l-4 border-l-emerald-500 border border-border/40 bg-emerald-500/5 overflow-hidden"
+            className="rounded-md border-l-4 border-l-emerald-500 border border-border/40 bg-emerald-500/5 overflow-hidden"
           >
             <div className="flex items-center gap-3 px-4 py-2.5 border-b border-border/30 bg-background/50">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background border border-border/40">
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-background border border-border/40">
                 <Hammer className="h-5 w-5 text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">

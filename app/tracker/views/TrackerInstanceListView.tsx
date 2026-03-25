@@ -354,7 +354,7 @@ export function TrackerInstanceListView({
             <label className="inline-flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
-                className="h-3 w-3 rounded border-border/70"
+                className="h-3 w-3 rounded-md border-border/70"
                 checked={showBranchColumn}
                 onChange={(e) => setShowBranchColumn(e.target.checked)}
               />
@@ -363,7 +363,7 @@ export function TrackerInstanceListView({
             <label className="inline-flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
-                className="h-3 w-3 rounded border-border/70"
+                className="h-3 w-3 rounded-md border-border/70"
                 checked={showAuthorColumn}
                 onChange={(e) => setShowAuthorColumn(e.target.checked)}
               />
@@ -372,7 +372,7 @@ export function TrackerInstanceListView({
             <label className="inline-flex items-center gap-1.5 cursor-pointer">
               <input
                 type="checkbox"
-                className="h-3 w-3 rounded border-border/70"
+                className="h-3 w-3 rounded-md border-border/70"
                 checked={showCreatedColumn}
                 onChange={(e) => setShowCreatedColumn(e.target.checked)}
               />
@@ -402,7 +402,7 @@ export function TrackerInstanceListView({
 
         {!loading && !error && instances.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-4 py-16">
-            <div className="w-12 h-12 rounded-xl bg-muted/40 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-md bg-muted/40 flex items-center justify-center">
               <Layers className="h-5 w-5 text-muted-foreground/30" />
             </div>
             <div className="text-center space-y-1">
@@ -428,7 +428,7 @@ export function TrackerInstanceListView({
             )}
 
             {filteredInstances.length > 0 && (
-              <div className="rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-[0_0_0_1px_rgba(15,23,42,0.02)]">
+              <div className="rounded-md border border-border/60 bg-card/40 overflow-hidden shadow-[0_0_0_1px_rgba(15,23,42,0.02)]">
                 <div className="max-h-[calc(100vh-220px)] overflow-auto">
                   <table className="w-full border-collapse text-[12px] sm:text-xs">
                     <thead className="bg-muted/60 text-muted-foreground/80">

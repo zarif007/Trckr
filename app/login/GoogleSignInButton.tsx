@@ -41,7 +41,7 @@ export function GoogleSignInButton({ callbackUrl }: Props) {
         theme.radius.md
       )}
     >
-      <div className="flex items-center justify-center w-5 h-5 rounded-sm bg-white p-0.5">
+      <div className="flex items-center justify-center w-5 h-5 rounded-md bg-white p-0.5">
         <GoogleIcon />
       </div>
       Continue with Google

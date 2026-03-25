@@ -60,13 +60,13 @@ export function DependsOnTab({
     return (
       <div
         className={cn(
-          theme.radius.lg,
+          theme.radius.md,
           theme.border.subtle,
           'border-2 border-dashed bg-muted/20 py-12 px-6 text-center',
           'hover:border-primary/40 hover:bg-muted/30 transition-colors duration-200'
         )}
       >
-        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-md bg-primary/10 text-primary">
           <Sparkles className="h-5 w-5" />
         </div>
         <p className="text-sm font-semibold text-foreground mb-1.5">No visibility conditions</p>
@@ -101,7 +101,7 @@ export function DependsOnTab({
               className={cn(
                 theme.surface.card,
                 theme.border.subtle,
-                theme.radius.lg,
+                theme.radius.md,
                 'border overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.04)]'
               )}
             >
@@ -130,7 +130,7 @@ export function DependsOnTab({
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {rule.source ? (
-                      <div className={cn('flex items-center gap-2 rounded-lg border px-3 py-2 min-h-9', theme.border.subtle, theme.surface.mutedSubtle)}>
+                      <div className={cn('flex items-center gap-2 rounded-md border px-3 py-2 min-h-9', theme.border.subtle, theme.surface.mutedSubtle)}>
                         <span
                           className="text-sm font-medium truncate max-w-[200px]"
                           title={sourceLabel}
@@ -139,7 +139,7 @@ export function DependsOnTab({
                         </span>
                         <button
                           type="button"
-                          className="shrink-0 text-xs font-medium text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded px-1 -mx-1"
+                          className="shrink-0 text-xs font-medium text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-1 -mx-1"
                           onClick={() =>
                             setDependsOnRules((prev) =>
                               prev.map((r, i) => (i === index ? { ...r, source: '' } : r))
@@ -217,7 +217,7 @@ export function DependsOnTab({
 
                 <section
                   className={cn(
-                    'space-y-2 rounded-lg border-l-4 pl-4 py-3',
+                    'space-y-2 rounded-md border-l-4 pl-4 py-3',
                     theme.status.info.bg,
                     'border-l-info/60'
                   )}

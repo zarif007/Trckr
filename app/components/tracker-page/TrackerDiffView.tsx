@@ -351,7 +351,7 @@ export function TrackerDiffView({
                 type="button"
                 onClick={() => setMode('side-by-side')}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1',
+                  'px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors flex items-center gap-1',
                   mode === 'side-by-side' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
@@ -361,7 +361,7 @@ export function TrackerDiffView({
                 type="button"
                 onClick={() => setMode('inline')}
                 className={cn(
-                  'px-2 py-0.5 rounded text-[10px] font-medium transition-colors flex items-center gap-1',
+                  'px-2 py-0.5 rounded-md text-[10px] font-medium transition-colors flex items-center gap-1',
                   mode === 'inline' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground',
                 )}
               >

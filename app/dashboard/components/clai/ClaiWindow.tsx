@@ -4,6 +4,7 @@ import { Rnd } from 'react-rnd'
 import { X, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import { cliTheme } from './cliTheme'
 import { ClaiPanel } from './ClaiPanel'
 import type { ClaiInstance } from './types'
@@ -82,7 +83,8 @@ export function ClaiWindow({
       onDragStop={(_e, d) => onPositionChange?.(d.x, d.y)}
       onResizeStop={(_e, _dir, el) => onSizeChange?.(el.offsetWidth, el.offsetHeight)}
       className={cn(
-        '!z-50 flex flex-col overflow-hidden rounded-xl border shadow-2xl',
+        '!z-50 flex flex-col overflow-hidden border shadow-2xl',
+        theme.radius.md,
         className
       )}
       style={{ zIndex: 50, backgroundColor: cliTheme.bgTabBar, borderColor: cliTheme.border }}
@@ -114,7 +116,7 @@ export function ClaiWindow({
               >
                 <button
                   type="button"
-                  className="min-w-0 truncate text-left text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded"
+                  className="min-w-0 truncate text-left text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 rounded-md"
                   style={{ color: 'inherit' }}
                   onClick={() => onActiveIdChange(inst.id)}
                   title={inst.location || 'dashboard'}
@@ -124,7 +126,7 @@ export function ClaiWindow({
                 {canCloseTab && (
                   <button
                     type="button"
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-white/10 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded-md hover:bg-white/10 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30"
                     style={{ color: cliTheme.textMuted }}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -160,7 +162,7 @@ export function ClaiWindow({
           <X className="h-4 w-4" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-b-xl">
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden rounded-b-md">
         {activeInstance && (
           <ClaiPanel
             lines={activeInstance.lines}

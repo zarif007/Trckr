@@ -49,7 +49,7 @@ export const projectAreaBreadcrumbInputClass =
   'h-6 w-40 max-w-[min(50vw,12rem)] rounded-md border-border/50 text-[11px] font-medium'
 
 export const projectAreaBreadcrumbCrumbClass =
-  'min-w-0 flex-1 cursor-default select-none truncate rounded-sm px-1 py-0.5 font-medium text-foreground hover:bg-muted/40'
+  'min-w-0 flex-1 cursor-default select-none truncate rounded-md px-1 py-0.5 font-medium text-foreground hover:bg-muted/40'
 
 export const projectAreaScrollClass =
   'flex-1 overflow-auto px-3 py-6 sm:px-4'

@@ -97,7 +97,7 @@ function TrackerNameEdit({
         onChange={(e) => setValue(e.target.value)}
         onBlur={commit}
         onKeyDown={handleKeyDown}
-        className="min-w-[120px] max-w-[min(50vw,360px)] rounded px-1.5 py-0.5 text-base font-bold bg-transparent border border-input focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+        className="min-w-[120px] max-w-[min(50vw,360px)] rounded-md px-1.5 py-0.5 text-base font-bold bg-transparent border border-input focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
         aria-label="Tracker name"
       />
     )
@@ -107,7 +107,7 @@ function TrackerNameEdit({
     <button
       type="button"
       onClick={() => setEditing(true)}
-      className="min-w-0 max-w-[min(50vw,360px)] truncate rounded px-1.5 py-0.5 text-left text-base font-bold text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="min-w-0 max-w-[min(50vw,360px)] truncate rounded-md px-1.5 py-0.5 text-left text-base font-bold text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       title="Click to rename"
       aria-label="Tracker name (click to edit)"
     >
@@ -379,7 +379,7 @@ export default function TrackerNavBar() {
             {showAutosaveBadge && (
               <Badge
                 variant="outline"
-                className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium shadow-sm backdrop-blur-sm ${autosaveBadgeClassName}`}
+                className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-medium shadow-sm backdrop-blur-sm ${autosaveBadgeClassName}`}
                 title={
                   dataSaveStatus === 'error'
                     ? dataSaveError ?? 'Failed to save'
@@ -443,7 +443,7 @@ export default function TrackerNavBar() {
                       {actionsDraft.map((action, index) => (
                         <div
                           key={action.id}
-                          className="rounded-lg border border-border/60 bg-muted/[0.15] p-2.5"
+                          className="rounded-md border border-border/60 bg-muted/[0.15] p-2.5"
                         >
                           <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_110px_38px]">
                             <Input

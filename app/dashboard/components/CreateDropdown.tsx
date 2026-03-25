@@ -156,7 +156,7 @@ export function CreateDropdown(props: CreateDropdownProps) {
             className={
               isToolbar
                 ? 'h-7 gap-1.5 rounded-md text-xs font-medium'
-                : 'rounded-full gap-1.5'
+                : 'rounded-md gap-1.5'
             }
           >
             <Plus className="h-3.5 w-3.5" />

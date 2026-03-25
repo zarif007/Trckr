@@ -25,4 +25,14 @@ export const patterns = {
     'hover:bg-accent hover:text-accent-foreground',
     'dark:hover:bg-input/50',
   ].join(' '),
+  /** Fixed context / account menu shell (portal menus) */
+  menuPanel: [
+    'fixed z-[100] min-w-[192px] border bg-popover text-popover-foreground shadow-lg py-1 animate-in fade-in-0 zoom-in-95',
+    radius.md,
+  ].join(' '),
+  /** Full-width row inside portal menus; use `cn(..., 'py-2')` when a taller hit target is needed */
+  menuItem: [
+    'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/80',
+    radius.md,
+  ].join(' '),
 } as const

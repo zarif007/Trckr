@@ -44,7 +44,7 @@ export function TrackerInputArea({
     <div className={isHero ? 'space-y-4' : 'space-y-3'}>
       <div className="relative group">
         <div
-          className={`relative overflow-hidden transition-shadow duration-200 ${isHero ? 'bg-card rounded-2xl border border-border/60 shadow-sm' : 'bg-background rounded-xl border border-border/50 shadow-none focus-within:border-foreground/20 focus-within:shadow-[0_0_0_1px_hsl(var(--foreground)/0.06)]'} ${isFocused ? 'ring-1 ring-foreground/10' : ''}`}
+          className={`relative overflow-hidden transition-shadow duration-200 ${isHero ? 'bg-card rounded-md border border-border/60 shadow-sm' : 'bg-background rounded-md border border-border/50 shadow-none focus-within:border-foreground/20 focus-within:shadow-[0_0_0_1px_hsl(var(--foreground)/0.06)]'} ${isFocused ? 'ring-1 ring-foreground/10' : ''}`}
         >
           <div className={`flex items-end gap-2 ${isHero ? 'p-3 md:p-4' : 'p-2.5 pl-4'}`}>
             <textarea
@@ -71,7 +71,7 @@ export function TrackerInputArea({
             <Button
               onClick={handleSubmit}
               disabled={!input.trim() || isLoading}
-              className={`shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isHero ? 'h-12 w-12 rounded-xl' : 'h-9 w-9 rounded-lg'} ${input.trim() && !isLoading
+              className={`shrink-0 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isHero ? 'h-12 w-12 rounded-md' : 'h-9 w-9 rounded-md'} ${input.trim() && !isLoading
                 ? 'bg-foreground text-background hover:bg-foreground/90'
                 : 'bg-muted text-muted-foreground'
                 }`}

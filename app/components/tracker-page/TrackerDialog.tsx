@@ -127,7 +127,7 @@ export function TrackerDialog({
         <Button
           variant="secondary"
           size="icon"
-          className="absolute top-3 right-3 z-50 h-9 w-9 rounded-full opacity-90 hover:opacity-100"
+          className="absolute top-3 right-3 z-50 h-9 w-9 rounded-md opacity-90 hover:opacity-100"
           onClick={() => handleOpenChange(false)}
           aria-label="Close preview"
         >
@@ -205,7 +205,7 @@ export function TrackerDialog({
             </div>
           ) : error && !isLoading ? (
             <div className="h-full flex flex-col items-center justify-center text-destructive gap-4">
-              <div className="p-3 rounded-full bg-destructive/10">
+              <div className="p-3 rounded-md bg-destructive/10">
                 <AlertTriangle className="w-8 h-8" />
               </div>
               <div className="text-center max-w-md space-y-2">
@@ -225,7 +225,7 @@ export function TrackerDialog({
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-6">
               {messagesLength > 0 && !isLoading ? (
                 <div className="flex flex-col items-center gap-4 text-warning">
-                  <div className="p-3 rounded-full bg-warning/10">
+                  <div className="p-3 rounded-md bg-warning/10">
                     <AlertTriangle className="w-8 h-8" />
                   </div>
                   <div className="text-center max-w-md space-y-2">

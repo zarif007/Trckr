@@ -75,7 +75,7 @@ export function TrackerPageSkeleton() {
                       {/* Section 1 */}
                       <div className={SECTION_GROUP_ROOT}>
                         <div className={cn(SECTION_BAR_CLASS, 'opacity-80')}>
-                          <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                          <Skeleton className="h-4 w-4 shrink-0 rounded-md" />
                           <Skeleton className="h-4 flex-1 max-w-[180px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
@@ -116,7 +116,7 @@ export function TrackerPageSkeleton() {
                       {/* Section 2 */}
                       <div className={SECTION_GROUP_ROOT}>
                         <div className={cn(SECTION_BAR_CLASS, 'opacity-80')}>
-                          <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                          <Skeleton className="h-4 w-4 shrink-0 rounded-md" />
                           <Skeleton className="h-4 flex-1 max-w-[140px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>
@@ -208,7 +208,7 @@ export function TrackerPageSkeleton() {
                     <div className={TAB_CONTENT_INNER}>
                       <div className={SECTION_GROUP_ROOT}>
                         <div className={cn(SECTION_BAR_CLASS, 'opacity-80')}>
-                          <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                          <Skeleton className="h-4 w-4 shrink-0 rounded-md" />
                           <Skeleton className="h-4 flex-1 max-w-[160px]" />
                         </div>
                         <div className={GRIDS_CONTAINER}>

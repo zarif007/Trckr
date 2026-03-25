@@ -144,7 +144,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                   type="button"
                   onClick={() => setViewMode('grid')}
                   className={cn(
-                    'rounded-sm px-1.5 py-1 transition-all',
+                    'rounded-md px-1.5 py-1 transition-all',
                     viewMode === 'grid'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -156,7 +156,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                   type="button"
                   onClick={() => setViewMode('list')}
                   className={cn(
-                    'rounded-sm px-1.5 py-1 transition-all',
+                    'rounded-md px-1.5 py-1 transition-all',
                     viewMode === 'list'
                       ? 'bg-background text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
@@ -219,7 +219,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                           <div className={DASH_GRID_ICON_SHELL}>
                             <FolderOpen className={DASH_GRID_ICON} />
                             {projectTrackerCount > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[1rem] h-4 px-1 flex items-center justify-center">
+                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-md min-w-[1rem] h-4 px-1 flex items-center justify-center">
                                 {projectTrackerCount}
                               </span>
                             )}

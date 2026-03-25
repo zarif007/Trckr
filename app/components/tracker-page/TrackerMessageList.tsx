@@ -27,7 +27,7 @@ interface TrackerMessageListProps {
 
 function renderStreamingPreview() {
   return (
-    <div className="w-full min-w-0 rounded-xl border border-border/40 bg-muted/40 px-4 py-3 flex items-center gap-3">
+    <div className="w-full min-w-0 rounded-md border border-border/40 bg-muted/40 px-4 py-3 flex items-center gap-3">
       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       <p className="text-sm font-medium text-muted-foreground">Streaming tracker…</p>
     </div>
@@ -77,7 +77,7 @@ export function TrackerMessageList({
           className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
         >
           {message.role === 'assistant' && (
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
           )}
@@ -86,7 +86,7 @@ export function TrackerMessageList({
           >
             {message.content && (
               <div
-                className={`rounded-xl px-4 py-2.5 text-sm leading-relaxed ${message.role === 'user'
+                className={`rounded-md px-4 py-2.5 text-sm leading-relaxed ${message.role === 'user'
                   ? 'bg-foreground text-background font-medium'
                   : 'bg-muted/60 border border-border/40 text-foreground'
                   }`}
@@ -105,7 +105,7 @@ export function TrackerMessageList({
                 <div className="w-full min-w-0 space-y-2">
                   {message.managerData && (
                     <div className="w-full min-w-0">
-                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                      <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
                         <button
                           type="button"
                           onClick={() => {
@@ -136,7 +136,7 @@ export function TrackerMessageList({
                                   <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Execution plan</p>
                                   <div className="flex flex-col gap-1 w-full min-w-0">
                                     {message.managerData.builderTodo.map((todo, i) => (
-                                      <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded-lg border border-border/20 min-w-0 w-full">
+                                      <div key={i} className="flex items-start gap-2 text-xs font-medium text-foreground/90 bg-background/40 p-2 rounded-md border border-border/20 min-w-0 w-full">
                                         <div className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${todo.action === 'create' ? 'bg-success' :
                                           todo.action === 'update' ? 'bg-info' :
                                             todo.action === 'delete' ? 'bg-destructive' : 'bg-muted-foreground'
@@ -159,7 +159,7 @@ export function TrackerMessageList({
                   )}
                   {message.toolCalls && message.toolCalls.length > 0 && (
                     <div className="w-full min-w-0">
-                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                      <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
                         <button
                           type="button"
                           onClick={() => setMessageToolsOpen(idx, !message.isToolsOpen)}
@@ -191,7 +191,7 @@ export function TrackerMessageList({
               )}
             {message.trackerData && (
               <div
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
                   activeTrackerMessageIndex === idx
                     ? 'border-foreground/20 bg-muted/50 text-foreground'
                     : 'border-border/40 bg-muted/30 text-muted-foreground'
@@ -217,7 +217,7 @@ export function TrackerMessageList({
             )}
           </div>
           {message.role === 'user' && (
-            <div className="w-8 h-8 rounded-lg bg-muted/60 border border-border/40 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-md bg-muted/60 border border-border/40 flex items-center justify-center shrink-0 mt-0.5">
               <User className="w-4 h-4 text-muted-foreground" />
             </div>
           )}
@@ -231,11 +231,11 @@ export function TrackerMessageList({
           className="space-y-4"
         >
           <div className="flex gap-3 justify-start">
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-8 h-8 rounded-md bg-foreground flex items-center justify-center shrink-0 mt-0.5">
               <Sparkles className="w-4 h-4 text-background" />
             </div>
             <div className="flex-1 min-w-0 w-full space-y-3">
-              <div className="flex items-center gap-2.5 rounded-xl px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground text-sm font-medium">
+              <div className="flex items-center gap-2.5 rounded-md px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground text-sm font-medium">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-foreground/70" />
                 <p className="text-sm">
                   {isAnalystMode
@@ -254,7 +254,7 @@ export function TrackerMessageList({
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-xl px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground"
+                  className="rounded-md px-4 py-2.5 bg-muted/60 border border-border/40 text-foreground"
                 >
                   <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:mt-3 prose-headings:mb-1.5 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-table:my-2 prose-pre:my-2">
                     <Markdown>{(object as { content?: string }).content}</Markdown>
@@ -269,7 +269,7 @@ export function TrackerMessageList({
                       <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="p-4 rounded-xl bg-muted/30 border border-border/30 space-y-3 min-w-0 w-full"
+                        className="p-4 rounded-md bg-muted/30 border border-border/30 space-y-3 min-w-0 w-full"
                       >
                         <div className="flex items-center gap-2">
                           <span className="relative flex h-1.5 w-1.5">
@@ -294,7 +294,7 @@ export function TrackerMessageList({
                             <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Actions</p>
                             <div className="flex flex-col gap-1.5 w-full min-w-0">
                               {object.manager.builderTodo.map((todo, i) => (
-                                <div key={i} className="flex items-center gap-3 text-xs font-medium text-foreground bg-background/40 p-2 rounded-lg border border-border/20 min-w-0 w-full">
+                                <div key={i} className="flex items-center gap-3 text-xs font-medium text-foreground bg-background/40 p-2 rounded-md border border-border/20 min-w-0 w-full">
                                   {todo?.action === 'create' && <div className="h-2 w-2 rounded-full bg-success animate-pulse shrink-0" />}
                                   {todo?.action === 'update' && <div className="h-2 w-2 rounded-full bg-info animate-pulse shrink-0" />}
                                   {todo?.action === 'delete' && <div className="h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />}
@@ -310,7 +310,7 @@ export function TrackerMessageList({
 
                     {toolCalls.length > 0 && (
                       <div className="w-full min-w-0">
-                        <div className="flex flex-col gap-2 p-3 rounded-xl bg-muted/40 border border-border/30 min-w-0 w-full">
+                        <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
                           <button
                             type="button"
                             onClick={() => setPreviewToolsOpen((o) => !o)}

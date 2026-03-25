@@ -9,11 +9,16 @@ alwaysApply: false
 - Use `cn()` from `@/lib/utils` for className composition.
 - Import and use `theme` from `@/lib/theme` for all surfaces, text, borders, shadows, radius, and status colors.
 
+## Border radius
+
+- Use `theme.radius.md` (or the literal `rounded-md` where the file already uses raw Tailwind for layout). Never add `rounded-sm` / `rounded-lg` / `rounded-xl` / `rounded-2xl` for chrome.
+- Prefer `theme.patterns.inputBase`, `theme.patterns.card`, `theme.patterns.menuPanel`, and `theme.patterns.menuItem` over hand-rolled class strings.
+
 ## Form Fields
 
 - Border: `border-input`, `hover:border-ring`, `focus-visible:border-ring`
 - Shadow: `shadow-xs`
-- Radius: `rounded-md`
+- Radius: `theme.radius.md` / `rounded-md`
 - Height: use `input-field-height` class for consistency
 
 ## Status Colors

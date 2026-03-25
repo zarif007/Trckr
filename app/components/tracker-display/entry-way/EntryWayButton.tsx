@@ -58,7 +58,7 @@ export function EntryWayButton({
                 <button
                   key={way.id}
                   type="button"
-                  className="flex w-full flex-col items-start rounded-sm px-2 py-1.5 text-left hover:bg-muted"
+                  className="flex w-full flex-col items-start rounded-md px-2 py-1.5 text-left hover:bg-muted"
                   onClick={() => onSelectEntryWay(way)}
                 >
                   <span className="font-medium text-foreground">{way.label}</span>

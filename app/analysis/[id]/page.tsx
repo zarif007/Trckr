@@ -320,7 +320,7 @@ export default function AnalysisPage() {
               Download document
             </Button>
           </div>
-          <div className="overflow-hidden rounded-xl border border-border/80 bg-card/40 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.07] print:shadow-none print:ring-0">
+          <div className="overflow-hidden rounded-md border border-border/80 bg-card/40 shadow-sm ring-1 ring-black/[0.04] dark:ring-white/[0.07] print:shadow-none print:ring-0">
             <AnalysisDocumentView
               document={document}
               header={{

@@ -245,7 +245,7 @@ export function ClaiProvider({
           variant="secondary"
           size="icon"
           className={cn(
-            'fixed bottom-6 right-6 z-40 h-11 w-11 rounded-full shadow-md border border-border/60',
+            'fixed bottom-6 right-6 z-40 h-11 w-11 rounded-md shadow-md border border-border/60',
             'hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors'
           )}
           onClick={() => setOpen(true)}

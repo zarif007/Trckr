@@ -106,7 +106,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     <ShieldCheck className="h-3.5 w-3.5" />
                     <span>Validations</span>
                     {rules.length > 0 && (
-                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
                         {rules.length}
                       </span>
                     )}
@@ -117,7 +117,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     <Sigma className="h-3.5 w-3.5" />
                     <span>Calculations</span>
                     {calculationRule && (
-                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
                         1
                       </span>
                     )}
@@ -128,7 +128,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     <Link2 className="h-3.5 w-3.5" />
                     <span>Depends on</span>
                     {dependsOnRules.length > 0 && (
-                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
                         {dependsOnRules.length}
                       </span>
                     )}
@@ -139,7 +139,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     <ArrowRight className="h-3.5 w-3.5" />
                     <span>Bindings</span>
                     {bindingEnabled && (
-                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-full text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
                         1
                       </span>
                     )}

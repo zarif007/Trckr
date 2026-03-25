@@ -178,7 +178,7 @@ export function ReportRecipeFilters({
               disabled={disabled}
               onClick={() => setDateEnabled(!dateEnabled)}
               className={cn(
-                'flex h-7 w-12 shrink-0 items-center rounded-full px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50',
+                'flex h-7 w-12 shrink-0 items-center rounded-md px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50',
                 dateEnabled ? 'bg-primary' : 'bg-muted-foreground/25',
               )}
             >

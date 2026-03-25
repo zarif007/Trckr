@@ -20,6 +20,8 @@ import {
   GitBranch,
 } from 'lucide-react'
 
+import { theme } from '@/lib/theme'
+
 export type ContextMenuRowKind =
   | 'file'
   | 'module'
@@ -210,10 +212,8 @@ export function useRenameDeleteContextMenu({
   }
 }
 
-const menuLinkClass =
-  'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
-const menuBtnClass =
-  'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
+const menuLinkClass = theme.patterns.menuItem
+const menuBtnClass = theme.patterns.menuItem
 const sectionLabelClass =
   'px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground select-none'
 
@@ -233,7 +233,7 @@ export function RenameDeleteContextMenuPortal({
 
   const menu = (
     <div
-      className="fixed z-[100] min-w-[192px] rounded-lg border bg-popover text-popover-foreground shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
+      className={theme.patterns.menuPanel}
       style={{ left: contextMenu.x, top: contextMenu.y }}
       role="menu"
       onClick={(e) => e.stopPropagation()}

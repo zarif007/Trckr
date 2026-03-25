@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, FilePlus, GitBranch, Layers, Info, FileText, Table2 } from 'lucide-react'
+import { Loader2, FilePlus, GitBranch, Layers, Info, FileText, Table2, Database } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import type { MasterDataScope } from '@/lib/master-data-scope'
 import { cn } from '@/lib/utils'
 
 interface NewTrackerDialogProps {
@@ -25,6 +27,39 @@ interface NewTrackerDialogProps {
 }
 
 type InstanceType = 'SINGLE' | 'MULTI'
+
+type InheritedSource = 'none' | 'module' | 'project'
+
+type ScopeDefaultResponse = {
+  inheritedDefault: MasterDataScope | null
+  inheritedSource: InheritedSource
+  inheritedSourceModuleId?: string
+  ownerTarget:
+    | { kind: 'module'; moduleId: string; projectId: string }
+    | { kind: 'project'; projectId: string }
+}
+
+const SCOPE_OPTIONS: Array<{
+  value: MasterDataScope
+  label: string
+  description: string
+}> = [
+  {
+    value: 'tracker',
+    label: 'Tracker',
+    description: 'Master data lives only in this tracker.',
+  },
+  {
+    value: 'module',
+    label: 'Module',
+    description: 'Shared with all trackers in this module.',
+  },
+  {
+    value: 'project',
+    label: 'Project',
+    description: 'Shared across the whole project (root).',
+  },
+]
 
 const INSTANCE_OPTIONS: Array<{
   value: InstanceType
@@ -68,6 +103,13 @@ export function NewTrackerDialog({
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const [masterDataScope, setMasterDataScope] = useState<MasterDataScope>('tracker')
+  const [scopeDefaultLoading, setScopeDefaultLoading] = useState(false)
+  const [scopeHint, setScopeHint] = useState<ScopeDefaultResponse | null>(null)
+  /** Scope preselected when defaults finished loading (for scenario B / change detection) */
+  const scopeBaselineRef = useRef<MasterDataScope>('tracker')
+  const [persistOwnerDefault, setPersistOwnerDefault] = useState(false)
+
   const reset = useCallback(() => {
     setName('')
     setInstance('SINGLE')
@@ -75,6 +117,11 @@ export function NewTrackerDialog({
     setAutoSave(true)
     setError(null)
     setCreating(false)
+    setMasterDataScope('tracker')
+    setScopeHint(null)
+    scopeBaselineRef.current = 'tracker'
+    setPersistOwnerDefault(false)
+    setScopeDefaultLoading(false)
   }, [])
 
   const handleOpenChange = useCallback(
@@ -88,6 +135,60 @@ export function NewTrackerDialog({
     },
     [reset],
   )
+
+  useEffect(() => {
+    if (!open || !projectId) {
+      if (!open) return
+      setMasterDataScope('tracker')
+      scopeBaselineRef.current = 'tracker'
+      setScopeHint(null)
+      return
+    }
+
+    let cancelled = false
+    setScopeDefaultLoading(true)
+    const q = moduleId ? `?moduleId=${encodeURIComponent(moduleId)}` : ''
+    fetch(`/api/projects/${projectId}/master-data-scope-default${q}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load defaults')
+        return res.json() as Promise<ScopeDefaultResponse>
+      })
+      .then((data) => {
+        if (cancelled) return
+        setScopeHint(data)
+        const initial = data.inheritedDefault ?? 'tracker'
+        setMasterDataScope(initial)
+        scopeBaselineRef.current = initial
+        setPersistOwnerDefault(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setScopeHint(null)
+        setMasterDataScope('tracker')
+        scopeBaselineRef.current = 'tracker'
+      })
+      .finally(() => {
+        if (!cancelled) setScopeDefaultLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, projectId, moduleId])
+
+  const hasInheritedDefault = scopeHint?.inheritedDefault != null
+  const scenarioA = Boolean(projectId && !hasInheritedDefault && !scopeDefaultLoading)
+  const scenarioB = Boolean(projectId && hasInheritedDefault)
+  const scopeChangedFromBaseline = masterDataScope !== scopeBaselineRef.current
+  const showSetDefaultCheckbox = Boolean(projectId && scenarioA)
+  const showUpdateDefaultCheckbox = Boolean(projectId && scenarioB && scopeChangedFromBaseline)
+  const ownerKindLabel = scopeHint
+    ? scopeHint.ownerTarget.kind === 'module'
+      ? 'module'
+      : 'project'
+    : moduleId
+      ? 'module'
+      : 'project'
 
   const handleInstanceChange = useCallback((val: InstanceType) => {
     setInstance(val)
@@ -119,9 +220,16 @@ export function NewTrackerDialog({
           instance,
           versionControl: instance === 'SINGLE' ? versionControl : false,
           autoSave: instance === 'SINGLE' && !versionControl ? autoSave : false,
+          masterDataScope,
         }
         if (projectId) body.projectId = projectId
         if (moduleId) body.moduleId = moduleId
+        if (persistOwnerDefault && showSetDefaultCheckbox) {
+          body.setMasterDataDefaultForOwner = true
+        }
+        if (persistOwnerDefault && showUpdateDefaultCheckbox) {
+          body.updateMasterDataDefaultForOwner = true
+        }
 
         const res = await fetch('/api/trackers', {
           method: 'POST',
@@ -151,7 +259,22 @@ export function NewTrackerDialog({
         setCreating(false)
       }
     },
-    [name, instance, versionControl, autoSave, projectId, moduleId, router, onCreated, onError, reset],
+    [
+      name,
+      instance,
+      versionControl,
+      autoSave,
+      projectId,
+      moduleId,
+      masterDataScope,
+      persistOwnerDefault,
+      showSetDefaultCheckbox,
+      showUpdateDefaultCheckbox,
+      router,
+      onCreated,
+      onError,
+      reset,
+    ],
   )
 
   return (
@@ -167,7 +290,7 @@ export function NewTrackerDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
             <FilePlus className="h-4 w-4 text-primary" />
@@ -200,6 +323,95 @@ export function NewTrackerDialog({
             </p>
           </div>
 
+          {/* Master data scope */}
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
+              <Database className="h-3 w-3" />
+              Master data scope
+            </legend>
+            {scopeDefaultLoading && projectId ? (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading defaults…
+              </p>
+            ) : null}
+            {scenarioB ? (
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Default from{' '}
+                {scopeHint?.inheritedSource === 'project'
+                  ? 'Project settings'
+                  : 'Module settings'}
+                {scopeHint?.inheritedSource === 'module' && scopeHint.inheritedSourceModuleId
+                  ? ' (ancestor module)'
+                  : null}
+                : <span className="font-medium text-foreground">{scopeHint?.inheritedDefault}</span>
+              </p>
+            ) : null}
+            {!projectId ? (
+              <p className="text-[10px] text-muted-foreground leading-snug">
+                Master data is stored in this tracker only until the tracker belongs to a project.
+              </p>
+            ) : null}
+            <div className="flex flex-col gap-2">
+              {SCOPE_OPTIONS.map((opt) => {
+                const moduleChoiceDisabled = opt.value === 'module' && !moduleId
+                const disabled =
+                  creating || scopeDefaultLoading || moduleChoiceDisabled || (!projectId && opt.value !== 'tracker')
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      if (disabled) return
+                      setMasterDataScope(opt.value)
+                    }}
+                    disabled={disabled}
+                    aria-pressed={masterDataScope === opt.value}
+                    className={cn(
+                      'rounded-md border px-3 py-2 text-left transition-all duration-150 w-full',
+                      masterDataScope === opt.value
+                        ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
+                        : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                      disabled && 'opacity-40 pointer-events-none',
+                    )}
+                  >
+                    <div className="text-xs font-semibold">{opt.label}</div>
+                    <div className="text-[10px] leading-snug opacity-80 mt-0.5">{opt.description}</div>
+                    {moduleChoiceDisabled ? (
+                      <div className="text-[10px] text-muted-foreground mt-1">Only when creating inside a module.</div>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+            {showSetDefaultCheckbox ? (
+              <label className="flex items-start gap-2 cursor-pointer mt-1">
+                <Checkbox
+                  checked={persistOwnerDefault}
+                  onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
+                  disabled={creating}
+                  className="mt-0.5"
+                />
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  Set this as the default for this {ownerKindLabel}?
+                </span>
+              </label>
+            ) : null}
+            {showUpdateDefaultCheckbox ? (
+              <label className="flex items-start gap-2 cursor-pointer mt-1">
+                <Checkbox
+                  checked={persistOwnerDefault}
+                  onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
+                  disabled={creating}
+                  className="mt-0.5"
+                />
+                <span className="text-[11px] text-muted-foreground leading-snug">
+                  Update default {ownerKindLabel} setting to &ldquo;{masterDataScope}&rdquo;?
+                </span>
+              </label>
+            ) : null}
+          </fieldset>
+
           {/* Instance */}
           <fieldset className="flex flex-col gap-1.5">
             <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
@@ -218,7 +430,7 @@ export function NewTrackerDialog({
                     disabled={creating}
                     aria-pressed={isSelected}
                     className={cn(
-                      'flex-1 rounded-lg border px-3 py-2.5 text-left transition-all duration-150',
+                      'flex-1 rounded-md border px-3 py-2.5 text-left transition-all duration-150',
                       isSelected
                         ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
                         : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -263,7 +475,7 @@ export function NewTrackerDialog({
               }}
               disabled={creating || instance === 'MULTI'}
               className={cn(
-                'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-all duration-150 w-full',
+                'flex items-center justify-between rounded-md border px-4 py-3 text-left transition-all duration-150 w-full',
                 versionControl && instance === 'SINGLE'
                   ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
                   : 'border-border bg-muted/20 hover:bg-muted/50',
@@ -282,7 +494,7 @@ export function NewTrackerDialog({
               <div
                 aria-hidden="true"
                 className={cn(
-                  'flex-shrink-0 ml-4 w-9 h-5 rounded-full transition-colors duration-200 relative',
+                  'flex-shrink-0 ml-4 w-9 h-5 rounded-md transition-colors duration-200 relative',
                   versionControl && instance === 'SINGLE' ? 'bg-primary' : 'bg-muted-foreground/30',
                 )}
               >
@@ -334,7 +546,7 @@ export function NewTrackerDialog({
               }}
               disabled={creating || instance === 'MULTI' || versionControl}
               className={cn(
-                'flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-all duration-150 w-full',
+                'flex items-center justify-between rounded-md border px-4 py-3 text-left transition-all duration-150 w-full',
                 autoSave && instance === 'SINGLE' && !versionControl
                   ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
                   : 'border-border bg-muted/20 hover:bg-muted/50',
@@ -355,7 +567,7 @@ export function NewTrackerDialog({
               <div
                 aria-hidden="true"
                 className={cn(
-                  'flex-shrink-0 ml-4 w-9 h-5 rounded-full transition-colors duration-200 relative',
+                  'flex-shrink-0 ml-4 w-9 h-5 rounded-md transition-colors duration-200 relative',
                   autoSave && instance === 'SINGLE' && !versionControl ? 'bg-primary' : 'bg-muted-foreground/30',
                 )}
               >

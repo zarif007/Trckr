@@ -22,7 +22,7 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       aria-label="Toggle theme"
       onClick={toggleTheme}
       className={cn(
-        'size-9 shrink-0 rounded-full border-0 shadow-none',
+        'size-9 shrink-0 rounded-md border-0 shadow-none',
         className,
       )}
     >

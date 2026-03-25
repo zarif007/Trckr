@@ -29,6 +29,7 @@ import {
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 import {
   DashboardProvider,
   useDashboard,
@@ -836,7 +837,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   if (status === 'unauthenticated') {
     return (
       <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6 px-4">
-        <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center border border-border/50">
+        <div
+          className={cn(
+            'w-16 h-16 bg-muted/50 flex items-center justify-center border border-border/50',
+            theme.radius.md,
+          )}
+        >
           <Monitor className="h-8 w-8 text-muted-foreground" />
         </div>
         <div className="text-center space-y-2">
@@ -845,7 +851,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             Sign in to access your workspace.
           </p>
         </div>
-        <Button asChild size="sm" variant="secondary" className="rounded-full px-6">
+        <Button asChild size="sm" variant="secondary" className="px-6">
           <Link href="/login">Sign in</Link>
         </Button>
       </div>
@@ -858,7 +864,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         typeof document !== 'undefined' &&
         createPortal(
           <div
-            className="fixed z-[100] min-w-[192px] rounded-lg border bg-popover text-popover-foreground shadow-lg py-1 animate-in fade-in-0 zoom-in-95"
+            className={theme.patterns.menuPanel}
             style={{
               left: sidebarContextMenu.x,
               top: sidebarContextMenu.y,
@@ -868,7 +874,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             {sidebarContextMenu.item.kind === 'tracker' ? (() => {
               const { trackerHrefs: hrefs } = sidebarContextMenu.item
-              const linkCls = 'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 rounded-sm transition-colors'
+              const linkCls = theme.patterns.menuItem
               const sectionCls = 'px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground select-none'
               return (
                 <>
@@ -939,7 +945,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   role="menuitem"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80"
+                  className={cn(theme.patterns.menuItem, 'py-2')}
                   onClick={() => handleSidebarRename(sidebarContextMenu.item)}
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -948,7 +954,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   role="menuitem"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/80 text-destructive"
+                  className={cn(theme.patterns.menuItem, 'py-2 text-destructive')}
                   onClick={() => handleSidebarDelete(sidebarContextMenu.item)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -1006,7 +1012,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
             <div className="flex-shrink-0 flex items-center gap-1 p-2 min-w-0">
               <Link
                 href="/"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                className={cn(
+                  'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
+                  theme.radius.md,
+                )}
                 aria-label="Go to home"
               >
                 <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
@@ -1025,7 +1034,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/dashboard"
                 className={cn(
-                  'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                  'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
+                  theme.radius.md,
                   isDashboardHome
                     ? 'bg-primary/10 text-primary font-medium'
                     : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -1039,7 +1049,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setProjectSectionOpen((v) => !v)}
-                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                  className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                 >
                   <span className="relative inline-flex h-4 w-4 items-center justify-center">
                     <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1075,7 +1085,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setRecentSectionOpen((v) => !v)}
-                  className="w-6 h-6 flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                  className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                 >
                   <span className="relative inline-flex h-4 w-4 items-center justify-center">
                     <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1122,7 +1132,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="border-t border-border/50 p-2 bg-background/50">
-              <div className="flex items-center gap-2 px-2 py-2 rounded-lg bg-muted/30">
+              <div
+                className={cn(
+                  'flex items-center gap-2 px-2 py-2 bg-muted/30',
+                  theme.radius.md,
+                )}
+              >
                 <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -1153,7 +1168,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   <div className="flex items-center gap-1 min-w-0">
                     <Link
                       href="/"
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
+                        theme.radius.md,
+                      )}
                       aria-label="Go to home"
                     >
                       <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
@@ -1184,10 +1202,11 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     <Link
                       href="/dashboard"
                       className={cn(
-                        'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                        'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
+                        theme.radius.md,
                         isDashboardHome
                           ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
                       )}
                     >
                       {sidebarCollapsed ? (
@@ -1204,7 +1223,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={() => setProjectSectionOpen((v) => !v)}
-                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                       >
                         <span className="relative inline-flex h-4 w-4 items-center justify-center">
                           <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1240,7 +1259,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <button
                         type="button"
                         onClick={() => setRecentSectionOpen((v) => !v)}
-                        className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                        className="w-[18px] h-[18px] flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                       >
                         <span className="relative inline-flex h-4 w-4 items-center justify-center">
                           <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1294,7 +1313,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   sidebarCollapsed && 'flex flex-col items-center gap-1'
                 )}
               >
-                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
+                <div
+                  className={cn(
+                    'flex items-center gap-2 px-2 py-1.5 bg-muted/30',
+                    theme.radius.md,
+                  )}
+                >
                   <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   {!sidebarCollapsed && (
                     <div className="min-w-0 flex-1">
@@ -1319,7 +1343,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 {sidebarCollapsed && (
                   <button
                     onClick={() => setSidebarCollapsed(false)}
-                    className="p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                    className="p-1 rounded-md hover:bg-muted/60 text-muted-foreground"
                     aria-label="Expand sidebar"
                   >
                     <ChevronRight className="h-4 w-4" />
@@ -1328,7 +1352,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 {!sidebarCollapsed && (
                   <button
                     onClick={() => setSidebarCollapsed(true)}
-                    className="mt-1 w-full flex justify-end p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                    className="mt-1 w-full flex justify-end p-1 rounded-md hover:bg-muted/60 text-muted-foreground"
                     aria-label="Collapse sidebar"
                   >
                     <ChevronDown className="h-3.5 w-3.5 rotate-[270deg]" />
@@ -1359,7 +1383,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       <div className="flex items-center gap-1 min-w-0">
                         <Link
                           href="/"
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                          className={cn(
+                            'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
+                            theme.radius.md,
+                          )}
                           aria-label="Go to home"
                         >
                           <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
@@ -1378,7 +1405,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <Link
                           href="/dashboard"
                           className={cn(
-                            'flex items-center px-2.5 py-2 rounded-lg text-left transition-colors flex-1 min-w-0',
+                            'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
+                            theme.radius.md,
                             isDashboardHome
                               ? 'bg-primary/10 text-primary font-medium'
                               : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
@@ -1393,7 +1421,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <button
                           type="button"
                           onClick={() => setProjectSectionOpen((v) => !v)}
-                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                         >
                           <span className="relative inline-flex h-4 w-4 items-center justify-center">
                             <Folder className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1429,7 +1457,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         <button
                           type="button"
                           onClick={() => setRecentSectionOpen((v) => !v)}
-                          className="w-[18px] h-[18px] flex items-center justify-center rounded hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
+                          className="w-[18px] h-[18px] flex items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground flex-shrink-0 transition-opacity"
                         >
                           <span className="relative inline-flex h-4 w-4 items-center justify-center">
                             <LayoutList className="h-4 w-4 opacity-80 transition-opacity duration-150 group-hover:opacity-0" />
@@ -1477,7 +1505,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     </div>
                   </div>
                   <div className="border-t border-border/50 p-2 bg-background/50">
-                    <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/30">
+                    <div
+                      className={cn(
+                        'flex items-center gap-2 px-2 py-1.5 bg-muted/30',
+                        theme.radius.md,
+                      )}
+                    >
                       <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -1499,7 +1532,7 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     </div>
                     <button
                       onClick={() => setSidebarCollapsed(true)}
-                      className="mt-1 w-full flex justify-end p-1 rounded hover:bg-muted/60 text-muted-foreground"
+                      className="mt-1 w-full flex justify-end p-1 rounded-md hover:bg-muted/60 text-muted-foreground"
                       aria-label="Collapse sidebar"
                     >
                       <ChevronDown className="h-3.5 w-3.5 rotate-[270deg]" />
