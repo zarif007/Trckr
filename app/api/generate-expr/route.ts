@@ -1,6 +1,5 @@
 import { parseRequestBody, getErrorMessage } from './lib/validation'
-import { deriveAvailableFields } from './lib/prompts'
-import { generateExpr } from './lib/generate'
+import { runGenerateExprIntent } from './lib/run-intent'
 import { badRequest, createRequestLogContext, jsonError, jsonOk } from '@/lib/api'
 import { logAiError, logAiStage } from '@/lib/ai'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
@@ -33,16 +32,15 @@ export async function POST(request: Request) {
     }
 
     const { prompt, gridId, fieldId, purpose, currentTracker } = parsed
-    const availableFields = deriveAvailableFields(currentTracker, gridId)
+    const fieldPath = `${gridId}.${fieldId}`
 
     try {
       logAiStage(logContext, 'request', 'Generating expression.')
-      const { expr, usage } = await generateExpr({
+      const { expr, usage } = await runGenerateExprIntent({
         prompt,
-        gridId,
-        fieldId,
+        fieldPath,
         purpose,
-        availableFields,
+        currentTracker,
       })
       scheduleRecordLlmUsage({
         userId: authResult.user.id,

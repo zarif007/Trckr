@@ -1,4 +1,9 @@
-import type { FieldCalculationRule } from '@/lib/functions/types'
+import {
+  applyExprIntentResults,
+  collectExprIntents,
+  parseFieldPath,
+  type ExprIntent,
+} from '@/lib/expr-intents'
 import type { TrackerLike } from '@/lib/validate-tracker'
 
 export type ToolCallStatus = 'pending' | 'running' | 'done' | 'error'
@@ -14,79 +19,15 @@ export interface ToolCallEntry {
   result?: unknown
 }
 
-interface IntentLocation {
-  fieldPath: string
-  purpose: 'validation' | 'calculation'
-  description: string
-  /** For validations: index into the rules array */
-  ruleIndex?: number
-}
-
-interface ValidationRuleWithIntent {
-  type: string
-  _intent?: string
-  message?: string
-  [key: string]: unknown
-}
-
-interface CalculationWithIntent {
-  _intent?: string
-  expr?: unknown
-  [key: string]: unknown
-}
-
-function isIntentValidationRule(rule: unknown): rule is ValidationRuleWithIntent {
-  if (!rule || typeof rule !== 'object') return false
-  const r = rule as Record<string, unknown>
-  return r.type === 'expr' && typeof r._intent === 'string'
-}
-
-function isIntentCalculation(entry: unknown): entry is CalculationWithIntent {
-  if (!entry || typeof entry !== 'object') return false
-  const e = entry as Record<string, unknown>
-  return typeof e._intent === 'string' && !e.expr
-}
-
-export function detectIntents(tracker: TrackerLike): IntentLocation[] {
-  const intents: IntentLocation[] = []
-
-  const validations = tracker.validations ?? {}
-  for (const [fieldPath, rules] of Object.entries(validations)) {
-    if (!Array.isArray(rules)) continue
-    for (let i = 0; i < rules.length; i++) {
-      if (isIntentValidationRule(rules[i])) {
-        intents.push({
-          fieldPath,
-          purpose: 'validation',
-          description: (rules[i] as ValidationRuleWithIntent)._intent!,
-          ruleIndex: i,
-        })
-      }
-    }
-  }
-
-  const calculations = (tracker as TrackerLike & { calculations?: Record<string, unknown> }).calculations ?? {}
-  for (const [fieldPath, entry] of Object.entries(calculations)) {
-    if (isIntentCalculation(entry)) {
-      intents.push({
-        fieldPath,
-        purpose: 'calculation',
-        description: (entry as CalculationWithIntent)._intent!,
-      })
-    }
-  }
-
-  return intents
-}
+/** @deprecated Use collectExprIntents from @/lib/expr-intents */
+export const detectIntents = collectExprIntents
 
 async function callExprAgent(
-  intent: IntentLocation,
+  intent: ExprIntent,
   currentTracker: unknown,
   trackerSchemaId?: string | null,
 ): Promise<{ expr: unknown }> {
-  const dotIndex = intent.fieldPath.indexOf('.')
-  const gridId = intent.fieldPath.substring(0, dotIndex)
-  const fieldId = intent.fieldPath.substring(dotIndex + 1)
+  const { gridId, fieldId } = parseFieldPath(intent.fieldPath)
 
   const res = await fetch('/api/generate-expr', {
     method: 'POST',
@@ -124,7 +65,7 @@ export async function resolveExprIntents(
   onProgress: (toolCalls: ToolCallEntry[]) => void,
   options?: { trackerSchemaId?: string | null },
 ): Promise<ResolveResult> {
-  const intents = detectIntents(tracker)
+  const intents = collectExprIntents(tracker)
   if (intents.length === 0) {
     return { tracker, errors: [], toolCalls: [] }
   }
@@ -148,7 +89,7 @@ export async function resolveExprIntents(
         const result = await callExprAgent(intent, tracker, options?.trackerSchemaId)
         toolCalls[i] = { ...toolCalls[i], status: 'done', result: result.expr }
         onProgress([...toolCalls])
-        return { index: i, intent, expr: result.expr }
+        return { intent, expr: result.expr }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         toolCalls[i] = { ...toolCalls[i], status: 'error', error: message }
@@ -158,39 +99,20 @@ export async function resolveExprIntents(
     }),
   )
 
-  const validations = { ...(tracker.validations ?? {}) }
-  const calculations = {
-    ...((tracker as TrackerLike & { calculations?: Record<string, unknown> }).calculations ?? {}),
-  }
+  const fulfilled: Array<{ intent: ExprIntent; expr: unknown }> = []
   const errors: string[] = []
 
   for (const result of results) {
-    if (result.status === 'rejected') {
-      continue
-    }
-
-    const { intent, expr } = result.value
-
-    if (intent.purpose === 'validation' && intent.ruleIndex != null) {
-      const rules = [...(validations[intent.fieldPath] ?? [])]
-      const existingRule = rules[intent.ruleIndex] as ValidationRuleWithIntent | undefined
-      if (existingRule) {
-        const { _intent: _, ...rest } = existingRule
-        rules[intent.ruleIndex] = { ...rest, expr } as unknown as typeof rules[number]
-      }
-      validations[intent.fieldPath] = rules
-    } else if (intent.purpose === 'calculation') {
-      calculations[intent.fieldPath] = { expr } as FieldCalculationRule
-    }
-  }
-
-  for (const result of results) {
-    if (result.status === 'rejected') {
+    if (result.status === 'fulfilled') {
+      fulfilled.push(result.value)
+    } else {
       const reason = result.reason instanceof Error ? result.reason.message : String(result.reason)
       errors.push(`Expression generation failed: ${reason}`)
     }
   }
 
-  const resolved = { ...tracker, validations, calculations } as TrackerLike
+  const resolutions = fulfilled.map(({ intent, expr }) => ({ intent, expr }))
+  const resolved = applyExprIntentResults(tracker, resolutions)
+
   return { tracker: resolved, errors, toolCalls }
 }

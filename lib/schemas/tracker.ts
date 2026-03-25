@@ -190,11 +190,62 @@ export const bindingsSchema = z
   .default({})
   .describe('Bindings for select/multiselect fields. Key is grid_id.field_id. MANDATORY for all select/multiselect fields.')
 
-/** Top-level validations map (fieldId -> rules). */
+/** Single validation rule (mirrors runtime FieldValidationRule; expr may use _intent until resolved). */
+export const fieldValidationRuleSchema = z.union([
+  z.object({ type: z.literal('required'), message: z.string().optional() }).passthrough(),
+  z
+    .object({
+      type: z.literal('min'),
+      value: z.coerce.number(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      type: z.literal('max'),
+      value: z.coerce.number(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      type: z.literal('minLength'),
+      value: z.coerce.number(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      type: z.literal('maxLength'),
+      value: z.coerce.number(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      type: z.literal('expr'),
+      expr: z.any(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  z
+    .object({
+      type: z.literal('expr'),
+      _intent: z.string(),
+      message: z.string().optional(),
+    })
+    .passthrough(),
+  /** Lenient fallback for forward-compatible or malformed rules from the LLM */
+  z.object({ type: z.string() }).passthrough(),
+])
+
+/** Top-level validations map (grid_id.field_id -> rules). */
 export const validationsSchema = z
-  .record(z.string(), z.array(z.any()))
+  .record(z.string(), z.array(fieldValidationRuleSchema))
   .default({})
-  .describe('Field validations keyed by field id. Rules are evaluated in order.')
+  .describe(
+    'Field validations keyed by grid_id.field_id (like bindings). For type "expr", use either { expr } or { _intent } until the expression agent resolves _intent.',
+  )
 
 /** Top-level calculations map (target fieldId -> expression rule or intent). */
 export const calculationsSchema = z

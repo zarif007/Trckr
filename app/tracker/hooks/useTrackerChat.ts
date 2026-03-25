@@ -20,11 +20,8 @@ import {
   normalizeValidationAndCalculations,
   trackerHasAnyData,
 } from './normalization'
-import {
-  detectIntents,
-  resolveExprIntents,
-  type ToolCallEntry,
-} from './resolveExprIntents'
+import { collectExprIntents } from '@/lib/expr-intents'
+import { resolveExprIntents, type ToolCallEntry } from './resolveExprIntents'
 
 export type { ToolCallEntry } from './resolveExprIntents'
 export { suggestions } from './constants'
@@ -298,7 +295,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           tracker = autoFixBindings(tracker as TrackerLike) as TrackerResponse
         }
 
-        const intents = tracker ? detectIntents(tracker as TrackerLike) : []
+        const intents = tracker ? collectExprIntents(tracker as TrackerLike) : []
 
         if (intents.length > 0 && tracker) {
           setIsResolvingExpressions(true)
