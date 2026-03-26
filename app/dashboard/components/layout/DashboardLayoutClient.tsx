@@ -12,7 +12,7 @@ import {
   X,
   FolderOpen,
   Folder,
-  HardDrive,
+  LayoutDashboard,
   ChevronRight,
   ChevronDown,
   Pencil,
@@ -42,6 +42,7 @@ import {
 } from '../../dashboard-context'
 import { QueryClientProviderWrapper } from './QueryClientProviderWrapper'
 import { ClaiProvider } from '../clai'
+import { DashboardUserMenu } from '../DashboardUserMenu'
 
 type SidebarContextItem =
   | { kind: 'project'; id: string; label: string }
@@ -996,29 +997,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           aria-label="Sidebar navigation"
         >
           <div className="flex h-full flex-col min-h-0 min-w-0">
-            <div className="flex items-center justify-between border-b border-border/50 px-2 py-1.5">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
-                Navigation
-              </span>
-              <button
-                type="button"
-                onClick={() => setMobileSidebarOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-                aria-label="Close sidebar"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="flex-shrink-0 flex items-center gap-1 p-2 min-w-0">
+            <div className="flex items-center gap-3 border-b border-border/50 px-3 py-2.5 bg-muted/10">
               <Link
                 href="/"
                 className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
+                  'flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/40 bg-background/80 hover:bg-muted/50 hover:text-foreground shadow-sm',
                   theme.radius.md,
                 )}
-                aria-label="Go to home"
+                aria-label="Trckr home"
               >
-                <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                <span className="flex h-5 w-5 items-center justify-center [&_svg]:h-5 [&_svg]:w-5" aria-hidden>
                   <svg
                     viewBox="0 0 24 24"
                     fill="none"
@@ -1031,18 +1019,32 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   </svg>
                 </span>
               </Link>
-              <Link
-                href="/dashboard"
-                className={cn(
-                  'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
-                  theme.radius.md,
-                  isDashboardHome
-                    ? 'bg-primary/10 text-primary font-medium'
-                    : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                )}
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                  Trckr
+                </p>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileSidebarOpen(false)}
+                  className={cn(
+                    'mt-0.5 block text-sm font-semibold tracking-tight truncate rounded-sm',
+                    isDashboardHome
+                      ? 'text-primary'
+                      : 'text-foreground/90 hover:text-foreground',
+                  )}
+                >
+                  Dashboard
+                </Link>
+              </div>
+              <DashboardUserMenu triggerSize="md" />
+              <button
+                type="button"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                aria-label="Close sidebar"
               >
-                <span className="text-sm truncate">Dashboard</span>
-              </Link>
+                <X className="h-4 w-4" />
+              </button>
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-1 flex flex-col gap-0.5 min-w-0">
               <div className="flex items-center gap-1 min-w-0 group">
@@ -1138,13 +1140,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   theme.radius.md,
                 )}
               >
-                <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <LayoutDashboard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                    This PC
+                    Workspace
                   </p>
                   <p className="text-xs text-foreground/80 tabular-nums truncate">
-                    {projects.length} folders · {totalTrackers} trackers
+                    {projects.length} projects · {totalTrackers} trackers
                   </p>
                 </div>
               </div>
@@ -1164,58 +1166,54 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                <div className="flex-shrink-0 flex flex-col gap-0.5 min-w-0">
-                  <div className="flex items-center gap-1 min-w-0">
-                    <Link
-                      href="/"
-                      className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
-                        theme.radius.md,
-                      )}
-                      aria-label="Go to home"
-                    >
-                      <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="text-current"
-                        >
-                          <path
-                            d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
-                            fill="currentColor"
-                            className="opacity-100"
-                          />
-                          <path
-                            d="M12 12L20 7.5V16.5L12 21V12Z"
-                            fill="currentColor"
-                            className="opacity-70"
-                          />
-                          <path
-                            d="M12 12L4 7.5V16.5L12 21V12Z"
-                            fill="currentColor"
-                            className="opacity-40"
-                          />
-                        </svg>
-                      </span>
-                    </Link>
-                    <Link
-                      href="/dashboard"
-                      className={cn(
-                        'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
-                        theme.radius.md,
-                        isDashboardHome
-                          ? 'bg-primary/10 text-primary font-medium'
-                          : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                      )}
-                    >
-                      {sidebarCollapsed ? (
-                        <span className="text-xs font-medium w-6 text-center">D</span>
-                      ) : (
-                        <span className="text-xs truncate">Dashboard</span>
-                      )}
-                    </Link>
-                  </div>
+                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 px-1 py-2 border-b border-border/40">
+                  <Link
+                    href="/"
+                    className={cn(
+                      'flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/35 bg-background/70 hover:bg-muted/50 hover:text-foreground',
+                      theme.radius.md,
+                    )}
+                    aria-label="Trckr home"
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center [&_svg]:h-5 [&_svg]:w-5" aria-hidden>
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="text-current"
+                      >
+                        <path
+                          d="M12 3L20 7.5L12 12L4 7.5L12 3Z"
+                          fill="currentColor"
+                          className="opacity-100"
+                        />
+                        <path
+                          d="M12 12L20 7.5V16.5L12 21V12Z"
+                          fill="currentColor"
+                          className="opacity-70"
+                        />
+                        <path
+                          d="M12 12L4 7.5V16.5L12 21V12Z"
+                          fill="currentColor"
+                          className="opacity-40"
+                        />
+                      </svg>
+                    </span>
+                  </Link>
+                  <Link
+                    href="/dashboard"
+                    className={cn(
+                      'flex h-8 w-9 items-center justify-center rounded-md transition-colors',
+                      isDashboardHome
+                        ? 'bg-primary/12 text-primary'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+                    )}
+                    aria-label="Dashboard"
+                    title="Dashboard"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                  </Link>
+                  <DashboardUserMenu triggerSize="sm" />
                 </div>
                 {!sidebarCollapsed && (
                   <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
@@ -1319,14 +1317,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                     theme.radius.md,
                   )}
                 >
-                  <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <LayoutDashboard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   {!sidebarCollapsed && (
                     <div className="min-w-0 flex-1">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                        This PC
+                        Workspace
                       </p>
                       <p className="text-xs text-foreground/80 tabular-nums truncate">
-                        {projects.length} folders · {totalTrackers} trackers
+                        {projects.length} projects · {totalTrackers} trackers
                       </p>
                       {lastActivity && (
                         <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
@@ -1379,17 +1377,17 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               >
                 <aside className="h-full w-full flex flex-col border-r border-border/50 bg-muted/20 min-w-0 overflow-hidden">
                   <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                    <div className="flex-shrink-0 flex flex-col gap-0.5 min-w-0">
-                      <div className="flex items-center gap-1 min-w-0">
+                    <div className="flex-shrink-0 border-b border-border/40 bg-muted/10 px-2 py-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
                         <Link
                           href="/"
                           className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
+                            'flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/40 bg-background/80 hover:bg-muted/50 hover:text-foreground shadow-sm',
                             theme.radius.md,
                           )}
-                          aria-label="Go to home"
+                          aria-label="Trckr home"
                         >
-                          <span className="flex h-6 w-6 items-center justify-center [&_svg]:h-6 [&_svg]:w-6" aria-hidden>
+                          <span className="flex h-5 w-5 items-center justify-center [&_svg]:h-5 [&_svg]:w-5" aria-hidden>
                             <svg
                               viewBox="0 0 24 24"
                               fill="none"
@@ -1402,18 +1400,23 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                             </svg>
                           </span>
                         </Link>
-                        <Link
-                          href="/dashboard"
-                          className={cn(
-                            'flex items-center px-2.5 py-2 text-left transition-colors flex-1 min-w-0',
-                            theme.radius.md,
-                            isDashboardHome
-                              ? 'bg-primary/10 text-primary font-medium'
-                              : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-                          )}
-                        >
-                          <span className="text-sm truncate">Dashboard</span>
-                        </Link>
+                        <div className="min-w-0 flex-1 leading-tight">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                            Trckr
+                          </p>
+                          <Link
+                            href="/dashboard"
+                            className={cn(
+                              'mt-0.5 block text-sm font-semibold tracking-tight truncate',
+                              isDashboardHome
+                                ? 'text-primary'
+                                : 'text-foreground/90 hover:text-foreground',
+                            )}
+                          >
+                            Dashboard
+                          </Link>
+                        </div>
+                        <DashboardUserMenu triggerSize="md" />
                       </div>
                     </div>
                     <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 pt-0 flex flex-col gap-0.5 min-w-0">
@@ -1511,13 +1514,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                         theme.radius.md,
                       )}
                     >
-                      <HardDrive className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <LayoutDashboard className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                          This PC
+                          Workspace
                         </p>
                         <p className="text-xs text-foreground/80 tabular-nums truncate">
-                          {projects.length} folders · {totalTrackers} trackers
+                          {projects.length} projects · {totalTrackers} trackers
                         </p>
                         {lastActivity && (
                           <p className="text-[11px] text-muted-foreground/60 truncate mt-0.5">
