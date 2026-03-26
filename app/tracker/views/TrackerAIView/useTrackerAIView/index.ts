@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useUndoableSchemaChange } from '@/app/components/tracker-display/edit-mode'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
 import type { ForeignBindingNavUiState, TrackerFormAction } from '@/app/components/tracker-display/types'
-import type { GridDataSnapshot } from '../../TrackerPanel'
 import { useTrackerNav } from '../../../TrackerNavContext'
 import { useTrackerChat, type Message, type TrackerResponse } from '../../../hooks/useTrackerChat'
 import { useAnalystChat } from '../../../hooks/useAnalystChat'
@@ -243,13 +242,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [setVcLoadedSnapshot])
 
   const formActionsState = useFormActionsState(schema, currentFormStatus)
-  const {
-    formActions,
-    visibleFormActions,
-    effectiveCurrentFormStatus,
-    previousFormStatus,
-    isReadOnly,
-  } = formActionsState
+  const { formActions, effectiveCurrentFormStatus, isReadOnly } = formActionsState
 
   const allowAutoSave =
     autoSave &&
@@ -420,8 +413,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       !allowSchemaAutoSave &&
       !allowAutoSave &&
       (isDataPage ? instanceType === 'MULTI' : (canEditSchema && editMode))
-    const showPreviewSaveButton =
-      isDataPage && instanceType === 'SINGLE' && !allowAutoSave && !versionControl
+    // Sticky footer Save in the preview panel is disabled; use top nav Save or Action menu.
+    const showPreviewSaveButton = false
     const showActionsConfig =
       canEditSchema &&
       editMode &&
@@ -435,10 +428,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       autosaveEnabled: autosaveEnabledForNav,
       dataSaveStatus: navDataSaveStatus,
       dataSaveError: navDataSaveError,
-      formActions: showFormActions ? formActions : [],
+      // Always pass schema form actions so Configure actions can load saved rows on the edit page
+      // (showFormActions only gates the data-entry Action menu + onFormActionSelect).
+      formActions,
       currentFormStatus: isDataPage ? effectiveCurrentFormStatus : null,
-      previousFormStatus: isDataPage ? previousFormStatus : null,
-      visibleFormActions: isDataPage ? visibleFormActions : [],
       formActionSaving: isDataPage ? formActionSaving : false,
       formActionError: isDataPage ? formActionError : null,
       canConfigureFormActions: showActionsConfig,
@@ -462,8 +455,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     schemaSaveError,
     formActions,
     effectiveCurrentFormStatus,
-    previousFormStatus,
-    visibleFormActions,
     formActionSaving,
     formActionError,
     canEditSchema,
@@ -489,8 +480,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         dataSaveError: null,
         formActions: [],
         currentFormStatus: null,
-        previousFormStatus: null,
-        visibleFormActions: [],
         formActionSaving: false,
         formActionError: null,
         canConfigureFormActions: false,
@@ -725,7 +714,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     handleVcBranchCreated,
     handleVcMergedToMain,
     showPanelUtilities,
-    showPreviewSaveButton: isDataPage && instanceType === 'SINGLE' && !allowAutoSave && !versionControl,
+    showPreviewSaveButton: false,
     onPreviewSave,
     dataSaveStatus,
     chatPanelProps,

@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes'
 import { TeamProvider } from '@/lib/teams'
 import { AuthProvider } from './components/AuthProvider'
 import NavBarWrapper from './components/NavBarWrapper'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const inter = Inter({
@@ -67,6 +68,7 @@ export default function RootLayout({
             <main className="max-w-full mx-auto">
               {children}
             </main>
+            <Toaster position="top-center" closeButton />
           </TeamProvider>
           </AuthProvider>
         </ThemeProvider>

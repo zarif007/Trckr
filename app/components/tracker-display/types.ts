@@ -121,6 +121,13 @@ export type TrackerFormAction = {
   label: string
   statusTag: string
   isEditable: boolean
+  /** When true, clicking saves data but does not advance form status to this action's statusTag. */
+  persistOnly?: boolean
+  /**
+   * When true on a transition row (not the first row), reaching this statusTag locks further apply-actions.
+   * At most one row should be marked last; normalize keeps the last such row in array order.
+   */
+  isLast?: boolean
 }
 
 export type TrackerLayoutNode = {

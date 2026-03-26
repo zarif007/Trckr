@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { useAutoSaveTrackerData } from '../../../hooks/useAutoSaveTrackerData'
 import { useAutoSave } from '@/app/hooks/useAutoSave'
 import type { TrackerFormAction } from '@/app/components/tracker-display/types'
@@ -254,13 +255,25 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       setFormActionSaving(true)
       setFormActionError(null)
       const prevStatus = formStatusRef.current
-      setCurrentFormStatus(action.statusTag)
+      const persistOnly = action.persistOnly === true
+      if (!persistOnly) {
+        setCurrentFormStatus(action.statusTag)
+      }
       try {
-        await saveTrackerData({ formStatus: action.statusTag })
+        await saveTrackerData(persistOnly ? {} : { formStatus: action.statusTag })
+        toast(action.label, {
+          description: persistOnly ? 'Saved' : `Status: ${action.statusTag}`,
+        })
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Failed to update status'
         setFormActionError(msg)
-        setCurrentFormStatus(prevStatus ?? null)
+        toast('Action failed', {
+          description: msg,
+          classNames: { toast: 'border-destructive/40' },
+        })
+        if (!persistOnly) {
+          setCurrentFormStatus(prevStatus ?? null)
+        }
       } finally {
         setFormActionSaving(false)
       }

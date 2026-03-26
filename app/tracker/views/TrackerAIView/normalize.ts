@@ -17,6 +17,8 @@ export function normalizeFormActions(
       label,
       statusTag,
       isEditable: action?.isEditable === true,
+      persistOnly: action?.persistOnly === true,
+      isLast: action?.isLast === true,
     }
   })
   const firstFromInput = trimmed[0]
@@ -25,10 +27,23 @@ export function normalizeFormActions(
     label: firstFromInput?.label || DEFAULT_FORM_ACTION.label,
     statusTag: firstFromInput?.statusTag || DEFAULT_FORM_ACTION.statusTag,
     isEditable: true,
+    persistOnly: false,
+    isLast: false,
   }
-  const rest = trimmed
+  const restFiltered = trimmed
     .slice(1)
     .filter((action) => action.label.length > 0 && action.statusTag.length > 0)
+  let lastIsLastIndex = -1
+  for (let i = restFiltered.length - 1; i >= 0; i--) {
+    if (restFiltered[i].isLast) {
+      lastIsLastIndex = i
+      break
+    }
+  }
+  const rest: TrackerFormAction[] = restFiltered.map((action, i) => ({
+    ...action,
+    isLast: i === lastIsLastIndex,
+  }))
   return [first, ...rest]
 }
 

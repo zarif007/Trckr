@@ -21,42 +21,32 @@ export function useFormActionsState(
       ) ?? null,
     [formActions, currentFormStatus]
   )
+
+  const terminalAction = useMemo(
+    () => formActions.find((a) => a.isLast === true) ?? null,
+    [formActions]
+  )
+
   const currentStatusNormalized = (currentFormStatus ?? '').trim().toLowerCase()
-  const activeActionIndex = useMemo(
-    () =>
-      formActions.findIndex(
-        (action) => action.statusTag.trim().toLowerCase() === currentStatusNormalized
-      ),
-    [formActions, currentStatusNormalized]
-  )
-  const nextActionIndex = useMemo(() => {
-    if (formActions.length === 0) return -1
-    if (activeActionIndex < 0) return 0
-    const next = activeActionIndex + 1
-    return next < formActions.length ? next : -1
-  }, [formActions, activeActionIndex])
-  const visibleFormActions = useMemo(
-    () => (nextActionIndex >= 0 ? [formActions[nextActionIndex]] : []),
-    [formActions, nextActionIndex]
-  )
+  const formActionsLocked = useMemo(() => {
+    if (!terminalAction) return false
+    return (
+      terminalAction.statusTag.trim().toLowerCase() === currentStatusNormalized
+    )
+  }, [terminalAction, currentStatusNormalized])
+
   const effectiveCurrentFormStatus = useMemo(
     () => currentFormStatus?.trim() || DRAFT_STATUS_TAG,
     [currentFormStatus]
   )
-  const previousFormStatus = useMemo(() => {
-    if (nextActionIndex <= 0) return DRAFT_STATUS_TAG
-    return formActions[nextActionIndex - 1]?.statusTag || DRAFT_STATUS_TAG
-  }, [formActions, nextActionIndex])
+
   const isReadOnly = activeFormAction ? !activeFormAction.isEditable : false
 
   return {
     formActions,
     activeFormAction,
-    activeActionIndex,
-    nextActionIndex,
-    visibleFormActions,
+    formActionsLocked,
     effectiveCurrentFormStatus,
-    previousFormStatus,
     isReadOnly,
   }
 }

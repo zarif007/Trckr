@@ -30,8 +30,6 @@ export type TrackerSaveState = {
   dataSaveError: string | null
   formActions: TrackerFormAction[]
   currentFormStatus: string | null
-  previousFormStatus: string | null
-  visibleFormActions: TrackerFormAction[]
   formActionSaving: boolean
   formActionError: string | null
   canConfigureFormActions: boolean
@@ -66,8 +64,6 @@ export const initialSaveState: TrackerSaveState = {
   dataSaveError: null,
   formActions: [],
   currentFormStatus: null,
-  previousFormStatus: null,
-  visibleFormActions: [],
   formActionSaving: false,
   formActionError: null,
   canConfigureFormActions: false,

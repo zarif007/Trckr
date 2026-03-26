@@ -374,6 +374,8 @@ export const trackerSchema = z
             label: z.string().trim().min(1),
             statusTag: z.string().trim().min(1),
             isEditable: z.boolean(),
+            persistOnly: z.boolean().optional(),
+            isLast: z.boolean().optional(),
           })
           .passthrough()
       )
