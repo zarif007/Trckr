@@ -205,7 +205,7 @@ export const TrackerPanel = memo(function TrackerPanel({
         </div>
       )}
       <div
-        className={`absolute top-3 z-20 flex flex-wrap items-center justify-end gap-1 rounded-md border border-border/60 bg-background/90 p-1 shadow-sm max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-3'}`}
+        className={`absolute top-3 z-20 flex flex-wrap items-center justify-end gap-1 rounded-md border border-border/50 bg-background/85 p-1 shadow-sm backdrop-blur-md max-w-[calc(100%-0.5rem)] ${hideChatToggle ? 'right-1' : 'right-3'}`}
       >
         {allowSchemaEditToggle && (
           <div className={`inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5 ${isStreamingTracker ? 'opacity-60 pointer-events-none' : ''}`}>
@@ -214,7 +214,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                 <button
                   type="button"
                   onClick={() => setEditMode(false)}
-                  className={`p-1.5 rounded-md transition-colors ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`p-1.5 rounded-md transition-colors duration-150 ease-out ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
                   aria-pressed={!editMode}
                   aria-label="Preview"
                   disabled={isStreamingTracker}
@@ -224,7 +224,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                 <button
                   type="button"
                   onClick={() => setEditMode(true)}
-                  className={`p-1.5 rounded-md transition-colors ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`p-1.5 rounded-md transition-colors duration-150 ease-out ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
                   aria-pressed={editMode}
                   aria-label="Edit"
                   disabled={isStreamingTracker}
@@ -237,7 +237,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                 <button
                   type="button"
                   onClick={() => setEditMode(false)}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3 ${!editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
                   aria-pressed={!editMode}
                   disabled={isStreamingTracker}
                 >
@@ -246,7 +246,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                 <button
                   type="button"
                   onClick={() => setEditMode(true)}
-                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3 ${editMode ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'}`}
                   aria-pressed={editMode}
                   disabled={isStreamingTracker}
                 >
@@ -382,8 +382,8 @@ export const TrackerPanel = memo(function TrackerPanel({
 
       <div
         className={`h-full overflow-y-auto ${hideChatToggle
-          ? 'px-1 pt-12 pb-2'
-          : 'px-3 pt-14 pb-4'
+          ? 'px-0 pt-12 pb-1'
+          : 'px-2 pt-14 pb-2'
           }`}
       >
         {ownerScopeSettingsBanner && (
@@ -455,7 +455,7 @@ export const TrackerPanel = memo(function TrackerPanel({
         </TrackerDisplayErrorBoundary>
 
         {showPreviewSaveButton && onPreviewSave && (
-          <div className="sticky bottom-0 left-0 right-0 flex justify-end border-t border-border/60 bg-background/95 backdrop-blur-sm py-2.5 px-3 mt-3 -mb-4">
+          <div className="sticky bottom-0 left-0 right-0 flex justify-end border-t border-border/60 bg-background/95 backdrop-blur-sm py-2.5 px-3 mt-3 -mb-2">
             <Button
               variant="outline"
               size="sm"

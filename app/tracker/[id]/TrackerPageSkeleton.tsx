@@ -41,7 +41,7 @@ export function TrackerPageSkeleton() {
             {/* Toolbar strip — matches TrackerPanel top bar */}
             <div
               className={cn(
-                'absolute top-3 right-3 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1 rounded-md border bg-background/90 p-1 shadow-sm',
+                'absolute top-3 right-3 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1 rounded-md border border-border/50 bg-background/85 p-1 shadow-sm backdrop-blur-md',
                 theme.border.subtle
               )}
             >
@@ -61,8 +61,8 @@ export function TrackerPageSkeleton() {
             </div>
 
             {/* Content area — matches TrackerPanel scroll + TrackerDisplayInline card */}
-            <div className="h-full overflow-y-auto px-3 pt-14 pb-4">
-              <div className="w-full min-w-0 space-y-4 px-0 py-3 md:p-4 bg-card rounded-md">
+            <div className="h-full overflow-y-auto px-2 pt-14 pb-2">
+              <div className="w-full min-w-0 space-y-4 px-0 py-2 md:px-1 md:py-2 rounded-md bg-card">
                 <Tabs defaultValue="tab1" className="w-full min-w-0 gap-2">
                   <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
                     <TabsList className="h-9 w-fit inline-flex">
@@ -183,13 +183,13 @@ export function TrackerPageSkeleton() {
             <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
               <section
                 className={cn(
-                  'relative h-full w-full overflow-y-auto bg-background/60 px-1 pt-12 pb-2',
+                  'relative h-full w-full overflow-y-auto bg-background/60 px-0 pt-12 pb-1',
                   theme.radius.md
                 )}
               >
                 <div
                   className={cn(
-                    'absolute top-3 right-1 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1 rounded-md border bg-background/90 p-1 shadow-sm',
+                    'absolute top-3 right-1 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1 rounded-md border border-border/50 bg-background/85 p-1 shadow-sm backdrop-blur-md',
                     theme.border.subtle
                   )}
                 >
@@ -197,7 +197,7 @@ export function TrackerPageSkeleton() {
                   <Skeleton className="h-7 w-10" />
                   <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
-                <div className="w-full min-w-0 space-y-4 px-0 py-3 bg-card rounded-md">
+                <div className="w-full min-w-0 space-y-4 px-0 py-2 md:px-1 md:py-2 rounded-md bg-card">
                   <div className="flex items-center gap-2 min-w-0">
                     <TabsList className="h-9 w-fit inline-flex">
                       <Skeleton className="h-8 w-20 rounded-md mx-0.5" />

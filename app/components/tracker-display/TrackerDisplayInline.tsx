@@ -20,6 +20,7 @@ import { EditModeProvider } from './edit-mode'
 import { SHARED_TAB_ID } from '@/lib/depends-on-options'
 import { collectOptionsSourceSchemaIds } from '@/lib/resolve-bindings'
 import { getEffectiveDependsOn } from '@/lib/depends-on'
+import { cn } from '@/lib/utils'
 import { useTrackerTabs } from './state/useTrackerTabs'
 import { useGridDataEngine } from './state/useGridDataEngine'
 import { useSchemaTabActions } from './state/useSchemaTabActions'
@@ -70,13 +71,16 @@ function SortableTabRow({
           <GripVertical className="h-3.5 w-3.5 shrink-0" />
         </span>
       )}
-      <TabsTrigger value={tab.id}>
+      <TabsTrigger
+        value={tab.id}
+        className="min-w-0 max-w-[11rem] truncate text-xs font-semibold sm:max-w-[15rem]"
+      >
         {editMode && onSchemaChange ? (
           <span onClick={(e) => e.stopPropagation()} className="min-w-0 truncate">
             <InlineEditableName
               value={tab.name}
               onChange={(name) => onRenameTab(tab.id, name)}
-              className="text-sm font-medium truncate"
+              className="text-xs font-semibold truncate"
             />
           </span>
         ) : (
@@ -262,7 +266,13 @@ export function TrackerDisplayInline({
 
   const tabListContent =
     normalizedTabs.length > 0 || editMode ? (
-      <TabsList>
+      <TabsList
+        className={cn(
+          'min-h-8',
+          '[&_[data-slot=tabs-trigger]]:min-h-7 [&_[data-slot=tabs-trigger]]:px-2 [&_[data-slot=tabs-trigger]]:py-0.5',
+          '[&_[data-slot=tabs-trigger]]:text-xs [&_[data-slot=tabs-trigger]]:font-semibold'
+        )}
+      >
         {editMode && onSchemaChange ? (
           <DndContext
             sensors={sensors}
@@ -288,7 +298,10 @@ export function TrackerDisplayInline({
         ) : (
           normalizedTabs.map((tab) => (
             <div key={tab.id} className="flex items-center gap-0.5">
-              <TabsTrigger value={tab.id}>
+              <TabsTrigger
+                value={tab.id}
+                className="min-w-0 max-w-[11rem] truncate sm:max-w-[15rem]"
+              >
                 {tab.name}
               </TabsTrigger>
             </div>
@@ -298,7 +311,7 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full min-w-0 space-y-4 px-0 py-3 md:p-4 bg-card rounded-md">
+    <div className="w-full min-w-0 space-y-4 px-0 py-2 md:px-1 md:py-2 rounded-md bg-card">
       <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}

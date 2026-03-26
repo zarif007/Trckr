@@ -90,11 +90,11 @@ export function TrackerChatPanel({
   }
 
   return (
-    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/30 border-l border-border/60">
+    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-border/50 bg-muted/20 dark:bg-muted/10">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5">
         <div className="mx-auto max-w-2xl space-y-5">
           {conversationWindows && conversationWindows.length > 0 && (
-            <div className="flex items-center gap-0 border-b border-border/40 mb-4 min-h-9">
+            <div className="flex items-center gap-0 border-b border-border/40 mb-3 min-h-8">
               <div
                 ref={tabStripRef}
                 className="flex items-center gap-0 overflow-x-auto scrollbar-none flex-1 min-w-0 flex-nowrap"
@@ -113,10 +113,10 @@ export function TrackerChatPanel({
                       type="button"
                       onClick={() => onSelectConversation?.(window.id)}
                       className={cn(
-                        'px-3 py-2 text-xs transition-colors whitespace-nowrap border border-b-0 border-transparent rounded-t-md -mb-px shrink-0',
+                        'px-3 py-1.5 text-xs transition-colors duration-150 whitespace-nowrap border border-b-0 border-transparent rounded-t-md -mb-px shrink-0',
                         isActive
-                          ? 'bg-zinc-50/80 dark:bg-zinc-950/50 text-foreground border-border/40 border-b-zinc-50/80 dark:border-b-zinc-950/50'
-                          : 'bg-muted/50 text-muted-foreground hover:bg-muted/80 border-transparent',
+                          ? 'bg-muted/20 text-foreground border-border/40 border-b-muted/20 dark:border-b-muted/10 dark:bg-muted/10'
+                          : 'bg-muted/40 text-muted-foreground hover:bg-muted/60 border-transparent dark:bg-muted/20',
                       )}
                       title={window.title}
                     >
@@ -130,7 +130,7 @@ export function TrackerChatPanel({
                 <button
                   type="button"
                   onClick={onCreateConversation}
-                  className="inline-flex items-center justify-center rounded-t-md w-8 h-9 border border-border/60 border-b-0 text-xs text-muted-foreground hover:bg-muted/80 hover:text-foreground shrink-0"
+                  className="inline-flex items-center justify-center rounded-t-md w-8 h-8 border border-border/50 border-b-0 text-xs text-muted-foreground hover:bg-muted/70 hover:text-foreground shrink-0"
                   aria-label="New conversation"
                 >
                   +
