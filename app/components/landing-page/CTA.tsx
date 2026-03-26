@@ -21,7 +21,7 @@ export default function CTA() {
         className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-px [transform:translateZ(0)]"
         style={{ backgroundColor: 'hsl(var(--border))' }}
       />
-      <div className="absolute inset-0 bg-grid-small opacity-10 [mask-image:radial-gradient(circle_at_center,black,transparent_70%)]" />
+      <div className="absolute inset-0 bg-grid-small opacity-[0.06] dark:opacity-[0.09]" />
 
       <LandingAxisFrame
         className="relative z-10 mx-auto max-w-4xl"

@@ -160,7 +160,7 @@ export function ExprRuleEditor({
           <TabsTrigger value="json">JSON</TabsTrigger>
           <TabsTrigger value="ai">AI prompt</TabsTrigger>
         </TabsList>
-        <TabsContent value="visual" className="mt-4">
+        <TabsContent value="visual" className="mt-4 w-full min-w-0">
           <ExprFlowBuilder
             expr={expr}
             availableFields={availableFields}

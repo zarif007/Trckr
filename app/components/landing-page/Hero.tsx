@@ -11,6 +11,7 @@ export default function Hero() {
     <section className="relative overflow-visible px-3 pb-20 pt-[3.5rem] sm:px-4 sm:pb-24 sm:pt-28 md:pb-16 md:pt-24">
       <div className="relative z-10 mx-auto flex min-h-[min(82svh,880px)] max-w-6xl flex-col justify-center sm:min-h-[min(76svh,800px)] md:min-h-0">
         <LandingAxisFrame
+          variant="blueprint"
           className="mx-auto w-full max-w-6xl"
           extend={30}
           contentClassName={cn(
@@ -31,8 +32,8 @@ export default function Hero() {
               )}
             >
               <span className="relative flex h-2 w-2 sm:h-1.5 sm:w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-40" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-success sm:h-1.5 sm:w-1.5" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/20" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-foreground/45 sm:h-1.5 sm:w-1.5" />
               </span>
               <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground sm:text-[11px]">
                 AI-native Data Tracking
@@ -74,10 +75,10 @@ export default function Hero() {
                 delay: 0.14,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="mx-auto mt-7 max-w-2xl text-pretty text-base leading-relaxed tracking-[-0.015em] text-muted-foreground sm:mt-8 sm:text-lg md:mt-9 md:text-xl"
+              className="mx-auto mt-7 max-w-xl text-pretty text-base leading-relaxed tracking-[-0.015em] text-muted-foreground sm:mt-8 sm:text-lg md:mt-9"
             >
-              Notion-easy, spreadsheet-powerful. Describe what you need—AI
-              builds trackers for projects, inventory, and requests.
+              Describe what you track—AI builds it; your team works it; the analyst
+              reads it.
             </motion.p>
 
             {/* CTAs — full-width on narrow phones for a stronger, app-like hero */}

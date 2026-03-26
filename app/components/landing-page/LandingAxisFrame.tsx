@@ -2,13 +2,16 @@
 
 import type { CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
+import { theme } from '@/lib/theme'
 
 type LandingAxisFrameProps = {
   children: React.ReactNode
   id?: string
+  /** Blueprint axis lines (Hero only). Default is rounded card everywhere else. */
+  variant?: 'blueprint' | 'card'
   /** Outer wrapper (layout only; inset matches `extend` so rules are not clipped). */
   className?: string
-  /** Inner panel: padding, background, transitions — no box border needed; frame is the axis lines. */
+  /** Inner panel: padding, background, transitions — for blueprint, frame is the axis lines; for card, includes border + rounded-md. */
   contentClassName?: string
   /**
    * Extra classes on axis lines (e.g. opacity). Color defaults to `hsl(var(--border))` inline so
@@ -18,6 +21,7 @@ type LandingAxisFrameProps = {
   /**
    * How far each rule runs past the opposite edges (blueprint / drafting overlap).
    * Top & bottom lines extend horizontally by 2× this; left & right extend vertically.
+   * Ignored when variant is `card`.
    */
   extend?: number
 }
@@ -25,11 +29,29 @@ type LandingAxisFrameProps = {
 export default function LandingAxisFrame({
   children,
   id,
+  variant = 'card',
   className,
   contentClassName,
   lineClassName,
   extend = 18,
 }: LandingAxisFrameProps) {
+  if (variant === 'card') {
+    return (
+      <div id={id} className={cn(className)}>
+        <div
+          className={cn(
+            'border',
+            theme.border.subtle,
+            theme.radius.md,
+            contentClassName
+          )}
+        >
+          {children}
+        </div>
+      </div>
+    )
+  }
+
   const ext = extend
   const line = cn(
     'pointer-events-none absolute z-0 [transform:translateZ(0)] [backface-visibility:hidden]',

@@ -1035,10 +1035,13 @@ export function DynamicFunctionFlowBuilder({
         applyError={applyError ?? null}
         onApply={handleApply}
         applyLabel="Apply visual pipeline"
-        canvasClassName="flex flex-col min-h-0"
+        canvasClassName="min-h-0"
         paletteClassName="w-[120px]"
       >
-        <div ref={wrapperRef} className="h-full min-h-[380px] w-full">
+        <div
+          ref={wrapperRef}
+          className="flex min-h-0 min-w-0 h-full min-h-[380px] w-full flex-1 flex-col"
+        >
           <ReactFlow
             nodes={nodesWithValidation}
             edges={edgesWithValidation}
@@ -1058,7 +1061,7 @@ export function DynamicFunctionFlowBuilder({
             onNodeDragStop={() => setIsDraggingNode(false)}
             onSelectionChange={onSelectionChange}
             onKeyDown={onKeyDown}
-            className="!bg-transparent h-full"
+            className="!bg-transparent h-full min-h-0 w-full min-w-0"
           >
             <Background
               gap={22}
@@ -1075,7 +1078,7 @@ export function DynamicFunctionFlowBuilder({
           <DialogHeader>
             <DialogTitle>Filter condition</DialogTitle>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-auto">
+          <div className="flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-auto">
             <ExprFlowBuilder
               expr={filterExprDraft}
               availableFields={availableFields}

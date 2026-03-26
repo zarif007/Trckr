@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
@@ -21,9 +21,72 @@ const navLinks = [
   { href: '#demo', label: 'Demo' },
 ]
 
+function UserMenu({
+  trigger,
+}: {
+  trigger: ReactNode
+}) {
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const { data: session } = useSession()
+  const user = session?.user
+  if (!user) return null
+
+  return (
+    <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className={cn(
+          'w-56 overflow-hidden border bg-popover p-0 shadow-lg',
+          theme.border.default,
+          'rounded-md',
+        )}
+        sideOffset={8}
+      >
+        <div
+          className={cn(
+            'truncate border-b border-border px-3 py-2.5',
+            theme.typography.monoOverlineMuted,
+          )}
+        >
+          {user.email}
+        </div>
+        <div className="flex flex-col gap-0.5 p-1.5">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            onClick={() => setUserMenuOpen(false)}
+          >
+            <LayoutDashboard className="h-4 w-4 shrink-0 opacity-70" />
+            Dashboard
+          </Link>
+          <Link
+            href="/tracker"
+            className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            onClick={() => setUserMenuOpen(false)}
+          >
+            <Plus className="h-4 w-4 shrink-0 opacity-70" />
+            New tracker
+          </Link>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            onClick={() => {
+              setUserMenuOpen(false)
+              signOut({ redirectTo: '/' })
+            }}
+          >
+            <LogOut className="h-4 w-4 shrink-0 opacity-70" />
+            Sign out
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function NavBar() {
   const [open, setOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const { data: session, status } = useSession()
   const isSignedIn = status === 'authenticated' && !!session
 
@@ -36,9 +99,56 @@ export default function NavBar() {
       )}
     >
       <nav className="relative mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:h-[3.75rem] sm:gap-6 sm:px-6 lg:px-8">
-        {/* Left: segmented nav (desktop) */}
-        <div className="flex min-w-0 flex-1 items-center md:min-w-0">
-          <div className="w-10 shrink-0 md:hidden" aria-hidden />
+        {/* Left: mobile menu + segmented nav (desktop) */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:min-w-0 md:gap-0">
+          <div className="flex shrink-0 items-center md:hidden">
+            <button
+              type="button"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
+              onClick={() => setOpen(!open)}
+              className={cn(
+                'flex h-8 w-8 items-center justify-center border backdrop-blur-sm',
+                theme.border.subtleAlt,
+                theme.surface.secondaryLight,
+                'rounded-md text-foreground transition-colors',
+                'hover:bg-muted/40 active:scale-[0.98]',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              )}
+            >
+              {open ? (
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                  className="shrink-0"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.25"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                  className="shrink-0"
+                >
+                  <path d="M5 7h14M5 12h14M5 17h14" />
+                </svg>
+              )}
+            </button>
+          </div>
           <nav
             className="hidden md:flex"
             aria-label="Primary"
@@ -107,8 +217,8 @@ export default function NavBar() {
           </svg>
         </Link>
 
-        {/* Right: theme + account */}
-        <div className="flex min-w-0 flex-1 justify-end">
+        {/* Right: theme + account (desktop); account / sign in (mobile) */}
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
           <div className="hidden shrink-0 items-center gap-2 sm:gap-3 md:flex">
             <ThemeToggle
               className={cn(
@@ -119,8 +229,8 @@ export default function NavBar() {
               )}
             />
             {isSignedIn && session?.user ? (
-              <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
-                <PopoverTrigger asChild>
+              <UserMenu
+                trigger={
                   <button
                     type="button"
                     className={cn(
@@ -151,55 +261,8 @@ export default function NavBar() {
                       {session.user.name ?? session.user.email ?? 'User'}
                     </span>
                   </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="end"
-                  className={cn(
-                    'w-56 overflow-hidden border bg-popover p-0 shadow-lg',
-                    theme.border.default,
-                    'rounded-md',
-                  )}
-                  sideOffset={8}
-                >
-                  <div
-                    className={cn(
-                      'truncate border-b border-border px-3 py-2.5',
-                      theme.typography.monoOverlineMuted,
-                    )}
-                  >
-                    {session.user.email}
-                  </div>
-                  <div className="flex flex-col gap-0.5 p-1.5">
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <LayoutDashboard className="h-4 w-4 shrink-0 opacity-70" />
-                      Dashboard
-                    </Link>
-                    <Link
-                      href="/tracker"
-                      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <Plus className="h-4 w-4 shrink-0 opacity-70" />
-                      New tracker
-                    </Link>
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                      onClick={() => {
-                        setUserMenuOpen(false)
-                        signOut({ redirectTo: '/' })
-                      }}
-                    >
-                      <LogOut className="h-4 w-4 shrink-0 opacity-70" />
-                      Sign out
-                    </button>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                }
+              />
             ) : (
               <Button
                 asChild
@@ -214,56 +277,54 @@ export default function NavBar() {
               </Button>
             )}
           </div>
-        </div>
 
-        {/* Mobile menu trigger */}
-        <div className="flex shrink-0 items-center md:hidden">
-          <button
-            type="button"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
-            className={cn(
-              'flex h-10 w-10 items-center justify-center border backdrop-blur-sm',
-              theme.border.subtleAlt,
-              theme.surface.secondaryLight,
-              'rounded-md text-foreground transition-colors',
-              'hover:bg-muted/40 active:scale-[0.98]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-            )}
-          >
-            {open ? (
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                className="shrink-0"
-              >
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
+          <div className="flex shrink-0 items-center md:hidden">
+            {isSignedIn && session?.user ? (
+              <UserMenu
+                trigger={
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden border backdrop-blur-sm',
+                      theme.border.subtleAlt,
+                      theme.surface.secondaryLight,
+                      'rounded-md outline-none transition-colors hover:bg-muted/40',
+                      'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    )}
+                    aria-label="Open user menu"
+                  >
+                    {session.user.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt=""
+                        width={32}
+                        height={32}
+                        className="h-full w-full rounded-md object-cover ring-1 ring-border/50"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center rounded-md bg-muted/40 text-[11px] font-semibold leading-none text-foreground">
+                        {(session.user.name ?? session.user.email ?? '?')
+                          .charAt(0)
+                          .toUpperCase()}
+                      </span>
+                    )}
+                  </button>
+                }
+              />
             ) : (
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.25"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-                className="shrink-0"
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                className={cn(
+                  'h-8 shrink-0 rounded-md border-border/80 bg-background/60 px-2 text-[11px] font-medium backdrop-blur-sm',
+                  'hover:bg-muted/40',
+                )}
               >
-                <path d="M5 7h14M5 12h14M5 17h14" />
-              </svg>
+                <Link href="/login?callbackUrl=/tracker">Sign in</Link>
+              </Button>
             )}
-          </button>
+          </div>
         </div>
       </nav>
 

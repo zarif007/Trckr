@@ -51,7 +51,7 @@ export function FlowBuilderLayout({
   return (
     <div
       className={cn(
-        'flex flex-col gap-4 border bg-card/50 p-4 shadow-sm',
+        'flex w-full min-w-0 flex-col gap-4 border bg-card/50 p-4 shadow-sm',
         theme.radius.md,
         theme.border.subtleAlt
       )}
@@ -70,7 +70,7 @@ export function FlowBuilderLayout({
       </div>
 
       {/* Main Content: Palette + Canvas */}
-      <div className="flex gap-4 min-h-0 flex-1">
+      <div className="flex min-h-0 min-w-0 w-full flex-1 gap-4">
         {/* Palette Sidebar — scrollable when content exceeds viewport */}
         <div
           className={cn(
@@ -86,7 +86,7 @@ export function FlowBuilderLayout({
         {/* Canvas Area */}
         <div
           className={cn(
-            'min-h-0 min-w-0 flex-1 overflow-hidden border bg-background/80 shadow-inner',
+            'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden border bg-background/80 shadow-inner',
             theme.radius.md,
             theme.border.subtleAlt,
             canvasClassName
@@ -112,14 +112,14 @@ export function FlowBuilderLayout({
 
       {/* Apply Button */}
       <div className="flex justify-end pt-1">
-        <Button 
-          type="button" 
-          size="sm" 
+        <Button
+          type="button"
+          size="sm"
           onClick={onApply}
           className={cn(
             "gap-2 transition-all duration-200",
-            applySuccess 
-              ? "bg-green-600 hover:bg-green-700 text-white" 
+            applySuccess
+              ? "bg-green-600 hover:bg-green-700 text-white"
               : "bg-primary hover:bg-primary/90"
           )}
         >

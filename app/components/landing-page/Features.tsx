@@ -1,8 +1,10 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { ChevronRight } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
+import { UseCaseVisual } from '@/app/components/landing-page/landing-mini-visuals'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 
@@ -10,89 +12,73 @@ export default function Features() {
   return (
     <motion.section
       id="samples"
-      className="space-y-8 sm:space-y-12"
+      className="space-y-5 sm:space-y-6"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       transition={{ duration: 0.8 }}
     >
-      <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
         <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          Built for how small teams actually work.
+          Real ops
         </h3>
-        <p className="text-muted-foreground text-sm sm:text-base max-w-2xl font-medium">
-          Trckr handles internal projects, inventory, requests, hiring, and
-          day-to-day operations—more powerful than spreadsheets, easier than
-          stitching together docs and Notion pages.
-        </p>
+        <a
+          href="#platform"
+          className="inline-flex items-center gap-0.5 text-xs font-semibold text-muted-foreground hover:text-foreground w-fit"
+        >
+          Engine
+          <ChevronRight className="h-3.5 w-3.5 opacity-70" aria-hidden />
+        </a>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
         {[
           {
-            category: 'Projects & Ops',
-            title: 'Project pipeline',
-            body: 'See every initiative in one place with owners, due dates, and status so nothing slips.',
-            footer:
-              'Fields: project, owner, status, due date • Views: table, kanban',
+            category: 'Projects',
+            title: 'Pipeline',
+            visual: 'table' as const,
           },
           {
-            category: 'Inventory & Assets',
-            title: 'Equipment tracker',
-            body: 'Know what you own, where it is, and who is responsible—without wrestling a giant spreadsheet.',
-            footer:
-              'Fields: item, location, owner, status • Views: inventory table',
+            category: 'Inventory',
+            title: 'Stock & assets',
+            visual: 'kanban' as const,
           },
           {
-            category: 'Requests & HR',
-            title: 'Internal requests',
-            body: 'Centralize IT, facilities, and HR requests with clear assignees and SLAs for your team.',
-            footer:
-              'Fields: type, requester, assignee, status • Views: inbox, by owner',
+            category: 'Requests',
+            title: 'HR & IT queue',
+            visual: 'inbox' as const,
           },
         ].map((sample, idx) => (
           <motion.div
             key={sample.title}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.98 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.4, delay: idx * 0.1 }}
+            transition={{ duration: 0.35, delay: idx * 0.06 }}
             className="relative"
           >
             <LandingAxisFrame
               contentClassName={cn(
                 theme.surface.secondarySubtle,
-                'p-4 sm:p-6'
+                'flex flex-col gap-2.5 p-3.5 sm:p-4'
               )}
             >
-              <div className="space-y-3 sm:space-y-4">
-                <div className="flex items-center justify-between">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      'text-[9px] uppercase tracking-widest sm:text-[10px]',
-                      theme.surface.badgeWash,
-                      theme.border.subtleAlt
-                    )}
-                  >
-                    {sample.category}
-                  </Badge>
-                </div>
-                <h4 className="text-lg sm:text-xl font-bold text-foreground">
-                  {sample.title}
-                </h4>
-                <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed">
-                  {sample.body}
-                </p>
-                <p
+              <UseCaseVisual variant={sample.visual} />
+              <div className="flex items-center justify-between gap-2">
+                <Badge
+                  variant="outline"
                   className={cn(
-                    'pt-3 text-[9px] font-medium uppercase tracking-tight text-muted-foreground/60 sm:pt-4 sm:text-[10px] border-t',
-                    theme.border.divider
+                    'text-[9px] uppercase tracking-widest sm:text-[10px]',
+                    theme.surface.badgeWash,
+                    theme.border.subtleAlt
                   )}
                 >
-                  {sample.footer}
-                </p>
+                  {sample.category}
+                </Badge>
               </div>
+              <h4 className="text-sm sm:text-base font-bold text-foreground leading-tight">
+                {sample.title}
+              </h4>
             </LandingAxisFrame>
           </motion.div>
         ))}

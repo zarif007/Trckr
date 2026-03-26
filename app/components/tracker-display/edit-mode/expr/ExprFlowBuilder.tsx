@@ -281,9 +281,15 @@ export function ExprFlowBuilder({
       onApply={handleCompile}
       applyLabel="Apply visual expression"
       paletteClassName="w-[148px]"
-      canvasClassName="flex flex-col min-h-0"
+      canvasClassName="min-h-0"
     >
-      <div ref={wrapperRef} className={cn('w-full h-full min-h-[320px]', flowHeightClassName ?? 'h-[360px]')}>
+      <div
+        ref={wrapperRef}
+        className={cn(
+          'flex min-h-0 min-w-0 w-full flex-1 flex-col min-h-[320px]',
+          flowHeightClassName ?? 'h-[360px]'
+        )}
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -301,7 +307,7 @@ export function ExprFlowBuilder({
           onDragOver={onDragOver}
           onSelectionChange={onSelectionChange}
           onKeyDown={onKeyDown}
-          className="!bg-transparent h-full"
+          className="!bg-transparent h-full min-h-0 w-full min-w-0"
         >
           <Background
             gap={22}
