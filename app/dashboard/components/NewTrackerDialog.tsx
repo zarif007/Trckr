@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, FilePlus, GitBranch, Layers, Info, FileText, Table2, Database } from 'lucide-react'
+import { Loader2, FilePlus, GitBranch, Layers, Info, Table2, Database } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -13,6 +15,14 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { MasterDataScope } from '@/lib/master-data-scope'
 import { cn } from '@/lib/utils'
 
@@ -64,22 +74,80 @@ const SCOPE_OPTIONS: Array<{
 const INSTANCE_OPTIONS: Array<{
   value: InstanceType
   label: string
+  shortLabel: string
   icon: typeof Table2 | typeof Layers
   description: string
 }> = [
   {
     value: 'SINGLE',
     label: 'Single',
+    shortLabel: 'One dataset',
     icon: Table2,
-    description: 'One shared tracker with a single dataset. Supports optional version control with branches, diffs, and merging.',
+    description: 'One shared dataset. Optional version control (branches, merge).',
   },
   {
     value: 'MULTI',
     label: 'Multi',
+    shortLabel: 'Many rows',
     icon: Layers,
-    description: 'Multiple independent instances of this tracker, each with its own data, author, and timestamp.',
+    description: 'Separate instances, each with its own data and timestamp.',
   },
 ]
+
+function SettingsToggleRow({
+  title,
+  description,
+  checked,
+  onToggle,
+  disabled,
+}: {
+  title: string
+  description?: string
+  checked: boolean
+  onToggle: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => {
+        if (disabled) return
+        onToggle()
+      }}
+      disabled={disabled}
+      className={cn(
+        'flex items-center justify-between rounded-md border px-3 py-2 text-left transition-all duration-150 w-full',
+        checked
+          ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
+          : cn('border-border bg-muted/20', !disabled && 'hover:bg-muted/50'),
+        disabled && 'cursor-not-allowed opacity-80',
+      )}
+    >
+      <div className="min-w-0 pr-2">
+        <div className="text-sm font-medium text-foreground">{title}</div>
+        {description ? (
+          <div className="text-[11px] text-muted-foreground leading-snug mt-0.5">{description}</div>
+        ) : null}
+      </div>
+      <div
+        aria-hidden="true"
+        className={cn(
+          'flex-shrink-0 w-9 h-5 rounded-md transition-colors duration-200 relative',
+          checked ? 'bg-primary' : 'bg-muted-foreground/30',
+        )}
+      >
+        <span
+          className={cn(
+            'pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-primary-foreground shadow-sm transition-[left] duration-200 ease-out',
+            checked ? 'left-[calc(100%-1rem-0.125rem)]' : 'left-0.5',
+          )}
+        />
+      </div>
+    </button>
+  )
+}
 
 export function NewTrackerDialog({
   projectId,
@@ -277,6 +345,41 @@ export function NewTrackerDialog({
     ],
   )
 
+  const selectedScope = SCOPE_OPTIONS.find((o) => o.value === masterDataScope)
+  const instanceHelp = INSTANCE_OPTIONS.find((o) => o.value === instance)?.description ?? ''
+
+  const choicesSummary =
+    instance === 'MULTI'
+      ? `${INSTANCE_OPTIONS.find((o) => o.value === 'MULTI')?.label ?? 'Multi'} · ${selectedScope?.label ?? ''} scope`
+      : [
+          INSTANCE_OPTIONS.find((o) => o.value === 'SINGLE')?.label ?? 'Single',
+          `${selectedScope?.label ?? ''} scope`,
+          versionControl ? 'Version control' : autoSave ? 'Auto-save' : 'Manual save',
+        ].join(' · ')
+
+  const scopeCallout = (() => {
+    if (scopeDefaultLoading && projectId) {
+      return (
+        <div className="flex items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px] text-muted-foreground">
+          <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+          Loading defaults…
+        </div>
+      )
+    }
+    if (!projectId) {
+      return (
+        <div className="rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px] text-muted-foreground leading-snug">
+          Master data stays in this tracker until it belongs to a project.
+        </div>
+      )
+    }
+    return null
+  })()
+
+  const vcChecked = versionControl && instance === 'SINGLE'
+  const autoSaveChecked = autoSave && instance === 'SINGLE' && !versionControl
+  const savingDisabled = instance === 'MULTI'
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {!isControlled && (
@@ -290,337 +393,260 @@ export function NewTrackerDialog({
         </DialogTrigger>
       )}
 
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-3 text-left">
           <DialogTitle className="flex items-center gap-2 text-base">
             <FilePlus className="h-4 w-4 text-primary" />
             New Tracker
           </DialogTitle>
+          <DialogDescription className="sr-only">Create a new tracker.</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 pt-1">
-          {/* Name */}
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="tracker-name"
-              className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
-            >
-              Name
-            </label>
-            <Input
-              id="tracker-name"
-              ref={inputRef}
-              value={name}
-              onChange={(e) => { setName(e.target.value); setError(null) }}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
-              placeholder="e.g. budget-tracker"
-              className="h-9 text-sm"
-              disabled={creating}
-              autoComplete="off"
-            />
-            <p className="text-[10px] text-muted-foreground/70">
-              If a tracker with this name already exists, a suffix like <span className="font-mono">(1)</span> will be added.
-            </p>
-          </div>
-
-          {/* Master data scope */}
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
-              <Database className="h-3 w-3" />
-              Master data scope
-            </legend>
-            {scopeDefaultLoading && projectId ? (
-              <p className="text-[10px] text-muted-foreground flex items-center gap-2">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading defaults…
-              </p>
-            ) : null}
-            {scenarioB ? (
-              <p className="text-[10px] text-muted-foreground leading-snug">
-                Default from{' '}
-                {scopeHint?.inheritedSource === 'project'
-                  ? 'Project settings'
-                  : 'Module settings'}
-                {scopeHint?.inheritedSource === 'module' && scopeHint.inheritedSourceModuleId
-                  ? ' (ancestor module)'
-                  : null}
-                : <span className="font-medium text-foreground">{scopeHint?.inheritedDefault}</span>
-              </p>
-            ) : null}
-            {!projectId ? (
-              <p className="text-[10px] text-muted-foreground leading-snug">
-                Master data is stored in this tracker only until the tracker belongs to a project.
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-2">
-              {SCOPE_OPTIONS.map((opt) => {
-                const moduleChoiceDisabled = opt.value === 'module' && !moduleId
-                const disabled =
-                  creating || scopeDefaultLoading || moduleChoiceDisabled || (!projectId && opt.value !== 'tracker')
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      if (disabled) return
-                      setMasterDataScope(opt.value)
-                    }}
-                    disabled={disabled}
-                    aria-pressed={masterDataScope === opt.value}
-                    className={cn(
-                      'rounded-md border px-3 py-2 text-left transition-all duration-150 w-full',
-                      masterDataScope === opt.value
-                        ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
-                        : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                      disabled && 'opacity-40 pointer-events-none',
-                    )}
-                  >
-                    <div className="text-xs font-semibold">{opt.label}</div>
-                    <div className="text-[10px] leading-snug opacity-80 mt-0.5">{opt.description}</div>
-                    {moduleChoiceDisabled ? (
-                      <div className="text-[10px] text-muted-foreground mt-1">Only when creating inside a module.</div>
-                    ) : null}
-                  </button>
-                )
-              })}
-            </div>
-            {showSetDefaultCheckbox ? (
-              <label className="flex items-start gap-2 cursor-pointer mt-1">
-                <Checkbox
-                  checked={persistOwnerDefault}
-                  onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="tracker-name" className="text-sm font-medium text-foreground">
+                  Name
+                </label>
+                <Input
+                  id="tracker-name"
+                  ref={inputRef}
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value)
+                    setError(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleSubmit()
+                    }
+                  }}
+                  placeholder="e.g. budget-tracker"
+                  className="h-9 text-sm"
                   disabled={creating}
-                  className="mt-0.5"
+                  autoComplete="off"
                 />
-                <span className="text-[11px] text-muted-foreground leading-snug">
-                  Set this as the default for this {ownerKindLabel}?
-                </span>
-              </label>
-            ) : null}
-            {showUpdateDefaultCheckbox ? (
-              <label className="flex items-start gap-2 cursor-pointer mt-1">
-                <Checkbox
-                  checked={persistOwnerDefault}
-                  onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
-                  disabled={creating}
-                  className="mt-0.5"
-                />
-                <span className="text-[11px] text-muted-foreground leading-snug">
-                  Update default {ownerKindLabel} setting to &ldquo;{masterDataScope}&rdquo;?
-                </span>
-              </label>
-            ) : null}
-          </fieldset>
-
-          {/* Instance */}
-          <fieldset className="flex flex-col gap-1.5">
-            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
-              <Layers className="h-3 w-3" />
-              Instance
-            </legend>
-            <div className="flex gap-2">
-              {INSTANCE_OPTIONS.map((opt) => {
-                const Icon = opt.icon
-                const isSelected = instance === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => handleInstanceChange(opt.value)}
-                    disabled={creating}
-                    aria-pressed={isSelected}
-                    className={cn(
-                      'flex-1 rounded-md border px-3 py-2.5 text-left transition-all duration-150',
-                      isSelected
-                        ? 'border-primary bg-primary/10 text-primary shadow-sm shadow-primary/10'
-                        : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground',
-                    )}
-                  >
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="text-xs font-semibold">{opt.label}</span>
-                    </div>
-                    <div className="text-[10px] leading-snug opacity-80">
-                      {opt.description}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </fieldset>
-
-          {/* Version Control */}
-          <fieldset
-            className={cn(
-              'flex flex-col gap-1.5 transition-all duration-200',
-              instance === 'MULTI' && 'opacity-40 pointer-events-none',
-            )}
-            disabled={instance === 'MULTI'}
-          >
-            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
-              <GitBranch className="h-3 w-3" />
-              Version Control
-            </legend>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={versionControl && instance === 'SINGLE'}
-              onClick={() => {
-                if (instance !== 'SINGLE') return
-                setVersionControl((v) => {
-                  const next = !v
-                  if (next) setAutoSave(false)
-                  return next
-                })
-              }}
-              disabled={creating || instance === 'MULTI'}
-              className={cn(
-                'flex items-center justify-between rounded-md border px-4 py-3 text-left transition-all duration-150 w-full',
-                versionControl && instance === 'SINGLE'
-                  ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
-                  : 'border-border bg-muted/20 hover:bg-muted/50',
-              )}
-            >
-              <div>
-                <div className="text-xs font-semibold text-foreground mb-0.5">
-                  {versionControl && instance === 'SINGLE' ? 'Enabled' : 'Disabled'}
-                </div>
-                <div className="text-[10px] text-muted-foreground leading-snug">
-                  {instance === 'MULTI'
-                    ? 'Not available for Multi-instance trackers.'
-                    : 'Create branches, compare diffs, and merge changes.'}
-                </div>
-              </div>
-              <div
-                aria-hidden="true"
-                className={cn(
-                  'flex-shrink-0 ml-4 w-9 h-5 rounded-md transition-colors duration-200 relative',
-                  versionControl && instance === 'SINGLE' ? 'bg-primary' : 'bg-muted-foreground/30',
-                )}
-              >
-                <span
-                  className={cn(
-                    'pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-primary-foreground shadow-sm transition-[left] duration-200 ease-out',
-                    versionControl && instance === 'SINGLE'
-                      ? 'left-[calc(100%-1rem-0.125rem)]'
-                      : 'left-0.5',
-                  )}
-                />
-              </div>
-            </button>
-
-            <div
-              className={cn(
-                'overflow-hidden transition-all duration-200',
-                versionControl && instance === 'SINGLE' ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0',
-              )}
-            >
-              <div className="flex items-start gap-1.5 rounded-md bg-primary/5 border border-primary/20 px-3 py-2 mt-1">
-                <Info className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
-                <p className="text-[10px] text-primary/80 leading-snug">
-                  A <strong>main</strong> branch will be created on first save. You can branch, diff, and merge from the tracker toolbar.
+                <p className="text-[11px] text-muted-foreground">
+                  Duplicate names get a suffix like <span className="font-mono">(1)</span>.
                 </p>
               </div>
+
+              <div className="rounded-lg border border-border/80 bg-muted/20 p-4 space-y-5">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Layers className="h-3.5 w-3.5 shrink-0" />
+                    Instance
+                  </div>
+                  <Tabs
+                    value={instance}
+                    onValueChange={(v) => handleInstanceChange(v as InstanceType)}
+                    className="gap-2"
+                  >
+                    <TabsList className="grid h-auto w-full grid-cols-2 gap-[2px] p-0.5">
+                      {INSTANCE_OPTIONS.map((opt) => {
+                        const Icon = opt.icon
+                        return (
+                          <TabsTrigger
+                            key={opt.value}
+                            value={opt.value}
+                            disabled={creating}
+                            className="gap-1.5 py-2 text-xs"
+                          >
+                            <Icon className="h-3.5 w-3.5 shrink-0" />
+                            {opt.shortLabel}
+                          </TabsTrigger>
+                        )
+                      })}
+                    </TabsList>
+                  </Tabs>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{instanceHelp}</p>
+                </div>
+
+                <div className="h-px bg-border/60" role="presentation" />
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Database className="h-3.5 w-3.5 shrink-0" />
+                    Scope
+                  </div>
+                  {scopeCallout}
+                  <Select
+                    value={masterDataScope}
+                    onValueChange={(v) => setMasterDataScope(v as MasterDataScope)}
+                    disabled={creating || scopeDefaultLoading}
+                  >
+                    <SelectTrigger size="sm" className="h-9 w-full min-w-0 font-normal">
+                      <SelectValue placeholder={scopeDefaultLoading ? 'Loading…' : 'Choose scope'} />
+                    </SelectTrigger>
+                    <SelectContent position="popper" className="w-[var(--radix-select-trigger-width)]">
+                      {SCOPE_OPTIONS.map((opt) => {
+                        const moduleChoiceDisabled = opt.value === 'module' && !moduleId
+                        const itemDisabled =
+                          moduleChoiceDisabled || (!projectId && opt.value !== 'tracker')
+                        return (
+                          <SelectItem key={opt.value} value={opt.value} disabled={itemDisabled}>
+                            {opt.label}
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
+                  {selectedScope ? (
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">{selectedScope.description}</p>
+                  ) : null}
+                  {!moduleId && projectId ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Module scope appears when you create a tracker from inside a module.
+                    </p>
+                  ) : null}
+                  {showSetDefaultCheckbox ? (
+                    <label className="grid cursor-pointer grid-cols-[auto_1fr] items-start gap-x-3 gap-y-0">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center translate-y-px">
+                        <Checkbox
+                          checked={persistOwnerDefault}
+                          onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
+                          disabled={creating}
+                        />
+                      </span>
+                      <span className="text-[11px] text-muted-foreground leading-snug pt-px min-w-0">
+                        Remember this as the default for this {ownerKindLabel}
+                      </span>
+                    </label>
+                  ) : null}
+                  {showUpdateDefaultCheckbox ? (
+                    <label className="grid cursor-pointer grid-cols-[auto_1fr] items-start gap-x-3 gap-y-0">
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center translate-y-px">
+                        <Checkbox
+                          checked={persistOwnerDefault}
+                          onCheckedChange={(v) => setPersistOwnerDefault(v === true)}
+                          disabled={creating}
+                        />
+                      </span>
+                      <span className="text-[11px] text-muted-foreground leading-snug pt-px min-w-0">
+                        Update default {ownerKindLabel} setting to &ldquo;{masterDataScope}&rdquo;
+                      </span>
+                    </label>
+                  ) : null}
+                </div>
+
+                <div className="h-px bg-border/60" role="presentation" />
+
+                <fieldset
+                  className={cn('space-y-2', savingDisabled && 'opacity-40')}
+                  disabled={savingDisabled}
+                >
+                  <legend className="flex w-full items-center gap-2 text-xs font-medium text-muted-foreground mb-0">
+                    <GitBranch className="h-3.5 w-3.5 shrink-0" />
+                    Saving
+                  </legend>
+                  <p className="text-[11px] text-muted-foreground pb-1">
+                    For one dataset only. Version control disables auto-save.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <SettingsToggleRow
+                      title="Version control"
+                      description={
+                        instance === 'MULTI'
+                          ? 'Not available for multi-instance trackers.'
+                          : vcChecked
+                            ? 'Branches, diffs, and merges.'
+                            : 'Off'
+                      }
+                      checked={vcChecked}
+                      disabled={creating || instance === 'MULTI'}
+                      onToggle={() => {
+                        if (instance !== 'SINGLE') return
+                        setVersionControl((v) => {
+                          const next = !v
+                          if (next) setAutoSave(false)
+                          return next
+                        })
+                      }}
+                    />
+                    <div
+                      className={cn(
+                        'overflow-hidden transition-all duration-200',
+                        vcChecked ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0',
+                      )}
+                    >
+                      <div className="flex items-start gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+                        <Info className="mt-0.5 h-3 w-3 shrink-0 text-primary" />
+                        <p className="text-[10px] leading-snug text-primary/80">
+                          A <strong>main</strong> branch is created on first save. Use the tracker toolbar to branch
+                          and merge.
+                        </p>
+                      </div>
+                    </div>
+                    <SettingsToggleRow
+                      title="Auto-save"
+                      description={
+                        instance === 'MULTI'
+                          ? 'Not available for multi-instance trackers.'
+                          : versionControl
+                            ? 'Off while version control is on.'
+                            : autoSaveChecked
+                              ? 'Saves as you edit.'
+                              : 'Off — save manually.'
+                      }
+                      checked={autoSaveChecked}
+                      disabled={creating || instance === 'MULTI' || versionControl}
+                      onToggle={() => {
+                        if (instance !== 'SINGLE' || versionControl) return
+                        setAutoSave((v) => !v)
+                      }}
+                    />
+                  </div>
+                </fieldset>
+              </div>
+
+              {error ? (
+                <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md" role="alert">
+                  {error}
+                </p>
+              ) : null}
             </div>
-          </fieldset>
-
-          {/* Auto Save */}
-          <fieldset
-            className={cn(
-              'flex flex-col gap-1.5 transition-all duration-200',
-              (instance === 'MULTI' || versionControl) && 'opacity-40 pointer-events-none',
-            )}
-            disabled={instance === 'MULTI' || versionControl}
-          >
-            <legend className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-1.5">
-              <FileText className="h-3 w-3" />
-              Auto Save
-            </legend>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={autoSave && instance === 'SINGLE' && !versionControl}
-              onClick={() => {
-                if (instance !== 'SINGLE' || versionControl) return
-                setAutoSave((v) => !v)
-              }}
-              disabled={creating || instance === 'MULTI' || versionControl}
-              className={cn(
-                'flex items-center justify-between rounded-md border px-4 py-3 text-left transition-all duration-150 w-full',
-                autoSave && instance === 'SINGLE' && !versionControl
-                  ? 'border-primary bg-primary/10 shadow-sm shadow-primary/10'
-                  : 'border-border bg-muted/20 hover:bg-muted/50',
-              )}
-            >
-              <div>
-                <div className="text-xs font-semibold text-foreground mb-0.5">
-                  {autoSave && instance === 'SINGLE' && !versionControl ? 'Enabled' : 'Disabled'}
-                </div>
-                <div className="text-[10px] text-muted-foreground leading-snug">
-                  {instance === 'MULTI'
-                    ? 'Not available for Multi-instance trackers.'
-                    : versionControl
-                      ? 'Disabled when version control is enabled.'
-                      : 'Automatically save changes as you edit.'}
-                </div>
-              </div>
-              <div
-                aria-hidden="true"
-                className={cn(
-                  'flex-shrink-0 ml-4 w-9 h-5 rounded-md transition-colors duration-200 relative',
-                  autoSave && instance === 'SINGLE' && !versionControl ? 'bg-primary' : 'bg-muted-foreground/30',
-                )}
-              >
-                <span
-                  className={cn(
-                    'pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-primary-foreground shadow-sm transition-[left] duration-200 ease-out',
-                    autoSave && instance === 'SINGLE' && !versionControl
-                      ? 'left-[calc(100%-1rem-0.125rem)]'
-                      : 'left-0.5',
-                  )}
-                />
-              </div>
-            </button>
-          </fieldset>
-
-          {/* Error */}
-          {error && (
-            <p className="text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-md" role="alert">
-              {error}
-            </p>
-          )}
-
-          {/* Actions */}
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setOpen(false)}
-              disabled={creating}
-              className="rounded-md"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={creating || !name.trim()}
-              className="rounded-md gap-1.5 min-w-[100px]"
-            >
-              {creating ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                <>
-                  <FilePlus className="h-3.5 w-3.5" />
-                  Create
-                </>
-              )}
-            </Button>
           </div>
+
+          <DialogFooter className="shrink-0 flex-col items-stretch gap-3 border-t bg-muted/10 px-6 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+            <p
+              className="text-[11px] text-muted-foreground leading-snug sm:min-w-0 sm:flex-1 sm:pr-2"
+              title={choicesSummary}
+            >
+              {choicesSummary}
+            </p>
+            <div className="flex justify-end gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setOpen(false)}
+                disabled={creating}
+                className="rounded-md"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={creating || !name.trim()}
+                className="min-w-[100px] gap-1.5 rounded-md"
+              >
+                {creating ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Creating…
+                  </>
+                ) : (
+                  <>
+                    <FilePlus className="h-3.5 w-3.5" />
+                    Create
+                  </>
+                )}
+              </Button>
+            </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
