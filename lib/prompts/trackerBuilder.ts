@@ -44,8 +44,10 @@ Scope behavior:
 2) masterDataScope = "module" or "project"
    - Do NOT create master_data_tab or any local options grids.
    - Still create bindings entries for every options/multiselect field.
+   - For each distinct option set, create a masterDataTrackers entry (see below).
    - Set optionsSourceSchemaId to "__master_data__" placeholder.
-   - Use optionsGrid "master_data_grid" and labelField "master_data_grid.name".
+   - Set optionsSourceKey to the masterDataTrackers key.
+   - Use optionsGrid equal to the master data tracker's grid id (from its schema) and labelField "<optionsGrid>.<labelFieldId>".
    - The server will replace the placeholder with a real master data tracker before saving.
 
 === CRITICAL: OPTIONS/MULTISELECT FIELDS USE BINDINGS ONLY ===
@@ -53,6 +55,25 @@ Scope behavior:
 Every field with dataType "options" or "multiselect" MUST have a bindings entry. If optionsSourceSchemaId is OMITTED, optionsGrid MUST point to a LOCAL master data grid (id ending with _options_grid), NEVER to a main data grid (e.g. do NOT use suppliers_grid as optionsGrid for a supplier select — use supplier_options_grid).
 
 MASTER DATA GRID (local scope): ONE FIELD PER OPTION SET — no separate "label" and "value". The option field holds whatever the user enters; that value is both what is displayed and what is stored (e.g. "Exercise" or "High"). CRITICAL: The master data grid MUST use a DIFFERENT field id than the select field. Use a dedicated option field id (e.g. exercise_option for exercise_options_grid), NEVER the same id as the select field (e.g. do NOT use "exercise" in both workouts_grid and exercise_options_grid — use "exercise" in the main grid and "exercise_option" in the master data grid).
+
+=== MASTER DATA TRACKERS (module/project scope ONLY) ===
+
+When masterDataScope = "module" or "project", you MUST output masterDataTrackers (top-level array). One entry per distinct option set:
+
+masterDataTrackers: [
+  {
+    key: "student",              // stable key for bindings
+    name: "Student",             // tracker name
+    labelFieldId: "full_name",   // field used for select display/value
+    schema: { ... }              // FULL tracker schema for the master data tracker
+  }
+]
+
+Rules for each master data tracker schema:
+- Use a SINGLE grid id derived from the tracker key/name (snake_case, ends with _grid). Bindings must reference this grid id.
+- Fields can be ANY required fields for that entity (e.g., full_name, age, roll).
+- Include the labelFieldId field and make it a string.
+- Ensure tabs/sections/grids/fields/layoutNodes/config are all valid (same schema rules as a normal tracker).
 
 Create for EACH distinct option set when masterDataScope = "tracker":
 1. MASTER DATA TAB (once): { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
@@ -75,6 +96,7 @@ bindings: {
     // OPTIONAL: optionsSourceSchemaId — id of another tracker schema in the same project. When set, optionsGrid / labelField / mapping "from" refer to that tracker; "to" paths stay on this tracker. Omit for normal bindings (options live on this tracker).
     optionsGrid: "<grid_id>",              // Grid id containing options (e.g. product_options_grid)
     labelField: "<options_grid_id>.<option_field_id>",   // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
+    optionsSourceKey: "student",           // REQUIRED for module/project scope (matches masterDataTrackers.key)
     fieldMappings: [
       { from: "<options_grid_id>.<option_field_id>", to: "<this_select_grid>.<this_field>" },  // required: "from" must equal labelField
       { from: "<options_grid_id>.<other_field>", to: "<main_grid>.<other_field>" }       // auto-populate (optional)
@@ -128,8 +150,8 @@ BINDINGS RULES:
 1. EVERY select/multiselect field MUST have a bindings entry - NO EXCEPTIONS
 2. Key is ALWAYS: "<grid_id>.<field_id>" (NO tab in any path)
 3. If optionsSourceSchemaId is omitted, optionsGrid MUST be a local master data grid (id ending with _options_grid), NEVER a main data grid (e.g. use supplier_options_grid not suppliers_grid)
-4. If optionsSourceSchemaId is present (module/project scope), optionsGrid MUST be "master_data_grid" and labelField MUST be "master_data_grid.name" (the server will replace the placeholder schema id).
-5. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise"). For module/project scope, labelField is "master_data_grid.name".
+4. If optionsSourceSchemaId is present (module/project scope), optionsGrid MUST match the grid id used in the referenced masterDataTrackers.schema, and optionsSourceKey MUST match a masterDataTrackers.key.
+5. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise"). For module/project scope, labelField is "<optionsGrid>.<labelFieldId>" from the matching masterDataTrackers entry.
 6. fieldMappings MUST have at least one entry where "to" is this select field path and "from" equals labelField (same path)
 7. Other fieldMappings entries auto-populate other main grid fields when an option is selected
 
@@ -141,7 +163,7 @@ Before completing output, verify:
 [ ] Every optionsGrid, labelField (option field path), and fieldMappings from/to reference existing grids and fields
 [ ] labelField and the value mapping "from" point to the same option field; option field id must be DIFFERENT from the select field id (e.g. exercise_options_grid.exercise_option, not exercise_options_grid.exercise)
 [ ] Every LOCAL optionsGrid id ends with _options_grid (local master data grids only; never main data grids)
-[ ] If optionsSourceSchemaId is present, optionsGrid is "master_data_grid" and labelField is "master_data_grid.name"
+[ ] If optionsSourceSchemaId is present, optionsGrid matches the masterDataTrackers schema grid id and optionsSourceKey matches a masterDataTrackers.key
 [ ] Master data tab infrastructure exists for all local options grids when masterDataScope = "tracker"
 
 CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" object (can be {} if no options needed). The UI uses config to apply rules (disabled state, visibility, layout).
@@ -175,7 +197,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - See the "BINDINGS" section above for detailed structure and examples.
 - EVERY select/multiselect field MUST have a bindings entry.
 - Key is "<grid_id>.<field_id>" (no tab).
-- optionsGrid MUST be an options grid (id ending with _options_grid) for local tracker scope. If optionsSourceSchemaId is set (module/project scope), optionsGrid MUST be "master_data_grid". Never use a main data grid as optionsGrid.
+- optionsGrid MUST be an options grid (id ending with _options_grid) for local tracker scope. If optionsSourceSchemaId is set (module/project scope), optionsGrid MUST match the master data tracker's grid id. Never use a main data grid as optionsGrid.
 - Contains optionsGrid, labelField, and fieldMappings array.
 
 9. Output

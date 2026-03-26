@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db'
 import { applyMasterDataBindings } from '@/lib/master-data/builder'
 import { resolveMasterDataDefaultScope } from '@/lib/master-data/resolve-default'
 import { normalizeMasterDataScope } from '@/lib/master-data-scope'
+import type { MasterDataTrackerSpec } from '@/lib/schemas/multi-agent'
 
 const bodySchema = z.object({
   tracker: z.unknown(),
@@ -12,6 +13,7 @@ const bodySchema = z.object({
   projectId: z.string().optional(),
   moduleId: z.string().optional(),
   masterDataScope: z.enum(['tracker', 'module', 'project']).optional(),
+  masterDataTrackers: z.array(z.record(z.string(), z.any())).optional(),
 }).passthrough()
 
 export async function POST(request: Request) {
@@ -71,6 +73,7 @@ export async function POST(request: Request) {
   const result = await applyMasterDataBindings({
     tracker: body.tracker as Record<string, unknown>,
     scope: masterDataScope,
+    masterDataTrackers: body.masterDataTrackers as MasterDataTrackerSpec[] | undefined,
     projectId: project.id,
     moduleId,
     userId: authResult.user.id,

@@ -231,22 +231,22 @@ export function useFieldSettingsState({
       return
     }
     let cancelled = false
-    ;(async () => {
-      setSiblingsLoading(true)
-      try {
-        const res = await fetch(`/api/projects/${encodeURIComponent(ctxProjectId)}/trackers`)
-        if (!res.ok) {
+      ; (async () => {
+        setSiblingsLoading(true)
+        try {
+          const res = await fetch(`/api/projects/${encodeURIComponent(ctxProjectId)}/trackers`)
+          if (!res.ok) {
+            if (!cancelled) setSiblingTrackers([])
+            return
+          }
+          const data = (await res.json()) as { items?: Array<{ id: string; name: string | null }> }
+          if (!cancelled) setSiblingTrackers(Array.isArray(data.items) ? data.items : [])
+        } catch {
           if (!cancelled) setSiblingTrackers([])
-          return
+        } finally {
+          if (!cancelled) setSiblingsLoading(false)
         }
-        const data = (await res.json()) as { items?: Array<{ id: string; name: string | null }> }
-        if (!cancelled) setSiblingTrackers(Array.isArray(data.items) ? data.items : [])
-      } catch {
-        if (!cancelled) setSiblingTrackers([])
-      } finally {
-        if (!cancelled) setSiblingsLoading(false)
-      }
-    })()
+      })()
     return () => {
       cancelled = true
     }
@@ -266,21 +266,21 @@ export function useFieldSettingsState({
     }
     let cancelled = false
     setSourceSchemaLoading(true)
-    ;(async () => {
-      try {
-        const res = await fetch(`/api/trackers/${encodeURIComponent(sid)}`)
-        if (!res.ok) {
+      ; (async () => {
+        try {
+          const res = await fetch(`/api/trackers/${encodeURIComponent(sid)}`)
+          if (!res.ok) {
+            if (!cancelled) setSourceSchema(null)
+            return
+          }
+          const data = (await res.json()) as { schema?: TrackerDisplayProps }
+          if (!cancelled) setSourceSchema((data.schema ?? null) as TrackerDisplayProps | null)
+        } catch {
           if (!cancelled) setSourceSchema(null)
-          return
+        } finally {
+          if (!cancelled) setSourceSchemaLoading(false)
         }
-        const data = (await res.json()) as { schema?: TrackerDisplayProps }
-        if (!cancelled) setSourceSchema((data.schema ?? null) as TrackerDisplayProps | null)
-      } catch {
-        if (!cancelled) setSourceSchema(null)
-      } finally {
-        if (!cancelled) setSourceSchemaLoading(false)
-      }
-    })()
+      })()
     return () => {
       cancelled = true
     }
@@ -356,15 +356,15 @@ export function useFieldSettingsState({
         ? schema.dependsOnByTarget[validationKey]
         : validationKey && Array.isArray(schema?.dependsOn)
           ? schema.dependsOn
-              .filter((r) => r?.targets?.includes(validationKey))
-              .map((r) => ({
-                source: r.source,
-                operator: r.operator,
-                value: r.value,
-                action: r.action,
-                set: r.set,
-                priority: r.priority,
-              }))
+            .filter((r) => r?.targets?.includes(validationKey))
+            .map((r) => ({
+              source: r.source,
+              operator: r.operator,
+              value: r.value,
+              action: r.action,
+              set: r.set,
+              priority: r.priority,
+            }))
           : []
     setDependsOnRules(nextDependsOn)
     setCalculationRule(nextCalculation && nextCalculation.expr ? nextCalculation : null)
@@ -648,11 +648,11 @@ export function useFieldSettingsState({
     const nextFields = schema.fields.map((f) =>
       f.id === field.id
         ? {
-            ...f,
-            dataType,
-            ui: { ...f.ui, label: label.trim() || f.ui.label, placeholder: placeholder || undefined },
-            config: nextConfig,
-          }
+          ...f,
+          dataType,
+          ui: { ...f.ui, label: label.trim() || f.ui.label, placeholder: placeholder || undefined },
+          config: nextConfig,
+        }
         : f
     )
 
@@ -792,6 +792,50 @@ export function useFieldSettingsState({
     [bindingDraft?.optionsSourceSchemaId, sourceSchema, schema?.grids, schema?.fields]
   )
 
+  /** Data sources card: show linked tracker id for foreign auto-populate, e.g. `Suppliers.students_grid → student_name`. */
+  const resolveAutoPopulateFromPathLabelFn = useCallback(
+    (fromPath: string) => {
+      const inner = resolvePathLabel(fromPath, schema?.grids ?? [], schema?.fields ?? [])
+      const targetPath = gridId && field?.id ? `${gridId}.${field.id}` : ''
+      if (!targetPath) return inner
+
+      let sourceBinding: TrackerBindingEntry | undefined
+      for (const raw of Object.values(schema?.bindings ?? {})) {
+        if (!raw || typeof raw !== 'object') continue
+        const b = raw as TrackerBindingEntry
+        const hit = (b.fieldMappings ?? []).some(
+          (m) => m.from === fromPath && m.to === targetPath
+        )
+        if (hit) {
+          sourceBinding = b
+          break
+        }
+      }
+
+      const sid = sourceBinding?.optionsSourceSchemaId?.trim()
+      const selfId = ctxTrackerSchemaId?.trim()
+      if (!sid || (selfId && sid === selfId)) {
+        return inner
+      }
+
+      const trackerTitle =
+        siblingTrackers.find((t) => t.id === sid)?.name?.trim() || 'Linked tracker'
+      const { gridId: optGridId, fieldId: optFieldId } = parsePath(fromPath)
+      const pathPart =
+        optGridId && optFieldId ? `${optGridId} → ${optFieldId}` : fromPath
+      return `${trackerTitle}.${pathPart}`
+    },
+    [
+      schema?.bindings,
+      schema?.grids,
+      schema?.fields,
+      gridId,
+      field?.id,
+      ctxTrackerSchemaId,
+      siblingTrackers,
+    ]
+  )
+
   return {
     field,
     schema,
@@ -893,6 +937,7 @@ export function useFieldSettingsState({
     disableSave,
     resolvePathLabelFn,
     resolveBindingFromPathLabelFn,
+    resolveAutoPopulateFromPathLabelFn,
     bindingKey,
     siblingTrackers,
     siblingsLoading,

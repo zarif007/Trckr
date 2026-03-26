@@ -7,6 +7,9 @@ import {
   deleteTrackerByIdForUser,
   ownerScopeJsonForSettingsTracker,
 } from '@/lib/repositories'
+import { prisma } from '@/lib/db'
+import { isMasterDataModuleSettings } from '@/lib/master-data-scope'
+import { readMasterDataMeta, withMasterDataMeta } from '@/lib/master-data/meta'
 
 const patchTrackerBodySchema = z
   .object({
@@ -72,7 +75,26 @@ export async function PATCH(
     updateData.name = body.name.trim() || null
   }
   if (body.schema !== undefined && typeof body.schema === 'object' && body.schema !== null) {
-    updateData.schema = body.schema as object
+    let schema = body.schema as Record<string, unknown>
+    if (tracker.moduleId) {
+      const moduleRow = await prisma.module.findFirst({
+        where: {
+          id: tracker.moduleId,
+          projectId: tracker.projectId,
+          project: { userId: authResult.user.id },
+        },
+        select: { id: true, settings: true },
+      })
+      if (moduleRow && isMasterDataModuleSettings(moduleRow.settings)) {
+        const existingMeta = readMasterDataMeta(tracker.schema as Record<string, unknown>)
+        schema = withMasterDataMeta({
+          schema,
+          key: existingMeta?.key,
+          preferredLabelFieldId: existingMeta?.labelFieldId,
+        })
+      }
+    }
+    updateData.schema = schema as object
   }
 
   if (Object.keys(updateData).length === 0) {

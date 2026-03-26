@@ -127,13 +127,24 @@ export const trackerPatchSchema = z
   })
   .passthrough()
 
+const masterDataTrackerSpecSchema = z
+  .object({
+    key: z.string().describe('Stable key for bindings (e.g. "student", "supplier")'),
+    name: z.string().describe('Master data tracker name (e.g. "Student")'),
+    labelFieldId: z.string().describe('Field id used for select display/value'),
+    schema: trackerSchema.describe('Full tracker schema for this master data tracker'),
+  })
+  .passthrough()
+
 export const multiAgentSchema = z
   .object({
     manager: managerSchema.optional(),
     tracker: trackerSchema.optional(),
     trackerPatch: trackerPatchSchema.optional(),
+    masterDataTrackers: z.array(masterDataTrackerSpecSchema).optional(),
   })
   .passthrough()
 
 export type MultiAgentSchema = z.infer<typeof multiAgentSchema>
 export type TrackerPatchSchema = z.infer<typeof trackerPatchSchema>
+export type MasterDataTrackerSpec = z.infer<typeof masterDataTrackerSpecSchema>

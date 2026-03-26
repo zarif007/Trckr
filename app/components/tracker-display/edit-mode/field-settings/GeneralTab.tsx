@@ -27,6 +27,8 @@ export interface GeneralTabProps {
   setPrefix: (v: string) => void
   dataSourcesList: Array<{ type: 'manual' } | { type: 'calculation' } | { type: 'auto_populate'; fromPath: string }>
   resolvePathLabelFn: (path: string) => string
+  /** Foreign auto-populate: prefix with linked tracker name (see useFieldSettingsState). */
+  resolveAutoPopulateFromPathLabelFn: (fromPath: string) => string
   isRequired: boolean
   setIsRequired: (v: boolean) => void
   isHidden: boolean
@@ -78,6 +80,7 @@ export function GeneralTab({
   setPrefix,
   dataSourcesList,
   resolvePathLabelFn,
+  resolveAutoPopulateFromPathLabelFn,
   isRequired,
   setIsRequired,
   isHidden,
@@ -628,7 +631,7 @@ export function GeneralTab({
                     className="rounded-md border border-border/60 bg-muted/40 px-3 py-1 text-xs text-foreground/80"
                     title={sourceEntryId(entry)}
                   >
-                    {sourceEntryLabel(entry, resolvePathLabelFn)}
+                    {sourceEntryLabel(entry, resolvePathLabelFn, resolveAutoPopulateFromPathLabelFn)}
                   </div>
                 ))}
               </div>

@@ -72,6 +72,7 @@ interface TrackerPanelProps {
   isChatOpen: boolean
   setIsChatOpen: (v: boolean | ((prev: boolean) => boolean)) => void
   isStreamingTracker: boolean
+  isResolvingMasterData?: boolean
   trackerDataRef: React.RefObject<(() => Record<string, Array<Record<string, unknown>>>) | null>
   onGridDataChange?: (data: GridDataSnapshot) => void
   handleSchemaChange?: (next: TrackerResponse) => void
@@ -111,6 +112,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   isChatOpen,
   setIsChatOpen,
   isStreamingTracker,
+  isResolvingMasterData = false,
   trackerDataRef,
   onGridDataChange,
   handleSchemaChange,
@@ -177,7 +179,7 @@ export const TrackerPanel = memo(function TrackerPanel({
         width: fullWidth ? '100%' : isChatOpen ? (leftWidth ? `${leftWidth}px` : `${DEFAULT_LEFT_RATIO * 100}%`) : '100%',
       }}
     >
-      {isStreamingTracker && (
+      {(isStreamingTracker || isResolvingMasterData) && (
         <div className="absolute top-0 left-0 right-0 z-30 h-1 overflow-hidden rounded-t-lg bg-muted/40">
           <div className="h-full w-1/3 min-w-[120px] rounded-full bg-primary animate-progress-bar" />
         </div>

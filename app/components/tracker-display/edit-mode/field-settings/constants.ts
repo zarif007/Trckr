@@ -82,9 +82,12 @@ export function sourceEntryId(entry: FieldDataSource): string {
 
 export function sourceEntryLabel(
   entry: FieldDataSource,
-  pathLabelFn: (path: string) => string
+  pathLabelFn: (path: string) => string,
+  /** When set, used for auto_populate rows (e.g. include linked tracker name for foreign bindings). */
+  autoPopulatePathLabelFn?: (fromPath: string) => string
 ): string {
   if (entry.type === 'manual') return 'Manual'
   if (entry.type === 'calculation') return 'Calculation'
-  return `Auto-populate from ${pathLabelFn(entry.fromPath)}`
+  const labelFn = autoPopulatePathLabelFn ?? pathLabelFn
+  return `Auto-populate from ${labelFn(entry.fromPath)}`
 }

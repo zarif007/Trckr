@@ -19,6 +19,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     handlePointerDown,
     effectiveDisplaySchema,
     isStreamingTracker,
+    isResolvingMasterData,
     trackerDataRef,
     handleGridDataChange,
     undoable,
@@ -59,6 +60,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           isChatOpen={isChatOpen}
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
+          isResolvingMasterData={isResolvingMasterData}
           trackerDataRef={trackerDataRef}
           onGridDataChange={handleGridDataChange}
           handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}

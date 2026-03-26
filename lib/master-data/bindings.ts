@@ -1,17 +1,28 @@
 import { prisma } from '@/lib/db'
 import { createTrackerForUser } from '@/lib/repositories'
 import { findOrCreateMasterDataModule } from './module'
-import { buildMasterDataSchema, resolveLabelFieldId } from './schema'
+import { buildMasterDataSchema } from './schema'
+import {
+  buildMasterDataMeta,
+  extractMasterDataFields,
+  readMasterDataMeta,
+  resolveLabelFieldId as resolveLabelFieldIdFromMeta,
+  resolveMasterDataGridId,
+  withMasterDataMeta,
+} from './meta'
 import { isPlainObject, normalizeName, titleCase } from './utils'
+import type { MasterDataTrackerSpec } from '@/lib/schemas/multi-agent'
 import {
   normalizeMasterDataScope,
   resolveMasterDataScopeFromTracker,
   type MasterDataScope,
 } from '@/lib/master-data-scope'
+import { buildFieldPath, parsePath } from '@/lib/resolve-bindings/path'
 
 export type MasterDataBuildResult = {
   tracker: Record<string, unknown>
   createdTrackerIds: string[]
+  actions: Array<{ type: 'create' | 'reuse'; name: string; key?: string; trackerId: string }>
 }
 
 type Grid = { id?: string; sectionId?: string; name?: string }
@@ -61,18 +72,40 @@ function ensureBindingEntry(options: {
   bindings: Record<string, unknown>
   fieldPath: string
   optionsSourceSchemaId: string
+  optionsSourceKey?: string
   optionsGrid: string
   labelField: string
+  optionsFieldIds?: Set<string>
 }) {
-  const { bindings, fieldPath, optionsSourceSchemaId, optionsGrid, labelField } = options
+  const { bindings, fieldPath, optionsSourceSchemaId, optionsSourceKey, optionsGrid, labelField, optionsFieldIds } =
+    options
   const existing = bindings[fieldPath] as Record<string, unknown> | undefined
-  const existingMappings = Array.isArray(existing?.fieldMappings) ? (existing?.fieldMappings as Array<Record<string, unknown>>) : []
-  const hasValueMapping = existingMappings.some((m) => m?.to === fieldPath)
+  const existingMappings = Array.isArray(existing?.fieldMappings)
+    ? (existing?.fieldMappings as Array<Record<string, unknown>>)
+    : []
+  const normalizedMappings =
+    optionsFieldIds && optionsFieldIds.size > 0
+      ? existingMappings
+          .map((m) => {
+            const from = typeof m?.from === 'string' ? m.from : ''
+            const to = typeof m?.to === 'string' ? m.to : ''
+            if (!from || !to) return null
+            const parsed = parsePath(from)
+            if (!parsed.fieldId) return null
+            if (!optionsFieldIds.has(parsed.fieldId)) return null
+            return { from: buildFieldPath(optionsGrid, parsed.fieldId), to }
+          })
+          .filter((m): m is { from: string; to: string } => Boolean(m))
+      : existingMappings
+  const hasValueMapping = normalizedMappings.some((m) => m?.to === fieldPath)
   const valueMapping = { from: labelField, to: fieldPath }
-  const fieldMappings = hasValueMapping ? existingMappings : [valueMapping, ...existingMappings]
+  const fieldMappings = hasValueMapping ? normalizedMappings : [valueMapping, ...normalizedMappings]
+  const existingKey = typeof existing?.optionsSourceKey === 'string' ? existing.optionsSourceKey : undefined
+  const finalKey = optionsSourceKey ?? existingKey
 
   bindings[fieldPath] = {
     optionsSourceSchemaId,
+    ...(finalKey ? { optionsSourceKey: finalKey } : {}),
     optionsGrid,
     labelField,
     fieldMappings,
@@ -83,11 +116,11 @@ function resolveUnboundSelectFields(options: {
   tracker: Record<string, unknown>
   bindings: Record<string, unknown>
   gridByFieldId: Map<string, string>
-}): Array<{ field: Field; fieldPath: string }> {
+}): Array<{ field: Field; fieldPath: string; binding?: Record<string, unknown> }> {
   const { tracker, bindings, gridByFieldId } = options
   const fields = Array.isArray(tracker.fields) ? (tracker.fields as Field[]) : []
 
-  const unresolved: Array<{ field: Field; fieldPath: string }> = []
+  const unresolved: Array<{ field: Field; fieldPath: string; binding?: Record<string, unknown> }> = []
   for (const field of fields) {
     if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
     if (!field.id) continue
@@ -97,7 +130,7 @@ function resolveUnboundSelectFields(options: {
     const existingBinding = bindings[fieldPath] as Record<string, unknown> | undefined
     const sourceId = existingBinding?.optionsSourceSchemaId
     if (sourceId && String(sourceId).trim().length > 0 && !isPlaceholderSourceId(sourceId)) continue
-    unresolved.push({ field, fieldPath })
+    unresolved.push({ field, fieldPath, binding: existingBinding })
   }
   return unresolved
 }
@@ -105,6 +138,7 @@ function resolveUnboundSelectFields(options: {
 export async function applyMasterDataBindings(options: {
   tracker: Record<string, unknown>
   scope?: MasterDataScope | null
+  masterDataTrackers?: MasterDataTrackerSpec[]
   projectId: string
   moduleId?: string | null
   userId: string
@@ -114,7 +148,7 @@ export async function applyMasterDataBindings(options: {
   const nextTracker: Record<string, unknown> = { ...(tracker ?? {}), masterDataScope: scope }
 
   if (scope === 'tracker') {
-    return { tracker: nextTracker, createdTrackerIds: [] }
+    return { tracker: nextTracker, createdTrackerIds: [], actions: [] }
   }
 
   const layoutNodes = Array.isArray(nextTracker.layoutNodes) ? (nextTracker.layoutNodes as LayoutNode[]) : []
@@ -134,7 +168,16 @@ export async function applyMasterDataBindings(options: {
 
   if (unresolvedFields.length === 0) {
     const cleaned = stripLocalOptionsGrids(nextTracker)
-    return { tracker: { ...cleaned, bindings }, createdTrackerIds: [] }
+    return { tracker: { ...cleaned, bindings }, createdTrackerIds: [], actions: [] }
+  }
+
+  const specs = Array.isArray(options.masterDataTrackers) ? options.masterDataTrackers : []
+  const specsByKey = new Map<string, MasterDataTrackerSpec>()
+  for (const spec of specs) {
+    if (!spec || typeof spec !== 'object') continue
+    const key = typeof spec.key === 'string' ? spec.key.trim() : ''
+    if (!key) continue
+    specsByKey.set(key, spec)
   }
 
   const masterDataModuleParent = scope === 'module' ? moduleId ?? null : null
@@ -153,75 +196,201 @@ export async function applyMasterDataBindings(options: {
     select: { id: true, name: true, schema: true },
   })
 
-  const trackerIndex = existingMasterDataTrackers.map((t) => ({
-    id: t.id,
-    name: t.name ?? '',
-    normalized: normalizeName(t.name ?? ''),
-    schema: t.schema as Record<string, unknown>,
-  }))
+  const trackerIndex = existingMasterDataTrackers.map((t) => {
+    const schema = t.schema as Record<string, unknown>
+    const meta = readMasterDataMeta(schema) ?? buildMasterDataMeta({ schema })
+    return {
+      id: t.id,
+      name: t.name ?? '',
+      normalized: normalizeName(t.name ?? ''),
+      schema,
+      meta,
+    }
+  })
 
   const createdTrackerIds: string[] = []
-  const targetCache = new Map<string, { trackerId: string; gridId: string; labelFieldId: string }>()
+  const actions: MasterDataBuildResult['actions'] = []
+  const targetCache = new Map<
+    string,
+    { trackerId: string; gridId: string; labelFieldId: string; fieldIds: Set<string>; key?: string }
+  >()
+  const specCacheKey = (key: string) => `spec:${key}`
+  const nameCacheKey = (name: string) => `name:${name}`
+
+  const hasMasterDataGrid = (schema: Record<string, unknown>) => {
+    return resolveMasterDataGridId(schema) != null
+  }
+
+  const findCompatibleBySpec = (spec: MasterDataTrackerSpec) => {
+    const desiredSchema =
+      spec && typeof spec.schema === 'object' && spec.schema && !Array.isArray(spec.schema)
+        ? (spec.schema as Record<string, unknown>)
+        : buildMasterDataSchema(spec.name)
+
+    const desiredGridId = resolveMasterDataGridId(desiredSchema)
+    const usableSchema = desiredGridId ? desiredSchema : buildMasterDataSchema(spec.name)
+    let desiredFields = extractMasterDataFields(usableSchema, desiredGridId).fieldIds
+    if (!desiredFields.length) {
+      const fallback = buildMasterDataSchema(spec.name)
+      desiredFields = extractMasterDataFields(fallback).fieldIds
+      return { compatible: null, desiredSchema: fallback, desiredFields }
+    }
+
+    const candidates = trackerIndex.filter((t) => {
+      const candidateGridId = resolveMasterDataGridId(t.schema, t.meta?.gridId)
+      if (!candidateGridId) return false
+      if (t.meta?.key && t.meta.key === spec.key) return true
+      return t.normalized === normalizeName(spec.name)
+    })
+
+    const compatible = candidates.find((t) => desiredFields.every((id) => t.meta.fieldIds.includes(id)))
+    return { compatible, desiredSchema: usableSchema, desiredFields }
+  }
 
   for (const entry of unresolvedFields) {
-    const { field, fieldPath } = entry
+    const { field, fieldPath, binding } = entry
     if (!field.id) continue
+
+    const rawKey = typeof binding?.optionsSourceKey === 'string' ? binding.optionsSourceKey.trim() : ''
+    const spec = rawKey ? specsByKey.get(rawKey) : undefined
+
+    if (spec) {
+      const cacheKey = specCacheKey(spec.key)
+      if (!targetCache.has(cacheKey)) {
+        const { compatible, desiredSchema } = findCompatibleBySpec(spec)
+        if (compatible) {
+          const fieldsInfo = extractMasterDataFields(compatible.schema, compatible.meta?.gridId)
+          const labelFieldId = resolveLabelFieldIdFromMeta({
+            fieldIds: fieldsInfo.fieldIds,
+            fieldIdToLabel: fieldsInfo.fieldIdToLabel,
+            preferredId: spec.labelFieldId,
+          })
+          const gridId = fieldsInfo.gridId ?? resolveMasterDataGridId(compatible.schema, compatible.meta?.gridId)
+          if (!gridId) continue
+          targetCache.set(cacheKey, {
+            trackerId: compatible.id,
+            gridId,
+            labelFieldId,
+            fieldIds: new Set(fieldsInfo.fieldIds),
+            key: spec.key,
+          })
+          actions.push({ type: 'reuse', name: compatible.name || spec.name, key: spec.key, trackerId: compatible.id })
+        } else {
+          const schemaWithScope = { ...desiredSchema, masterDataScope: 'tracker' }
+          const schemaWithMeta = withMasterDataMeta({
+            schema: schemaWithScope,
+            key: spec.key,
+            preferredLabelFieldId: spec.labelFieldId,
+          })
+          const created = await createTrackerForUser({
+            userId,
+            name: spec.name,
+            schema: schemaWithMeta as object,
+            projectId,
+            moduleId: masterDataModule.id,
+          })
+          createdTrackerIds.push(created.id)
+          const meta = readMasterDataMeta(schemaWithMeta) ?? buildMasterDataMeta({
+            schema: schemaWithMeta,
+            key: spec.key,
+            preferredLabelFieldId: spec.labelFieldId,
+          })
+          trackerIndex.push({
+            id: created.id,
+            name: created.name ?? '',
+            normalized: normalizeName(created.name ?? ''),
+            schema: schemaWithMeta,
+            meta,
+          })
+          const gridId = meta.gridId ?? resolveMasterDataGridId(schemaWithMeta)
+          if (!gridId) continue
+          const fieldsInfo = extractMasterDataFields(schemaWithMeta, gridId)
+          targetCache.set(cacheKey, {
+            trackerId: created.id,
+            gridId,
+            labelFieldId: meta.labelFieldId,
+            fieldIds: new Set(fieldsInfo.fieldIds),
+            key: spec.key,
+          })
+          actions.push({ type: 'create', name: created.name ?? spec.name, key: spec.key, trackerId: created.id })
+        }
+      }
+
+      const target = targetCache.get(cacheKey)
+      if (!target) continue
+      ensureBindingEntry({
+        bindings,
+        fieldPath,
+        optionsSourceSchemaId: target.trackerId,
+        optionsSourceKey: target.key,
+        optionsGrid: target.gridId,
+        labelField: `${target.gridId}.${target.labelFieldId}`,
+        optionsFieldIds: target.fieldIds,
+      })
+      continue
+    }
 
     const label = field.ui?.label ?? field.id
     const entityName = titleCase(String(label))
     const normalized = normalizeName(entityName)
 
-    if (!targetCache.has(normalized)) {
-      let match = trackerIndex.find((t) => t.normalized === normalized)
-      let schema = match?.schema
-
-      if (!match || !schema) {
+    const fallbackKey = nameCacheKey(normalized)
+    if (!targetCache.has(fallbackKey)) {
+      let match = trackerIndex.find((t) => t.normalized === normalized && hasMasterDataGrid(t.schema))
+      if (!match) {
+        const fallbackSchema = buildMasterDataSchema(entityName)
+        const schemaWithMeta = withMasterDataMeta({
+          schema: { ...fallbackSchema, masterDataScope: 'tracker' },
+          key: normalized || undefined,
+          preferredLabelFieldId: 'value',
+        })
         const created = await createTrackerForUser({
           userId,
           name: entityName,
-          schema: buildMasterDataSchema(entityName) as object,
+          schema: schemaWithMeta as object,
           projectId,
           moduleId: masterDataModule.id,
         })
         createdTrackerIds.push(created.id)
-        schema = created.schema as Record<string, unknown>
-        match = { id: created.id, name: created.name ?? '', normalized, schema }
+        const meta = readMasterDataMeta(schemaWithMeta) ?? buildMasterDataMeta({ schema: schemaWithMeta })
+        match = {
+          id: created.id,
+          name: created.name ?? '',
+          normalized,
+          schema: schemaWithMeta,
+          meta,
+        }
         trackerIndex.push(match)
+        actions.push({ type: 'create', name: created.name ?? entityName, trackerId: created.id })
+      } else {
+        actions.push({ type: 'reuse', name: match.name || entityName, trackerId: match.id })
       }
 
-      let target = schema ? resolveLabelFieldId(schema, field.id) : null
-      if (!target) {
-        const created = await createTrackerForUser({
-          userId,
-          name: entityName,
-          schema: buildMasterDataSchema(entityName) as object,
-          projectId,
-          moduleId: masterDataModule.id,
-        })
-        createdTrackerIds.push(created.id)
-        const createdSchema = created.schema as Record<string, unknown>
-        trackerIndex.push({ id: created.id, name: created.name ?? '', normalized, schema: createdSchema })
-        target = resolveLabelFieldId(createdSchema, field.id)
-        if (!target) continue
-        match = { id: created.id, name: created.name ?? '', normalized, schema: createdSchema }
-      }
-
-      targetCache.set(normalized, {
+      const fieldsInfo = extractMasterDataFields(match.schema, match.meta?.gridId)
+      const labelFieldId = resolveLabelFieldIdFromMeta({
+        fieldIds: fieldsInfo.fieldIds,
+        fieldIdToLabel: fieldsInfo.fieldIdToLabel,
+        preferredId: match.meta?.labelFieldId,
+      })
+      const gridId = fieldsInfo.gridId ?? resolveMasterDataGridId(match.schema, match.meta?.gridId)
+      if (!gridId) continue
+      targetCache.set(fallbackKey, {
         trackerId: match.id,
-        gridId: target.gridId,
-        labelFieldId: target.labelFieldId,
+        gridId,
+        labelFieldId,
+        fieldIds: new Set(fieldsInfo.fieldIds),
       })
     }
 
-    const target = targetCache.get(normalized)
+    const target = targetCache.get(fallbackKey)
     if (!target) continue
-
     ensureBindingEntry({
       bindings,
       fieldPath,
       optionsSourceSchemaId: target.trackerId,
       optionsGrid: target.gridId,
       labelField: `${target.gridId}.${target.labelFieldId}`,
+      optionsFieldIds: target.fieldIds,
     })
   }
 
@@ -229,5 +398,6 @@ export async function applyMasterDataBindings(options: {
   return {
     tracker: { ...cleaned, bindings },
     createdTrackerIds,
+    actions,
   }
 }

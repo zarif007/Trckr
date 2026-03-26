@@ -78,6 +78,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
+  const [isResolvingMasterData, setIsResolvingMasterData] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
   const [resumingAfterError, setResumingAfterError] = useState(false)
@@ -88,6 +89,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const continueCountRef = useRef(0)
   const validationFixRetryCountRef = useRef(0)
   const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
+  const masterDataSpecsRef = useRef<MultiAgentSchema['masterDataTrackers'] | undefined>(undefined)
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
@@ -183,6 +185,11 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     }
 
     if (!rawTracker) return null
+    if (Array.isArray(response.masterDataTrackers) && response.masterDataTrackers.length) {
+      masterDataSpecsRef.current = response.masterDataTrackers
+    } else {
+      masterDataSpecsRef.current = undefined
+    }
     rawTracker = normalizeValidationAndCalculations(rawTracker)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
@@ -226,6 +233,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     if (!needsResolution) return tracker
 
     try {
+      setIsResolvingMasterData(true)
       const res = await fetch('/api/master-data/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -233,6 +241,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           tracker,
           trackerSchemaId: trackerId,
           masterDataScope: scope,
+          masterDataTrackers: masterDataSpecsRef.current,
         }),
       })
       if (!res.ok) return tracker
@@ -240,6 +249,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       return data.tracker ?? tracker
     } catch {
       return tracker
+    } finally {
+      setIsResolvingMasterData(false)
     }
   }, [trackerId])
 
@@ -677,6 +688,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setIsDialogOpen,
     activeTrackerData,
     setActiveTrackerData,
+    isResolvingMasterData,
     generationErrorMessage,
     validationErrors,
     resumingAfterError,

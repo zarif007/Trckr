@@ -1,11 +1,18 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { useMemo, useState } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { SearchableSelect } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, ListTree } from 'lucide-react'
 import type { FieldMapping } from '@/lib/types/tracker-bindings'
 import { cn } from '@/lib/utils'
 
@@ -51,7 +58,7 @@ function MappingInput({
       value={value || '__empty__'}
       onValueChange={(v) => onChange(v === '__empty__' ? '' : v)}
       placeholder={placeholder}
-      searchPlaceholder={placeholder}
+      searchPlaceholder={`Search ${placeholder.toLowerCase()}…`}
       className={className}
       disabled={disabled}
     />
@@ -67,6 +74,7 @@ export function FieldMappingsEditor({
   className,
 }: FieldMappingsEditorProps) {
   const mappings: FieldMapping[] = Array.isArray(value) ? value : []
+  const [open, setOpen] = useState(false)
 
   const summary = useMemo(() => {
     if (!mappings.length) return 'No mappings'
@@ -80,73 +88,144 @@ export function FieldMappingsEditor({
   }
 
   const removeAt = (index: number) => {
-    const nextList = mappings.filter((_, i) => i !== index)
-    onChange(nextList)
+    onChange(mappings.filter((_, i) => i !== index))
   }
 
   const append = () => onChange([...mappings, { from: '', to: '' }])
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <button
           type="button"
           className={cn(
-            'w-full text-left px-2 py-1.5 rounded-md border border-transparent hover:border-input hover:bg-muted/50 transition-colors',
+            'group w-full flex items-center justify-between gap-3 rounded-lg border border-border/80 bg-muted/25 px-3 py-2.5 text-left shadow-sm transition-colors hover:bg-muted/45 hover:border-border',
             className
           )}
           disabled={disabled}
         >
-          <span className="truncate block">{summary}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background/80 text-muted-foreground ring-1 ring-border/60 group-hover:text-foreground">
+              <ListTree className="size-4" aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-medium text-foreground">{summary}</span>
+              <span className="block text-[11px] text-muted-foreground">Map master data columns to this grid</span>
+            </span>
+          </span>
+          <span className="shrink-0 rounded-md bg-background/60 px-2 py-1 text-[11px] font-medium text-muted-foreground ring-1 ring-border/50 group-hover:text-foreground">
+            Edit
+          </span>
         </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" align="start" sideOffset={4}>
-        <div className="flex flex-col gap-1.5 w-full min-w-[280px] max-w-[420px]">
-          {mappings.map((m, i) => (
-            <div key={i} className="flex items-center gap-1.5 flex-wrap">
-              <MappingInput
-                value={m.from}
-                onChange={(next) => updateAt(i, { ...m, from: next })}
-                options={fromOptions}
-                placeholder="From"
-                disabled={disabled}
-                className="flex-1 min-w-[80px]"
-              />
-              <span className="text-muted-foreground shrink-0">→</span>
-              <MappingInput
-                value={m.to}
-                onChange={(next) => updateAt(i, { ...m, to: next })}
-                options={toOptions}
-                placeholder="To"
-                disabled={disabled}
-                className="flex-1 min-w-[80px]"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0 h-7 w-7 text-muted-foreground hover:text-destructive"
-                onClick={() => removeAt(i)}
-                disabled={disabled}
-                aria-label="Remove mapping"
-              >
-                <Trash2 className="size-3.5" />
-              </Button>
+      </DialogTrigger>
+      <DialogContent
+        showCloseButton
+        className="flex max-h-[min(90vh,780px)] w-[calc(100%-1.5rem)] flex-col overflow-hidden p-0 sm:max-w-2xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="shrink-0 space-y-1.5 border-b border-border/60 px-5 pt-5 pb-4 text-left">
+          <DialogTitle className="text-base">Field mappings</DialogTitle>
+          <DialogDescription className="text-xs leading-relaxed">
+            When someone picks an option in the bound select, values copy from the master data row (left) into
+            fields on this grid (right). Use <span className="font-medium text-foreground/90">Auto-map</span> on the
+            bindings tab for suggested pairs.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+          {mappings.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/70 bg-muted/20 py-12 px-4 text-center">
+              <ListTree className="size-8 text-muted-foreground/50" aria-hidden />
+              <p className="text-sm text-muted-foreground max-w-sm">
+                No mappings yet. Add rows below or run Auto-map to match fields by name.
+              </p>
             </div>
-          ))}
+          ) : (
+            <div className="space-y-3">
+              <div className="hidden sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem] sm:gap-x-3 sm:items-end sm:px-1">
+                <span className="sr-only">#</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Master data field
+                </span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  This grid field
+                </span>
+                <span className="sr-only">Remove</span>
+              </div>
+              {mappings.map((m, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'rounded-xl border border-border/60 bg-card/40 p-3 shadow-sm',
+                    'sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none',
+                    'sm:grid sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,1fr)_2.5rem] sm:gap-x-3 sm:items-center'
+                  )}
+                >
+                  <div
+                    className="mb-3 flex size-8 items-center justify-center rounded-lg bg-muted/80 text-xs font-semibold text-muted-foreground sm:mb-0"
+                    aria-hidden
+                  >
+                    {i + 1}
+                  </div>
+                  <div className="min-w-0 space-y-1.5 sm:space-y-0">
+                    <label className="sm:sr-only text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Master data field
+                    </label>
+                    <MappingInput
+                      value={m.from}
+                      onChange={(next) => updateAt(i, { ...m, from: next })}
+                      options={fromOptions}
+                      placeholder="Choose source…"
+                      disabled={disabled}
+                      className="h-10 w-full min-w-0"
+                    />
+                  </div>
+                  <div className="mt-3 min-w-0 space-y-1.5 sm:mt-0 sm:space-y-0">
+                    <label className="sm:sr-only text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      This grid field
+                    </label>
+                    <MappingInput
+                      value={m.to}
+                      onChange={(next) => updateAt(i, { ...m, to: next })}
+                      options={toOptions}
+                      placeholder="Choose target…"
+                      disabled={disabled}
+                      className="h-10 w-full min-w-0"
+                    />
+                  </div>
+                  <div className="mt-2 flex justify-end sm:mt-0 sm:justify-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-9 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => removeAt(i)}
+                      disabled={disabled}
+                      aria-label={`Remove mapping ${i + 1}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="shrink-0 border-t border-border/60 bg-muted/20 px-5 py-4">
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             size="sm"
-            className="w-full justify-center gap-1.5 h-7 text-muted-foreground"
+            className="h-10 w-full gap-2 sm:w-auto sm:min-w-[160px]"
             onClick={append}
             disabled={disabled}
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
             Add mapping
           </Button>
         </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   )
 }

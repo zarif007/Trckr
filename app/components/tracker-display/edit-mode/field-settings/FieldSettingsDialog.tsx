@@ -168,6 +168,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     setPrefix={state.setPrefix}
                     dataSourcesList={state.dataSourcesList}
                     resolvePathLabelFn={state.resolvePathLabelFn}
+                    resolveAutoPopulateFromPathLabelFn={state.resolveAutoPopulateFromPathLabelFn}
                     isRequired={state.isRequired}
                     setIsRequired={state.setIsRequired}
                     isHidden={state.isHidden}

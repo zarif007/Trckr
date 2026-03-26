@@ -183,6 +183,12 @@ const bindingEntrySchema = z
       .describe(
         'Optional id of another tracker schema in the same project; when set, optionsGrid/labelField refer to that schema and rows load from that tracker data.',
       ),
+    optionsSourceKey: z
+      .string()
+      .optional()
+      .describe(
+        'Optional stable key for master data tracker specs (module/project scope). Used to match bindings to master data tracker definitions.',
+      ),
     optionsGrid: z.string().describe('Grid id containing options (e.g. product_options_grid)'),
     labelField: z.string().describe('Path to the option field in options grid (grid_id.field_id). Must be a different field id than the select field—use a dedicated option field in the options grid (e.g. exercise_options_grid.exercise_option), not the same id as the bound select.'),
     fieldMappings: z.array(fieldMappingSchema).default([]).describe('Must include one mapping where "to" is this select field and "from" is the same path as labelField; other mappings auto-populate'),

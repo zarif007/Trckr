@@ -50,7 +50,7 @@ function buildOptionRowIndex(
   const byValue = new Map<unknown, Record<string, unknown>>()
   const byLabel = new Map<string, Record<string, unknown>>()
   const byId = new Map<unknown, Record<string, unknown>>()
-  
+
   for (const row of rows) {
     // Index by value field
     if (valueFieldId && row[valueFieldId] !== undefined) {
@@ -68,7 +68,7 @@ function buildOptionRowIndex(
       byId.set(String(rowId), row)
     }
   }
-  
+
   return { byValue, byLabel, byId, byIndex: rows }
 }
 
@@ -83,18 +83,18 @@ function getCachedOptionRowIndex(
 ): OptionRowIndex {
   const cacheKey = `${valueFieldId ?? ''}|${labelFieldId ?? ''}`
   let byBinding = optionRowIndexCache.get(rows)
-  
+
   if (!byBinding) {
     byBinding = new Map()
     optionRowIndexCache.set(rows, byBinding)
   }
-  
+
   let index = byBinding.get(cacheKey)
   if (!index) {
     index = buildOptionRowIndex(rows, valueFieldId, labelFieldId)
     byBinding.set(cacheKey, index)
   }
-  
+
   return index
 }
 

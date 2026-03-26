@@ -1,6 +1,6 @@
 import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
-import { MASTER_DATA_GRID_ID, MASTER_DATA_SECTION_ID, MASTER_DATA_VIEW_ID } from './constants'
-import { titleCase } from './utils'
+import { MASTER_DATA_VIEW_ID } from './constants'
+import { createMasterDataGridId, createMasterDataSectionId, titleCase } from './utils'
 
 type Grid = { id?: string; sectionId?: string; name?: string }
 type Field = { id?: string; dataType?: string; ui?: { label?: string } }
@@ -13,7 +13,7 @@ function readSchemaArrays(schema: Record<string, unknown>) {
   return { grids, fields, layoutNodes }
 }
 
-export function resolveLabelFieldId(
+export function findLabelFieldPathForOptionsBinding(
   schema: Record<string, unknown>,
   selectFieldId: string
 ): { gridId: string; labelFieldId: string } | null {
@@ -47,15 +47,16 @@ export function buildMasterDataSchema(entityName: string): Record<string, unknow
   const base = createEmptyTrackerSchema()
   const tabId = base.tabs?.[0]?.id ?? 'overview_tab'
   const tabName = base.tabs?.[0]?.name ?? 'Overview'
-  const sectionId = MASTER_DATA_SECTION_ID
-  const gridId = MASTER_DATA_GRID_ID
+  const sectionId = createMasterDataSectionId(entityName)
+  const gridId = createMasterDataGridId(entityName)
+  const sectionName = `${titleCase(entityName)} Master Data`
 
   return {
     ...base,
     name: undefined,
     masterDataScope: 'tracker',
     tabs: [{ id: tabId, name: tabName, placeId: base.tabs?.[0]?.placeId ?? 0, config: {} }],
-    sections: [{ id: sectionId, name: 'Master Data', tabId, placeId: 1, config: {} }],
+    sections: [{ id: sectionId, name: sectionName, tabId, placeId: 1, config: {} }],
     grids: [
       {
         id: gridId,
@@ -67,9 +68,14 @@ export function buildMasterDataSchema(entityName: string): Record<string, unknow
       },
     ],
     fields: [
-      { id: 'name', dataType: 'string', ui: { label: 'Name' }, config: { isRequired: true } },
+      {
+        id: 'value',
+        dataType: 'string',
+        ui: { label: titleCase(entityName) || 'Value' },
+        config: { isRequired: true },
+      },
     ],
-    layoutNodes: [{ gridId, fieldId: 'name', order: 1 }],
+    layoutNodes: [{ gridId, fieldId: 'value', order: 1 }],
     bindings: {},
     validations: {},
     calculations: {},

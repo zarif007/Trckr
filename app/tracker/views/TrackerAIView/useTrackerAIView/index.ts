@@ -111,6 +111,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     isChatEmpty,
     toolCalls,
     isResolvingExpressions,
+    isResolvingMasterData,
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
@@ -534,7 +535,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [activeTrackerData, viewingMessageIndex, allowSchemaAutoSave, dataSave])
 
   const effectiveDisplaySchema = useMemo(() => {
-    const isTrackerBusy = isLoading || isResolvingExpressions
+    const isTrackerBusy =
+      isLoading || isResolvingExpressions || isResolvingMasterData
     if (isTrackerBusy && streamedDisplayTracker) return streamedDisplayTracker
     if (viewingMessageIndex !== null) return schema
     if (activeTrackerData && lastSyncedTracker !== activeTrackerData) return activeTrackerData
@@ -542,6 +544,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [
     isLoading,
     isResolvingExpressions,
+    isResolvingMasterData,
     streamedDisplayTracker,
     viewingMessageIndex,
     activeTrackerData,
@@ -573,8 +576,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [isDesktop, mobileTab])
 
   useEffect(() => {
-    if (isLoading || isResolvingExpressions) setEditMode(false)
-  }, [isLoading, isResolvingExpressions])
+    if (isLoading || isResolvingExpressions || isResolvingMasterData) setEditMode(false)
+  }, [isLoading, isResolvingExpressions, isResolvingMasterData])
 
   const hasGeneratedTracker = useMemo(
     () => messages.some((message) => Boolean(message.trackerData)),
@@ -592,7 +595,15 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     return viewingMessageIndex !== lastTrackerMessageIndex
   }, [viewingMessageIndex, lastTrackerMessageIndex])
 
-  const isStreamingTracker = Boolean(isLoading && streamedDisplayTracker)
+  const streamedObject = object as
+    | { tracker?: unknown; trackerPatch?: unknown }
+    | undefined
+  const isStreamingTracker = Boolean(
+    isLoading &&
+      (streamedDisplayTracker ||
+        streamedObject?.tracker != null ||
+        streamedObject?.trackerPatch != null),
+  )
   const hasAnyAssistantResponse = messages.some((m) => m.role === 'assistant')
   const showStatusPanel =
     Boolean(error) ||
@@ -636,6 +647,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       activeTrackerMessageIndex: undefined,
       toolCalls: undefined,
       isResolvingExpressions: false,
+      isResolvingMasterData: false,
       mode: 'data' as const,
       isConversationLoading: analystConversationLoading,
       conversationWindows: analystChatWindows,
@@ -664,6 +676,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
       toolCalls,
       isResolvingExpressions,
+      isResolvingMasterData,
       mode: 'schema' as const,
       isConversationLoading: builderConversationLoading,
       conversationWindows: builderChatWindows,
@@ -690,6 +703,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     effectiveDisplaySchema,
     canEditSchema,
     isStreamingTracker,
+    isResolvingMasterData,
     trackerDataRef,
     handleGridDataChange,
     undoable,

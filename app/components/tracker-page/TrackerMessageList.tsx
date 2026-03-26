@@ -22,14 +22,15 @@ interface TrackerMessageListProps {
   activeTrackerMessageIndex?: number | null
   toolCalls?: ToolCallEntry[]
   isResolvingExpressions?: boolean
+  isResolvingMasterData?: boolean
   mode?: 'schema' | 'data'
 }
 
-function renderStreamingPreview() {
+function renderStreamingStatus(message: string) {
   return (
     <div className="w-full min-w-0 rounded-md border border-border/40 bg-muted/40 px-4 py-3 flex items-center gap-3">
       <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-      <p className="text-sm font-medium text-muted-foreground">Streaming tracker…</p>
+      <p className="text-sm font-medium text-muted-foreground">{message}</p>
     </div>
   )
 }
@@ -45,6 +46,7 @@ export function TrackerMessageList({
   activeTrackerMessageIndex,
   toolCalls = [],
   isResolvingExpressions = false,
+  isResolvingMasterData = false,
   mode = 'schema',
 }: TrackerMessageListProps) {
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false)
@@ -223,7 +225,7 @@ export function TrackerMessageList({
           )}
         </motion.div>
       ))}
-      {(isLoading || isResolvingExpressions) && (
+      {(isLoading || isResolvingExpressions || isResolvingMasterData) && (
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -242,11 +244,13 @@ export function TrackerMessageList({
                     ? (object as { content?: string } | undefined)?.content
                       ? 'Writing analysis…'
                       : 'Analyzing your data…'
-                    : isResolvingExpressions
-                      ? 'Generating expressions…'
-                      : !object?.manager ? 'Consulting product manager…' :
-                        !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
-                          'Building your tracker…'}
+                    : isResolvingMasterData
+                      ? 'Linking master data…'
+                      : isResolvingExpressions
+                        ? 'Generating expressions…'
+                        : !object?.manager ? 'Consulting product manager…' :
+                          !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
+                            'Building your tracker…'}
                 </p>
               </div>
 
@@ -263,9 +267,10 @@ export function TrackerMessageList({
               )}
 
               {!isAnalystMode &&
-                ((isLoading && object?.manager) || toolCalls.length > 0) && (
+                (((isLoading || isResolvingMasterData) && object?.manager) ||
+                  toolCalls.length > 0) && (
                   <div className="w-full min-w-0 space-y-2">
-                    {isLoading && object?.manager && (
+                    {(isLoading || isResolvingMasterData) && object?.manager && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -342,7 +347,11 @@ export function TrackerMessageList({
                 )}
             </div>
           </div>
-          {!isAnalystMode && isLoading && object?.tracker && renderStreamingPreview()}
+          {!isAnalystMode &&
+            isLoading &&
+            (object?.tracker || object?.trackerPatch) &&
+            renderStreamingStatus('Streaming tracker…')}
+          {!isAnalystMode && isResolvingMasterData && renderStreamingStatus('Linking master data…')}
         </motion.div>
       )}
       <div ref={messagesEndRef} />

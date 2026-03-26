@@ -7,8 +7,8 @@ into small, composable units so each concern can be tested and evolved independe
 ## Responsibilities
 - **Scope resolution:** resolve default scope from nearest module ancestor, then project.
 - **Module container:** find or create a `Master Data` module marked with `settings.masterDataModule = true`.
-- **Schema building:** create a minimal master data tracker (single grid with `name`).
-- **Binding builder:** reuse existing master data trackers by normalized name or create new ones, then
+- **Schema building:** use LLM-defined master data tracker schemas when provided; fallback to a minimal schema when missing.
+- **Binding builder:** reuse existing master data trackers by spec key or name similarity, then
   bind select/multiselect fields via `optionsSourceSchemaId`.
 
 ## Scope Behavior
@@ -23,22 +23,30 @@ into small, composable units so each concern can be tested and evolved independe
 For module/project scope, LLM output can use a placeholder:
 ```
 optionsSourceSchemaId: "__master_data__"
-optionsGrid: "master_data_grid"
-labelField: "master_data_grid.name"
+optionsSourceKey: "student"
+optionsGrid: "student_grid"
+labelField: "student_grid.full_name"
 ```
 The server-side builder replaces this placeholder with a real tracker schema id and a concrete
 grid/label field from the reused/created master data tracker.
+
+## Master Data Trackers (module/project scope)
+LLM output can include `masterDataTrackers` entries that define the full schema for reusable master data:
+- Each entry has `key`, `name`, `labelFieldId`, and `schema`.
+- The schema must include a single grid with an id derived from the tracker key/name (snake_case, ends with `_grid`).
+- Fields can be any required attributes (e.g. full_name, age, roll).
 
 ## Invariants
 - Master data containers are always modules named **Master Data** with `settings.masterDataModule = true`.
 - Reuse is preferred: if a compatible tracker exists in the scoped Master Data module, it is reused.
 - No default Master Data tab is created unless scope is `tracker` **and** select fields exist.
 - Legacy `shared_tab` is preserved and never renamed.
+- Master data trackers embed `masterDataMeta` (including grid id + field signatures) for compatibility checks.
 
 ## Entry Points
 - `resolveMasterDataDefaultScope()` — scope inheritance (module chain → project).
 - `findOrCreateMasterDataModule()` — module container resolution.
-- `applyMasterDataBindings()` — binding creation/reuse and placeholder replacement.
+- `applyMasterDataBindings()` — binding creation/reuse, placeholder replacement, and metadata embedding.
 - `buildMasterDataSchema()` — minimal master data tracker schema.
 
 ## Tests

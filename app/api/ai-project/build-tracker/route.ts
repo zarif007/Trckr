@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { multiAgentSchema, type MultiAgentSchema } from '@/lib/schemas/multi-agent'
+import { multiAgentSchema, type MultiAgentSchema, type MasterDataTrackerSpec } from '@/lib/schemas/multi-agent'
 import { getDefaultAiProvider, logAiError, logAiStage, getConfiguredMaxOutputTokens } from '@/lib/ai'
 import { createRequestLogContext, jsonError } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
@@ -203,13 +203,52 @@ export async function POST(request: Request) {
               ...(trackerSchema as Record<string, unknown>),
               masterDataScope,
             }
+            const masterDataTrackers = Array.isArray(fullObject?.masterDataTrackers)
+              ? (fullObject.masterDataTrackers as MasterDataTrackerSpec[])
+              : undefined
+            if (masterDataScope === 'tracker') {
+              const grids = Array.isArray((schemaWithScope as Record<string, unknown>).grids)
+                ? ((schemaWithScope as Record<string, unknown>).grids as Array<{ id?: string }>)
+                : []
+              const tabs = Array.isArray((schemaWithScope as Record<string, unknown>).tabs)
+                ? ((schemaWithScope as Record<string, unknown>).tabs as Array<{ id?: string }>)
+                : []
+              const hasLocalOptions =
+                grids.some((g) => (g.id ?? '').endsWith('_options_grid')) ||
+                tabs.some((t) => t.id === 'master_data_tab')
+              if (hasLocalOptions) {
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({
+                      type: 'progress',
+                      message: 'Master Data: building local options',
+                    }) + '\n',
+                  ),
+                )
+              }
+            }
             const masterDataResult = await applyMasterDataBindings({
               tracker: schemaWithScope,
               scope: masterDataScope,
+              masterDataTrackers,
               projectId: parsed.projectId,
               moduleId: parsed.moduleId ?? null,
               userId: authResult.user.id,
             })
+
+            if (masterDataResult.actions.length) {
+              for (const action of masterDataResult.actions) {
+                const verb = action.type === 'create' ? 'creating' : 'reusing'
+                controller.enqueue(
+                  encoder.encode(
+                    JSON.stringify({
+                      type: 'progress',
+                      message: `Master Data: ${verb} ${action.name}`,
+                    }) + '\n',
+                  ),
+                )
+              }
+            }
 
             createdTracker = await createTrackerForUser({
               userId: authResult.user.id,
