@@ -179,7 +179,7 @@ export function validateBindingDraft(
   }
 
   if (!optionsGrid) {
-    errors.optionsGrid = 'Options grid is required.'
+    errors.optionsGrid = 'Master data grid is required.'
   }
 
   if (!labelField) {
@@ -189,16 +189,16 @@ export function validateBindingDraft(
     if (!parsed.fieldId) {
       errors.labelField = 'Label field must be a grid.field path.'
     } else if (parsed.gridId && parsed.gridId !== optionsGrid) {
-      errors.labelField = 'Label field must be in the selected options grid.'
+      errors.labelField = 'Label field must be in the selected master data grid.'
     } else if (parsed.fieldId) {
       const gridFields = optionsSideMap.get(optionsGrid)
       if (gridFields && !gridFields.has(parsed.fieldId)) {
-        errors.labelField = 'Label field does not exist in the selected options grid.'
+        errors.labelField = 'Label field does not exist in the selected master data grid.'
       } else if (key) {
         const keyFieldId = parsePath(key).fieldId
         if (keyFieldId && keyFieldId === parsed.fieldId) {
           errors.labelField =
-            'The options grid must use a different field than the select field. Add a dedicated field (e.g. exercise_option) in the options grid and choose it here.'
+            'The master data grid must use a different field than the select field. Add a dedicated field (e.g. exercise_option) in the master data grid and choose it here.'
         }
       }
     }
@@ -215,11 +215,11 @@ export function validateBindingDraft(
       const toParsed = parsePath(mapping.to)
       if (optionsFieldIds) {
         if (fromParsed.gridId && fromParsed.gridId !== optionsGrid) {
-          errors.fieldMappings = 'Mapping sources must be from the options grid.'
+          errors.fieldMappings = 'Mapping sources must be from the master data grid.'
           break
         }
         if (fromParsed.fieldId && !optionsFieldIds.has(fromParsed.fieldId)) {
-          errors.fieldMappings = 'Mapping sources must be from the options grid.'
+          errors.fieldMappings = 'Mapping sources must be from the master data grid.'
           break
         }
       }

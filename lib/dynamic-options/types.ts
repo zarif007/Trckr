@@ -47,7 +47,7 @@ export interface DynamicOptionsContext {
   gridData?: Record<string, Array<Record<string, unknown>>>
   /** When provided, all_field_paths only returns paths that exist in layout (grid.field on a grid). */
   layoutNodes?: DynamicOptionsLayoutNode[]
-  /** When provided, all_field_paths excludes fields on sections with tabId === shared_tab. */
+  /** When provided, all_field_paths excludes fields on sections with tabId === shared_tab or master_data_tab. */
   sections?: DynamicOptionsSection[]
   /** Optional runtime values when resolving dynamic options for a specific field/row. */
   runtime?: DynamicOptionsRuntimeContext

@@ -9,15 +9,15 @@ The schema MUST follow this structure exactly (flat arrays with references, no n
 - grids: array of grid objects with sectionId referencing a section
 - fields: array of atomic field objects (data definitions)
 - layoutNodes: array of placement objects linking fields to grids (fieldId, gridId, order)
-- bindings: MANDATORY object for ALL select/multiselect fields — the ONLY source of options; each entry points to an options grid (id ending with _options_grid)
+- bindings: MANDATORY object for ALL select/multiselect fields — the ONLY source of options; each entry points to a master data grid (local) or master data tracker (foreign)
 - dependsOn: optional array of conditional rules that apply dynamic field actions (hide/require/disable)
 
 All IDs MUST be unique across the schema.
 
 ID NAMING (follow exactly so agents and code stay consistent):
-- Tabs: snake_case, MUST end with _tab (e.g. overview_tab, shared_tab).
+- Tabs: snake_case, MUST end with _tab (e.g. overview_tab, master_data_tab). Legacy shared_tab may exist; keep it untouched.
 - Sections: snake_case, MUST end with _section (e.g. main_section, option_lists_section).
-- Grids: snake_case, MUST end with _grid (e.g. tasks_grid, meta_grid). Options grids MUST end with _options_grid (e.g. category_options_grid).
+- Grids: snake_case, MUST end with _grid (e.g. tasks_grid, meta_grid). Local master data grids (tracker scope) MUST end with _options_grid (e.g. category_options_grid).
 - Fields: snake_case, no suffix (e.g. due_date, status, title).
 - RESERVED: Never use "row_id" as a field id — it is reserved for the system.
 
@@ -29,18 +29,37 @@ GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
 - Never emit two different objects with the exact same id.
 - When generating patches, you MUST respect existing ids in the Current Tracker State (do not rename them). For any NEW tab/section/grid/field you add, if the desired base id is already used anywhere, choose the next available numeric suffix instead.
 
+=== MASTER DATA SCOPE (MANDATORY) ===
+
+Top-level masterDataScope: "tracker" | "module" | "project".
+- Always include masterDataScope in the output.
+- If the Current Tracker State already includes shared_tab, keep it as legacy (do NOT rename it).
+
+Scope behavior:
+1) masterDataScope = "tracker"
+   - Create a "Master Data" tab only when options/multiselect fields exist.
+   - Tab: { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
+   - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
+   - Create local master data grids (id ending with _options_grid) inside master_data_section.
+2) masterDataScope = "module" or "project"
+   - Do NOT create master_data_tab or any local options grids.
+   - Still create bindings entries for every options/multiselect field.
+   - Set optionsSourceSchemaId to "__master_data__" placeholder.
+   - Use optionsGrid "master_data_grid" and labelField "master_data_grid.name".
+   - The server will replace the placeholder with a real master data tracker before saving.
+
 === CRITICAL: OPTIONS/MULTISELECT FIELDS USE BINDINGS ONLY ===
 
-Every field with dataType "options" or "multiselect" MUST have a bindings entry. optionsGrid MUST point to an OPTIONS GRID (id ending with _options_grid), NEVER to a main data grid (e.g. do NOT use suppliers_grid as optionsGrid for a supplier select — use supplier_options_grid).
+Every field with dataType "options" or "multiselect" MUST have a bindings entry. If optionsSourceSchemaId is OMITTED, optionsGrid MUST point to a LOCAL master data grid (id ending with _options_grid), NEVER to a main data grid (e.g. do NOT use suppliers_grid as optionsGrid for a supplier select — use supplier_options_grid).
 
-OPTIONS GRID: ONE FIELD PER OPTION SET — no separate "label" and "value". The option field holds whatever the user enters; that value is both what is displayed and what is stored (e.g. "Exercise" or "High"). CRITICAL: The options grid MUST use a DIFFERENT field id than the select field. Use a dedicated option field id (e.g. exercise_option for exercise_options_grid), NEVER the same id as the select field (e.g. do NOT use "exercise" in both workouts_grid and exercise_options_grid — use "exercise" in the main grid and "exercise_option" in the options grid).
+MASTER DATA GRID (local scope): ONE FIELD PER OPTION SET — no separate "label" and "value". The option field holds whatever the user enters; that value is both what is displayed and what is stored (e.g. "Exercise" or "High"). CRITICAL: The master data grid MUST use a DIFFERENT field id than the select field. Use a dedicated option field id (e.g. exercise_option for exercise_options_grid), NEVER the same id as the select field (e.g. do NOT use "exercise" in both workouts_grid and exercise_options_grid — use "exercise" in the main grid and "exercise_option" in the master data grid).
 
-Create for EACH distinct option set:
-1. SHARED TAB (once): { id: "shared_tab", name: "Shared", placeId: 999, config: {} }
-2. SHARED SECTION (once): { id: "option_lists_section", name: "Option Lists", tabId: "shared_tab", placeId: 1, config: {} }
-3. OPTIONS GRID: { id: "{option_name}_options_grid", name: "{Option Name} Options", sectionId: "option_lists_section", placeId: N, config: {}, views: [{ id: "{option_name}_table_view", name: "Table", type: "table", config: {} }] }
+Create for EACH distinct option set when masterDataScope = "tracker":
+1. MASTER DATA TAB (once): { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
+2. MASTER DATA SECTION (once): { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
+3. MASTER DATA GRID: { id: "{option_name}_options_grid", name: "{Option Name}", sectionId: "master_data_section", placeId: N, config: {}, views: [{ id: "{option_name}_table_view", name: "Table", type: "table", config: {} }] }
 4. ONE OPTION FIELD (distinct id): { id: "{option_name}_option", dataType: "string", ui: { label: "{Option Name}" }, config: {} } — e.g. id "exercise_option" for exercise_options_grid (select field stays "exercise" in main grid). This single field is both display and stored value.
-5. LAYOUT NODES: place that option field in the options grid (and the select field only in the main grid)
+5. LAYOUT NODES: place that option field in the master data grid (and the select field only in the main grid)
 6. BINDINGS ENTRY: labelField = path to the OPTION field (e.g. "exercise_options_grid.exercise_option"); fieldMappings "from" = same path
 
 === BINDINGS (MANDATORY FOR ALL SELECT/MULTISELECT FIELDS) ===
@@ -67,7 +86,7 @@ PATH FORMAT (no tab - grid and grid.field only):
 - optionsGrid: just the grid id (e.g. "product_options_grid")
 - labelField and field path: "grid_id.field_id" (e.g. "exercise_options_grid.exercise", "orders_grid.product")
 
-EXAMPLE 1 - Product select with price auto-fill (options grid uses product_option, not product):
+EXAMPLE 1 - Product select with price auto-fill (local options grid uses product_option, not product):
 
 bindings: {
   "orders_grid.product": {
@@ -80,7 +99,7 @@ bindings: {
   }
 }
 
-EXAMPLE 2 - Simple status dropdown (options grid uses status_option):
+EXAMPLE 2 - Simple status dropdown (local options grid uses status_option):
 
 bindings: {
   "tasks_grid.status": {
@@ -92,7 +111,7 @@ bindings: {
   }
 }
 
-EXAMPLE 3 - Multiple auto-populate (options grid must be _options_grid):
+EXAMPLE 3 - Multiple auto-populate (local options grid ends with _options_grid):
 
 bindings: {
   "items_grid.product": {
@@ -108,10 +127,11 @@ bindings: {
 BINDINGS RULES:
 1. EVERY select/multiselect field MUST have a bindings entry - NO EXCEPTIONS
 2. Key is ALWAYS: "<grid_id>.<field_id>" (NO tab in any path)
-3. optionsGrid MUST be an options grid (id ending with _options_grid), NEVER a main data grid (e.g. use supplier_options_grid not suppliers_grid)
-4. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise").
-5. fieldMappings MUST have at least one entry where "to" is this select field path and "from" equals labelField (same path)
-6. Other fieldMappings entries auto-populate other main grid fields when an option is selected
+3. If optionsSourceSchemaId is omitted, optionsGrid MUST be a local master data grid (id ending with _options_grid), NEVER a main data grid (e.g. use supplier_options_grid not suppliers_grid)
+4. If optionsSourceSchemaId is present (module/project scope), optionsGrid MUST be "master_data_grid" and labelField MUST be "master_data_grid.name" (the server will replace the placeholder schema id).
+5. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise"). For module/project scope, labelField is "master_data_grid.name".
+6. fieldMappings MUST have at least one entry where "to" is this select field path and "from" equals labelField (same path)
+7. Other fieldMappings entries auto-populate other main grid fields when an option is selected
 
 === VALIDATION CHECKLIST ===
 Before completing output, verify:
@@ -120,14 +140,15 @@ Before completing output, verify:
 [ ] Every fieldMappings includes one entry where "to" equals the bindings key (the value mapping)
 [ ] Every optionsGrid, labelField (option field path), and fieldMappings from/to reference existing grids and fields
 [ ] labelField and the value mapping "from" point to the same option field; option field id must be DIFFERENT from the select field id (e.g. exercise_options_grid.exercise_option, not exercise_options_grid.exercise)
-[ ] Every optionsGrid id ends with _options_grid (options grids only; never main data grids)
-[ ] Shared tab infrastructure exists for all options grids referenced in bindings
+[ ] Every LOCAL optionsGrid id ends with _options_grid (local master data grids only; never main data grids)
+[ ] If optionsSourceSchemaId is present, optionsGrid is "master_data_grid" and labelField is "master_data_grid.name"
+[ ] Master data tab infrastructure exists for all local options grids when masterDataScope = "tracker"
 
 CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" object (can be {} if no options needed). The UI uses config to apply rules (disabled state, visibility, layout).
 
 1. Tabs
 - One object per tab. Fields: id (snake_case, MUST end with _tab), name (human title), placeId (numeric order), config (REQUIRED).
-- config standard: { isHidden?: boolean }. Use isHidden: true to hide a tab from the tab list. Do NOT set isHidden on shared_tab — the Shared tab must remain visible so users can view and edit option lists.
+- config standard: { isHidden?: boolean }. Use isHidden: true to hide a tab from the tab list. Do NOT set isHidden on master_data_tab (or legacy shared_tab) — the Master Data tab must remain visible when present.
 
 2. Sections
 - One object per section. Fields: id (snake_case, MUST end with _section), name, tabId (parent tab id), placeId (numeric order), config (REQUIRED).
@@ -154,18 +175,18 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - See the "BINDINGS" section above for detailed structure and examples.
 - EVERY select/multiselect field MUST have a bindings entry.
 - Key is "<grid_id>.<field_id>" (no tab).
-- optionsGrid MUST be an options grid (id ending with _options_grid). Never use a main data grid as optionsGrid.
+- optionsGrid MUST be an options grid (id ending with _options_grid) for local tracker scope. If optionsSourceSchemaId is set (module/project scope), optionsGrid MUST be "master_data_grid". Never use a main data grid as optionsGrid.
 - Contains optionsGrid, labelField, and fieldMappings array.
 
 9. Output
 - Emit only valid JSON. No markdown or commentary.
 
-10. Shared tab for options
-- Create a tab with id "shared_tab" and name "Shared".
-- Add a section with id "option_lists_section" (e.g. name "Option Lists").
-- Create one table grid per distinct option set; grid id MUST end with _options_grid (e.g. category_options_grid).
-- Each options grid has ONE dedicated option field per select, with a different id than the select field (e.g. field id "exercise_option" for exercise_options_grid when the select field is "exercise"). That field is both display and stored value. You can add additional fields for auto-populate (e.g., price, category).
-- For EACH select/multiselect field, add an entry to the bindings object with optionsGrid pointing to the options grid (never to a main data grid).
+10. Master Data (tracker scope only)
+- If masterDataScope = "tracker", create a tab with id "master_data_tab" and name "Master Data".
+- Add a section with id "master_data_section" (e.g. name "Master Data").
+- Create one table grid per distinct option set; grid id MUST end with _options_grid (e.g. category_options_grid), but grid names should be clean (no "Options" suffix).
+- Each master data grid has ONE dedicated option field per select, with a different id than the select field (e.g. field id "exercise_option" for exercise_options_grid when the select field is "exercise"). That field is both display and stored value. You can add additional fields for auto-populate (e.g., price, category).
+- For EACH select/multiselect field, add an entry to the bindings object with optionsGrid pointing to the master data grid (never to a main data grid).
 
 11. Views (REQUIRED)
 - Each grid MUST have a "views" array that defines all representations of that grid's data.
@@ -215,7 +236,7 @@ CRITICAL for revisions:
 5. Div view type is ONLY for single-instance content (meta, bio, summary, one-off). For any repeating/list data use table (or kanban/timeline/calendar). Never use div for rows of items.
 6. MANDATORY: Every field with dataType "options" or "multiselect" MUST have an entry in the bindings object. The bindings key is "<grid_id>.<field_id>" (no tab). Never leave options/multiselect fields without a bindings entry.
 7. When creating select fields that should auto-populate other fields (e.g., selecting a product fills in price), add fieldMappings to the bindings entry.
-8. The options grid in Shared tab can have additional fields beyond the single option field (e.g. price, description) for use in fieldMappings.
+8. The options grid in Master Data tab can have additional fields beyond the single option field (e.g. price, description) for use in fieldMappings.
 9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
 10. If the user asks for conditional behavior (show/hide/require/disable fields), include a dependsOn array with the required rules.
 11. Use "options" and "multiselect" for select fields (with bindings). Do not use "dynamic_select" or "dynamic_multiselect" unless explicitly mentioned and only when a function backs the options (e.g. built-in dynamic option functions).

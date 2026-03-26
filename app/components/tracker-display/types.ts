@@ -175,6 +175,8 @@ export type ForeignBindingNavUiState = {
 export interface TrackerDisplayProps {
   /** Optional display name for the tracker (shown in nav, share dialog, etc.). */
   name?: string
+  /** Master data scope (tracker/module/project). */
+  masterDataScope?: 'tracker' | 'module' | 'project'
   tabs: TrackerTab[]
   sections: TrackerSection[]
   grids: TrackerGrid[]

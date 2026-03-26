@@ -357,7 +357,7 @@ function DynamicNodeCardInlineConfig({
             checked={config.excludeSharedTab !== false}
             onCheckedChange={(v) => update((c) => ({ ...c, excludeSharedTab: Boolean(v) }))}
           />
-          Exclude shared tab
+          Exclude Master Data tab
         </label>
       </div>
     )

@@ -1,12 +1,14 @@
 /**
  * Build bindings from tracker schema: ensure every select/multiselect has a binding
- * pointing to an options grid; create Shared tab and option grids when missing.
+ * pointing to a master data grid; create Master Data tab and grids when missing.
  */
 
 import type { TrackerLike } from './types'
+import { MASTER_DATA_SECTION_ID, MASTER_DATA_TAB_ID } from '@/lib/master-data/constants'
+import { resolveMasterDataScopeFromTracker } from '@/lib/master-data-scope'
 
-const SHARED_TAB_ID = 'shared_tab'
-const SHARED_SECTION_ID = 'option_lists_section'
+const LEGACY_SHARED_TAB_ID = 'shared_tab'
+const LEGACY_SHARED_SECTION_ID = 'option_lists_section'
 
 function titleCase(str: string): string {
   return str.replace(/\b\w/g, (c) => c.toUpperCase())
@@ -45,11 +47,15 @@ function isOptionsGrid(gridId: string): boolean {
 }
 
 /**
- * Ensure an options grid exists for the given field id: creates Shared tab, section,
+ * Ensure an options grid exists for the given field id: creates Master Data tab, section,
  * grid, one option field, and layoutNodes if missing. Mutates fixed in place.
  * Returns the options grid id (always {fieldId}_options_grid).
  */
-function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string {
+function ensureOptionsGridForField(
+  fieldId: string,
+  fixed: TrackerLike,
+  container: { tabId: string; tabName: string; sectionId: string; sectionName: string }
+): string {
   let tabs = [...(fixed.tabs ?? [])]
   let sections = [...(fixed.sections ?? [])]
   let grids = [...(fixed.grids ?? [])]
@@ -61,32 +67,41 @@ function ensureOptionsGridForField(fieldId: string, fixed: TrackerLike): string 
   const fieldIds = new Set(fields.map((f) => f.id))
 
   const optionsGridId = `${fieldId}_options_grid`
-  const optionFieldId = fieldId
+  const optionFieldId = `${fieldId}_option`
 
   if (gridIds.has(optionsGridId)) {
     return optionsGridId
   }
 
-  if (!tabIds.has(SHARED_TAB_ID)) {
+  if (!tabIds.has(container.tabId)) {
     const maxPlaceId = Math.max(0, ...tabs.map((t) => t.placeId ?? 0))
-    tabs = [...tabs, { id: SHARED_TAB_ID, name: 'Shared', placeId: maxPlaceId + 100, config: {} }]
-    tabIds.add(SHARED_TAB_ID)
+    tabs = [...tabs, { id: container.tabId, name: container.tabName, placeId: maxPlaceId + 100, config: {} }]
+    tabIds.add(container.tabId)
   }
-  if (!sectionIds.has(SHARED_SECTION_ID)) {
-    sections = [...sections, { id: SHARED_SECTION_ID, name: 'Option Lists', tabId: SHARED_TAB_ID, placeId: 1, config: {} }]
-    sectionIds.add(SHARED_SECTION_ID)
+  if (!sectionIds.has(container.sectionId)) {
+    sections = [
+      ...sections,
+      {
+        id: container.sectionId,
+        name: container.sectionName,
+        tabId: container.tabId,
+        placeId: 1,
+        config: {},
+      },
+    ]
+    sectionIds.add(container.sectionId)
   }
 
   const gridPlaceId =
-    Math.max(0, ...grids.filter((g) => g.sectionId === SHARED_SECTION_ID).map((g) => g.placeId ?? 0)) + 1
+    Math.max(0, ...grids.filter((g) => g.sectionId === container.sectionId).map((g) => g.placeId ?? 0)) + 1
   const baseName = fieldId.replace(/_/g, ' ')
   grids = [
     ...grids,
     {
       id: optionsGridId,
-      name: `${titleCase(baseName)} Options`,
+      name: `${titleCase(baseName)}`,
       type: 'table',
-      sectionId: SHARED_SECTION_ID,
+      sectionId: container.sectionId,
       placeId: gridPlaceId,
       config: {},
     },
@@ -136,7 +151,26 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
     bindings: { ...(tracker.bindings ?? {}) },
   }
 
-  const optionGridMeta: Record<string, { labelFieldId: string; valueFieldId: string }> = {}
+  const masterDataScope = resolveMasterDataScopeFromTracker(tracker as { masterDataScope?: unknown })
+  const hasLegacySharedTab = (fixed.tabs ?? []).some((t) => t.id === LEGACY_SHARED_TAB_ID)
+  const useLocalOptions = masterDataScope === 'tracker'
+  const container = hasLegacySharedTab
+    ? {
+      tabId: LEGACY_SHARED_TAB_ID,
+      tabName: 'Shared',
+      sectionId: LEGACY_SHARED_SECTION_ID,
+      sectionName: 'Option Lists',
+    }
+    : {
+      tabId: MASTER_DATA_TAB_ID,
+      tabName: 'Master Data',
+      sectionId: MASTER_DATA_SECTION_ID,
+      sectionName: 'Master Data',
+    }
+
+  const optionGridMeta: Partial<
+    Record<string, { labelFieldId: string; valueFieldId: string }>
+  > = {}
   const refreshOptionGridMeta = () => {
     for (const grid of fixed.grids ?? []) {
       if (!isOptionsGrid(grid.id)) continue
@@ -158,6 +192,27 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
     if (!gridId) continue
 
     const fieldPath = `${gridId}.${field.id}`
+    const existing = fixed.bindings![fieldPath]
+    const foreignSource = Boolean(existing?.optionsSourceSchemaId?.trim())
+
+    if (foreignSource) {
+      if (existing?.labelField) {
+        const valueMapping = { from: existing.labelField, to: fieldPath }
+        const hasValueMapping = existing.fieldMappings?.some((m) => m.to === fieldPath)
+        fixed.bindings![fieldPath] = {
+          optionsGrid: existing.optionsGrid,
+          labelField: existing.labelField,
+          optionsSourceSchemaId: existing.optionsSourceSchemaId,
+          fieldMappings: hasValueMapping ? existing.fieldMappings : [valueMapping, ...(existing.fieldMappings ?? [])],
+        }
+      }
+      continue
+    }
+
+    if (!useLocalOptions) {
+      continue
+    }
+
     const optionsGridId = `${field.id}_options_grid`
 
     let labelFieldId: string
@@ -175,20 +230,27 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
           valueFieldId = meta.valueFieldId
           optionGridMeta[optionsGridId] = meta
         } else {
-          ensureOptionsGridForField(field.id, fixed)
+          ensureOptionsGridForField(field.id, fixed, container)
           refreshOptionGridMeta()
-          labelFieldId = field.id
-          valueFieldId = field.id
+          const afterEnsure = getOptionGridLabelAndValueFieldIds(
+            optionsGridId,
+            fixed.layoutNodes ?? []
+          )
+          labelFieldId = afterEnsure?.labelFieldId ?? `${field.id}_option`
+          valueFieldId = afterEnsure?.valueFieldId ?? labelFieldId
         }
       } else {
-        ensureOptionsGridForField(field.id, fixed)
+        ensureOptionsGridForField(field.id, fixed, container)
         refreshOptionGridMeta()
-        labelFieldId = field.id
-        valueFieldId = field.id
+        const afterEnsure = getOptionGridLabelAndValueFieldIds(
+          optionsGridId,
+          fixed.layoutNodes ?? []
+        )
+        labelFieldId = afterEnsure?.labelFieldId ?? `${field.id}_option`
+        valueFieldId = afterEnsure?.valueFieldId ?? labelFieldId
       }
     }
 
-    const existing = fixed.bindings![fieldPath]
     const valueMapping = { from: `${optionsGridId}.${valueFieldId}`, to: fieldPath }
     if (existing?.fieldMappings?.length) {
       const hasValueMapping = existing.fieldMappings.some((m) => m.to === fieldPath)
@@ -210,17 +272,23 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   }
 
   const hasOptionGrids = (fixed.grids ?? []).some((g) => isOptionsGrid(g.id))
-  const hasSharedTab = (fixed.tabs ?? []).some((t) => t.id === SHARED_TAB_ID)
-  if (hasOptionGrids && !hasSharedTab) {
-    const maxPlaceId = Math.max(0, ...(fixed.tabs ?? []).map((t) => t.placeId ?? 0))
-    fixed.tabs = [...(fixed.tabs ?? []), { id: SHARED_TAB_ID, name: 'Shared', placeId: maxPlaceId + 100, config: {} }]
-  }
-  if (fixed.tabs?.length) {
-    fixed.tabs = fixed.tabs.map((tab) =>
-      tab.id === SHARED_TAB_ID
-        ? { ...tab, config: { ...(tab.config ?? {}), isHidden: false } }
-        : tab
-    )
+  if (hasOptionGrids && useLocalOptions) {
+    const tabId = container.tabId
+    const hasContainerTab = (fixed.tabs ?? []).some((t) => t.id === tabId)
+    if (!hasContainerTab) {
+      const maxPlaceId = Math.max(0, ...(fixed.tabs ?? []).map((t) => t.placeId ?? 0))
+      fixed.tabs = [
+        ...(fixed.tabs ?? []),
+        { id: tabId, name: container.tabName, placeId: maxPlaceId + 100, config: {} },
+      ]
+    }
+    if (fixed.tabs?.length) {
+      fixed.tabs = fixed.tabs.map((tab) =>
+        tab.id === tabId
+          ? { ...tab, config: { ...(tab.config ?? {}), isHidden: false } }
+          : tab
+      )
+    }
   }
 
   return { ...tracker, ...fixed } as T

@@ -52,12 +52,12 @@ const SCOPE_OPTIONS: Array<{
   {
     value: 'module',
     label: 'Module',
-    description: 'Shared with all trackers in this module.',
+    description: 'Master data is available to every tracker in this module.',
   },
   {
     value: 'project',
     label: 'Project',
-    description: 'Shared across the whole project (root).',
+    description: 'Master data is available across the entire project.',
   },
 ]
 

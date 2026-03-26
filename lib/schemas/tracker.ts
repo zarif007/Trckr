@@ -5,7 +5,7 @@ import { TRACKER_FIELD_TYPES } from '@/lib/tracker-field-types'
 const tabId = () =>
   z
     .string()
-    .describe('Unique tab id ending with _tab (e.g. overview_tab, shared_tab)')
+    .describe('Unique tab id ending with _tab (e.g. overview_tab, master_data_tab)')
 
 const sectionId = () =>
   z
@@ -77,6 +77,11 @@ export const gridViewSchema = z
 const fieldDataTypeEnum = z
   .enum(TRACKER_FIELD_TYPES)
   .catch('string')
+
+const masterDataScopeSchema = z
+  .enum(['tracker', 'module', 'project'])
+  .optional()
+  .describe('Master data scope: tracker (local), module (shared in module), project (shared across project).')
 
 const renderAsEnum = z
   .enum(['default', 'table', 'kanban', 'calendar', 'timeline'])
@@ -262,6 +267,7 @@ export const trackerSchema = z
       .string()
       .optional()
       .describe('Display name of the tracker (e.g. "Fitness Log", "Project Tasks").'),
+    masterDataScope: masterDataScopeSchema,
     tabs: z
       .array(
         z

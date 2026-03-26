@@ -3,6 +3,7 @@
  */
 
 import { MAX_CONTEXT_MESSAGES_PER_ROLE } from './constants'
+import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 
 const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
 const DEFAULT_SHARED_TAB_ID = 'shared_tab'
@@ -31,6 +32,7 @@ interface ChatMessage {
 
 /** Normalized tracker state we inject into the prompt */
 export interface NormalizedTrackerState {
+  masterDataScope?: string
   tabs: Array<{ id: string; name?: string; placeId?: number; config?: Record<string, unknown> }>
   sections: Array<{ id: string; name?: string; tabId?: string; placeId?: number; config?: Record<string, unknown> }>
   grids: Array<{ id: string; name?: string; sectionId?: string; placeId?: number; config?: Record<string, unknown>; views?: unknown[] }>
@@ -78,6 +80,7 @@ function isDependsOnScaffoldLayoutNode(node: { gridId: string; fieldId: string }
  * - ignore internal Depends On scaffold rows/fields if present
  */
 function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
+  if (normalizeMasterDataScope(state.masterDataScope) != null) return false
   const meaningfulSections = state.sections.filter((s) => !isDependsOnScaffoldSection(s))
   const meaningfulGrids = state.grids.filter((g) => !isDependsOnScaffoldGrid(g))
   const meaningfulFields = state.fields.filter((f) => !isDependsOnScaffoldField(f))
@@ -157,6 +160,7 @@ export function normalizeTrackerState(source: unknown): NormalizedTrackerState |
   const grids = toRecordArray(t.grids)
   const fields = toRecordArray(t.fields)
   return {
+    masterDataScope: normalizeMasterDataScope(t.masterDataScope) ?? undefined,
     tabs: tabs.map((tab) => ({
       id: String(tab.id ?? ''),
       name: tab.name as string | undefined,

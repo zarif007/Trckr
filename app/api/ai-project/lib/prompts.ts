@@ -58,6 +58,7 @@ export function buildTrackerBuilderPrompt(input: {
     instance: 'SINGLE' | 'MULTI'
     versionControl: boolean
     autoSave: boolean
+    masterDataScope?: 'tracker' | 'module' | 'project'
   }
 }): string {
   const moduleLabel = input.tracker.module ? `Module: ${input.tracker.module}` : 'Module: (none)'
@@ -81,6 +82,7 @@ Tracker to build:
 - Instance: ${input.tracker.instance}
 - Version control: ${input.tracker.versionControl ? 'Enabled' : 'Disabled'}
 - Auto save: ${input.tracker.autoSave ? 'Enabled' : 'Disabled'}
+- Master data scope: ${input.tracker.masterDataScope ?? 'tracker'}
 
 Builder instructions:
 ${input.tracker.prompt}

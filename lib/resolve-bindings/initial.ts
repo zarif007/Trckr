@@ -1,6 +1,6 @@
 /**
  * Build initial grid data for option grids from bindings.
- * Option grids start empty; user adds options in Shared tab.
+ * Option grids start empty; user adds options in Master Data tab.
  */
 
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'

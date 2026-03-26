@@ -1,12 +1,12 @@
 /**
  * Dynamic options: all field paths (gridId.fieldId) that actually exist in the layout,
  * with labels "Grid name → Field label". Only includes (grid, field) pairs from layoutNodes.
- * Excludes fields on the Shared tab when sections context is provided.
+ * Excludes fields on the Shared/Master Data tab when sections context is provided.
  */
 
 import type { DynamicOptionsContext, DynamicOption } from '../types'
 
-const SHARED_TAB_ID = 'shared_tab'
+const EXCLUDED_TAB_IDS = new Set(['shared_tab', 'master_data_tab'])
 
 export const ID = 'all_field_paths'
 
@@ -16,7 +16,7 @@ export function allFieldPaths(context: DynamicOptionsContext): DynamicOption[] {
   const fieldMap = new Map(fields.map((f) => [f.id, f]))
 
   const sharedSectionIds = sections?.length
-    ? new Set(sections.filter((s) => s.tabId === SHARED_TAB_ID).map((s) => s.id))
+    ? new Set(sections.filter((s) => EXCLUDED_TAB_IDS.has(s.tabId)).map((s) => s.id))
     : undefined
 
   const nodes = layoutNodes?.length ? layoutNodes : []

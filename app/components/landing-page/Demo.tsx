@@ -43,7 +43,7 @@ export default function Demo() {
   const demoData = {
     tabs: [
       { id: 'projects_tab', name: 'Projects', placeId: 1 },
-      { id: 'shared_tab', name: 'Option Lists', placeId: 999, config: {} },
+      { id: 'master_data_tab', name: 'Master Data', placeId: 999, config: {} },
     ],
     sections: [
       {
@@ -53,9 +53,9 @@ export default function Demo() {
         placeId: 1,
       },
       {
-        id: 'options_section',
-        name: 'Option Lists',
-        tabId: 'shared_tab',
+        id: 'master_data_section',
+        name: 'Master Data',
+        tabId: 'master_data_tab',
         placeId: 1,
         config: {},
       },
@@ -79,17 +79,17 @@ export default function Demo() {
       },
       {
         id: 'priority_options_grid',
-        name: 'Priority Options',
+        name: 'Priority',
         type: 'table' as const,
-        sectionId: 'options_section',
+        sectionId: 'master_data_section',
         placeId: 1,
         config: {},
       },
       {
         id: 'status_options_grid',
-        name: 'Status Options',
+        name: 'Status',
         type: 'table' as const,
-        sectionId: 'options_section',
+        sectionId: 'master_data_section',
         placeId: 2,
         config: {},
       },

@@ -105,12 +105,12 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
         warnings.push(`Binding "${fieldPath}": labelField "${entry.labelField}" not found`)
       } else if (fieldId && fieldId === labelParsed.fieldId) {
         errors.push(
-          `Binding "${fieldPath}": the options grid must use a different field for option values than the select field. Use a dedicated field in the options grid (e.g. exercise_option) and set labelField to that grid.field path.`
+          `Binding "${fieldPath}": the master data grid must use a different field for option values than the select field. Use a dedicated field in the master data grid (e.g. exercise_option) and set labelField to that grid.field path.`
         )
       }
     } else if (fieldId && labelParsed.fieldId && fieldId === labelParsed.fieldId) {
       errors.push(
-        `Binding "${fieldPath}": the options grid must use a different field for option values than the select field.`
+        `Binding "${fieldPath}": the master data grid must use a different field for option values than the select field.`
       )
     }
 

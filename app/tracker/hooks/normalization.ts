@@ -1,5 +1,6 @@
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { TrackerLike } from '@/lib/validate-tracker'
+import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 
 const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
 const DEFAULT_SHARED_TAB_ID = 'shared_tab'
@@ -22,6 +23,8 @@ function isDefaultTabConfig(value: unknown): boolean {
 export function isUntouchedFirstRunScaffold(tracker: TrackerLike | null | undefined): boolean {
   if (!tracker) return true
   const trackerWithExtras = tracker as TrackerLike & { styles?: unknown; dynamicOptions?: unknown }
+  const scope = normalizeMasterDataScope((tracker as { masterDataScope?: unknown }).masterDataScope)
+  if (scope != null) return false
 
   const sections = Array.isArray(tracker.sections) ? tracker.sections : []
   const grids = Array.isArray(tracker.grids) ? tracker.grids : []

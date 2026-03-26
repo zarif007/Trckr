@@ -76,7 +76,7 @@ export function BindingsTab({
     return (
       <div className="rounded-md border border-dashed border-border/60 bg-muted/20 py-8 px-4 text-center space-y-4">
         <p className="text-sm text-muted-foreground">
-          No binding yet. Bindings connect this select field to an options grid.
+          No binding yet. Bindings connect this select field to master data.
         </p>
         <Button
           size="sm"
@@ -108,10 +108,10 @@ export function BindingsTab({
 
       <div className="space-y-2">
         <label className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-          Options source
+          Master data source
         </label>
         <p className="text-xs text-muted-foreground">
-          Choose a tracker, then any grid, then the field that provides labels and stored values for options.
+          Choose a tracker, then any grid, then the field that provides labels and stored values for master data.
         </p>
         <BindingSourceCascade
           localSchema={schema}
@@ -150,7 +150,7 @@ export function BindingsTab({
         </div>
         <p className="text-xs text-muted-foreground">
           Mappings control auto‑population. When a user selects an option, values from the
-          options grid fields (left) are copied into target fields on this grid (right).
+          master data fields (left) are copied into target fields on this grid (right).
         </p>
         <FieldMappingsEditor
           value={bindingDraft.fieldMappings}

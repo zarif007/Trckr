@@ -9,6 +9,9 @@ import { createTrackerForUser } from '@/lib/repositories'
 import { getCombinedSystemPrompt } from '@/app/api/generate-tracker/lib/prompts'
 import { buildTrackerBuilderPrompt } from '../lib/prompts'
 import { parseBuildBody } from '../lib/validation'
+import { applyMasterDataBindings } from '@/lib/master-data/builder'
+import { resolveMasterDataDefaultScope } from '@/lib/master-data/resolve-default'
+import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 
 const trackerSpecSchema = z.object({
   name: z.string(),
@@ -18,6 +21,7 @@ const trackerSpecSchema = z.object({
   instance: z.enum(['SINGLE', 'MULTI']).optional(),
   versionControl: z.boolean().optional(),
   autoSave: z.boolean().optional(),
+  masterDataScope: z.enum(['tracker', 'module', 'project']).optional(),
 }).passthrough()
 
 const projectContextSchema = z
@@ -103,6 +107,16 @@ export async function POST(request: Request) {
   try {
     const provider = getDefaultAiProvider()
     const system = getCombinedSystemPrompt()
+    const defaultScopeResolution = await resolveMasterDataDefaultScope({
+      projectId: parsed.projectId,
+      userId: authResult.user.id,
+      moduleId: parsed.moduleId ?? null,
+    })
+    const masterDataScope =
+      normalizeMasterDataScope(trackerSpec.masterDataScope) ??
+      defaultScopeResolution.inheritedDefault ??
+      'tracker'
+
     const prompt = buildTrackerBuilderPrompt({
       project: projectContext.project,
       modules: projectContext.modules,
@@ -114,6 +128,7 @@ export async function POST(request: Request) {
         instance: trackerSpec.instance ?? 'SINGLE',
         versionControl: trackerSpec.versionControl ?? false,
         autoSave: trackerSpec.autoSave ?? true,
+        masterDataScope,
       },
     })
 
@@ -184,10 +199,22 @@ export async function POST(request: Request) {
             trackerSpec.name?.trim() || (trackerSchema as { name?: string }).name || 'Untitled tracker'
           let createdTracker: { id: string; name: string | null; moduleId: string | null }
           try {
+            const schemaWithScope = {
+              ...(trackerSchema as Record<string, unknown>),
+              masterDataScope,
+            }
+            const masterDataResult = await applyMasterDataBindings({
+              tracker: schemaWithScope,
+              scope: masterDataScope,
+              projectId: parsed.projectId,
+              moduleId: parsed.moduleId ?? null,
+              userId: authResult.user.id,
+            })
+
             createdTracker = await createTrackerForUser({
               userId: authResult.user.id,
               name: resolvedName,
-              schema: trackerSchema as object,
+              schema: masterDataResult.tracker as object,
               projectId: parsed.projectId,
               moduleId: parsed.moduleId ?? undefined,
               instance: trackerSpec.instance === 'MULTI' ? 'MULTI' : 'SINGLE',

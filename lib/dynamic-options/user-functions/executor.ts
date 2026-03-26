@@ -289,7 +289,7 @@ function buildLayoutRows(context: DynamicOptionsContext, includeHidden: boolean,
       if (!grid || !field) continue
       const section = sectionMap.get(grid.sectionId)
       if (!includeHidden && toRecord(field.config).isHidden === true) continue
-      if (excludeSharedTab && section?.tabId === 'shared_tab') continue
+      if (excludeSharedTab && (section?.tabId === 'shared_tab' || section?.tabId === 'master_data_tab')) continue
       rows.push({
         gridId: grid.id,
         gridName: grid.name,

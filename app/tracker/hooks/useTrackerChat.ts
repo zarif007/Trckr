@@ -9,6 +9,7 @@ import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
+import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 import { ensureConversation, persistMessage } from './conversation'
 import {
   CONTINUE_PROMPT,
@@ -188,6 +189,60 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     return tracker as TrackerResponse
   }, [getBaseTracker])
 
+  const resolveMasterDataIfNeeded = useCallback(async (tracker: TrackerResponse | null) => {
+    if (!tracker) return tracker
+    const scope = normalizeMasterDataScope(tracker.masterDataScope)
+    if (!scope || scope === 'tracker') return tracker
+    if (!trackerId) return tracker
+
+    const isPlaceholderSourceId = (value: unknown) => {
+      if (typeof value !== 'string') return false
+      const trimmed = value.trim()
+      return trimmed === '__master_data__' || trimmed === 'master_data' || trimmed === 'MASTER_DATA'
+    }
+
+    const fields = tracker.fields ?? []
+    const layoutNodes = tracker.layoutNodes ?? []
+    const gridByFieldId = new Map<string, string>()
+    for (const node of layoutNodes) {
+      if (node?.fieldId && node?.gridId) {
+        gridByFieldId.set(node.fieldId, node.gridId)
+      }
+    }
+
+    let needsResolution = false
+    for (const field of fields) {
+      if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
+      const gridId = gridByFieldId.get(field.id)
+      if (!gridId) continue
+      const fieldPath = `${gridId}.${field.id}`
+      const binding = tracker.bindings?.[fieldPath]
+      if (!binding || !binding.optionsSourceSchemaId || isPlaceholderSourceId(binding.optionsSourceSchemaId)) {
+        needsResolution = true
+        break
+      }
+    }
+
+    if (!needsResolution) return tracker
+
+    try {
+      const res = await fetch('/api/master-data/build', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tracker,
+          trackerSchemaId: trackerId,
+          masterDataScope: scope,
+        }),
+      })
+      if (!res.ok) return tracker
+      const data = (await res.json()) as { tracker?: TrackerResponse }
+      return data.tracker ?? tracker
+    } catch {
+      return tracker
+    }
+  }, [trackerId])
+
   const finalizeTracker = useCallback((
     tracker: TrackerResponse | null,
     managerData: MultiAgentSchema['manager'],
@@ -295,34 +350,43 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           tracker = autoFixBindings(tracker as TrackerLike) as TrackerResponse
         }
 
-        const intents = tracker ? collectExprIntents(tracker as TrackerLike) : []
+        resolveMasterDataIfNeeded(tracker)
+          .then((resolvedTracker) => {
+            const trackerForIntents = resolvedTracker
+              ? (autoFixBindings(resolvedTracker as TrackerLike) as TrackerResponse)
+              : resolvedTracker
+            const intents = trackerForIntents ? collectExprIntents(trackerForIntents as TrackerLike) : []
 
-        if (intents.length > 0 && tracker) {
-          setIsResolvingExpressions(true)
-          resolveExprIntents(tracker as TrackerLike, setToolCalls, {
-            trackerSchemaId: trackerId,
+            if (intents.length > 0 && trackerForIntents) {
+              setIsResolvingExpressions(true)
+              resolveExprIntents(trackerForIntents as TrackerLike, setToolCalls, {
+                trackerSchemaId: trackerId,
+              })
+                .then(({ tracker: resolved, errors, toolCalls: resolvedToolCalls }) => {
+                  let resolvedTrackerFinal = resolved as TrackerResponse
+                  if (resolvedTrackerFinal) {
+                    resolvedTrackerFinal = autoFixBindings(resolvedTrackerFinal as TrackerLike) as TrackerResponse
+                  }
+                  if (errors.length > 0) {
+                    setValidationErrors((prev) => [...prev, ...errors])
+                  }
+                  finalizeTracker(resolvedTrackerFinal, finishedObject.manager, resolvedToolCalls)
+                })
+                .catch((err) => {
+                  console.error('Expression resolution failed:', err)
+                  finalizeTracker(trackerForIntents as TrackerResponse, finishedObject.manager)
+                })
+                .finally(() => {
+                  setIsResolvingExpressions(false)
+                })
+              return
+            }
+
+            finalizeTracker(trackerForIntents, finishedObject.manager)
           })
-            .then(({ tracker: resolved, errors, toolCalls: resolvedToolCalls }) => {
-              let resolvedTracker = resolved as TrackerResponse
-              if (resolvedTracker) {
-                resolvedTracker = autoFixBindings(resolvedTracker as TrackerLike) as TrackerResponse
-              }
-              if (errors.length > 0) {
-                setValidationErrors((prev) => [...prev, ...errors])
-              }
-              finalizeTracker(resolvedTracker, finishedObject.manager, resolvedToolCalls)
-            })
-            .catch((err) => {
-              console.error('Expression resolution failed:', err)
-              finalizeTracker(tracker as TrackerResponse, finishedObject.manager)
-            })
-            .finally(() => {
-              setIsResolvingExpressions(false)
-            })
-          return
-        }
-
-        finalizeTracker(tracker, finishedObject.manager)
+          .catch(() => {
+            finalizeTracker(tracker, finishedObject.manager)
+          })
       } else {
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current

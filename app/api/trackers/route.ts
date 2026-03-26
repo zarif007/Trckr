@@ -1,9 +1,11 @@
 import { z } from 'zod'
-import { TrackerSchemaType } from '@prisma/client'
+import { Prisma, TrackerSchemaType } from '@prisma/client'
 import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
 import { badRequest, jsonOk } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { createTrackerForUser } from '@/lib/repositories'
+import { prisma } from '@/lib/db'
+import { normalizeMasterDataScope, type MasterDataScope } from '@/lib/master-data-scope'
 
 const createTrackerBodySchema = z
   .object({
@@ -15,6 +17,9 @@ const createTrackerBodySchema = z
     instance: z.enum(['SINGLE', 'MULTI']).optional(),
     versionControl: z.boolean().optional(),
     autoSave: z.boolean().optional(),
+    masterDataScope: z.enum(['tracker', 'module', 'project']).optional(),
+    setMasterDataDefaultForOwner: z.boolean().optional(),
+    updateMasterDataDefaultForOwner: z.boolean().optional(),
   })
   .passthrough()
 
@@ -40,11 +45,12 @@ export async function POST(request: Request) {
 
   const isNew = body.new === true
   const schemaFromBody = body.schema
+  const requestedScope = normalizeMasterDataScope(body.masterDataScope) ?? 'tracker'
   const schema =
     isNew
       ? (typeof schemaFromBody === 'object' && schemaFromBody !== null
-          ? (schemaFromBody as object)
-          : (createEmptyTrackerSchema() as object))
+          ? { ...(schemaFromBody as Record<string, unknown>), masterDataScope: requestedScope }
+          : ({ ...createEmptyTrackerSchema(), masterDataScope: requestedScope } as object))
       : schemaFromBody
 
   if (schema === undefined || typeof schema !== 'object' || schema === null) {
@@ -73,6 +79,45 @@ export async function POST(request: Request) {
     autoSave,
     type: TrackerSchemaType.GENERAL,
   })
+
+  const shouldPersistDefault =
+    body.setMasterDataDefaultForOwner === true || body.updateMasterDataDefaultForOwner === true
+  if (shouldPersistDefault) {
+    const nextScope: MasterDataScope = requestedScope
+    const nextSettings = (settings: unknown): Prisma.InputJsonValue => {
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        return { masterDataDefaultScope: nextScope }
+      }
+      return {
+        ...(settings as Record<string, Prisma.InputJsonValue>),
+        masterDataDefaultScope: nextScope,
+      }
+    }
+
+    if (tracker.moduleId) {
+      const mod = await prisma.module.findFirst({
+        where: { id: tracker.moduleId, projectId: tracker.projectId, project: { userId: authResult.user.id } },
+        select: { id: true, settings: true },
+      })
+      if (mod) {
+        await prisma.module.update({
+          where: { id: mod.id },
+          data: { settings: nextSettings(mod.settings) },
+        })
+      }
+    } else {
+      const project = await prisma.project.findFirst({
+        where: { id: tracker.projectId, userId: authResult.user.id },
+        select: { id: true, settings: true },
+      })
+      if (project) {
+        await prisma.project.update({
+          where: { id: project.id },
+          data: { settings: nextSettings(project.settings) },
+        })
+      }
+    }
+  }
 
   return jsonOk(tracker)
 }

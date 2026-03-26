@@ -1,14 +1,16 @@
 /**
  * Auto-fix missing bindings and invalid bindings (select field id === options grid field id).
- * Creates default bindings with Shared tab infrastructure and repairs same-id bindings; returns a new tracker (does not mutate).
+ * Creates default bindings with Master Data tab infrastructure and repairs same-id bindings; returns a new tracker (does not mutate).
  */
 
 import { parsePath, normalizeOptionsGridId } from '@/lib/resolve-bindings'
 import type { TrackerLike } from './types'
 import { titleCase } from './utils'
+import { MASTER_DATA_SECTION_ID, MASTER_DATA_TAB_ID } from '@/lib/master-data/constants'
+import { resolveMasterDataScopeFromTracker } from '@/lib/master-data-scope'
 
-const SHARED_TAB_ID = 'shared_tab'
-const SHARED_SECTION_ID = 'option_lists_section'
+const LEGACY_SHARED_TAB_ID = 'shared_tab'
+const LEGACY_SHARED_SECTION_ID = 'option_lists_section'
 
 export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
   if (!tracker) return tracker
@@ -22,6 +24,23 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
     bindings: { ...(tracker.bindings ?? {}) },
   }
 
+  const masterDataScope = resolveMasterDataScopeFromTracker(tracker as { masterDataScope?: unknown })
+  const hasLegacySharedTab = (fixed.tabs ?? []).some((t) => t.id === LEGACY_SHARED_TAB_ID)
+  const useLocalOptions = masterDataScope === 'tracker'
+  const container = hasLegacySharedTab
+    ? {
+      tabId: LEGACY_SHARED_TAB_ID,
+      tabName: 'Shared',
+      sectionId: LEGACY_SHARED_SECTION_ID,
+      sectionName: 'Option Lists',
+    }
+    : {
+      tabId: MASTER_DATA_TAB_ID,
+      tabName: 'Master Data',
+      sectionId: MASTER_DATA_SECTION_ID,
+      sectionName: 'Master Data',
+    }
+
   const tabIds = new Set(fixed.tabs!.map((t) => t.id))
   const sectionIds = new Set(fixed.sections!.map((s) => s.id))
   const gridIds = new Set(fixed.grids!.map((g) => g.id))
@@ -32,6 +51,7 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
 
   // --- Fix invalid bindings: select field id must not equal options grid label field id ---
   for (const [fieldPath, entry] of Object.entries(fixed.bindings!)) {
+    if (entry.optionsSourceSchemaId?.trim()) continue
     const { fieldId: selectFieldId } = parsePath(fieldPath)
     const optGridId = normalizeOptionsGridId(entry.optionsGrid)
     const labelParsed = parsePath(entry.labelField)
@@ -86,36 +106,37 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
     return { tabId: section.tabId, gridId: grid.id }
   }
 
-  const ensureSharedTabInfrastructure = () => {
-    if (!tabIds.has(SHARED_TAB_ID)) {
+  const ensureMasterDataContainer = () => {
+    if (!tabIds.has(container.tabId)) {
       const maxPlaceId = Math.max(0, ...fixed.tabs!.map((t) => t.placeId ?? 0))
       fixed.tabs!.push({
-        id: SHARED_TAB_ID,
-        name: 'Shared',
+        id: container.tabId,
+        name: container.tabName,
         placeId: maxPlaceId + 100,
         config: {},
       })
-      tabIds.add(SHARED_TAB_ID)
+      tabIds.add(container.tabId)
     }
-    if (!sectionIds.has(SHARED_SECTION_ID)) {
+    if (!sectionIds.has(container.sectionId)) {
       fixed.sections!.push({
-        id: SHARED_SECTION_ID,
-        name: 'Option Lists',
-        tabId: SHARED_TAB_ID,
+        id: container.sectionId,
+        name: container.sectionName,
+        tabId: container.tabId,
         placeId: 1,
         config: {},
       })
-      sectionIds.add(SHARED_SECTION_ID)
+      sectionIds.add(container.sectionId)
     }
   }
 
   let gridPlaceId = Math.max(
     0,
-    ...fixed.grids!.filter((g) => g.sectionId === SHARED_SECTION_ID).map((g) => g.placeId ?? 0)
+    ...fixed.grids!.filter((g) => g.sectionId === container.sectionId).map((g) => g.placeId ?? 0)
   )
 
   for (const field of fixed.fields!) {
     if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
+    if (!useLocalOptions) continue
 
     const gridInfo = getGridInfo(field.id)
     if (!gridInfo) continue
@@ -123,7 +144,7 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
     const fieldPath = `${gridInfo.gridId}.${field.id}`
     if (fixed.bindings![fieldPath]) continue
 
-    ensureSharedTabInfrastructure()
+    ensureMasterDataContainer()
 
     const baseName = field.id.replace(/_/g, ' ')
     const optionsGridId = `${field.id}_options_grid`
@@ -137,9 +158,9 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
       gridPlaceId++
       fixed.grids!.push({
         id: optionsGridId,
-        name: `${titleCase(baseName)} Options`,
+        name: `${titleCase(baseName)}`,
         type: 'table',
-        sectionId: SHARED_SECTION_ID,
+        sectionId: container.sectionId,
         placeId: gridPlaceId,
         config: {},
       })

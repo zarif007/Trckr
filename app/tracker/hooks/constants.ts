@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 
 export const CONTINUE_PROMPT =
-  'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to an options grid) are all filled. Add any missing parts from where you left off.'
+  'Continue and complete the response. If you were outputting a trackerPatch, finish the patch. Otherwise complete the full tracker: ensure tabs, sections, grids, fields, layoutNodes, and bindings (so that every options/multiselect field has a bindings entry pointing to master data) are all filled. Add any missing parts from where you left off.'
 
 export const MAX_AUTO_CONTINUES = 3
 export const MAX_VALIDATION_FIX_RETRIES = 2
