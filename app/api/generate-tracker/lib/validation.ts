@@ -6,13 +6,19 @@ import { hasDeepSeekApiKey } from '@/lib/ai'
 
 export type ParseResult =
   | {
-    ok: true
-    query: string
-    messages: unknown[]
-    currentTracker: unknown
-    trackerSchemaId?: string
-    projectId?: string
-  }
+      ok: true
+      query: string
+      messages: unknown[]
+      currentTracker: unknown
+      /**
+       * When true, current tracker schema is included in the LLM prompt.
+       * When false, prompt omits tracker state (client may send {}).
+       * When omitted, server infers from payload (see inferTrackerDirtyFromPayload).
+       */
+      dirty?: boolean
+      trackerSchemaId?: string
+      projectId?: string
+    }
   | { ok: false; error: string; status: number }
 
 function optionalId(value: unknown): string | undefined {
@@ -40,7 +46,7 @@ export function parseRequestBody(body: unknown): ParseResult {
     return {
       ok: false,
       error:
-        'Invalid request body. Expected JSON with "query" and optional "messages" and "currentTracker".',
+        'Invalid request body. Expected JSON with "query" and optional "messages", "currentTracker", and "dirty".',
       status: 400,
     }
   }
@@ -49,6 +55,7 @@ export function parseRequestBody(body: unknown): ParseResult {
   const query = b.query
   const messages = b.messages
   const currentTracker = b.currentTracker
+  const dirtyRaw = b.dirty !== undefined ? b.dirty : b.trackerDirty
 
   if (!query || typeof query !== 'string' || query.trim() === '') {
     return {
@@ -71,6 +78,7 @@ export function parseRequestBody(body: unknown): ParseResult {
     query: query.trim(),
     messages: Array.isArray(messages) ? messages : [],
     currentTracker: currentTracker ?? null,
+    dirty: typeof dirtyRaw === 'boolean' ? dirtyRaw : undefined,
     trackerSchemaId: optionalId(b.trackerSchemaId),
     projectId: optionalId(b.projectId),
   }

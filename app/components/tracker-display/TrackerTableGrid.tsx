@@ -126,12 +126,24 @@ function TrackerTableGridInner({
     [layoutNodesByGridId, grid.id]
   )
 
+  /** One column per field id — duplicate layout nodes would break React keys and dnd-kit ids. */
+  const uniqueFieldLayoutNodes = useMemo(() => {
+    const seen = new Set<string>()
+    const out: TrackerLayoutNode[] = []
+    for (const node of connectedFieldNodes) {
+      if (seen.has(node.fieldId)) continue
+      seen.add(node.fieldId)
+      out.push(node)
+    }
+    return out
+  }, [connectedFieldNodes])
+
   const tableFields = useMemo(
     () =>
-      connectedFieldNodes
+      uniqueFieldLayoutNodes
         .map((node) => fieldsById.get(node.fieldId))
         .filter((f): f is TrackerField => !!f && !f.config?.isHidden),
-    [connectedFieldNodes, fieldsById]
+    [uniqueFieldLayoutNodes, fieldsById]
   )
 
   const rows = useMemo(() => thisGridRows, [thisGridRows])
@@ -145,8 +157,8 @@ function TrackerTableGridInner({
   )
 
   const fieldSortableIds = useMemo(
-    () => connectedFieldNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
-    [grid.id, connectedFieldNodes]
+    () => uniqueFieldLayoutNodes.map((n) => fieldSortableId(grid.id, n.fieldId)),
+    [grid.id, uniqueFieldLayoutNodes]
   )
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -155,7 +167,7 @@ function TrackerTableGridInner({
     (event: DragEndEvent) => {
       const { active, over } = event
       if (!over || active.id === over.id || !reorder) return
-      const currentIds = connectedFieldNodes.map((n) => n.fieldId)
+      const currentIds = uniqueFieldLayoutNodes.map((n) => n.fieldId)
       const activeParsed = parseFieldId(String(active.id))
       const overParsed = parseFieldId(String(over.id))
       if (!activeParsed || !overParsed || activeParsed.gridId !== grid.id || overParsed.gridId !== grid.id) return
@@ -165,7 +177,7 @@ function TrackerTableGridInner({
       const reordered = arrayMove(currentIds, oldIndex, newIndex)
       reorder(reordered)
     },
-    [grid.id, connectedFieldNodes, reorder]
+    [grid.id, uniqueFieldLayoutNodes, reorder]
   )
 
   /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
@@ -525,7 +537,7 @@ function TrackerTableGridInner({
     [tableFields, canEditLayout, grid.id, remove, move, fieldOptionsMap]
   )
 
-  if (connectedFieldNodes.length === 0 && !canEditLayout) {
+  if (uniqueFieldLayoutNodes.length === 0 && !canEditLayout) {
     if (layoutNodes.length === 0) return null
     return (
       <div className="p-4 text-muted-foreground">
@@ -533,7 +545,7 @@ function TrackerTableGridInner({
       </div>
     )
   }
-  if (connectedFieldNodes.length === 0 && canEditLayout) {
+  if (uniqueFieldLayoutNodes.length === 0 && canEditLayout) {
     return (
       <div className="space-y-3">
         <div className="flex h-8 items-center justify-end pb-2">
@@ -572,7 +584,7 @@ function TrackerTableGridInner({
           open={addColumnOpen}
           onOpenChange={setAddColumnOpen}
           variant="column"
-          existingFieldIds={connectedFieldNodes.map((n) => n.fieldId)}
+          existingFieldIds={uniqueFieldLayoutNodes.map((n) => n.fieldId)}
           allFields={schema!.fields ?? []}
           onConfirm={handleAddColumnConfirm}
         />

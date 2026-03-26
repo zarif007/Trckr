@@ -54,7 +54,7 @@ export function DashboardUserMenu({ triggerSize = 'sm' }: DashboardUserMenuProps
     return (
       <div
         className={cn(
-          'shrink-0 rounded-full bg-muted/50 animate-pulse',
+          'shrink-0 rounded-md bg-muted/50 animate-pulse',
           t.box,
         )}
         aria-hidden
@@ -76,7 +76,7 @@ export function DashboardUserMenu({ triggerSize = 'sm' }: DashboardUserMenuProps
         <button
           type="button"
           className={cn(
-            'flex shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-border/50 bg-muted/30 outline-none transition-colors',
+            'flex shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-md border border-border/50 bg-muted/30 outline-none transition-colors',
             t.box,
             'hover:border-border hover:bg-muted/50',
             'focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -120,10 +120,10 @@ export function DashboardUserMenu({ triggerSize = 'sm' }: DashboardUserMenuProps
               alt=""
               width={36}
               height={36}
-              className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-border/50"
+              className="h-9 w-9 shrink-0 rounded-md object-cover ring-1 ring-border/50"
             />
           ) : (
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/60 bg-muted/40 text-sm font-semibold text-foreground">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border/60 bg-muted/40 text-sm font-semibold text-foreground">
               {initial}
             </span>
           )}

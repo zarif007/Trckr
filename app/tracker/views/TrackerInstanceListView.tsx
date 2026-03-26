@@ -242,7 +242,7 @@ export function TrackerInstanceListView({
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       {/* Header */}
-      <div className="flex-shrink-0 h-12 border-b border-border/40 flex items-center justify-between px-4 gap-3">
+      <div className="flex-shrink-0 h-12 border-b border-border/40 flex items-center justify-between px-3 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <button
             type="button"
@@ -316,7 +316,7 @@ export function TrackerInstanceListView({
 
       {/* Search bar (collapsible) */}
       {searchOpen && (
-        <div className="flex-shrink-0 px-4 py-2 border-b border-border/30">
+        <div className="flex-shrink-0 px-3 py-1.5 border-b border-border/30">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40" />
             <Input
@@ -341,7 +341,7 @@ export function TrackerInstanceListView({
 
       {/* Settings panel (collapsible) */}
       {settingsOpen && (
-        <div className="flex-shrink-0 px-4 py-2 border-b border-border/30 bg-muted/10">
+        <div className="flex-shrink-0 px-3 py-1.5 border-b border-border/30 bg-muted/10">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] font-medium text-muted-foreground/80">List settings</p>
@@ -401,7 +401,7 @@ export function TrackerInstanceListView({
         )}
 
         {!loading && !error && instances.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 py-16">
+          <div className="flex flex-col items-center justify-center h-full gap-3 py-12">
             <div className="w-12 h-12 rounded-md bg-muted/40 flex items-center justify-center">
               <Layers className="h-5 w-5 text-muted-foreground/30" />
             </div>
@@ -419,9 +419,9 @@ export function TrackerInstanceListView({
         )}
 
         {!loading && !error && instances.length > 0 && (
-          <div className="py-2 px-3">
+          <div className="py-1.5 px-2">
             {filteredInstances.length === 0 && searchQuery && (
-              <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
                 <Search className="h-5 w-5 opacity-20" />
                 <p className="text-xs text-muted-foreground/60">No results for &quot;{searchQuery}&quot;</p>
               </div>
@@ -480,7 +480,7 @@ export function TrackerInstanceListView({
             )}
 
             {total > PAGE_SIZE && (
-              <div className="flex items-center justify-center gap-2 px-1 py-4">
+              <div className="flex items-center justify-center gap-2 px-1 py-3">
                 <Button
                   variant="ghost"
                   size="sm"

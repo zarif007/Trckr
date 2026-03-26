@@ -18,6 +18,7 @@ import { motion } from 'framer-motion'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import type {
   Project,
   Module,
@@ -52,8 +53,13 @@ import {
   projectAreaTileMotionButtonClass,
   projectAreaTileOverflowButtonClass,
 } from '../project-area'
+import { MarqueeSelectionOverlay } from '../MarqueeSelectionOverlay'
+import { useMarqueeSelection } from '../../hooks/useMarqueeSelection'
 
 const STALE_TIME_MS = 60 * 1000
+
+const MARQUEE_SELECTED =
+  'ring-2 ring-primary/30 ring-offset-2 ring-offset-background border-primary/40'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -125,6 +131,7 @@ export function ProjectContent({
   const clickNavigateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+  const projectMarquee = useMarqueeSelection()
   const { fetchProjects, setProjects } = useDashboard()
 
   const invalidateProjectAndProjects = useCallback(() => {
@@ -737,7 +744,7 @@ export function ProjectContent({
         />
 
         <div className={projectAreaScrollClass}>
-          <div className="h-full min-h-0">
+          <div className="flex h-full min-h-0 min-w-0 flex-col">
             {isEmpty ? (
               <ProjectEmptyStatePanel
                 icon={FilePlus}
@@ -755,110 +762,123 @@ export function ProjectContent({
               </ProjectEmptyStatePanel>
             ) : (
               <div
-                className={projectAreaItemGridClass}
+                className="relative flex min-h-0 min-w-0 flex-1 flex-col"
                 aria-label="Project items"
+                {...projectMarquee.rootProps}
               >
-                {tableRows.map((row) => {
-                  const Icon = row.icon
-                  const contextItem: ContextMenuItem = {
-                    kind: row.kind,
-                    id: row.id,
-                    label: row.label,
-                    ...('trackerHrefs' in row ? { trackerHrefs: row.trackerHrefs } : {}),
-                  }
-                  const isRenamingThis =
-                    renaming &&
-                    renaming.kind === row.kind &&
-                    renaming.id === row.id
-                  const canRenameDelete =
-                    row.kind === 'module' ||
-                    row.kind === 'tracker' ||
-                    row.kind === 'report' ||
-                    row.kind === 'analysis'
-                  return (
-                    <div
-                      key={
-                        row.kind === 'file'
-                          ? `file-${row.id}`
-                          : `${row.kind}-${row.id}`
-                      }
-                      className={projectAreaTileCardClass}
-                    >
-                      <motion.button
-                        type="button"
-                        {...projectAreaTileButtonMotion}
-                        onClick={() => {
-                          if (isRenamingThis) return
-                          if (clickNavigateTimeoutRef.current)
-                            clearTimeout(clickNavigateTimeoutRef.current)
-                          clickNavigateTimeoutRef.current = setTimeout(() => {
-                            clickNavigateTimeoutRef.current = null
-                            router.push(row.href)
-                          }, 200)
-                        }}
-                        onDoubleClick={(e) => {
-                          if (canRenameDelete) {
-                            e.preventDefault()
-                            if (clickNavigateTimeoutRef.current) {
-                              clearTimeout(clickNavigateTimeoutRef.current)
-                              clickNavigateTimeoutRef.current = null
-                            }
-                            startRename(contextItem)
-                          }
-                        }}
-                        onContextMenu={
-                          canRenameDelete
-                            ? (e) => openContextMenu(e, contextItem)
-                            : undefined
+                <div className={projectAreaItemGridClass}>
+                  {tableRows.map((row) => {
+                    const Icon = row.icon
+                    const contextItem: ContextMenuItem = {
+                      kind: row.kind,
+                      id: row.id,
+                      label: row.label,
+                      ...('trackerHrefs' in row ? { trackerHrefs: row.trackerHrefs } : {}),
+                    }
+                    const isRenamingThis =
+                      renaming &&
+                      renaming.kind === row.kind &&
+                      renaming.id === row.id
+                    const canRenameDelete =
+                      row.kind === 'module' ||
+                      row.kind === 'tracker' ||
+                      row.kind === 'report' ||
+                      row.kind === 'analysis'
+                    const marqueeId = `${row.kind}:${row.id}`
+                    const isMarqueeSelected =
+                      projectMarquee.selectedIds.has(marqueeId)
+                    return (
+                      <div
+                        key={
+                          row.kind === 'file'
+                            ? `file-${row.id}`
+                            : `${row.kind}-${row.id}`
                         }
-                        className={projectAreaTileMotionButtonClass}
-                      >
-                        <ProjectFolderTileIcon
-                          icon={Icon}
-                          listHighlight={
-                            'trackerView' in row && row.trackerView === 'list'
-                          }
-                        />
-                        {isRenamingThis ? (
-                          <Input
-                            ref={renameInputRef}
-                            className="text-sm font-medium h-7 w-full text-center"
-                            defaultValue={renaming.currentName}
-                            onBlur={(e) => submitRename(e.target.value)}
-                            onKeyDown={handleRenameKeyDown}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          <span className="text-sm font-semibold text-center leading-tight truncate w-full">
-                            {row.label}
-                          </span>
+                        data-marquee-selectable
+                        data-marquee-id={marqueeId}
+                        aria-selected={isMarqueeSelected}
+                        role="option"
+                        className={cn(
+                          projectAreaTileCardClass,
+                          isMarqueeSelected && MARQUEE_SELECTED,
                         )}
-                      </motion.button>
-                      {(row.kind === 'tracker' ||
-                        row.kind === 'report' ||
-                        row.kind === 'analysis') &&
-                        !isRenamingThis && (
-                        <button
+                      >
+                        <motion.button
                           type="button"
-                          className={projectAreaTileOverflowButtonClass}
-                          aria-label={
-                            row.kind === 'report'
-                              ? 'Report actions'
-                              : row.kind === 'analysis'
-                                ? 'Analysis actions'
-                                : 'Tracker actions'
-                          }
-                          onClick={(e: MouseEvent<HTMLButtonElement>) => {
-                            e.stopPropagation()
-                            openContextMenu(e, contextItem)
+                          {...projectAreaTileButtonMotion}
+                          onClick={() => {
+                            if (isRenamingThis) return
+                            if (clickNavigateTimeoutRef.current)
+                              clearTimeout(clickNavigateTimeoutRef.current)
+                            clickNavigateTimeoutRef.current = setTimeout(() => {
+                              clickNavigateTimeoutRef.current = null
+                              router.push(row.href)
+                            }, 200)
                           }}
+                          onDoubleClick={(e) => {
+                            if (canRenameDelete) {
+                              e.preventDefault()
+                              if (clickNavigateTimeoutRef.current) {
+                                clearTimeout(clickNavigateTimeoutRef.current)
+                                clickNavigateTimeoutRef.current = null
+                              }
+                              startRename(contextItem)
+                            }
+                          }}
+                          onContextMenu={
+                            canRenameDelete
+                              ? (e) => openContextMenu(e, contextItem)
+                              : undefined
+                          }
+                          className={projectAreaTileMotionButtonClass}
                         >
-                          <MoreHorizontal className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
+                          <ProjectFolderTileIcon
+                            icon={Icon}
+                            listHighlight={
+                              'trackerView' in row && row.trackerView === 'list'
+                            }
+                          />
+                          {isRenamingThis ? (
+                            <Input
+                              ref={renameInputRef}
+                              className="text-sm font-medium h-7 w-full text-center"
+                              defaultValue={renaming.currentName}
+                              onBlur={(e) => submitRename(e.target.value)}
+                              onKeyDown={handleRenameKeyDown}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          ) : (
+                            <span className="text-sm font-semibold text-center leading-tight truncate w-full">
+                              {row.label}
+                            </span>
+                          )}
+                        </motion.button>
+                        {(row.kind === 'tracker' ||
+                          row.kind === 'report' ||
+                          row.kind === 'analysis') &&
+                          !isRenamingThis && (
+                          <button
+                            type="button"
+                            className={projectAreaTileOverflowButtonClass}
+                            aria-label={
+                              row.kind === 'report'
+                                ? 'Report actions'
+                                : row.kind === 'analysis'
+                                  ? 'Analysis actions'
+                                  : 'Tracker actions'
+                            }
+                            onClick={(e: MouseEvent<HTMLButtonElement>) => {
+                              e.stopPropagation()
+                              openContextMenu(e, contextItem)
+                            }}
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -884,6 +904,10 @@ export function ProjectContent({
         onStartRename={startRename}
         onDelete={handleDelete}
       />
+
+      {projectMarquee.isDragging && projectMarquee.dragRect && (
+        <MarqueeSelectionOverlay rect={projectMarquee.dragRect} />
+      )}
 
       {displayError && (
         <motion.div

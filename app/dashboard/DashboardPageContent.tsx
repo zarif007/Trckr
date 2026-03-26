@@ -31,6 +31,8 @@ import { theme } from '@/lib/theme'
 import { useDashboard, collectTrackersFromModules } from './dashboard-context'
 import { DashboardHomeSkeleton } from './components/skeleton/DashboardPageSkeleton'
 import { CreateDropdown } from './components/CreateDropdown'
+import { MarqueeSelectionOverlay } from './components/MarqueeSelectionOverlay'
+import { useMarqueeSelection } from './hooks/useMarqueeSelection'
 
 export type DashboardView = 'all' | 'projects' | 'recents'
 
@@ -43,6 +45,9 @@ const DASH_LIST_ICON = 'h-5 w-5 text-foreground/75 transition-colors group-hover
 
 const DASH_LIST_ROW =
   'flex items-center gap-3 px-3 py-2.5 rounded-md border border-border/35 bg-background/50 shadow-sm hover:border-border/50 hover:bg-muted/40 hover:shadow-md cursor-pointer transition-all duration-150 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background'
+
+const MARQUEE_SELECTED =
+  'ring-2 ring-primary/30 ring-offset-2 ring-offset-background border-primary/40'
 
 function getTrackerDisplayName(name: string | null, isList: boolean): string {
   if (!name) return isList ? 'Untitled list' : 'Untitled tracker'
@@ -60,6 +65,8 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
   const [createProjectOpen, setCreateProjectOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
   const createProjectInputRef = useRef<HTMLInputElement>(null)
+  const projectsMarquee = useMarqueeSelection()
+  const recentsMarquee = useMarqueeSelection()
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000)
@@ -193,11 +200,13 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
               animate={{ opacity: 1 }}
               transition={{ duration: 0.15 }}
               className={cn(
+                'relative',
                 view === 'projects' && 'h-full',
                 viewMode === 'grid'
                   ? 'grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 content-start'
                   : 'flex flex-col gap-1'
               )}
+              {...projectsMarquee.rootProps}
             >
               {viewMode === 'grid' ? (
                 <>
@@ -205,11 +214,17 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     const projectTrackerCount = (project.trackerSchemas ?? []).filter(
                       (t) => t.type === 'GENERAL',
                     ).length
+                    const pid = `project:${project.id}`
+                    const isSelected = projectsMarquee.selectedIds.has(pid)
                     return (
                       <Link
                         key={project.id}
                         href={`/project/${project.id}`}
-                        className="min-w-0 w-full"
+                        data-marquee-selectable
+                        data-marquee-id={pid}
+                        aria-selected={isSelected}
+                        role="option"
+                        className={cn('min-w-0 w-full', isSelected && MARQUEE_SELECTED)}
                       >
                         <motion.div
                           whileTap={{ scale: 0.98 }}
@@ -237,6 +252,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                   <motion.div
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    data-marquee-ignore
                     className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-md border border-dashed border-border/50 bg-muted/25 hover:border-primary/40 hover:bg-primary/[0.06] cursor-pointer transition-[border-color,box-shadow,background-color] duration-150 shadow-sm hover:shadow-md"
                     onClick={handleOpenCreateProject}
                   >
@@ -258,11 +274,17 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     const projectTrackerCount = (project.trackerSchemas ?? []).filter(
                       (t) => t.type === 'GENERAL',
                     ).length
+                    const pid = `project:${project.id}`
+                    const isSelected = projectsMarquee.selectedIds.has(pid)
                     return (
                       <Link
                         key={project.id}
                         href={`/project/${project.id}`}
-                        className={DASH_LIST_ROW}
+                        data-marquee-selectable
+                        data-marquee-id={pid}
+                        aria-selected={isSelected}
+                        role="option"
+                        className={cn(DASH_LIST_ROW, isSelected && MARQUEE_SELECTED)}
                       >
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-medium truncate block">
@@ -287,6 +309,7 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                   })}
                   <button
                     type="button"
+                    data-marquee-ignore
                     onClick={handleOpenCreateProject}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-md border border-dashed border-border/50 bg-muted/15 shadow-sm hover:bg-muted/30 hover:border-primary/35 hover:shadow-md transition-all duration-150 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
@@ -314,16 +337,25 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/85 mb-3 px-0.5">
                   Recent trackers
                 </h2>
-                <div className="flex flex-col gap-1.5">
+                <div
+                  className="relative flex flex-col gap-1.5"
+                  {...recentsMarquee.rootProps}
+                >
                   {recentTrackers.map((tracker) => {
                     const isListView = tracker.listForSchemaId != null
                     const TrackerIcon = isListView ? LayoutList : Table2
                     const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+                    const tid = `tracker:${tracker.id}`
+                    const isSelected = recentsMarquee.selectedIds.has(tid)
                     return (
                       <Link
                         key={tracker.id}
                         href={href}
-                        className={DASH_LIST_ROW}
+                        data-marquee-selectable
+                        data-marquee-id={tid}
+                        aria-selected={isSelected}
+                        role="option"
+                        className={cn(DASH_LIST_ROW, isSelected && MARQUEE_SELECTED)}
                       >
                         <div className="flex-1 min-w-0">
                           <span className="text-sm font-semibold truncate block">
@@ -368,16 +400,25 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
                     </p>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-1.5">
+                  <div
+                    className="relative flex flex-col gap-1.5"
+                    {...recentsMarquee.rootProps}
+                  >
                     {recentTrackers.map((tracker) => {
                       const isListView = tracker.listForSchemaId != null
                       const TrackerIcon = isListView ? LayoutList : Table2
                       const href = tracker.listForSchemaId ? `/tracker-list/${tracker.id}` : `/tracker/${tracker.id}`
+                      const tid = `tracker:${tracker.id}`
+                      const isSelected = recentsMarquee.selectedIds.has(tid)
                       return (
                         <Link
                           key={tracker.id}
                           href={href}
-                          className={DASH_LIST_ROW}
+                          data-marquee-selectable
+                          data-marquee-id={tid}
+                          aria-selected={isSelected}
+                          role="option"
+                          className={cn(DASH_LIST_ROW, isSelected && MARQUEE_SELECTED)}
                         >
                           <div className="flex-1 min-w-0">
                             <span className="text-sm font-semibold truncate block">
@@ -405,6 +446,13 @@ export function DashboardPageContent({ view = 'all' }: { view?: DashboardView })
           )}
         </div>
       </main>
+
+      {projectsMarquee.isDragging && projectsMarquee.dragRect && (
+        <MarqueeSelectionOverlay rect={projectsMarquee.dragRect} />
+      )}
+      {recentsMarquee.isDragging && recentsMarquee.dragRect && (
+        <MarqueeSelectionOverlay rect={recentsMarquee.dragRect} />
+      )}
 
       <div className="h-6 flex-shrink-0 border-t border-border/50 flex items-center justify-between px-3 text-[10px] text-muted-foreground bg-muted/20">
         <span>

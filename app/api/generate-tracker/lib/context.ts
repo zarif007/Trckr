@@ -238,7 +238,27 @@ export function buildConversationContext(messages: unknown[]): string {
 }
 
 /**
- * Build the "Current Tracker State (JSON)" block for the prompt when the client sends currentTracker.
+ * When the client omits `dirty`, infer whether the payload represents user-edited schema.
+ * Empty object `{}` (clean / not dirty) must not be treated as patchable state.
+ */
+export function inferTrackerDirtyFromPayload(currentTracker: unknown): boolean {
+  if (currentTracker == null) return false
+  if (isPlainRecord(currentTracker) && Object.keys(currentTracker).length === 0) return false
+  const state = normalizeTrackerState(currentTracker)
+  if (!state) return false
+  return !isUntouchedDefaultState(state)
+}
+
+/**
+ * True when the prompt includes full "Current Tracker State (JSON)" (patch mode).
+ */
+export function hasFullTrackerStateForPatch(currentTracker: unknown): boolean {
+  const state = normalizeTrackerState(currentTracker)
+  return state != null && !isUntouchedDefaultState(state)
+}
+
+/**
+ * Build the "Current Tracker State (JSON)" prefix for the user prompt, or empty when none.
  */
 export function buildCurrentStateBlock(currentTracker: unknown): string {
   const state = normalizeTrackerState(currentTracker)

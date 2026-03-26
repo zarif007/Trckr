@@ -6,6 +6,7 @@ import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
 import { validateTracker, autoFixBindings, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
+import { removeEmptyOverviewTabIfUnused } from '@/app/tracker/utils/removeEmptyOverviewTab'
 import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
@@ -153,17 +154,30 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
 
   /**
    * Current state sent to the API.
-   * - If we already have a tracker, send it so the model can generate a patch.
-   * - For the first request, send null when state is untouched default scaffold.
-   * - For the first request with manual edits, include the edited state.
+   * - After an assistant turn with trackerData, send the base tracker for patches.
+   * - On the first request, always send a concrete baseline (user draft, live schema, or INITIAL)
+   *   so the server can inject the empty-scaffold hint vs full JSON state.
    */
   const getCurrentTrackerForApi = useCallback((): TrackerResponse | null => {
     const hasGeneratedTracker = messagesRef.current.some((m) => !!m.trackerData)
     if (!hasGeneratedTracker) {
-      return firstRunUserDraftRef.current
+      return (
+        firstRunUserDraftRef.current ??
+        activeTrackerRef.current ??
+        (INITIAL_TRACKER_SCHEMA as TrackerResponse)
+      )
     }
     return getBaseTracker()
   }, [getBaseTracker])
+
+  const getDirtyForApi = useCallback((): boolean => {
+    if (messagesRef.current.some((m) => !!m.trackerData)) return true
+    const draft =
+      firstRunUserDraftRef.current ??
+      activeTrackerRef.current ??
+      (INITIAL_TRACKER_SCHEMA as TrackerResponse)
+    return !isUntouchedFirstRunScaffold(draft as TrackerLike)
+  }, [])
 
   const setResolvedTrackerData = useCallback(
     (next: TrackerResponse | null) => {
@@ -203,6 +217,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       masterDataSpecsRef.current = undefined
     }
     rawTracker = normalizeValidationAndCalculations(rawTracker)
+    rawTracker = removeEmptyOverviewTabIfUnused(rawTracker as TrackerLike)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
     const tracker = built ? enrichBindingsFromSchema(built as TrackerLike) : built
     return tracker as TrackerResponse
@@ -310,6 +325,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         query: fixPrompt,
         messages: nextMessages,
         currentTracker: tracker as TrackerResponse,
+        dirty: true,
         ...(trackerId ? { trackerSchemaId: trackerId } : {}),
       })
       return
@@ -611,10 +627,14 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       }
     }
 
+    const dirty = getDirtyForApi()
     submit({
       query: userMessage,
       messages: messages,
-      currentTracker: getCurrentTrackerForApi(),
+      currentTracker: dirty
+        ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
+        : {},
+      dirty,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
   }
@@ -630,10 +650,14 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         console.error('Failed to persist user message:', e)
       )
     }
+    const dirtyContinue = getDirtyForApi()
     submit({
       query: CONTINUE_PROMPT,
       messages: nextMessages,
-      currentTracker: getCurrentTrackerForApi(),
+      currentTracker: dirtyContinue
+      ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
+      : {},
+      dirty: dirtyContinue,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
     continueCountRef.current = 0
@@ -652,15 +676,19 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         console.error('Failed to persist user message:', e)
       )
     }
+    const dirtyPending = getDirtyForApi()
     submit({
       query: CONTINUE_PROMPT,
       messages: nextMessages,
-      currentTracker: getCurrentTrackerForApi(),
+      currentTracker: dirtyPending
+      ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
+      : {},
+      dirty: dirtyPending,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
     })
     setPendingContinue(false)
     continueCountRef.current += 1
-  }, [pendingContinue, isLoading, messages, submit, getCurrentTrackerForApi])
+  }, [pendingContinue, isLoading, messages, submit, getCurrentTrackerForApi, getDirtyForApi])
 
   useEffect(() => {
     if (isLoading && (object?.tracker || object?.trackerPatch)) {

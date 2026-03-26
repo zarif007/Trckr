@@ -2,7 +2,7 @@
 
 import React, { use, Suspense, useEffect, useState, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { TrackerPageMessage } from '../_components/TrackerPageMessage'
 import { TrackerAIView } from '../page'
 import { TrackerPageSkeleton } from './TrackerPageSkeleton'
 import { TrackerInstanceListView } from '../views/TrackerInstanceListView'
@@ -243,14 +243,7 @@ function TrackerByIdContent({
     Array.isArray(schema.fields)
 
   if (!hasValidSchema) {
-    return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
-        <p className="text-muted-foreground">Invalid tracker schema</p>
-        <Button variant="outline" onClick={onBack}>
-          Back
-        </Button>
-      </div>
-    )
+    return <TrackerPageMessage message="Invalid tracker schema" onBack={onBack} />
   }
 
   // If this is a .list companion schema, render the instance list view
@@ -290,14 +283,7 @@ function TrackerByIdContent({
 
 function TrackerLoadError({ error, onBack }: { error: Error; onBack: () => void }) {
   const message = error.message === 'NOT_FOUND' ? 'Tracker not found' : 'Failed to load tracker'
-  return (
-    <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
-      <p className="text-muted-foreground">{message}</p>
-      <Button variant="outline" onClick={onBack}>
-        Back
-      </Button>
-    </div>
-  )
+  return <TrackerPageMessage message={message} onBack={onBack} />
 }
 
 class TrackerErrorBoundary extends React.Component<
@@ -352,14 +338,7 @@ export default function TrackerByIdPage() {
   }, [router])
 
   if (!id) {
-    return (
-      <div className="min-h-screen font-sans bg-background text-foreground flex flex-wrap items-center justify-center gap-4 pt-24 px-4">
-        <p className="text-muted-foreground">Invalid tracker</p>
-        <Button variant="outline" onClick={handleBack}>
-          Back
-        </Button>
-      </div>
-    )
+    return <TrackerPageMessage message="Invalid tracker" onBack={handleBack} />
   }
 
   return (

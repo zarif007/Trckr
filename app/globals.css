@@ -49,8 +49,56 @@ body {
 }
 
 @layer base {
-  /* Light theme (default) – subtle warm off-white, better contrast */
+  /* Dark theme (default) */
   :root,
+  :root[data-theme='dark'] {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 60.4%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --radius: 0.5rem;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --success: 142 70% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 0 0% 98%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 98%;
+    --shadow-xs: none;
+    --shadow-sm: none;
+    --shadow-md: none;
+    --shadow-lg: none;
+    --shadow-xl: none;
+    --sidebar: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 9%;
+    --sidebar-accent: 0 0% 14.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 0 0% 14.9%;
+    --sidebar-ring: 0 0% 83.1%;
+  }
+
+  /* Light theme – subtle warm off-white, better contrast */
   :root[data-theme='light'] {
     --background: 40 6% 98.5%;
     --foreground: 0 0% 3.9%;
@@ -98,102 +146,6 @@ body {
     --sidebar-accent-foreground: 0 0% 9%;
     --sidebar-border: 0 0% 88%;
     --sidebar-ring: 0 0% 3.9%;
-  }
-
-  /* Dark theme */
-  :root[data-theme='dark'] {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 0%;
-    --card-foreground: 0 0% 100%;
-    --popover: 0 0% 0%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 60.4%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --success: 142 70% 45%;
-    --success-foreground: 0 0% 98%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 0 0% 98%;
-    --info: 217 91% 60%;
-    --info-foreground: 0 0% 98%;
-    --shadow-xs: none;
-    --shadow-sm: none;
-    --shadow-md: none;
-    --shadow-lg: none;
-    --shadow-xl: none;
-    --sidebar: 0 0% 0%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 98%;
-    --sidebar-primary-foreground: 0 0% 9%;
-    --sidebar-accent: 0 0% 14.9%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 0 0% 14.9%;
-    --sidebar-ring: 0 0% 83.1%;
-  }
-
-  /* System preference fallback (dark) */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme]) {
-      --background: 0 0% 0%;
-      --foreground: 0 0% 100%;
-      --card: 0 0% 0%;
-      --card-foreground: 0 0% 100%;
-      --popover: 0 0% 0%;
-      --popover-foreground: 0 0% 100%;
-      --primary: 0 0% 98%;
-      --primary-foreground: 0 0% 9%;
-      --secondary: 0 0% 14.9%;
-      --secondary-foreground: 0 0% 98%;
-      --muted: 0 0% 14.9%;
-      --muted-foreground: 0 0% 60.4%;
-      --accent: 0 0% 14.9%;
-      --accent-foreground: 0 0% 98%;
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 0 0% 14.9%;
-      --input: 0 0% 14.9%;
-      --ring: 0 0% 83.1%;
-      --chart-1: 220 70% 50%;
-      --chart-2: 160 60% 45%;
-      --chart-3: 30 80% 55%;
-      --chart-4: 280 65% 60%;
-      --chart-5: 340 75% 55%;
-      --success: 142 70% 45%;
-      --success-foreground: 0 0% 98%;
-      --warning: 38 92% 55%;
-      --warning-foreground: 0 0% 98%;
-      --info: 217 91% 60%;
-      --info-foreground: 0 0% 98%;
-      --shadow-xs: none;
-      --shadow-sm: none;
-      --shadow-md: none;
-      --shadow-lg: none;
-      --shadow-xl: none;
-      --sidebar: 0 0% 0%;
-      --sidebar-foreground: 0 0% 100%;
-      --sidebar-primary: 0 0% 98%;
-      --sidebar-primary-foreground: 0 0% 9%;
-      --sidebar-accent: 0 0% 14.9%;
-      --sidebar-accent-foreground: 0 0% 98%;
-      --sidebar-border: 0 0% 14.9%;
-      --sidebar-ring: 0 0% 83.1%;
-    }
   }
 }
 

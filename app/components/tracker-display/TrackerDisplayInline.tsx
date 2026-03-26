@@ -298,8 +298,8 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-md">
-      <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0">
+    <div className="w-full min-w-0 space-y-4 px-0 py-3 md:p-4 bg-card rounded-md">
+      <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}
           {editMode && onSchemaChange && (
@@ -309,7 +309,7 @@ export function TrackerDisplayInline({
               size="icon"
               onClick={handleAddTab}
               aria-label="Add tab"
-              className="shrink-0 h-9 w-9"
+              className="shrink-0 h-8 w-8"
             >
               <Plus className="h-4 w-4" />
             </Button>

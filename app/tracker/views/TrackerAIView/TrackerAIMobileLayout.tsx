@@ -49,7 +49,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
 
   return (
     <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-12 md:pt-14 md:hidden"
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-12 md:hidden"
       aria-hidden={isDesktop}
     >
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -58,7 +58,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
           onValueChange={(v) => setMobileTab(v as 'preview' | 'chat')}
           className="flex-1 min-h-0 flex flex-col gap-0"
         >
-          <div className="shrink-0 px-1 pt-2 pb-2 border-b border-border/60 bg-background/95 backdrop-blur">
+          <div className="shrink-0 px-1 py-1.5 border-b border-border/60 bg-background/95 backdrop-blur">
             <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="preview">Preview</TabsTrigger>
               <TabsTrigger value="chat">Chat</TabsTrigger>

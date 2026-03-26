@@ -91,8 +91,8 @@ export function TrackerChatPanel({
 
   return (
     <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden bg-zinc-50/50 dark:bg-zinc-950/30 border-l border-border/60">
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 py-8">
-        <div className="mx-auto max-w-2xl space-y-8">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5">
+        <div className="mx-auto max-w-2xl space-y-5">
           {conversationWindows && conversationWindows.length > 0 && (
             <div className="flex items-center gap-0 border-b border-border/40 mb-4 min-h-9">
               <div
@@ -142,7 +142,7 @@ export function TrackerChatPanel({
           {showStatusPanel && <TrackerStatusPanel {...statusPanelProps} />}
 
           {isConversationLoading ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex items-center justify-center py-12">
               <div className="text-xs text-muted-foreground">Loading conversation…</div>
             </div>
           ) : (
@@ -177,7 +177,7 @@ export function TrackerChatPanel({
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-sm px-6 py-4">
+      <div className="shrink-0 border-t border-border/40 bg-background/80 backdrop-blur-sm px-4 py-3">
         <div className="mx-auto max-w-2xl">
           <TrackerInputArea
             input={input}

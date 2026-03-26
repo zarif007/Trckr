@@ -48,7 +48,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
 
   return (
     <div
-      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-14 hidden md:flex"
+      className="h-screen box-border font-sans bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-hidden flex flex-col pt-12 hidden md:flex"
       aria-hidden={!isDesktop}
     >
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">

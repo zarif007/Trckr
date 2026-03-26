@@ -19,6 +19,7 @@ import {
 } from '@/lib/master-data-scope'
 import { buildFieldPath, parsePath } from '@/lib/resolve-bindings/path'
 import type { MasterDataBindingAction } from './chat-audit/schema'
+import { MASTER_DATA_TAB_ID } from './constants'
 
 export type { MasterDataBindingAction } from './chat-audit/schema'
 
@@ -60,6 +61,45 @@ function stripLocalOptionsGrids(tracker: Record<string, unknown>): Record<string
 
   const usedTabIds = new Set(nextSections.map((s) => s.tabId).filter((id): id is string => typeof id === 'string'))
   const nextTabs = tabs.filter((t) => usedTabIds.has(t.id ?? ''))
+
+  return {
+    ...tracker,
+    grids: nextGrids,
+    layoutNodes: nextLayoutNodes,
+    fields: nextFields,
+    sections: nextSections,
+    tabs: nextTabs,
+  }
+}
+
+/** Module/project scope: remove local Master Data tab chrome (AI sometimes emits it despite prompts). */
+function stripModuleProjectMasterDataTab(tracker: Record<string, unknown>): Record<string, unknown> {
+  const grids = Array.isArray(tracker.grids) ? (tracker.grids as Grid[]) : []
+  const layoutNodes = Array.isArray(tracker.layoutNodes) ? (tracker.layoutNodes as LayoutNode[]) : []
+  const fields = Array.isArray(tracker.fields) ? (tracker.fields as Field[]) : []
+  const sections = Array.isArray(tracker.sections) ? (tracker.sections as Array<{ id?: string; tabId?: string }>) : []
+  const tabs = Array.isArray(tracker.tabs) ? (tracker.tabs as Array<{ id?: string }>) : []
+
+  const sectionIdsToRemove = new Set(
+    sections.filter((s) => s.tabId === MASTER_DATA_TAB_ID).map((s) => s.id ?? '').filter(Boolean),
+  )
+  const hasOrphanMasterTab = tabs.some((t) => t.id === MASTER_DATA_TAB_ID)
+
+  if (sectionIdsToRemove.size === 0 && !hasOrphanMasterTab) {
+    return tracker
+  }
+
+  const gridIdsToRemove = new Set(
+    grids.filter((g) => sectionIdsToRemove.has(g.sectionId ?? '')).map((g) => g.id ?? '').filter(Boolean),
+  )
+
+  const nextGrids = grids.filter((g) => !gridIdsToRemove.has(g.id ?? ''))
+  const nextLayoutNodes = layoutNodes.filter((n) => !gridIdsToRemove.has(n.gridId ?? ''))
+  const usedFieldIds = new Set(nextLayoutNodes.map((n) => n.fieldId).filter((id): id is string => typeof id === 'string'))
+  const nextFields = fields.filter((f) => usedFieldIds.has(f.id ?? ''))
+  const nextSections = sections.filter((s) => !sectionIdsToRemove.has(s.id ?? ''))
+  const usedTabIds = new Set(nextSections.map((s) => s.tabId).filter((id): id is string => typeof id === 'string'))
+  const nextTabs = tabs.filter((t) => (t.id === MASTER_DATA_TAB_ID ? false : usedTabIds.has(t.id ?? '')))
 
   return {
     ...tracker,
@@ -170,7 +210,8 @@ export async function applyMasterDataBindings(options: {
   })
 
   if (unresolvedFields.length === 0) {
-    const cleaned = stripLocalOptionsGrids(nextTracker)
+    const afterOptions = stripLocalOptionsGrids(nextTracker)
+    const cleaned = stripModuleProjectMasterDataTab(afterOptions)
     return { tracker: { ...cleaned, bindings }, createdTrackerIds: [], actions: [] }
   }
 
@@ -397,7 +438,8 @@ export async function applyMasterDataBindings(options: {
     })
   }
 
-  const cleaned = stripLocalOptionsGrids(nextTracker)
+  const afterOptions = stripLocalOptionsGrids(nextTracker)
+  const cleaned = stripModuleProjectMasterDataTab(afterOptions)
   return {
     tracker: { ...cleaned, bindings },
     createdTrackerIds,

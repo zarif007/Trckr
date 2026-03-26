@@ -20,8 +20,9 @@ PRD Guidelines:
 
 Modifications & Construction Guidelines:
 - ALWAYS CREATE A TODO LIST in 'builderTodo'.
-- If FIRST TIME: List high-level components (e.g., "Create 'Overview' Tab").
-- If REVISION: Analyze "Current Tracker State" and list specific changes.
+- If FIRST TIME (greenfield, no prior tracker in context): List high-level components (e.g., main section + grid + fields on overview_tab, or multiple tabs only if the user asked for them).
+- On greenfield (no "Current Tracker State (JSON)"): Do NOT plan an empty Overview plus content elsewhere — primary builderTodo items should place the main structure on **overview_tab** unless the user explicitly wants multiple tabs. Never treat "add empty Overview" as a deliverable.
+- If REVISION (when "Current Tracker State (JSON)" is present): Analyze it and list specific changes.
 - Your 'builderTodo' is the instruction set for the Builder Agent.
 
 === PROJECT STRUCTURE: MODULES (OPTIONAL) ===

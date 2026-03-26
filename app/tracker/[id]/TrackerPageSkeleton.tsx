@@ -28,7 +28,7 @@ export function TrackerPageSkeleton() {
     <>
       {/* Desktop layout — matches TrackerAIView desktop */}
       <div
-        className="h-screen box-border font-sans bg-background text-foreground overflow-hidden flex flex-col pt-14 hidden md:flex"
+        className="h-screen box-border font-sans bg-background text-foreground overflow-hidden flex flex-col pt-12 hidden md:flex"
         aria-hidden={!isDesktop}
       >
         <div className="flex-1 min-h-0 flex overflow-hidden">
@@ -41,7 +41,7 @@ export function TrackerPageSkeleton() {
             {/* Toolbar strip — matches TrackerPanel top bar */}
             <div
               className={cn(
-                'absolute top-4 right-4 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-md border bg-background/90 p-1.5 shadow-sm',
+                'absolute top-3 right-3 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1 rounded-md border bg-background/90 p-1 shadow-sm',
                 theme.border.subtle
               )}
             >
@@ -60,10 +60,10 @@ export function TrackerPageSkeleton() {
               <Skeleton className="h-8 w-14 rounded-md" />
             </div>
 
-            {/* Content area — matches TrackerPanel: px-4 pt-16 pb-6 then card wrapper like TrackerDisplayInline */}
-            <div className="h-full overflow-y-auto px-4 pt-16 pb-6">
-              <div className="w-full min-w-0 space-y-6 px-0 py-4 md:p-6 bg-card rounded-md">
-                <Tabs defaultValue="tab1" className="w-full min-w-0">
+            {/* Content area — matches TrackerPanel scroll + TrackerDisplayInline card */}
+            <div className="h-full overflow-y-auto px-3 pt-14 pb-4">
+              <div className="w-full min-w-0 space-y-4 px-0 py-3 md:p-4 bg-card rounded-md">
+                <Tabs defaultValue="tab1" className="w-full min-w-0 gap-2">
                   <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
                     <TabsList className="h-9 w-fit inline-flex">
                       <Skeleton className="h-8 w-24 rounded-md mx-0.5" />
@@ -88,7 +88,7 @@ export function TrackerPageSkeleton() {
                           >
                             <div
                               className={cn(
-                                'flex w-full gap-4 border-b bg-muted/30 px-4 py-3',
+                                'flex w-full gap-3 border-b bg-muted/30 px-3 py-2.5',
                                 theme.border.verySubtle
                               )}
                             >
@@ -100,7 +100,7 @@ export function TrackerPageSkeleton() {
                               <div
                                 key={i}
                                 className={cn(
-                                  'flex w-full gap-4 border-b px-4 py-3 last:border-0',
+                                  'flex w-full gap-3 border-b px-3 py-2.5 last:border-0',
                                   theme.border.divider
                                 )}
                               >
@@ -129,7 +129,7 @@ export function TrackerPageSkeleton() {
                           >
                             <div
                               className={cn(
-                                'flex w-full gap-4 border-b bg-muted/30 px-4 py-3',
+                                'flex w-full gap-3 border-b bg-muted/30 px-3 py-2.5',
                                 theme.border.verySubtle
                               )}
                             >
@@ -140,7 +140,7 @@ export function TrackerPageSkeleton() {
                               <div
                                 key={i}
                                 className={cn(
-                                  'flex w-full gap-4 border-b px-4 py-3 last:border-0',
+                                  'flex w-full gap-3 border-b px-3 py-2.5 last:border-0',
                                   theme.border.divider
                                 )}
                               >
@@ -162,14 +162,14 @@ export function TrackerPageSkeleton() {
 
       {/* Mobile layout — matches TrackerAIView mobile (Preview tab only) */}
       <div
-        className="h-screen box-border font-sans bg-background text-foreground overflow-hidden flex flex-col pt-12 md:pt-14 md:hidden"
+        className="h-screen box-border font-sans bg-background text-foreground overflow-hidden flex flex-col pt-12 md:hidden"
         aria-hidden={isDesktop}
       >
         <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <Tabs defaultValue="preview" className="flex-1 min-h-0 flex flex-col gap-0">
             <div
               className={cn(
-                'shrink-0 border-b px-1 pt-2 pb-2 backdrop-blur bg-background/95',
+                'shrink-0 border-b px-1 py-1.5 backdrop-blur bg-background/95',
                 theme.border.subtle
               )}
             >
@@ -183,13 +183,13 @@ export function TrackerPageSkeleton() {
             <TabsContent value="preview" className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden">
               <section
                 className={cn(
-                  'relative h-full w-full overflow-y-auto bg-background/60 px-1 pt-14 pb-2',
+                  'relative h-full w-full overflow-y-auto bg-background/60 px-1 pt-12 pb-2',
                   theme.radius.md
                 )}
               >
                 <div
                   className={cn(
-                    'absolute top-4 right-1 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1.5 rounded-md border bg-background/90 p-1.5 shadow-sm',
+                    'absolute top-3 right-1 z-20 flex max-w-[calc(100%-0.5rem)] items-center gap-1 rounded-md border bg-background/90 p-1 shadow-sm',
                     theme.border.subtle
                   )}
                 >
@@ -197,7 +197,7 @@ export function TrackerPageSkeleton() {
                   <Skeleton className="h-7 w-10" />
                   <Skeleton className="h-8 w-8 rounded-md" />
                 </div>
-                <div className="w-full min-w-0 space-y-6 px-0 py-4 bg-card rounded-md">
+                <div className="w-full min-w-0 space-y-4 px-0 py-3 bg-card rounded-md">
                   <div className="flex items-center gap-2 min-w-0">
                     <TabsList className="h-9 w-fit inline-flex">
                       <Skeleton className="h-8 w-20 rounded-md mx-0.5" />

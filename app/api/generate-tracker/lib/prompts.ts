@@ -8,6 +8,8 @@ import trackerBuilderPrompt from '@/lib/prompts/trackerBuilder'
 export interface PromptInputs {
   query: string
   currentStateBlock: string
+  /** True when currentStateBlock is full "Current Tracker State (JSON)" (patch mode). */
+  hasFullTrackerStateForPatch: boolean
   conversationContext: string
   hasMessages: boolean
 }
@@ -44,6 +46,8 @@ export function getCombinedSystemPrompt(): string {
   - For calculations, set keys in "calculations"; set a key to null to delete it. Optionally list keys in "calculationsRemove".
   - For dependsOn, include the full updated dependsOn array if it changed.
 
+  GREENFIELD (no "Current Tracker State (JSON)" in this request): Put primary sections/grids on **overview_tab** by default. Do **not** emit an empty **overview_tab** while placing all main content on another tab. For multi-tab requests, give every tab at least one section.
+
   OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences). Do not output a summary in the manager.
   Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,
   output a complete but minimal tracker (fewer optional fields); the user can ask to add more.
@@ -54,18 +58,22 @@ export function getCombinedSystemPrompt(): string {
  * Build the main user prompt from query, current state, and conversation context.
  */
 export function buildUserPrompt(inputs: PromptInputs): string {
-  const { query, currentStateBlock, conversationContext, hasMessages } = inputs
+  const { query, currentStateBlock, conversationContext, hasMessages, hasFullTrackerStateForPatch } =
+    inputs
   const prefix = currentStateBlock + conversationContext
+  const stateTail = hasFullTrackerStateForPatch
+    ? ' Start from the Current Tracker State above when present.'
+    : ''
   if (conversationContext) {
     return (
       prefix +
-      `User: ${query}\n\nBased on our conversation, ${hasMessages ? 'update or modify' : 'update or create'} the tracker according to the user's latest request. Start from the Current Tracker State above when present.`
+      `User: ${query}\n\nBased on our conversation, ${hasMessages ? 'update or modify' : 'update or create'} the tracker according to the user's latest request.${stateTail}`
     )
   }
-  return (
-    prefix +
-    `User: ${query}\n\n${currentStateBlock ? 'Using the Current Tracker State above, update or create' : 'Create'} the tracker according to the user's request.`
-  )
+  const createLine = hasFullTrackerStateForPatch
+    ? 'Using the Current Tracker State above, update or create the tracker according to the user\'s request.'
+    : 'Create the tracker according to the user\'s request.'
+  return prefix + `User: ${query}\n\n${createLine}`
 }
 
 /**
@@ -73,8 +81,10 @@ export function buildUserPrompt(inputs: PromptInputs): string {
  * Each is progressively simpler to maximize chance of valid JSON.
  */
 export function buildFallbackPrompts(inputs: PromptInputs): string[] {
-  const { query, currentStateBlock, conversationContext } = inputs
-  const stateHint = currentStateBlock ? ' Start from the Current Tracker State above.' : ''
+  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch } = inputs
+  const stateHint = currentStateBlock && hasFullTrackerStateForPatch
+    ? ' Start from the Current Tracker State above.'
+    : ''
   return [
     `${currentStateBlock}${conversationContext}User: ${query}\n\nSimplify the request: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Always include both "manager" and "tracker" in valid JSON (manager: thinking, prd, builderTodo — no summary).${stateHint}`,
     `${currentStateBlock}${conversationContext}User: ${query}\n\nOutput only a minimal valid tracker JSON: one tab, one section, one grid, and one text field. Include "manager" (thinking, prd, builderTodo — no summary) and "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,

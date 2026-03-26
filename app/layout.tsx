@@ -57,7 +57,7 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="data-theme"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem={false}
           storageKey="trckr-theme"
         >

@@ -1,4 +1,9 @@
-import { buildConversationContext, buildCurrentStateBlock } from './lib/context'
+import {
+  buildConversationContext,
+  buildCurrentStateBlock,
+  hasFullTrackerStateForPatch,
+  inferTrackerDirtyFromPayload,
+} from './lib/context'
 import { generateTrackerResponse } from './lib/generate'
 import type { PromptInputs } from './lib/prompts'
 import { parseRequestBody, getErrorMessage } from './lib/validation'
@@ -18,7 +23,7 @@ export async function POST(request: Request) {
       body = await request.json()
     } catch {
       return badRequest(
-        'Invalid request body. Expected JSON with "query" and optional "messages" and "currentTracker".',
+        'Invalid request body. Expected JSON with "query" and optional "messages", "currentTracker", and "dirty".',
       )
     }
 
@@ -35,14 +40,17 @@ export async function POST(request: Request) {
       return jsonError(attr.error, attr.status)
     }
 
-    const { query, messages, currentTracker } = parsed
+    const { query, messages, currentTracker, dirty: dirtyFlag } = parsed
     const conversationContext = buildConversationContext(messages)
-    const currentStateBlock = buildCurrentStateBlock(currentTracker)
+    const effectiveDirty = dirtyFlag ?? inferTrackerDirtyFromPayload(currentTracker)
+    const trackerForPrompt = effectiveDirty ? currentTracker : null
+    const currentStateBlock = buildCurrentStateBlock(trackerForPrompt)
     const hasMessages = messages.length > 0
 
     const promptInputs: PromptInputs = {
       query,
       currentStateBlock,
+      hasFullTrackerStateForPatch: hasFullTrackerStateForPatch(trackerForPrompt),
       conversationContext,
       hasMessages,
     }

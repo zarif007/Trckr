@@ -267,4 +267,98 @@ describe('applyMasterDataBindings', () => {
     expect(call?.schema?.masterDataMeta?.key).toBe('student')
     expect(call?.schema?.masterDataMeta?.labelFieldId).toBe('full_name')
   })
+
+  it('strips empty master_data_tab when module scope and no local options grids', async () => {
+    const tracker = {
+      masterDataScope: 'module',
+      tabs: [
+        { id: 'overview_tab', name: 'Overview', placeId: 0, config: {} },
+        { id: 'master_data_tab', name: 'Master Data', placeId: 999, config: {} },
+      ],
+      sections: [
+        { id: 'main_section', name: 'Main', tabId: 'overview_tab', placeId: 1, config: {} },
+        { id: 'master_data_section', name: 'Master Data', tabId: 'master_data_tab', placeId: 1, config: {} },
+      ],
+      grids: [
+        {
+          id: 'tasks_grid',
+          name: 'Tasks',
+          sectionId: 'main_section',
+          placeId: 1,
+          config: {},
+          views: [{ id: 'tasks_table_view', name: 'Table', type: 'table' as const, config: {} }],
+        },
+      ],
+      fields: [{ id: 'title', dataType: 'string' as const, ui: { label: 'Title' }, config: {} }],
+      layoutNodes: [{ gridId: 'tasks_grid', fieldId: 'title', order: 1 }],
+      bindings: {},
+    }
+
+    const result = await applyMasterDataBindings({
+      tracker,
+      scope: 'module',
+      projectId: 'project-1',
+      moduleId: 'module-1',
+      userId: 'user-1',
+    })
+
+    expect((result.tracker.tabs as Array<{ id: string }>).some((t) => t.id === 'master_data_tab')).toBe(false)
+    expect((result.tracker.sections as Array<{ id: string }>).some((s) => s.id === 'master_data_section')).toBe(false)
+    expect((result.tracker.tabs as Array<{ id: string }>).map((t) => t.id)).toEqual(['overview_tab'])
+    expect(prismaMock.module.findMany).not.toHaveBeenCalled()
+  })
+
+  it('strips master_data_tab subtree including non-options grids under module scope', async () => {
+    const tracker = {
+      masterDataScope: 'module',
+      tabs: [
+        { id: 'overview_tab', name: 'Overview', placeId: 0, config: {} },
+        { id: 'master_data_tab', name: 'Master Data', placeId: 999, config: {} },
+      ],
+      sections: [
+        { id: 'main_section', name: 'Main', tabId: 'overview_tab', placeId: 1, config: {} },
+        { id: 'master_data_section', name: 'Master Data', tabId: 'master_data_tab', placeId: 1, config: {} },
+      ],
+      grids: [
+        {
+          id: 'tasks_grid',
+          name: 'Tasks',
+          sectionId: 'main_section',
+          placeId: 1,
+          config: {},
+          views: [{ id: 'tasks_table_view', name: 'Table', type: 'table' as const, config: {} }],
+        },
+        {
+          id: 'bogus_grid',
+          name: 'Bogus',
+          sectionId: 'master_data_section',
+          placeId: 1,
+          config: {},
+          views: [{ id: 'bogus_table_view', name: 'Table', type: 'table' as const, config: {} }],
+        },
+      ],
+      fields: [
+        { id: 'title', dataType: 'string' as const, ui: { label: 'Title' }, config: {} },
+        { id: 'orphan_field', dataType: 'string' as const, ui: { label: 'Orphan' }, config: {} },
+      ],
+      layoutNodes: [
+        { gridId: 'tasks_grid', fieldId: 'title', order: 1 },
+        { gridId: 'bogus_grid', fieldId: 'orphan_field', order: 1 },
+      ],
+      bindings: {},
+    }
+
+    const result = await applyMasterDataBindings({
+      tracker,
+      scope: 'module',
+      projectId: 'project-1',
+      moduleId: 'module-1',
+      userId: 'user-1',
+    })
+
+    expect((result.tracker.grids as Array<{ id: string }>).map((g) => g.id)).toEqual(['tasks_grid'])
+    expect((result.tracker.fields as Array<{ id: string }>).map((f) => f.id)).toEqual(['title'])
+    expect((result.tracker.tabs as Array<{ id: string }>).some((t) => t.id === 'master_data_tab')).toBe(false)
+    expect(prismaMock.module.findMany).not.toHaveBeenCalled()
+  })
 })
