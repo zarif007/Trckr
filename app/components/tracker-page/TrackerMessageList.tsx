@@ -2,10 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye, Wrench } from 'lucide-react'
+import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye, Wrench, Box, PackagePlus } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import type { Message, TrackerResponse, ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
+import { masterDataAuditHasCreated } from '@/lib/master-data/chat-audit'
+import {
+  MasterDataCreatedTrackersPanel,
+  MasterDataFunctionCallsPanel,
+} from './master-data-chat-audit'
 import { ToolCallProgress } from './ToolCallProgress'
 
 interface TrackerMessageListProps {
@@ -15,6 +20,8 @@ interface TrackerMessageListProps {
   object: unknown
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   setMessageToolsOpen: (idx: number, open: boolean) => void
+  setMessageMasterDataFunctionsOpen?: (idx: number, open: boolean) => void
+  setMessageMasterDataCreatedOpen?: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   /** Callback when user wants to view a specific message's tracker version */
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
@@ -41,6 +48,8 @@ export function TrackerMessageList({
   object: streamedObject,
   setMessageThinkingOpen,
   setMessageToolsOpen,
+  setMessageMasterDataFunctionsOpen: setMdFunctionsOpen = () => {},
+  setMessageMasterDataCreatedOpen: setMdCreatedOpen = () => {},
   messagesEndRef,
   onViewTracker,
   activeTrackerMessageIndex,
@@ -103,7 +112,9 @@ export function TrackerMessageList({
               </div>
             )}
             {message.role === 'assistant' &&
-              (message.managerData || (message.toolCalls && message.toolCalls.length > 0)) && (
+              (message.managerData ||
+                (message.toolCalls && message.toolCalls.length > 0) ||
+                message.masterDataBuildResult) && (
                 <div className="w-full min-w-0 space-y-2">
                   {message.managerData && (
                     <div className="w-full min-w-0">
@@ -188,6 +199,80 @@ export function TrackerMessageList({
                         )}
                       </div>
                     </div>
+                  )}
+                  {message.masterDataBuildResult && (
+                    <>
+                      <div className="w-full min-w-0">
+                        <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setMdFunctionsOpen(idx, !message.isMasterDataFunctionsOpen)
+                            }
+                            className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Box className="w-3 h-3" />
+                              Functions
+                            </div>
+                            {message.isMasterDataFunctionsOpen ? (
+                              <ChevronUp className="w-3 h-3" />
+                            ) : (
+                              <ChevronDown className="w-3 h-3" />
+                            )}
+                          </button>
+                          {message.isMasterDataFunctionsOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: 'auto', opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden w-full min-w-0"
+                            >
+                              <MasterDataFunctionCallsPanel
+                                audit={message.masterDataBuildResult}
+                                className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
+                              />
+                            </motion.div>
+                          )}
+                        </div>
+                      </div>
+                      {masterDataAuditHasCreated(message.masterDataBuildResult) && (
+                        <div className="w-full min-w-0">
+                          <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setMdCreatedOpen(idx, !message.isMasterDataCreatedOpen)
+                              }
+                              className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                <PackagePlus className="w-3 h-3" />
+                                Created
+                              </div>
+                              {message.isMasterDataCreatedOpen ? (
+                                <ChevronUp className="w-3 h-3" />
+                              ) : (
+                                <ChevronDown className="w-3 h-3" />
+                              )}
+                            </button>
+                            {message.isMasterDataCreatedOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden w-full min-w-0"
+                              >
+                                <MasterDataCreatedTrackersPanel
+                                  audit={message.masterDataBuildResult}
+                                  className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
+                                />
+                              </motion.div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}

@@ -9,6 +9,10 @@ import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
 import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
+import {
+  parseMasterDataBuildAuditFromUnknown,
+  type MasterDataBuildAudit,
+} from '@/lib/master-data/chat-audit'
 import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 import { ensureConversation, persistMessage } from './conversation'
 import {
@@ -39,6 +43,10 @@ export interface Message {
   isToolsOpen?: boolean
   /** Expression-agent tool calls persisted with this assistant turn */
   toolCalls?: ToolCallEntry[]
+  /** Module/project master data binding (reuse/create) for this assistant turn */
+  masterDataBuildResult?: MasterDataBuildAudit
+  isMasterDataFunctionsOpen?: boolean
+  isMasterDataCreatedOpen?: boolean
 }
 
 export interface UseTrackerChatOptions {
@@ -118,9 +126,13 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages(
       initialMessages.map((m) => {
         const normalized = mapApiToolCallsToEntries(m.toolCalls)
+        const masterDataBuildResult = parseMasterDataBuildAuditFromUnknown(
+          (m as { masterDataBuildResult?: unknown }).masterDataBuildResult,
+        )
         return {
           ...m,
           ...(normalized?.length ? { toolCalls: normalized } : {}),
+          ...(masterDataBuildResult ? { masterDataBuildResult } : {}),
         }
       }),
     )
@@ -196,68 +208,79 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     return tracker as TrackerResponse
   }, [getBaseTracker])
 
-  const resolveMasterDataIfNeeded = useCallback(async (tracker: TrackerResponse | null) => {
-    if (!tracker) return tracker
-    const scope = normalizeMasterDataScope(tracker.masterDataScope)
-    if (!scope || scope === 'tracker') return tracker
-    if (!trackerId) return tracker
+  const resolveMasterDataIfNeeded = useCallback(
+    async (
+      tracker: TrackerResponse | null,
+    ): Promise<{ tracker: TrackerResponse | null; masterDataBuildResult?: MasterDataBuildAudit }> => {
+      if (!tracker) return { tracker: null, masterDataBuildResult: undefined }
+      const scope = normalizeMasterDataScope(tracker.masterDataScope)
+      if (!scope || scope === 'tracker') return { tracker, masterDataBuildResult: undefined }
+      if (!trackerId) return { tracker, masterDataBuildResult: undefined }
 
-    const isPlaceholderSourceId = (value: unknown) => {
-      if (typeof value !== 'string') return false
-      const trimmed = value.trim()
-      return trimmed === '__master_data__' || trimmed === 'master_data' || trimmed === 'MASTER_DATA'
-    }
-
-    const fields = tracker.fields ?? []
-    const layoutNodes = tracker.layoutNodes ?? []
-    const gridByFieldId = new Map<string, string>()
-    for (const node of layoutNodes) {
-      if (node?.fieldId && node?.gridId) {
-        gridByFieldId.set(node.fieldId, node.gridId)
+      const isPlaceholderSourceId = (value: unknown) => {
+        if (typeof value !== 'string') return false
+        const trimmed = value.trim()
+        return trimmed === '__master_data__' || trimmed === 'master_data' || trimmed === 'MASTER_DATA'
       }
-    }
 
-    let needsResolution = false
-    for (const field of fields) {
-      if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
-      const gridId = gridByFieldId.get(field.id)
-      if (!gridId) continue
-      const fieldPath = `${gridId}.${field.id}`
-      const binding = tracker.bindings?.[fieldPath]
-      if (!binding || !binding.optionsSourceSchemaId || isPlaceholderSourceId(binding.optionsSourceSchemaId)) {
-        needsResolution = true
-        break
+      const fields = tracker.fields ?? []
+      const layoutNodes = tracker.layoutNodes ?? []
+      const gridByFieldId = new Map<string, string>()
+      for (const node of layoutNodes) {
+        if (node?.fieldId && node?.gridId) {
+          gridByFieldId.set(node.fieldId, node.gridId)
+        }
       }
-    }
 
-    if (!needsResolution) return tracker
+      let needsResolution = false
+      for (const field of fields) {
+        if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
+        const gridId = gridByFieldId.get(field.id)
+        if (!gridId) continue
+        const fieldPath = `${gridId}.${field.id}`
+        const binding = tracker.bindings?.[fieldPath]
+        if (!binding || !binding.optionsSourceSchemaId || isPlaceholderSourceId(binding.optionsSourceSchemaId)) {
+          needsResolution = true
+          break
+        }
+      }
 
-    try {
-      setIsResolvingMasterData(true)
-      const res = await fetch('/api/master-data/build', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tracker,
-          trackerSchemaId: trackerId,
-          masterDataScope: scope,
-          masterDataTrackers: masterDataSpecsRef.current,
-        }),
-      })
-      if (!res.ok) return tracker
-      const data = (await res.json()) as { tracker?: TrackerResponse }
-      return data.tracker ?? tracker
-    } catch {
-      return tracker
-    } finally {
-      setIsResolvingMasterData(false)
-    }
-  }, [trackerId])
+      if (!needsResolution) return { tracker, masterDataBuildResult: undefined }
+
+      try {
+        setIsResolvingMasterData(true)
+        const res = await fetch('/api/master-data/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tracker,
+            trackerSchemaId: trackerId,
+            masterDataScope: scope,
+            masterDataTrackers: masterDataSpecsRef.current,
+          }),
+        })
+        if (!res.ok) return { tracker, masterDataBuildResult: undefined }
+        const data = (await res.json()) as Record<string, unknown>
+        const nextTracker = (data.tracker as TrackerResponse | undefined) ?? tracker
+        const masterDataBuildResult = parseMasterDataBuildAuditFromUnknown({
+          actions: data.actions,
+          createdTrackerIds: data.createdTrackerIds,
+        })
+        return { tracker: nextTracker, masterDataBuildResult }
+      } catch {
+        return { tracker, masterDataBuildResult: undefined }
+      } finally {
+        setIsResolvingMasterData(false)
+      }
+    },
+    [trackerId],
+  )
 
   const finalizeTracker = useCallback((
     tracker: TrackerResponse | null,
     managerData: MultiAgentSchema['manager'],
     toolCallsForPersist?: ToolCallEntry[],
+    masterDataBuildResult?: MasterDataBuildAudit,
   ) => {
     const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
 
@@ -306,6 +329,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       trackerData: tracker as TrackerResponse,
       managerData,
       ...(toolCallsForPersist?.length ? { toolCalls: toolCallsForPersist } : {}),
+      ...(masterDataBuildResult ? { masterDataBuildResult } : {}),
     }
     setMessages((prev) => [...prev, assistantMessage])
     if (toolCallsForPersist?.length) {
@@ -328,6 +352,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           ...(tc.error != null && { error: tc.error }),
           ...(tc.result !== undefined && { result: tc.result }),
         }))
+      }
+      if (masterDataBuildResult?.actions?.length) {
+        payload.masterDataBuildResult = {
+          actions: masterDataBuildResult.actions,
+          createdTrackerIds: masterDataBuildResult.createdTrackerIds ?? [],
+        }
       }
       persistMessage(cid, payload).catch((err) => console.error('Failed to persist assistant message:', err))
     }
@@ -362,7 +392,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         }
 
         resolveMasterDataIfNeeded(tracker)
-          .then((resolvedTracker) => {
+          .then(({ tracker: resolvedTracker, masterDataBuildResult }) => {
             const trackerForIntents = resolvedTracker
               ? (autoFixBindings(resolvedTracker as TrackerLike) as TrackerResponse)
               : resolvedTracker
@@ -381,11 +411,16 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
                   if (errors.length > 0) {
                     setValidationErrors((prev) => [...prev, ...errors])
                   }
-                  finalizeTracker(resolvedTrackerFinal, finishedObject.manager, resolvedToolCalls)
+                  finalizeTracker(
+                    resolvedTrackerFinal,
+                    finishedObject.manager,
+                    resolvedToolCalls,
+                    masterDataBuildResult,
+                  )
                 })
                 .catch((err) => {
                   console.error('Expression resolution failed:', err)
-                  finalizeTracker(trackerForIntents as TrackerResponse, finishedObject.manager)
+                  finalizeTracker(trackerForIntents as TrackerResponse, finishedObject.manager, undefined, masterDataBuildResult)
                 })
                 .finally(() => {
                   setIsResolvingExpressions(false)
@@ -393,7 +428,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
               return
             }
 
-            finalizeTracker(trackerForIntents, finishedObject.manager)
+            finalizeTracker(trackerForIntents, finishedObject.manager, undefined, masterDataBuildResult)
           })
           .catch(() => {
             finalizeTracker(tracker, finishedObject.manager)
@@ -661,6 +696,18 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isToolsOpen: open } : m)))
   }
 
+  const setMessageMasterDataFunctionsOpen = (idx: number, open: boolean) => {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === idx ? { ...m, isMasterDataFunctionsOpen: open } : m)),
+    )
+  }
+
+  const setMessageMasterDataCreatedOpen = (idx: number, open: boolean) => {
+    setMessages((prev) =>
+      prev.map((m, i) => (i === idx ? { ...m, isMasterDataCreatedOpen: open } : m)),
+    )
+  }
+
   const isChatEmpty = messages.length === 0 && !isLoading
 
   const clearDialogError = () => {
@@ -680,6 +727,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     applySuggestion,
     setMessageThinkingOpen,
     setMessageToolsOpen,
+    setMessageMasterDataFunctionsOpen,
+    setMessageMasterDataCreatedOpen,
     isLoading,
     error,
     object,

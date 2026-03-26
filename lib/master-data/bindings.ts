@@ -18,11 +18,14 @@ import {
   type MasterDataScope,
 } from '@/lib/master-data-scope'
 import { buildFieldPath, parsePath } from '@/lib/resolve-bindings/path'
+import type { MasterDataBindingAction } from './chat-audit/schema'
+
+export type { MasterDataBindingAction } from './chat-audit/schema'
 
 export type MasterDataBuildResult = {
   tracker: Record<string, unknown>
   createdTrackerIds: string[]
-  actions: Array<{ type: 'create' | 'reuse'; name: string; key?: string; trackerId: string }>
+  actions: MasterDataBindingAction[]
 }
 
 type Grid = { id?: string; sectionId?: string; name?: string }

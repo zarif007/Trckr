@@ -7,6 +7,7 @@ UI components used **only by the `/tracker` route** (the main chat + tracker bui
 - **TrackerEmptyState**: First-time empty state with suggestions and hero input.
 - **TrackerInputArea**: Text input + quick suggestions; used in empty state and as fixed bottom bar when chat has messages.
 - **TrackerMessageList**: Renders chat messages (user/assistant), manager insights, and tracker preview cards; handles loading/streaming UI.
+- **master-data-chat-audit/**: Expandable **Functions** / **Created** panels for module/project master data binding audit (data from `@/lib/master-data/chat-audit`).
 - **TrackerDialog**: Modal that shows `TrackerDisplay` (streaming or final tracker), validation errors, and error/retry states.
 
 ## Data flow
@@ -25,6 +26,7 @@ UI components used **only by the `/tracker` route** (the main chat + tracker bui
 ```
 tracker-page/
   README.md
+  master-data-chat-audit/
   TrackerEmptyState.tsx
   TrackerInputArea.tsx
   TrackerMessageList.tsx

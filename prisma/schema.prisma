@@ -363,6 +363,8 @@ model Message {
   content               String
   trackerSchemaSnapshot Json?
   managerData           Json?
+  /// Master data binding pass: reuse/create actions + ids (module/project scope).
+  masterDataBuildResult Json?
   createdAt             DateTime     @default(now())
   conversation          Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   toolCalls             ToolCall[]

@@ -79,5 +79,9 @@ export async function POST(request: Request) {
     userId: authResult.user.id,
   })
 
-  return jsonOk({ tracker: result.tracker })
+  return jsonOk({
+    tracker: result.tracker,
+    actions: result.actions,
+    createdTrackerIds: result.createdTrackerIds,
+  })
 }

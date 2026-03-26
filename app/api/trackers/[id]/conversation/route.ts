@@ -24,6 +24,7 @@ function mapMessages(conversation: { messages: Array<{
   content: string
   trackerSchemaSnapshot: unknown
   managerData: unknown
+  masterDataBuildResult: unknown
   createdAt: Date
   toolCalls: Array<{
     id: string
@@ -42,6 +43,9 @@ function mapMessages(conversation: { messages: Array<{
     trackerData: m.trackerSchemaSnapshot as unknown,
     managerData: m.managerData as unknown,
     createdAt: m.createdAt,
+    ...(m.masterDataBuildResult != null && typeof m.masterDataBuildResult === 'object'
+      ? { masterDataBuildResult: m.masterDataBuildResult as object }
+      : {}),
     toolCalls: m.toolCalls?.map((tc) => ({
       id: tc.id,
       purpose: tc.purpose,

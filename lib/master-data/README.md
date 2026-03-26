@@ -49,8 +49,16 @@ LLM output can include `masterDataTrackers` entries that define the full schema 
 - `applyMasterDataBindings()` — binding creation/reuse, placeholder replacement, and metadata embedding.
 - `buildMasterDataSchema()` — minimal master data tracker schema.
 
+## Chat audit (builder UI)
+
+Module/project binding also produces a **persisted audit** on assistant chat messages (`Message.masterDataBuildResult` JSON) so users can expand **Functions** and **Created** in the builder, similar to expression-agent **Tools**.
+
+- **Library:** [`chat-audit/`](./chat-audit/README.md) — Zod schema, parsing, formatting, selectors. **Start there** when changing the payload or adding steps.
+- **UI:** [`app/components/tracker-page/master-data-chat-audit/`](../app/components/tracker-page/master-data-chat-audit/) — presentational panels only; no binding logic.
+
 ## Tests
 See `lib/master-data/__tests__` for coverage of:
 - default scope inheritance
 - module container creation/reuse
 - placeholder replacement + local options grid stripping
+- chat audit JSON parsing (`chat-audit/__tests__/schema.test.ts`)

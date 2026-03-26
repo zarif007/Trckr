@@ -1,3 +1,5 @@
+import type { MasterDataBuildAudit } from '@/lib/master-data/chat-audit'
+
 export type ConversationMode = 'BUILDER' | 'ANALYST'
 
 export interface ToolCallPayload {
@@ -15,6 +17,7 @@ export interface PersistMessagePayload {
   trackerSchemaSnapshot?: object
   managerData?: object
   toolCalls?: ToolCallPayload[]
+  masterDataBuildResult?: MasterDataBuildAudit
 }
 
 export interface ConversationListItem {
@@ -83,6 +86,7 @@ export interface ConversationWithMessages {
       error?: string
       result?: unknown
     }>
+    masterDataBuildResult?: MasterDataBuildAudit
   }>
 }
 
@@ -134,6 +138,9 @@ export async function persistMessage(
       ...(tc.error != null && { error: tc.error }),
       ...(tc.result !== undefined && { result: tc.result }),
     }))
+  }
+  if (payload.masterDataBuildResult?.actions?.length) {
+    body.masterDataBuildResult = payload.masterDataBuildResult
   }
 
   const res = await fetch(`/api/conversations/${conversationId}/messages`, {

@@ -29,6 +29,8 @@ interface TrackerChatPanelProps {
   messages: Message[]
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   setMessageToolsOpen: (idx: number, open: boolean) => void
+  setMessageMasterDataFunctionsOpen?: (idx: number, open: boolean) => void
+  setMessageMasterDataCreatedOpen?: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   object: unknown
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
@@ -60,6 +62,8 @@ export function TrackerChatPanel({
   messages,
   setMessageThinkingOpen,
   setMessageToolsOpen,
+  setMessageMasterDataFunctionsOpen,
+  setMessageMasterDataCreatedOpen,
   messagesEndRef,
   object,
   onViewTracker,
@@ -157,6 +161,8 @@ export function TrackerChatPanel({
                   object={object}
                   setMessageThinkingOpen={setMessageThinkingOpen}
                   setMessageToolsOpen={setMessageToolsOpen}
+                  setMessageMasterDataFunctionsOpen={setMessageMasterDataFunctionsOpen}
+                  setMessageMasterDataCreatedOpen={setMessageMasterDataCreatedOpen}
                   messagesEndRef={messagesEndRef}
                   onViewTracker={onViewTracker}
                   activeTrackerMessageIndex={activeTrackerMessageIndex}
