@@ -12,12 +12,14 @@ const frame = cn(
 /** Ops use-cases: projects, inventory, requests */
 export function UseCaseVisual({
   variant,
+  className,
 }: {
   variant: 'table' | 'kanban' | 'inbox'
+  className?: string
 }) {
   if (variant === 'kanban') {
     return (
-      <div className={cn('flex gap-1 p-2 h-[4.25rem]', frame)} aria-hidden>
+      <div className={cn('flex gap-1 p-2 h-[4.25rem]', frame, className)} aria-hidden>
         {[0.4, 0.55, 0.35].map((w, i) => (
           <div
             key={i}
@@ -35,7 +37,7 @@ export function UseCaseVisual({
   }
   if (variant === 'inbox') {
     return (
-      <div className={cn('space-y-1.5 p-2 h-[4.25rem]', frame)} aria-hidden>
+      <div className={cn('space-y-1.5 p-2 h-[4.25rem]', frame, className)} aria-hidden>
         {[0.92, 0.78, 0.85].map((w, i) => (
           <div key={i} className="flex items-center gap-2">
             <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/20" />
@@ -49,7 +51,7 @@ export function UseCaseVisual({
     )
   }
   return (
-    <div className={cn('space-y-1.5 p-2 h-[4.25rem]', frame)} aria-hidden>
+    <div className={cn('space-y-1.5 p-2 h-[4.25rem]', frame, className)} aria-hidden>
       {[0.95, 0.72, 0.88, 0.65].map((w, i) => (
         <div key={i} className="flex items-center gap-2">
           <div
@@ -65,6 +67,7 @@ export function UseCaseVisual({
 /** Platform capability tiles — abstract UI metaphors */
 export function CapabilityVisual({
   variant,
+  className,
 }: {
   variant:
     | 'aiBuild'
@@ -75,12 +78,13 @@ export function CapabilityVisual({
     | 'validate'
     | 'master'
     | 'report'
+  className?: string
 }) {
   const h = 'h-[3.35rem]'
 
   if (variant === 'aiBuild') {
     return (
-      <div className={cn('flex gap-1.5 p-2', frame, h)} aria-hidden>
+      <div className={cn('flex gap-1.5 p-2', frame, h, className)} aria-hidden>
         <div className="flex flex-1 flex-col justify-end gap-1 min-w-0">
           <div className="h-2 w-[72%] rounded-full bg-foreground/18 ml-auto" />
           <div className="h-2 w-[88%] rounded-full bg-muted-foreground/15 ml-auto" />
@@ -97,7 +101,7 @@ export function CapabilityVisual({
 
   if (variant === 'aiAnalyst') {
     return (
-      <div className={cn('p-2 flex flex-col gap-1.5', frame, h)} aria-hidden>
+      <div className={cn('p-2 flex flex-col gap-1.5', frame, h, className)} aria-hidden>
         <div className="flex items-end gap-0.5 h-8 px-0.5">
           {[35, 55, 40, 70, 45, 60].map((pct, i) => (
             <div
@@ -114,7 +118,7 @@ export function CapabilityVisual({
 
   if (variant === 'editor') {
     return (
-      <div className={cn('flex items-stretch gap-1 p-2', frame, h)} aria-hidden>
+      <div className={cn('flex items-stretch gap-1 p-2', frame, h, className)} aria-hidden>
         {[0.15, 0.35, 0.22].map((opacity, i) => (
           <div
             key={i}
@@ -136,7 +140,7 @@ export function CapabilityVisual({
 
   if (variant === 'drag') {
     return (
-      <div className={cn('flex items-center gap-1 p-2', frame, h)} aria-hidden>
+      <div className={cn('flex items-center gap-1 p-2', frame, h, className)} aria-hidden>
         <div className="flex flex-col gap-0.5 px-0.5 opacity-40">
           <div className="flex gap-0.5">
             <div className="h-0.5 w-0.5 rounded-full bg-foreground" />
@@ -158,7 +162,7 @@ export function CapabilityVisual({
 
   if (variant === 'calc') {
     return (
-      <div className={cn('flex items-center justify-center gap-1 px-2 py-1.5', frame, h)} aria-hidden>
+      <div className={cn('flex items-center justify-center gap-1 px-2 py-1.5', frame, h, className)} aria-hidden>
         <div className="h-6 w-7 rounded border bg-background/70" />
         <span className="text-[10px] font-bold text-muted-foreground">×</span>
         <div className="h-6 w-7 rounded border bg-background/70" />
@@ -170,7 +174,7 @@ export function CapabilityVisual({
 
   if (variant === 'validate') {
     return (
-      <div className={cn('flex flex-col justify-center gap-1.5 p-2', frame, h)} aria-hidden>
+      <div className={cn('flex flex-col justify-center gap-1.5 p-2', frame, h, className)} aria-hidden>
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded border-2 border-foreground/35 bg-foreground/8 shrink-0" />
           <div className="h-2 flex-1 rounded-sm bg-foreground/10" />
@@ -185,7 +189,7 @@ export function CapabilityVisual({
 
   if (variant === 'master') {
     return (
-      <div className={cn('flex items-center gap-1.5 p-2', frame, h)} aria-hidden>
+      <div className={cn('flex items-center gap-1.5 p-2', frame, h, className)} aria-hidden>
         <div className="flex-1 h-full rounded border bg-background/70 p-1 space-y-1 min-w-0">
           <div className="h-2 rounded-sm bg-foreground/12 w-full" />
           <div className="h-2 rounded-sm bg-foreground/8 w-3/4" />
@@ -202,7 +206,7 @@ export function CapabilityVisual({
 
   /* report */
   return (
-    <div className={cn('p-2 flex flex-col gap-1', frame, h)} aria-hidden>
+    <div className={cn('p-2 flex flex-col gap-1', frame, h, className)} aria-hidden>
       <div className="h-2 w-1/2 rounded-sm bg-foreground/15" />
       <div className="flex-1 rounded border bg-background/60 p-1 space-y-0.5 min-h-0">
         <div className="h-1 rounded-sm bg-foreground/10" />
