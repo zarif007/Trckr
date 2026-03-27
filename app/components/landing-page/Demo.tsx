@@ -110,9 +110,25 @@ export default function Demo() {
       contentClassName="relative p-4 sm:p-6 md:p-8 bg-secondary/30"
     >
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-5">
-        <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-          The full platform, live.
-        </h3>
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Demo
+          </p>
+          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+            The full platform, live.
+          </h3>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {(['Tracker', 'Formulas', 'Reports', 'Analysis'] as const).map((label, i) => (
+              <span key={label} className="flex items-center gap-1.5">
+                {i > 0 && <span className="text-border" aria-hidden>·</span>}
+                <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
+                  <span className="inline-flex h-1.5 w-1.5 rounded-full bg-foreground/20" aria-hidden />
+                  {label}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
 
         <Tabs
           value={surface}
