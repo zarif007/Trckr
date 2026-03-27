@@ -77,8 +77,8 @@ export default function Hero() {
               }}
               className="mx-auto mt-7 max-w-xl text-pretty text-base leading-relaxed tracking-[-0.015em] text-muted-foreground sm:mt-8 sm:text-lg md:mt-9"
             >
-              Describe what you track—AI builds it; your team works it; the analyst
-              reads it.
+              Describe it in plain language — AI builds the tracker, your team fills
+              it, the analyst reads it.
             </motion.p>
 
             {/* CTAs — full-width on narrow phones for a stronger, app-like hero */}
