@@ -2,6 +2,29 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Engineering Standard
+
+Build every piece of this project — components, functions, features, APIs — to production grade. Not MVP. Not "good enough for now."
+
+**The bar:** Code a new engineer (or agent) can onboard into in minutes, not days. Self-explanatory names, clear boundaries, no mystery.
+
+### Non-negotiables
+
+- **Modular**: Every unit has one job. Extract reusable logic into `lib/`. Keep components focused on rendering/interaction only.
+- **Scalable**: Design for growth. Avoid patterns that require rewriting when requirements change (e.g. hardcoded lists, prop-drilling across 3+ levels, god components).
+- **Unbreakable**: Cover edge cases. Validate at system boundaries. Never silently swallow errors. Tests for any non-trivial logic.
+- **Self-documenting**: Names explain intent. A function named `resolveFieldVisibility` needs no comment. Avoid abbreviations. Prefer explicit over clever.
+- **Minimal comments**: Only comment *why*, never *what*. If the code needs explanation, rename or restructure first.
+- **Consistent**: Follow existing patterns in the codebase before inventing new ones. New patterns belong in `lib/` with clear ownership.
+
+### What this means in practice
+
+- New feature? Define its module boundary before writing code.
+- New component? It should be droppable into a different page without changes.
+- New lib function? Export a typed interface, handle error cases, write a test.
+- Refactoring? Leave the module more coherent than you found it — but only touch what's necessary for the task.
+- If you find a shortcut that works now but will break at scale, flag it and do it right.
+
 ## Commands
 
 ```bash
