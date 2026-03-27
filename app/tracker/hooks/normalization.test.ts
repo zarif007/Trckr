@@ -19,7 +19,7 @@ describe('tracker normalization helpers', () => {
       bindings: {},
       validations: {},
       calculations: {},
-      dependsOn: [],
+      fieldRules: [],
     } as never)
 
     expect(result).toBe(true)
@@ -50,7 +50,7 @@ describe('tracker normalization helpers', () => {
         status: { expr: { op: 'const', value: 'open' } },
       },
       bindings: {},
-      dependsOn: [],
+      fieldRules: [],
     } as never)
 
     expect(normalized.validations).toHaveProperty('tasks_grid.status')

@@ -25,7 +25,7 @@
 
 - `lib/binding`: field option resolution and mapping.
 - `lib/resolve-bindings`: path parsing and option row application.
-- `lib/depends-on`: visibility/required/disabled overrides.
+- `lib/field-rules`: visibility/required/disabled overrides.
 - `lib/field-validation` + `lib/field-calculation`: field-level runtime checks and recalculation.
 - `lib/dynamic-options`: built-in and user-defined dynamic option providers.
 

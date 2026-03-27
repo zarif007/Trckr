@@ -1,16 +1,16 @@
 /**
- * Resolve depends-on rules against grid data to produce per-field overrides
+ * Resolve field rules against grid data to produce per-field overrides
  * (isHidden, isRequired, isDisabled, value) for a target grid row.
  */
 
 import type { FieldPath } from '@/lib/types/tracker-bindings'
 import { getValueByPath, parsePath } from '@/lib/resolve-bindings'
 import type {
-  DependsOnRule,
+  FieldRule,
   FieldOverride,
-  EnrichedDependsOnRule,
+  EnrichedFieldRule,
   ParsedPath,
-  ResolveDependsOnOptions,
+  ResolveFieldRuleOptions,
 } from './types'
 import { compareValues } from './compare'
 
@@ -35,13 +35,13 @@ function normalizeAction(action: unknown): keyof FieldOverride | null {
   return null
 }
 
-export function resolveDependsOnOverrides(
-  rules: DependsOnRule[] | undefined,
+export function resolveFieldRuleOverrides(
+  rules: FieldRule[] | undefined,
   gridData: Record<string, Array<Record<string, unknown>>>,
   targetGridId: string,
   rowIndex: number,
   rowDataOverride?: Record<string, unknown>,
-  options?: ResolveDependsOnOptions
+  options?: ResolveFieldRuleOptions
 ): Record<string, FieldOverride> {
   if (!rules || rules.length === 0) return {}
 
@@ -60,7 +60,7 @@ export function resolveDependsOnOverrides(
   rules.forEach((rule, order) => {
     if (!rule?.source || !rule?.targets || rule.targets.length === 0) return
 
-    const enriched = rule as EnrichedDependsOnRule
+    const enriched = rule as EnrichedFieldRule
     const sourceGridId =
       enriched._parsedSource?.gridId ?? parsePath(rule.source as FieldPath).gridId
     const sourceFieldId =

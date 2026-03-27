@@ -410,7 +410,7 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
         { type: 'min', value: 0, message: 'Rate cannot be negative' },
       ],
     },
-    dependsOn: [
+    fieldRules: [
       {
         source: 'cond_demo_grid.cond_category',
         operator: 'is_empty',

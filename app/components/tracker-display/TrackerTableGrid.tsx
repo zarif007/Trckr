@@ -9,15 +9,15 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  DependsOnRules,
+  FieldRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2, resolveFieldOptionsV2Async } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
-import { resolveDependsOnOverrides } from '@/lib/depends-on'
+import { resolveFieldRuleOverrides } from '@/lib/field-rules'
 import { useTrackerOptionsContext } from './tracker-options-context'
-import { useGridDependsOn } from './hooks/useGridDependsOn'
+import { useGridFieldRules } from './hooks/useGridFieldRules'
 import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
 import { useMemo, useCallback, useState, useEffect, memo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -41,7 +41,7 @@ interface TrackerTableGridProps {
   calculations?: Record<string, FieldCalculationRule>
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
-  dependsOn?: DependsOnRules
+  fieldRules?: FieldRules
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -66,7 +66,7 @@ function TrackerTableGridInner({
   validations,
   calculations,
   styleOverrides,
-  dependsOn,
+  fieldRules,
   gridData = {},
   gridDataForThisGrid,
   readOnly = false,
@@ -97,7 +97,7 @@ function TrackerTableGridInner({
   const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
 
-  const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
+  const { rulesForGrid } = useGridFieldRules(grid.id, fieldRules)
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>()
     fields.forEach((field) => map.set(field.id, field))
@@ -182,17 +182,17 @@ function TrackerTableGridInner({
 
   /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
   const rowOverridesCache = useMemo(() => {
-    const out: Record<number, Record<string, import('@/lib/depends-on').FieldOverride>> = {}
+    const out: Record<number, Record<string, import('@/lib/field-rules').FieldOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
-      out[idx] = resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, idx, row)
+      out[idx] = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, idx, row)
     })
     return out
-  }, [dependsOnForGrid, fullGridData, grid.id, rows])
+  }, [rulesForGrid, fullGridData, grid.id, rows])
 
   const hiddenTargetFields = useMemo(() => {
     const targets = new Set<string>()
-    dependsOnForGrid.forEach((rule) => {
+    rulesForGrid.forEach((rule) => {
       if (!rule?.targets || !rule.action) return
       const action = String(rule.action).toLowerCase()
       if (!action.includes('hidden')) return
@@ -202,7 +202,7 @@ function TrackerTableGridInner({
       })
     })
     return targets
-  }, [dependsOnForGrid, grid.id])
+  }, [rulesForGrid, grid.id])
 
   const hiddenColumnIds = useMemo(() => {
     const hidden = new Set<string>()
@@ -226,10 +226,10 @@ function TrackerTableGridInner({
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
     (values: Record<string, unknown>, fieldId: string) =>
-      resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, values, {
+      resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values, {
         onlyUseRowDataForSource: true,
       })[fieldId],
-    [dependsOnForGrid, fullGridData, grid.id]
+    [rulesForGrid, fullGridData, grid.id]
   )
 
   const handleAddColumnConfirm = useCallback(

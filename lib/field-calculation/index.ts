@@ -75,9 +75,9 @@ export interface CompiledCalculationPlan {
   gridId: string
   /** Rules indexed by target field ID (without grid prefix) */
   rulesByTargetFieldId: Map<string, FieldCalculationRule>
-  /** Forward deps: target -> set of target deps it depends on */
-  dependsOnTargets: Map<string, Set<string>>
-  /** Reverse deps: source -> set of targets that depend on it */
+  /** Forward deps: target -> set of source field ids that feed this target */
+  sourceFieldsByTarget: Map<string, Set<string>>
+  /** Reverse deps: source field id -> set of calculation targets that use it */
   reverseDeps: Map<string, Set<string>>
   /** Timestamp when plan was compiled (for cache diagnostics) */
   compiledAt: number
@@ -328,10 +328,10 @@ function buildDependencyGraph(
   gridId: string,
   rulesByTargetFieldId: Map<string, FieldCalculationRule>,
 ): {
-  dependsOnTargets: Map<string, Set<string>>
+  sourceFieldsByTarget: Map<string, Set<string>>
   reverseDeps: Map<string, Set<string>>
 } {
-  const dependsOnTargets = new Map<string, Set<string>>()
+  const sourceFieldsByTarget = new Map<string, Set<string>>()
   const reverseDeps = new Map<string, Set<string>>()
   const targetFieldIds = new Set(rulesByTargetFieldId.keys())
 
@@ -350,10 +350,10 @@ function buildDependencyGraph(
         deps.add(normalized)
       }
     }
-    dependsOnTargets.set(targetFieldId, deps)
+    sourceFieldsByTarget.set(targetFieldId, deps)
   }
 
-  return { dependsOnTargets, reverseDeps }
+  return { sourceFieldsByTarget, reverseDeps }
 }
 
 function normalizeChangedFieldIds(
@@ -407,7 +407,7 @@ function getImpactedTargets(
 }
 
 function resolveEvaluationOrder(
-  dependsOnTargets: Map<string, Set<string>>,
+  sourceFieldsByTarget: Map<string, Set<string>>,
   impactedTargets: Set<string>,
 ): { order: string[]; cyclicTargets: Set<string> } {
   const order: string[] = []
@@ -431,7 +431,7 @@ function resolveEvaluationOrder(
     visiting.add(target)
     stack.push(target)
 
-    for (const dep of dependsOnTargets.get(target) ?? []) {
+    for (const dep of sourceFieldsByTarget.get(target) ?? []) {
       if (!impactedTargets.has(dep)) continue
       dfs(dep)
     }
@@ -523,11 +523,11 @@ export function compileCalculationsForGrid(
   calculations?: Record<string, FieldCalculationRule>,
 ): CompiledCalculationPlan {
   const rulesByTargetFieldId = toGridTargetRules(gridId, calculations)
-  const { dependsOnTargets, reverseDeps } = buildDependencyGraph(gridId, rulesByTargetFieldId)
+  const { sourceFieldsByTarget, reverseDeps } = buildDependencyGraph(gridId, rulesByTargetFieldId)
   return {
     gridId,
     rulesByTargetFieldId,
-    dependsOnTargets,
+    sourceFieldsByTarget,
     reverseDeps,
     compiledAt: Date.now(),
     rulesHash: hashCalculationRules(calculations),
@@ -621,7 +621,7 @@ export function applyCompiledCalculationsForRow({
   const getColumnValues =
     gridData && Object.keys(gridData).length > 0 ? buildGetColumnValues(gridData) : undefined
 
-  const { order, cyclicTargets } = resolveEvaluationOrder(plan.dependsOnTargets, impactedTargets)
+  const { order, cyclicTargets } = resolveEvaluationOrder(plan.sourceFieldsByTarget, impactedTargets)
   const nextRow = { ...row }
   const rowValues = buildRowValuesForEval(nextRow, plan.gridId)
   const updatedFieldIds: string[] = []

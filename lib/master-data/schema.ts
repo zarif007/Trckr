@@ -79,6 +79,6 @@ export function buildMasterDataSchema(entityName: string): Record<string, unknow
     bindings: {},
     validations: {},
     calculations: {},
-    dependsOn: [],
+    fieldRules: [],
   }
 }

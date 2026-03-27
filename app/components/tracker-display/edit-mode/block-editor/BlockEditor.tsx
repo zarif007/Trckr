@@ -130,7 +130,7 @@ export function BlockEditor({
   validations,
   calculations,
   styles,
-  dependsOn,
+  fieldRules,
   gridData,
   gridDataRef,
   onUpdate,
@@ -448,7 +448,7 @@ export function BlockEditor({
                     validations={validations}
                     calculations={calculations}
                     styles={styles}
-                    dependsOn={dependsOn}
+                    fieldRules={fieldRules}
                     gridData={gridData}
                     gridDataRef={gridDataRef}
                     onUpdate={onUpdate}

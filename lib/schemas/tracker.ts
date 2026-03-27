@@ -133,36 +133,36 @@ export const stylesSchema = z
   .default({})
   .describe('Style overrides keyed by grid or view id. Only when user asks for visual changes.')
 
-// DEPENDS-ON (conditional field actions)
+// FIELD RULES (conditional field actions)
 
-const dependsOnActionEnum = z
+const fieldRuleActionEnum = z
   .enum(['isHidden', 'isRequired', 'isDisabled'])
   .catch('isHidden')
 
-export const dependsOnRuleSchema = z
+export const fieldRuleSchema = z
   .object({
     source: z.string().describe('Source field path (grid_id.field_id)'),
     operator: z.string().optional().describe('Comparison operator (e.g. =, !=, >, contains, in, is_empty)'),
     value: z.any().optional().describe('Value to compare against'),
-    action: dependsOnActionEnum.describe('Target field property to set (hide/require/disable)'),
+    action: fieldRuleActionEnum.describe('Target field property to set (hide/require/disable)'),
     set: z.union([z.boolean(), z.any()]).optional().describe('For isHidden/isRequired/isDisabled: value to set (default true).'),
     targets: z.array(z.string()).default([]).describe('Target field paths (grid_id.field_id)'),
     priority: z.coerce.number().optional().describe('Priority for conflict resolution; higher wins'),
   })
   .passthrough()
 
-/** Per-target rule (target implied by key); used when editing Depends on in field settings. */
-export const dependsOnRuleForTargetSchema = dependsOnRuleSchema.omit({ targets: true })
+/** Per-target rule (target implied by key); used when editing Field Rules in field settings. */
+export const fieldRuleForTargetSchema = fieldRuleSchema.omit({ targets: true })
 
-export const dependsOnSchema = z
-  .array(dependsOnRuleSchema)
+export const fieldRulesSchema = z
+  .array(fieldRuleSchema)
   .default([])
   .describe('Conditional field actions: evaluate source field, apply action to targets.')
 
-export const dependsOnByTargetSchema = z
-  .record(z.string(), z.array(dependsOnRuleForTargetSchema))
+export const fieldRulesByTargetSchema = z
+  .record(z.string(), z.array(fieldRuleForTargetSchema))
   .optional()
-  .describe('Depends-on rules keyed by target field path (grid_id.field_id). When set, used instead of dependsOn array.')
+  .describe('Field rules keyed by target field path (grid_id.field_id). When set, used instead of fieldRules array.')
 
 // BINDINGS - select/multiselect auto-population
 
@@ -360,9 +360,9 @@ export const trackerSchema = z
       .default([])
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
-    dependsOn: dependsOnSchema,
+    fieldRules: fieldRulesSchema,
 
-    dependsOnByTarget: dependsOnByTargetSchema,
+    fieldRulesByTarget: fieldRulesByTargetSchema,
 
     bindings: bindingsSchema,
 

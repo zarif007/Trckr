@@ -162,10 +162,10 @@ export type {
   TrackerBindings,
 } from '@/lib/types/tracker-bindings'
 
-export type { DependsOnRule, DependsOnRules, FieldOverride } from '@/lib/depends-on'
+export type { FieldRule, FieldRules, FieldOverride } from '@/lib/field-rules'
 
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
-import type { DependsOnRules } from '@/lib/depends-on'
+import type { FieldRules } from '@/lib/field-rules'
 import type { GridDataSnapshot } from '@/lib/tracker-data'
 
 /** Grid data map: grid id -> array of row objects. Used in refs to avoid TSX >> parsing. */
@@ -196,9 +196,9 @@ export interface TrackerDisplayProps {
   /** Field calculations keyed by "gridId.fieldId" (target path). */
   calculations?: Record<string, FieldCalculationRule>
   /** Conditional field actions (hide/require/disable). */
-  dependsOn?: DependsOnRules
-  /** Depends-on rules keyed by target field path (grid_id.field_id). When set, used instead of dependsOn. */
-  dependsOnByTarget?: Record<string, import('@/lib/depends-on').DependsOnRuleForTarget[]>
+  fieldRules?: FieldRules
+  /** Field rules keyed by target field path (grid_id.field_id). When set, used instead of fieldRules array. */
+  fieldRulesByTarget?: Record<string, import('@/lib/field-rules').FieldRuleForTarget[]>
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings
   /** Optional style overrides keyed by grid id or view id. */

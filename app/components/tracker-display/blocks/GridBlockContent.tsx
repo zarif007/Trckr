@@ -7,7 +7,7 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  DependsOnRules,
+  FieldRules,
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -27,7 +27,7 @@ export interface GridBlockContentProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  dependsOn?: DependsOnRules
+  fieldRules?: FieldRules
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -56,7 +56,7 @@ export function GridBlockContent({
   validations,
   calculations,
   styles,
-  dependsOn,
+  fieldRules,
   gridData,
   gridDataRef,
   readOnly,
@@ -99,7 +99,7 @@ export function GridBlockContent({
           validations={validations}
           calculations={calculations}
           styleOverrides={viewOverrides}
-          dependsOn={dependsOn}
+          fieldRules={fieldRules}
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridData?.[grid.id] ?? []}
@@ -148,7 +148,7 @@ export function GridBlockContent({
                 validations={validations}
                 calculations={calculations}
                 styleOverrides={viewOverrides}
-                dependsOn={dependsOn}
+                fieldRules={fieldRules}
                 gridData={gridData}
                 gridDataRef={gridDataRef}
                 gridDataForThisGrid={gridData?.[grid.id] ?? []}

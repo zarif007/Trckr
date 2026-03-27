@@ -6,7 +6,7 @@ import type { DynamicOptionsContext, DynamicOption } from '../types'
 
 export const ID = 'all_rule_set_values'
 
-export const DEPENDS_ON_SET_OPTIONS: Array<{ value: string; label: string }> = [
+export const FIELD_RULES_SET_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'true', label: 'True' },
   { value: 'false', label: 'False' },
 ]
@@ -15,5 +15,5 @@ export function allRuleSetValues(
   context: DynamicOptionsContext
 ): DynamicOption[] {
   void context
-  return DEPENDS_ON_SET_OPTIONS.map((o) => ({ ...o, id: o.value }))
+  return FIELD_RULES_SET_OPTIONS.map((o) => ({ ...o, id: o.value }))
 }

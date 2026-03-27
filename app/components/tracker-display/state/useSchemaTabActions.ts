@@ -3,7 +3,7 @@ import { arrayMove } from '@dnd-kit/sortable'
 import type { DragEndEvent } from '@dnd-kit/core'
 import { createNewTabId, getNextTabPlaceId } from '../edit-mode'
 import type { TrackerDisplayProps, TrackerTab } from '../types'
-import { SHARED_TAB_ID } from '@/lib/depends-on-options'
+import { SHARED_TAB_ID } from '@/lib/field-rules-options'
 
 interface UseSchemaTabActionsInput {
   tabs: TrackerDisplayProps['tabs']
@@ -15,7 +15,7 @@ interface UseSchemaTabActionsInput {
   validations: TrackerDisplayProps['validations']
   calculations: TrackerDisplayProps['calculations']
   styles: TrackerDisplayProps['styles']
-  dependsOn: TrackerDisplayProps['dependsOn']
+  fieldRules: TrackerDisplayProps['fieldRules']
   dynamicOptions: TrackerDisplayProps['dynamicOptions']
   onSchemaChange: TrackerDisplayProps['onSchemaChange']
   normalizedTabs: TrackerTab[]
@@ -33,7 +33,7 @@ export function useSchemaTabActions({
   validations,
   calculations,
   styles,
-  dependsOn,
+  fieldRules,
   dynamicOptions,
   onSchemaChange,
   normalizedTabs,
@@ -58,11 +58,11 @@ export function useSchemaTabActions({
       validations,
       calculations,
       styles,
-      dependsOn,
+      fieldRules,
       dynamicOptions,
     })
     setActiveTabId(id)
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange, setActiveTabId])
+  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, fieldRules, dynamicOptions, onSchemaChange, setActiveTabId])
 
   const handleRemoveTab = useCallback((tabId: string) => {
     if (!onSchemaChange || tabId === SHARED_TAB_ID) return
@@ -84,14 +84,14 @@ export function useSchemaTabActions({
       validations,
       calculations,
       styles,
-      dependsOn,
+      fieldRules,
       dynamicOptions,
     })
 
     if (activeTabId === tabId) {
       setActiveTabId(tabList[0]?.id ?? '')
     }
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange, activeTabId, setActiveTabId])
+  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, fieldRules, dynamicOptions, onSchemaChange, activeTabId, setActiveTabId])
 
   const handleRenameTab = useCallback((tabId: string, name: string) => {
     if (!onSchemaChange || !tabs) return
@@ -110,10 +110,10 @@ export function useSchemaTabActions({
       validations,
       calculations,
       styles,
-      dependsOn,
+      fieldRules,
       dynamicOptions,
     })
-  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange])
+  }, [tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, fieldRules, dynamicOptions, onSchemaChange])
 
   const handleTabDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event
@@ -151,10 +151,10 @@ export function useSchemaTabActions({
       validations,
       calculations,
       styles,
-      dependsOn,
+      fieldRules,
       dynamicOptions,
     })
-  }, [normalizedTabs, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions, onSchemaChange])
+  }, [normalizedTabs, tabs, sections, grids, fields, layoutNodes, bindings, validations, calculations, styles, fieldRules, dynamicOptions, onSchemaChange])
 
   return {
     handleAddTab,

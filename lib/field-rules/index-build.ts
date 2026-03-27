@@ -1,24 +1,24 @@
 /**
- * Builds the depends-on index: rules by source, by target, and by grid id.
+ * Builds the field rules index: rules by source, by target, and by grid id.
  * Enriches each rule with parsed paths and a compiled compare function.
  */
 
 import type { FieldPath } from '@/lib/types/tracker-bindings'
 import { parsePath } from '@/lib/resolve-bindings'
 import type {
-  DependsOnRules,
-  DependsOnIndex,
-  EnrichedDependsOnRule,
+  FieldRules,
+  FieldRuleIndex,
+  EnrichedFieldRule,
   ParsedPath,
 } from './types'
 import { compileCompare } from './compare'
 
-export function buildDependsOnIndex(
-  rules: DependsOnRules | undefined
-): DependsOnIndex {
-  const rulesBySource = new Map<string, EnrichedDependsOnRule[]>()
-  const rulesByTarget = new Map<string, EnrichedDependsOnRule[]>()
-  const rulesByGridId = new Map<string, EnrichedDependsOnRule[]>()
+export function buildFieldRuleIndex(
+  rules: FieldRules | undefined
+): FieldRuleIndex {
+  const rulesBySource = new Map<string, EnrichedFieldRule[]>()
+  const rulesByTarget = new Map<string, EnrichedFieldRule[]>()
+  const rulesByGridId = new Map<string, EnrichedFieldRule[]>()
 
   if (!rules || rules.length === 0) {
     return { rulesBySource, rulesByTarget, rulesByGridId }
@@ -41,7 +41,7 @@ export function buildDependsOnIndex(
     }
     if (parsedTargets.length === 0) continue
 
-    const enriched: EnrichedDependsOnRule = {
+    const enriched: EnrichedFieldRule = {
       ...rule,
       _parsedSource: { tabId: null, gridId: sourceGridId, fieldId: sourceFieldId },
       _parsedTargets: parsedTargets,

@@ -3,13 +3,13 @@
  * and compile a comparison function for use in the index.
  */
 
-import type { DependsOnOperator } from './types'
+import type { FieldRuleOperator } from './types'
 
 const NUMERIC_OPERATORS = new Set([
   '>', '>=', '<', '<=', 'gt', 'gte', 'lt', 'lte',
 ])
 
-export function normalizeOperator(op?: DependsOnOperator): DependsOnOperator {
+export function normalizeOperator(op?: FieldRuleOperator): FieldRuleOperator {
   if (!op) return 'eq'
   if (op === '==') return 'eq'
   if (op === '=') return 'eq'
@@ -39,7 +39,7 @@ function toNumber(value: unknown): number | null {
 /** Evaluate condition: does sourceValue match (operator, expected)? */
 export function compareValues(
   sourceValue: unknown,
-  operator: DependsOnOperator,
+  operator: FieldRuleOperator,
   expected: unknown
 ): boolean {
   const op = normalizeOperator(operator)
@@ -107,7 +107,7 @@ export function compareValues(
 
 /** Pre-compile operator + value into a comparison function (used at index build time). */
 export function compileCompare(
-  operator?: DependsOnOperator,
+  operator?: FieldRuleOperator,
   expected?: unknown
 ): (sourceValue: unknown) => boolean {
   const op = normalizeOperator(operator)

@@ -457,7 +457,7 @@ describe('tracker patch merge for calculations', () => {
     bindings: {},
     validations: {},
     calculations: {},
-    dependsOn: [],
+    fieldRules: [],
   }
 
   it('adds and removes calculations via patch', () => {

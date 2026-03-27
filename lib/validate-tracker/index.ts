@@ -9,7 +9,7 @@ import {
   validateLayout,
   validateOptionsFields,
   validateReservedFieldIds,
-  validateDependsOn,
+  validateFieldRules,
   validateBindings,
   validateValidations,
   validateCalculations,
@@ -17,7 +17,7 @@ import {
 
 export type { TrackerLike, ValidationResult, BindingEntry } from './types'
 export { autoFixBindings } from './auto-fix'
-export { validateBindings, validateDependsOn, validateValidations, validateCalculations } from './validators'
+export { validateBindings, validateFieldRules, validateValidations, validateCalculations } from './validators'
 
 function mergeResults(
   results: Array<{ errors?: string[]; warnings?: string[] }>
@@ -41,7 +41,7 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
     validateLayout(ctx),
     validateOptionsFields(ctx),
     validateReservedFieldIds(ctx),
-    validateDependsOn(tracker, ctx),
+    validateFieldRules(tracker, ctx),
     validateBindings(ctx),
     validateValidations(ctx),
     validateCalculations(ctx),

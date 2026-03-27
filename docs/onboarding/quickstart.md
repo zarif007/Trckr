@@ -16,7 +16,7 @@
 
 1. Tracker orchestration: `app/tracker`.
 2. Tracker renderer/editor: `app/components/tracker-display`.
-3. Runtime engines: `lib/binding`, `lib/resolve-bindings`, `lib/depends-on`, `lib/dynamic-options`.
+3. Runtime engines: `lib/binding`, `lib/resolve-bindings`, `lib/field-rules`, `lib/dynamic-options`.
 
 ## 35-50 min: Exercise one safe change
 

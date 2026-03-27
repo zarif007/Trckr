@@ -1,14 +1,14 @@
 /**
- * Depends On is now configured per target in field settings (dependsOnByTarget).
+ * Field rules are configured per target in field settings (fieldRulesByTarget).
  * This function is a no-op: returns input unchanged with empty seedGridData.
  * Kept for backward compatibility with any code that still calls it.
  */
 
-import type { DependsOnOptionGridsInput, DependsOnOptionGridsResult } from './types'
+import type { FieldRulesOptionGridsInput, FieldRulesOptionGridsResult } from './types'
 
-export function ensureDependsOnOptionGrids(
-  input: DependsOnOptionGridsInput
-): DependsOnOptionGridsResult {
+export function ensureFieldRulesOptionGrids(
+  input: FieldRulesOptionGridsInput
+): FieldRulesOptionGridsResult {
   return {
     sections: input.sections,
     grids: input.grids,

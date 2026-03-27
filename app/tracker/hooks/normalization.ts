@@ -30,7 +30,7 @@ export function isUntouchedFirstRunScaffold(tracker: TrackerLike | null | undefi
   const grids = Array.isArray(tracker.grids) ? tracker.grids : []
   const fields = Array.isArray(tracker.fields) ? tracker.fields : []
   const layoutNodes = Array.isArray(tracker.layoutNodes) ? tracker.layoutNodes : []
-  const dependsOn = Array.isArray(tracker.dependsOn) ? tracker.dependsOn : []
+  const fieldRules = Array.isArray(tracker.fieldRules) ? tracker.fieldRules : []
 
   if (sections.length > 0 || grids.length > 0 || fields.length > 0 || layoutNodes.length > 0) {
     return false
@@ -45,7 +45,7 @@ export function isUntouchedFirstRunScaffold(tracker: TrackerLike | null | undefi
   ) {
     return false
   }
-  if (dependsOn.length > 0) return false
+  if (fieldRules.length > 0) return false
 
   const tabs = Array.isArray(tracker.tabs) ? tracker.tabs : []
   if (tabs.length === 0 || tabs.length > 2) return false

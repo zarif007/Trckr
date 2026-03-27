@@ -20,7 +20,7 @@ import {
 } from '../../bindings/bindings-utils'
 import { parsePath } from '@/lib/resolve-bindings'
 import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
-import type { DependsOnRuleForTarget } from '@/lib/depends-on'
+import type { FieldRuleForTarget } from '@/lib/field-rules'
 import {
   defaultExpr,
   ensureRuleDefaults,
@@ -68,7 +68,7 @@ export function useFieldSettingsState({
   const [statusOptionsText, setStatusOptionsText] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
   const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
-  const [dependsOnRules, setDependsOnRules] = useState<DependsOnRuleForTarget[]>([])
+  const [fieldRules, setFieldRules] = useState<FieldRuleForTarget[]>([])
   const [structureOpen, setStructureOpen] = useState(false)
   const [showJsonInStructure, setShowJsonInStructure] = useState(false)
   const [bindingEnabled, setBindingEnabled] = useState(false)
@@ -351,11 +351,11 @@ export function useFieldSettingsState({
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
     const nextCalculation = validationKey ? (schema?.calculations?.[validationKey] ?? null) : null
-    const nextDependsOn =
-      validationKey && schema?.dependsOnByTarget?.[validationKey]
-        ? schema.dependsOnByTarget[validationKey]
-        : validationKey && Array.isArray(schema?.dependsOn)
-          ? schema.dependsOn
+    const nextFieldRules =
+      validationKey && schema?.fieldRulesByTarget?.[validationKey]
+        ? schema.fieldRulesByTarget[validationKey]
+        : validationKey && Array.isArray(schema?.fieldRules)
+          ? schema.fieldRules
             .filter((r) => r?.targets?.includes(validationKey))
             .map((r) => ({
               source: r.source,
@@ -366,7 +366,7 @@ export function useFieldSettingsState({
               priority: r.priority,
             }))
           : []
-    setDependsOnRules(nextDependsOn)
+    setFieldRules(nextFieldRules)
     setCalculationRule(nextCalculation && nextCalculation.expr ? nextCalculation : null)
     setStructureOpen(false)
     setShowJsonInStructure(false)
@@ -694,13 +694,13 @@ export function useFieldSettingsState({
       }
     }
 
-    const nextDependsOnByTarget = { ...(schema.dependsOnByTarget ?? {}) }
+    const nextFieldRulesByTarget = { ...(schema.fieldRulesByTarget ?? {}) }
     if (vKey) {
-      const validDependsOnRules = dependsOnRules.filter((r) => r.source?.trim())
-      if (validDependsOnRules.length > 0) {
-        nextDependsOnByTarget[vKey] = validDependsOnRules
+      const validFieldRules = fieldRules.filter((r) => r.source?.trim())
+      if (validFieldRules.length > 0) {
+        nextFieldRulesByTarget[vKey] = validFieldRules
       } else {
-        delete nextDependsOnByTarget[vKey]
+        delete nextFieldRulesByTarget[vKey]
       }
     }
 
@@ -710,7 +710,7 @@ export function useFieldSettingsState({
       validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
       calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
       bindings: nextBindings,
-      dependsOnByTarget: Object.keys(nextDependsOnByTarget).length > 0 ? nextDependsOnByTarget : undefined,
+      fieldRulesByTarget: Object.keys(nextFieldRulesByTarget).length > 0 ? nextFieldRulesByTarget : undefined,
       dynamicOptions: dynamicOptionsDraft,
     })
 
@@ -745,7 +745,7 @@ export function useFieldSettingsState({
     statusOptionsText,
     rules,
     calculationRule,
-    dependsOnRules,
+    fieldRules,
     bindingEnabled,
     bindingDraft,
     isBindable,
@@ -890,8 +890,8 @@ export function useFieldSettingsState({
     handleRuleTypeChange,
     calculationRule,
     setCalculationRule,
-    dependsOnRules,
-    setDependsOnRules,
+    fieldRules,
+    setFieldRules,
     structureOpen,
     setStructureOpen,
     showJsonInStructure,

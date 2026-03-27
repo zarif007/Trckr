@@ -16,7 +16,7 @@ import type { FieldSettingsDialogProps } from './types'
 import { GeneralTab } from './GeneralTab'
 import { BindingsTab } from './BindingsTab'
 import { CalculationsTab } from './CalculationsTab'
-import { DependsOnTab } from './DependsOnTab'
+import { FieldRulesTab } from './FieldRulesTab'
 import { ValidationsTab } from './ValidationsTab'
 import { DynamicOptionsBuilder } from '../dynamic-options'
 
@@ -33,7 +33,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
     disableSave,
     rules,
     calculationRule,
-    dependsOnRules,
+    fieldRules,
     isBindable,
     isDynamicField,
     bindingEnabled,
@@ -46,7 +46,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
           'general',
           'validations',
           'calculations',
-          'dependsOn',
+          'fieldRules',
           'bindings',
           'dynamicOptions',
         ] as const)
@@ -86,7 +86,7 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                   | 'general'
                   | 'validations'
                   | 'calculations'
-                  | 'dependsOn'
+                  | 'fieldRules'
                   | 'bindings'
                   | 'dynamicOptions'
               )
@@ -123,13 +123,13 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     )}
                   </TabsTrigger>
                 )}
-                {resolvedAllowedTabs.includes('dependsOn') && gridId && field && (
-                  <TabsTrigger value="dependsOn" className="gap-1.5 text-xs">
+                {resolvedAllowedTabs.includes('fieldRules') && gridId && field && (
+                  <TabsTrigger value="fieldRules" className="gap-1.5 text-xs">
                     <Link2 className="h-3.5 w-3.5" />
-                    <span>Depends on</span>
-                    {dependsOnRules.length > 0 && (
+                    <span>Field rules</span>
+                    {fieldRules.length > 0 && (
                       <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
-                        {dependsOnRules.length}
+                        {fieldRules.length}
                       </span>
                     )}
                   </TabsTrigger>
@@ -278,13 +278,13 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                   </TabsContent>
                 )}
 
-                {resolvedAllowedTabs.includes('dependsOn') && gridId && field && (
-                  <TabsContent value="dependsOn" className="mt-5 space-y-5">
-                    <DependsOnTab
+                {resolvedAllowedTabs.includes('fieldRules') && gridId && field && (
+                  <TabsContent value="fieldRules" className="mt-5 space-y-5">
+                    <FieldRulesTab
                       gridId={gridId}
                       field={field}
-                      dependsOnRules={state.dependsOnRules}
-                      setDependsOnRules={state.setDependsOnRules}
+                      fieldRules={state.fieldRules}
+                      setFieldRules={state.setFieldRules}
                       allFieldPathOptions={state.allFieldPathOptions}
                       pathLabelMap={state.pathLabelMap}
                       resolvePathLabelFn={state.resolvePathLabelFn}

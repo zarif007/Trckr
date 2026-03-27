@@ -558,7 +558,7 @@ export function ProjectContent({
         bindingsHref: string
         validationsHref: string
         calculationsHref: string
-        dependsOnHref: string
+        fieldRulesHref: string
       }
     } | {
       kind: 'report'
@@ -625,7 +625,7 @@ export function ProjectContent({
           bindingsHref: `/tracker/${parentId}/bindings`,
           validationsHref: `/tracker/${parentId}/validations`,
           calculationsHref: `/tracker/${parentId}/calculations`,
-          dependsOnHref: `/tracker/${parentId}/depends-on`,
+          fieldRulesHref: `/tracker/${parentId}/field-rules`,
         },
       }
     })

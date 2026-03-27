@@ -103,7 +103,7 @@ config: {
 If you want more advanced behavior later, extend `EntryWayConfig` and `buildEntryWaysForGrid`:
 
 - Support parameterized defaults (e.g. “today”, “now”, “current user”).
-- Integrate with bindings/depends-on to compute additional fields when the Entry Way is used.
+- Integrate with bindings/field-rules to compute additional fields when the Entry Way is used.
 - Attach icons to Entry Ways (add an optional `icon` field and render it in the menu).
 - Add an editor UI that lets users manage `entryWays` instead of editing schema by hand.
 

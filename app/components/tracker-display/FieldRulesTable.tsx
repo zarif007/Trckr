@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import { parsePath } from '@/lib/resolve-bindings'
-import type { DependsOnRules } from '@/lib/depends-on'
+import type { FieldRules } from '@/lib/field-rules'
 import type { TrackerGrid, TrackerField } from './types'
 import {
   Table,
@@ -38,8 +38,8 @@ function formatRuleValue(value: unknown): string {
   return String(value)
 }
 
-export interface DependsOnTableProps {
-  rules: DependsOnRules
+export interface FieldRulesTableProps {
+  rules: FieldRules
   grids: TrackerGrid[]
   fields: TrackerField[]
   /** Optional style overrides to match grid tables (e.g. from tracker styles). */
@@ -48,13 +48,13 @@ export interface DependsOnTableProps {
   showEmptyState?: boolean
 }
 
-export function DependsOnTable({
+export function FieldRulesTable({
   rules,
   grids,
   fields,
   styleOverrides,
   showEmptyState = false,
-}: DependsOnTableProps) {
+}: FieldRulesTableProps) {
   const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
 
   if (!rules?.length) {

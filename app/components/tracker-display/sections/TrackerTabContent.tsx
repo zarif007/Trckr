@@ -10,7 +10,7 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  DependsOnRules,
+  FieldRules,
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -28,7 +28,7 @@ export interface TrackerTabContentProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  dependsOn?: DependsOnRules
+  fieldRules?: FieldRules
   gridData: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -55,7 +55,7 @@ function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabC
     prev.validations !== next.validations ||
     prev.calculations !== next.calculations ||
     prev.styles !== next.styles ||
-    prev.dependsOn !== next.dependsOn ||
+    prev.fieldRules !== next.fieldRules ||
     prev.readOnly !== next.readOnly ||
     prev.onUpdate !== next.onUpdate ||
     prev.onAddEntry !== next.onAddEntry ||
@@ -80,7 +80,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   validations,
   calculations,
   styles,
-  dependsOn,
+  fieldRules,
   gridData,
   gridDataRef,
   readOnly,
@@ -118,7 +118,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
           validations={validations}
           calculations={calculations}
           styles={styles}
-          dependsOn={dependsOn}
+          fieldRules={fieldRules}
           gridData={gridData}
           gridDataRef={gridDataRef}
           onUpdate={onUpdate}
@@ -147,7 +147,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
             validations={validations}
             calculations={calculations}
             styles={styles}
-            dependsOn={dependsOn}
+            fieldRules={fieldRules}
             gridData={gridData}
             gridDataRef={gridDataRef}
             readOnly={readOnly}

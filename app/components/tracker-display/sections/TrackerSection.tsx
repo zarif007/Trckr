@@ -8,7 +8,7 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  DependsOnRules,
+  FieldRules,
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -27,7 +27,7 @@ export interface TrackerSectionProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  dependsOn?: DependsOnRules
+  fieldRules?: FieldRules
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -53,7 +53,7 @@ export function TrackerSection({
   validations,
   calculations,
   styles,
-  dependsOn,
+  fieldRules,
   gridData,
   gridDataRef,
   readOnly,
@@ -90,7 +90,7 @@ export function TrackerSection({
                   validations={validations}
                   calculations={calculations}
                   styles={styles}
-                  dependsOn={dependsOn}
+                  fieldRules={fieldRules}
                   gridData={gridData}
                   gridDataRef={gridDataRef}
                   readOnly={readOnly}

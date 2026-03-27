@@ -41,7 +41,7 @@ export function createEmptyTrackerSchema(options?: {
     calculations: {},
     dynamicOptions: {},
     styles: undefined,
-    dependsOn: [],
+    fieldRules: [],
   }
 }
 

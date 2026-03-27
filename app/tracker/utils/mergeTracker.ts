@@ -1,6 +1,6 @@
 import type { TrackerDisplayProps, TrackerLayoutNode } from '@/app/components/tracker-display/types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
-import type { DependsOnRuleForTarget } from '@/lib/depends-on'
+import type { FieldRuleForTarget } from '@/lib/field-rules'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options'
 
@@ -289,9 +289,9 @@ export function applyTrackerPatch(
     bindings,
     validations: normalizedValidations,
     calculations: normalizedCalculations,
-    dependsOn: patch.dependsOn ?? base.dependsOn,
-    dependsOnByTarget: (patch.dependsOnByTarget ?? base.dependsOnByTarget) as
-      | Record<string, DependsOnRuleForTarget[]>
+    fieldRules: patch.fieldRules ?? base.fieldRules,
+    fieldRulesByTarget: (patch.fieldRulesByTarget ?? base.fieldRulesByTarget) as
+      | Record<string, FieldRuleForTarget[]>
       | undefined,
     styles,
     dynamicOptions,

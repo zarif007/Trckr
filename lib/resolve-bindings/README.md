@@ -8,7 +8,7 @@ Technical documentation for the **binding resolution engine**: how select/multis
 
 - **Purpose:** Parse dot-notation field paths, read/write grid data by path, resolve **options** for bound select fields from option grids, and **apply bindings** (compute which target fields to update when the user picks an option). No UI—only path handling, grid access, and binding logic.
 - **Binding shape:** Each binding has `optionsGrid`, `labelField`, and `fieldMappings` (from option row field → to main grid field). One mapping has `to` = the select field path (label/value); others define auto-populated fields when an option is selected.
-- **Consumers:** Tracker grids (table, div, kanban) use `getBindingForField`, `findOptionRow`, `applyBindings`, and `resolveOptionsFromBinding`; the **binding** module uses path and lookup for schema build and option resolution; **depends-on** uses `parsePath` and `getValueByPath` for source values.
+- **Consumers:** Tracker grids (table, div, kanban) use `getBindingForField`, `findOptionRow`, `applyBindings`, and `resolveOptionsFromBinding`; the **binding** module uses path and lookup for schema build and option resolution; **field rules** use `parsePath` and `getValueByPath` for source values.
 
 ---
 
@@ -115,7 +115,7 @@ lib/resolve-bindings/
 ```
 
 - **path** — Single place for path parsing and building; used by all other modules that need gridId/fieldId.  
-- **grid-data** — Pure read/write by path; used by depends-on (read) and grids (read/write).  
+- **grid-data** — Pure read/write by path; used by field rules (read) and grids (read/write).  
 - **value-field** — Binding → value field id; used by options and option-row.  
 - **options** — Option list and row lookup; used by grids and the binding module.  
 - **apply** — Option row → target updates; used by grids on select change.  
@@ -166,4 +166,4 @@ Import from `@/lib/resolve-bindings`:
 ## Dependencies
 
 - **lib/types/tracker-bindings:** `FieldPath`, `TrackerBindingEntry`, `TrackerBindings`, `FieldMapping`.  
-- No dependency on **binding** or **depends-on**; those modules may import from resolve-bindings.
+- No dependency on **binding** or **field-rules**; those modules may import from resolve-bindings.

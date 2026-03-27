@@ -1,10 +1,10 @@
 /**
- * Types for the depends-on rule engine: rule shape, overrides, and index.
+ * Types for the field rules engine: rule shape, overrides, and index.
  */
 
 import type { FieldPath } from '@/lib/types/tracker-bindings'
 
-export type DependsOnOperator =
+export type FieldRuleOperator =
   | '='
   | '=='
   | '!='
@@ -28,29 +28,29 @@ export type DependsOnOperator =
   | 'is_empty'
   | 'not_empty'
 
-export type DependsOnAction = 'isHidden' | 'isRequired' | 'isDisabled'
+export type FieldRuleAction = 'isHidden' | 'isRequired' | 'isDisabled'
 
-export type DependsOnRule = {
+export type FieldRule = {
   source: FieldPath
-  operator?: DependsOnOperator
+  operator?: FieldRuleOperator
   value?: unknown
-  action: DependsOnAction
+  action: FieldRuleAction
   /** For isHidden/isRequired/isDisabled: value to set (default true). */
   set?: boolean | unknown
   targets: FieldPath[]
   priority?: number
 }
 
-export type DependsOnRules = DependsOnRule[]
+export type FieldRules = FieldRule[]
 
 /** Rule shape when stored per target (target is the key; no targets array). */
-export type DependsOnRuleForTarget = Omit<DependsOnRule, 'targets'>
+export type FieldRuleForTarget = Omit<FieldRule, 'targets'>
 
 /** Pre-parsed path for hot-path use (no parsePath in loops). Must match resolve-bindings.ParsedPath shape for type predicates. */
 export type ParsedPath = { tabId: null; gridId: string; fieldId: string }
 
-/** Rule with optional pre-parsed and pre-compiled data (set by buildDependsOnIndex). */
-export type EnrichedDependsOnRule = DependsOnRule & {
+/** Rule with optional pre-parsed and pre-compiled data (set by buildFieldRuleIndex). */
+export type EnrichedFieldRule = FieldRule & {
   _parsedSource?: ParsedPath
   _parsedTargets?: ParsedPath[]
   _compare?: (sourceValue: unknown) => boolean
@@ -63,14 +63,14 @@ export type FieldOverride = {
   value?: unknown
 }
 
-/** Index for O(1) lookup by source, target, or grid. All maps reference EnrichedDependsOnRule. */
-export interface DependsOnIndex {
-  rulesBySource: Map<string, EnrichedDependsOnRule[]>
-  rulesByTarget: Map<string, EnrichedDependsOnRule[]>
-  rulesByGridId: Map<string, EnrichedDependsOnRule[]>
+/** Index for O(1) lookup by source, target, or grid. All maps reference EnrichedFieldRule. */
+export interface FieldRuleIndex {
+  rulesBySource: Map<string, EnrichedFieldRule[]>
+  rulesByTarget: Map<string, EnrichedFieldRule[]>
+  rulesByGridId: Map<string, EnrichedFieldRule[]>
 }
 
-export interface ResolveDependsOnOptions {
+export interface ResolveFieldRuleOptions {
   /** When true, for source fields in the same grid use only rowDataOverride (e.g. Add form / new row). Never use gridData for same-grid source. */
   onlyUseRowDataForSource?: boolean
 }

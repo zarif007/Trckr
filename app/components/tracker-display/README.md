@@ -1,13 +1,13 @@
 # Tracker Display
 
-A **modular, reusable** React UI for rendering **tracker** definitions: config-driven tabs, sections, and grids with multiple view types (table, kanban, form), bindings, conditional rules (depends-on), and optional styling.
+A **modular, reusable** React UI for rendering **tracker** definitions: config-driven tabs, sections, and grids with multiple view types (table, kanban, form), bindings, conditional field rules, and optional styling.
 
 ---
 
 ## What It Is
 
 - **Tracker**: A schema + data model. It has **tabs** → **sections** → **grids** → **views**. Each grid holds rows of data; each view is a way to display that data (e.g. Table, Kanban, Form).
-- **Tracker Display**: The component tree that turns that schema + `gridData` (and optional `bindings`, `dependsOn`, `styles`) into the actual UI.
+- **Tracker Display**: The component tree that turns that schema + `gridData` (and optional `bindings`, `fieldRules` / `fieldRulesByTarget`, `styles`) into the actual UI.
 
 Data flow is one-way: the parent supplies `gridData` and callbacks (`onUpdate`, `onAddEntry`, `onDeleteEntries`). The display never owns persistence; it just renders and invokes those callbacks.
 
@@ -20,7 +20,7 @@ The codebase is split into **reusable folders** so you can import layout, blocks
 ```
 tracker-display/
 ├── README.md                    # This file (tech doc)
-├── index.tsx                    # Public API: TrackerDisplay, DependsOnTable, types
+├── index.tsx                    # Public API: TrackerDisplay, FieldRulesTable, types
 ├── types.ts                     # Shared types (TrackerTab, TrackerGrid, etc.)
 ├── constants.ts                 # View labels
 ├── view-utils.ts                # normalizeGridViews
@@ -49,7 +49,7 @@ tracker-display/
 ├── TrackerTableGrid.tsx
 ├── TrackerKanbanGrid.tsx
 ├── TrackerCell.tsx
-├── DependsOnTable.tsx
+├── FieldRulesTable.tsx
 │
 ├── edit-mode/                   # Edit layout (drag, rename, add block)
 │   ├── index.ts
@@ -69,7 +69,7 @@ tracker-display/
 │   └── div/                     # Form grid (TrackerDivGrid)
 │
 └── hooks/
-    └── useGridDependsOn.ts
+    └── useGridFieldRules.ts
 ```
 
 ---
@@ -143,7 +143,7 @@ Tracker schemas may include optional `formActions` (button label + status tag + 
 - **onAddEntry(gridId, newRow)**: Append a row.
 - **onDeleteEntries(gridId, rowIndices)**: Remove rows.
 
-Bindings and depends-on are passed from the top; grid components resolve options and overrides using `gridData` and `trackerContext` where needed.
+Bindings and field rules are passed from the top; grid components resolve options and overrides using `gridData` and `trackerContext` where needed.
 
 ---
 
@@ -190,8 +190,8 @@ TrackerDisplayInline (entry: tabs + state + callbacks)
 From `@/app/components/tracker-display` (root `index.tsx`):
 
 - **TrackerDisplay** (TrackerDisplayInline): main component; pass `TrackerDisplayProps`.
-- **DependsOnTable**: standalone table for depends-on rules.
-- **Types**: `TrackerDisplayProps`, `TrackerTab`, `TrackerSection`, `TrackerGrid`, `TrackerField`, `TrackerLayoutNode`, `TrackerBindings`, `StyleOverrides`, `DependsOnRules`.
+- **FieldRulesTable**: standalone table for field rules.
+- **Types**: `TrackerDisplayProps`, `TrackerTab`, `TrackerSection`, `TrackerGrid`, `TrackerField`, `TrackerLayoutNode`, `TrackerBindings`, `StyleOverrides`, `FieldRules`.
 
 For layout/blocks/sections reuse, import from:
 
@@ -205,4 +205,4 @@ For layout/blocks/sections reuse, import from:
 
 - **@dnd-kit** (core, sortable, utilities): used by TrackerKanbanGrid and edit-mode drag-and-drop.
 - **@tanstack/react-table** + **DataTable** from `grids/data-table`: used by TrackerTableGrid and shared by kanban/div.
-- **lib/binding**, **lib/resolve-bindings**, **lib/depends-on**, **lib/depends-on-options**, **lib/style-utils**: option resolution, bindings, conditional rules, style overrides.
+- **lib/binding**, **lib/resolve-bindings**, **lib/field-rules**, **lib/field-rules-options**, **lib/style-utils**: option resolution, bindings, conditional rules, style overrides.

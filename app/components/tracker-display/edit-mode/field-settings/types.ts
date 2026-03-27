@@ -15,7 +15,7 @@ export interface FieldSettingsDialogProps {
     | 'general'
     | 'validations'
     | 'calculations'
-    | 'dependsOn'
+    | 'fieldRules'
     | 'bindings'
     | 'dynamicOptions'
   /** Optional whitelist of tabs to render. Useful for focused workflows. */
@@ -23,7 +23,7 @@ export interface FieldSettingsDialogProps {
     | 'general'
     | 'validations'
     | 'calculations'
-    | 'dependsOn'
+    | 'fieldRules'
     | 'bindings'
     | 'dynamicOptions'
   >

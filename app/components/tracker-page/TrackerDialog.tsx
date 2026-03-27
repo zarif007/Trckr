@@ -42,8 +42,8 @@ function toDisplayProps(data: TrackerResponse): TrackerDisplayProps {
     validations: data.validations ?? {},
     calculations: data.calculations ?? {},
     styles: data.styles,
-    dependsOn: data.dependsOn ?? [],
-    dependsOnByTarget: data.dependsOnByTarget,
+    fieldRules: data.fieldRules ?? [],
+    fieldRulesByTarget: data.fieldRulesByTarget,
   }
 }
 
@@ -64,7 +64,7 @@ export function TrackerDialog({
   onSchemaChange,
 }: TrackerDialogProps) {
   const object = streamedObject as {
-    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; dependsOn?: unknown[]; dependsOnByTarget?: Record<string, unknown[]> }
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; fieldRules?: unknown[]; fieldRulesByTarget?: Record<string, unknown[]> }
     trackerPatch?: unknown
   } | undefined
   const handleOpenChange = (next: boolean) => {
@@ -101,8 +101,8 @@ export function TrackerDialog({
       validations: schema.validations ?? {},
       calculations: schema.calculations ?? {},
       styles: schema.styles,
-      dependsOn: schema.dependsOn ?? [],
-      dependsOnByTarget: schema.dependsOnByTarget,
+      fieldRules: schema.fieldRules ?? [],
+      fieldRulesByTarget: schema.fieldRulesByTarget,
     }
     onSchemaChange?.(next)
   }
@@ -162,8 +162,8 @@ export function TrackerDialog({
               validations={(tracker.validations || {}) as TrackerResponse['validations']}
               calculations={(tracker.calculations || {}) as TrackerResponse['calculations']}
               styles={(tracker.styles || {}) as TrackerResponse['styles']}
-              dependsOn={(tracker.dependsOn || []) as TrackerResponse['dependsOn']}
-              dependsOnByTarget={(tracker as TrackerResponse).dependsOnByTarget}
+              fieldRules={(tracker.fieldRules || []) as TrackerResponse['fieldRules']}
+              fieldRulesByTarget={(tracker as TrackerResponse).fieldRulesByTarget}
               getDataRef={trackerDataRef}
             />
           ) : activeTrackerData ? (
@@ -197,8 +197,8 @@ export function TrackerDialog({
                   validations={activeTrackerData.validations}
                   calculations={activeTrackerData.calculations}
                   styles={activeTrackerData.styles}
-                  dependsOn={activeTrackerData.dependsOn}
-                  dependsOnByTarget={activeTrackerData.dependsOnByTarget}
+                  fieldRules={activeTrackerData.fieldRules}
+                  fieldRulesByTarget={activeTrackerData.fieldRulesByTarget}
                   getDataRef={trackerDataRef}
                 />
               )}

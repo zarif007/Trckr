@@ -1,7 +1,7 @@
 export { validateLayout } from './layout'
 export { validateOptionsFields } from './options-fields'
 export { validateReservedFieldIds } from './reserved-field-ids'
-export { validateDependsOn } from './depends-on'
+export { validateFieldRules } from './field-rules'
 export { validateBindings } from './bindings'
 export { validateValidations } from './validations'
 export { validateCalculations } from './calculations'

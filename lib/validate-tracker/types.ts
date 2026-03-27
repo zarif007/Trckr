@@ -27,7 +27,7 @@ export interface TrackerLike {
   bindings?: Record<string, BindingEntry>
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
-  dependsOn?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
+  fieldRules?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
   dynamicOptions?: DynamicOptionsDefinitions
 }
 

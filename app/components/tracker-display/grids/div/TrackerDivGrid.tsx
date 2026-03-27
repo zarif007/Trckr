@@ -19,9 +19,9 @@ import { resolveFieldOptionsV2, resolveFieldOptionsV2Async } from '@/lib/binding
 import { useEditMode, useLayoutActions, SortableFieldRowEdit, fieldSortableId, parseFieldId, FieldSettingsDialog } from '../../edit-mode'
 import { DIV_GRID_MAX_COLS } from '../../edit-mode/utils'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
-import { applyFieldOverrides, resolveDependsOnOverrides } from '@/lib/depends-on'
+import { applyFieldOverrides, resolveFieldRuleOverrides } from '@/lib/field-rules'
 import { useTrackerOptionsContext } from '../../tracker-options-context'
-import { useGridDependsOn } from '../../hooks/useGridDependsOn'
+import { useGridFieldRules } from '../../hooks/useGridFieldRules'
 import type { OptionsGridFieldDef } from '../data-table/utils'
 import type { FieldMetadata } from '../data-table/utils'
 import { getValidationError } from '../data-table/utils'
@@ -48,7 +48,7 @@ function TrackerDivGridInner({
   validations,
   calculations,
   styleOverrides,
-  dependsOn,
+  fieldRules,
   gridData = {},
   gridDataRef,
   gridDataForThisGrid,
@@ -89,7 +89,7 @@ function TrackerDivGridInner({
   >({})
 
   const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides])
-  const { dependsOnForGrid } = useGridDependsOn(grid.id, dependsOn)
+  const { rulesForGrid } = useGridFieldRules(grid.id, fieldRules)
   const isGridReadOnly = readOnly || grid.config?.isRowEditAble === false
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>()
@@ -644,8 +644,8 @@ function TrackerDivGridInner({
   )
 
   const fieldOverrides = useMemo(
-    () => resolveDependsOnOverrides(dependsOnForGrid, fullGridData, grid.id, 0, data),
-    [dependsOnForGrid, fullGridData, grid.id, data]
+    () => resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, data),
+    [rulesForGrid, fullGridData, grid.id, data]
   )
 
   const rowKeys = useMemo(() => [...nodesByRow.keys()].sort((a, b) => a - b), [nodesByRow])
@@ -681,7 +681,7 @@ function TrackerDivGridInner({
     if (effectiveConfig?.isHidden) return null
 
     const options = fieldOptionsMap.get(field.id)
-    const fieldRules = validations?.[`${grid.id}.${field.id}`]
+    const validationRules = validations?.[`${grid.id}.${field.id}`]
     const rawValue = draftRow[field.id] ?? data[field.id]
     const value =
       effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined
@@ -694,15 +694,15 @@ function TrackerDivGridInner({
       !!effectiveConfig?.isDisabled ||
       (effectiveConfig && 'value' in effectiveConfig && (effectiveConfig as { value?: unknown }).value !== undefined)
 
-    const fieldRulesResolved = fieldRules ?? []
+    const validationRulesResolved = validationRules ?? []
     const validationError =
-      fieldRulesResolved.length > 0
+      validationRulesResolved.length > 0
         ? getValidationError({
           value,
           fieldId: field.id,
           fieldType: field.dataType,
           config: effectiveConfig,
-          rules: fieldRulesResolved,
+          rules: validationRulesResolved,
           rowValues: rowValuesForValidation,
         })
         : null

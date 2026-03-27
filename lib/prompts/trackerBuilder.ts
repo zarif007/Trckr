@@ -10,7 +10,7 @@ The schema MUST follow this structure exactly (flat arrays with references, no n
 - fields: array of atomic field objects (data definitions)
 - layoutNodes: array of placement objects linking fields to grids (fieldId, gridId, order)
 - bindings: MANDATORY object for ALL select/multiselect fields — the ONLY source of options; each entry points to a master data grid (local) or master data tracker (foreign)
-- dependsOn: optional array of conditional rules that apply dynamic field actions (hide/require/disable)
+- fieldRules: optional array of conditional rules that apply dynamic field actions (hide/require/disable)
 
 All IDs MUST be unique across the schema.
 
@@ -224,12 +224,12 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - Views share the grid's data and layoutNodes — no extra layoutNodes or bindings for view ids. layoutNodes and bindings always use the primary grid id only.
 - Example: tasks_grid with views: [{ id: "tasks_table_view", name: "Table", type: "table", config: {} }, { id: "tasks_kanban_view", name: "Kanban", type: "kanban", config: { groupBy: "status" } }].
 
-=== DEPENDS-ON (CONDITIONAL FIELD ACTIONS) ===
+=== FIELD RULES (CONDITIONAL FIELD ACTIONS) ===
 
-Use dependsOn ONLY when the user asks for dynamic behavior (show/hide/require/disable based on other fields).
+Use fieldRules ONLY when the user asks for dynamic behavior (show/hide/require/disable based on other fields).
 
 Top-level structure:
-dependsOn: [
+fieldRules: [
   {
     source: "grid_id.field_id",
     operator: "eq|neq|gt|gte|lt|lte|in|not_in|contains|not_contains|starts_with|ends_with|is_empty|not_empty|=|!=|>|>=|<|<=",
@@ -246,10 +246,10 @@ Rules:
 2. action must be one of: isHidden, isRequired, isDisabled.
 3. set defaults to true if omitted.
 4. priority controls conflicts: higher wins; ties resolve by later rule order.
-5. If the user does not mention dynamic behavior, omit dependsOn entirely.
+5. If the user does not mention dynamic behavior, omit fieldRules entirely.
 
 Example:
-dependsOn: [
+fieldRules: [
   { source: "inventory_grid.status", operator: "eq", value: "item_1", action: "isHidden", set: true, targets: ["inventory_grid.sku"] },
   { source: "inventory_grid.qty", operator: ">", value: 5, action: "isRequired", targets: ["inventory_grid.sku"], priority: 10 }
 ]
@@ -266,7 +266,7 @@ CRITICAL for revisions:
 7. When creating select fields that should auto-populate other fields (e.g., selecting a product fills in price), add fieldMappings to the bindings entry.
 8. The options grid in Master Data tab can have additional fields beyond the single option field (e.g. price, description) for use in fieldMappings.
 9. Options grids can have extra columns (e.g. price, taste); same-named main grid fields will be auto-filled when bindings are enriched (even if you omit those fieldMappings).
-10. If the user asks for conditional behavior (show/hide/require/disable fields), include a dependsOn array with the required rules.
+10. If the user asks for conditional behavior (show/hide/require/disable fields), include a fieldRules array with the required rules.
 11. Use "options" and "multiselect" for select fields (with bindings). Do not use "dynamic_select" or "dynamic_multiselect" unless explicitly mentioned and only when a function backs the options (e.g. built-in dynamic option functions).
 
 === STYLES (only when user explicitly asks for visual changes) ===

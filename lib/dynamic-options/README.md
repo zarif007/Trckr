@@ -10,7 +10,7 @@ Tech doc for the **dynamic options** system: how tracker fields of type `dynamic
 - **Solution:** A **registry** maps **function ids** (e.g. `all_field_paths`) to **functions** that take a **context** (grids, fields, optional layout/sections) and return a list of `{ value, label, id? }`.
 - **Usage:** A field’s config sets `dynamicOptionsFunction: 'all_field_paths'`. At resolve time, the app calls `getDynamicOptions('all_field_paths', context)` and uses the returned options for that field.
 
-No circular dependency: the registry and types live here; consumers (e.g. **binding**, depends-on-options) only import **ids** or **getDynamicOptions**.
+No circular dependency: the registry and types live here; consumers (e.g. **binding**, field-rules-options) only import **ids** or **getDynamicOptions**.
 
 ---
 
@@ -120,7 +120,7 @@ Import from `@/lib/dynamic-options`:
 | Id | File | Description |
 |----|------|-------------|
 | `all_field_paths` | `all-field-paths.ts` | Options for every (grid, field) in layout: value `gridId.fieldId`, label `"Grid name → Field label"`. Respects `layoutNodes` and excludes shared-tab sections when `sections` is provided. |
-| `all_operators` | `all-operators.ts` | Operator options (e.g. for depends-on rules): eq, neq, gt, gte, lt, lte, in, not_in, contains, not_contains, is_empty, not_empty, starts_with, ends_with. |
+| `all_operators` | `all-operators.ts` | Operator options (e.g. for field rules): eq, neq, gt, gte, lt, lte, in, not_in, contains, not_contains, is_empty, not_empty, starts_with, ends_with. |
 | `all_actions` | `all-actions.ts` | Action options: isHidden, isRequired, isDisabled. |
 | `all_rule_set_values` | `all-rule-set-values.ts` | Boolean-like options: True / False. |
 

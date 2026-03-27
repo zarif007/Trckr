@@ -37,7 +37,7 @@ export type TrackerHrefs = {
   bindingsHref: string
   validationsHref: string
   calculationsHref: string
-  dependsOnHref: string
+  fieldRulesHref: string
 }
 
 export type ContextMenuItem = {
@@ -270,9 +270,9 @@ export function RenameDeleteContextMenuPortal({
             <FunctionSquare className="h-3.5 w-3.5" />
             Calculations
           </Link>
-          <Link href={hrefs.dependsOnHref} className={menuLinkClass} role="menuitem">
+          <Link href={hrefs.fieldRulesHref} className={menuLinkClass} role="menuitem">
             <GitBranch className="h-3.5 w-3.5" />
-            Depends On
+            Field Rules
           </Link>
 
           <div className="my-1 mx-2 h-px bg-border/60" />

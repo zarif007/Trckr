@@ -7,7 +7,7 @@ Trckr is a Next.js App Router application for AI-assisted tracker generation and
 - `app/`: routes, API handlers, and feature UI.
 - `app/components/tracker-display`: tracker renderer/editor (tabs, sections, grids, field settings).
 - `app/tracker`: tracker route orchestration and chat/generation flow.
-- `lib/`: domain services and reusable runtime logic (bindings, depends-on, validation, calculations, dynamic options, teams, tracker data).
+- `lib/`: domain services and reusable runtime logic (bindings, field rules, validation, calculations, dynamic options, teams, tracker data).
 - `lib/api`, `lib/auth/server`: shared HTTP/auth handler boundary.
 - `lib/repositories`: persistence + ownership checks for API routes.
 - `lib/ai`: provider abstraction, AI config, timeout/logging runtime.

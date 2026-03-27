@@ -55,7 +55,7 @@ type SidebarContextItem =
       bindingsHref: string
       validationsHref: string
       calculationsHref: string
-      dependsOnHref: string
+      fieldRulesHref: string
     }
   }
 
@@ -127,7 +127,7 @@ function buildTrackerHrefs(tracker: TrackerSchema) {
     bindingsHref: `/tracker/${parentId}/bindings`,
     validationsHref: `/tracker/${parentId}/validations`,
     calculationsHref: `/tracker/${parentId}/calculations`,
-    dependsOnHref: `/tracker/${parentId}/depends-on`,
+    fieldRulesHref: `/tracker/${parentId}/field-rules`,
   }
 }
 
@@ -911,8 +911,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   <Link href={hrefs.calculationsHref} className={linkCls} role="menuitem">
                     <FunctionSquare className="h-3.5 w-3.5" /> Calculations
                   </Link>
-                  <Link href={hrefs.dependsOnHref} className={linkCls} role="menuitem">
-                    <GitBranch className="h-3.5 w-3.5" /> Depends On
+                  <Link href={hrefs.fieldRulesHref} className={linkCls} role="menuitem">
+                    <GitBranch className="h-3.5 w-3.5" /> Field Rules
                   </Link>
                 </>
               )

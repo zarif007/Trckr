@@ -644,7 +644,7 @@ export function ModuleContent({
         bindingsHref: string
         validationsHref: string
         calculationsHref: string
-        dependsOnHref: string
+        fieldRulesHref: string
       }
     } | {
       kind: 'report'
@@ -711,7 +711,7 @@ export function ModuleContent({
           bindingsHref: `/tracker/${parentId}/bindings`,
           validationsHref: `/tracker/${parentId}/validations`,
           calculationsHref: `/tracker/${parentId}/calculations`,
-          dependsOnHref: `/tracker/${parentId}/depends-on`,
+          fieldRulesHref: `/tracker/${parentId}/field-rules`,
         },
       }
     })

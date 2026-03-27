@@ -45,7 +45,7 @@ describe('applyMasterDataBindings', () => {
       bindings: {},
       validations: {},
       calculations: {},
-      dependsOn: [],
+      fieldRules: [],
       formActions: [
         { id: 'default_save_action', label: 'Save', statusTag: 'Saved', isEditable: true },
       ],
@@ -208,7 +208,7 @@ describe('applyMasterDataBindings', () => {
       bindings: {},
       validations: {},
       calculations: {},
-      dependsOn: [],
+      fieldRules: [],
       formActions: [
         { id: 'default_save_action', label: 'Save', statusTag: 'Saved', isEditable: true },
       ],

@@ -5,7 +5,7 @@ import { FieldMetadata, getValidationError } from './utils'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS, type ResolvedTableStyles } from '@/lib/style-utils'
-import { applyFieldOverrides } from '@/lib/depends-on'
+import { applyFieldOverrides } from '@/lib/field-rules'
 
 interface DataTableCellProps<TData> {
   cell: Cell<TData, any>

@@ -5,7 +5,7 @@ import { DataTableInput } from './data-table-input'
 import { FormDialog } from './form-dialog'
 import { FieldWrapper } from '../../shared/FieldWrapper'
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
-import { applyFieldOverrides } from '@/lib/depends-on'
+import { applyFieldOverrides } from '@/lib/field-rules'
 import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
 import type { FieldCalculationRule } from '@/lib/functions/types'
 

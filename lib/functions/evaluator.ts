@@ -92,7 +92,7 @@ function getBinaryOperands(
  * 
  * @param expr - Expression AST node to evaluate
  * @param ctx - Evaluation context containing row values and field metadata
- * @returns The computed value (type depends on expression)
+ * @returns The computed value (type follows the expression)
  * 
  * Supported operators:
  * - `const`: Return literal value

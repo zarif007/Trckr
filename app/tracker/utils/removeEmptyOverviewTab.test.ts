@@ -14,7 +14,7 @@ describe('removeEmptyOverviewTabIfUnused', () => {
       fields: [],
       layoutNodes: [],
       bindings: {},
-      dependsOn: [],
+      fieldRules: [],
     }
     const next = removeEmptyOverviewTabIfUnused(tracker)
     expect(next.tabs?.map((t) => t.id)).toEqual(['tasks_tab'])
@@ -31,7 +31,7 @@ describe('removeEmptyOverviewTabIfUnused', () => {
       fields: [],
       layoutNodes: [],
       bindings: {},
-      dependsOn: [],
+      fieldRules: [],
     }
     const next = removeEmptyOverviewTabIfUnused(tracker)
     expect(next.tabs?.map((t) => t.id)).toEqual(['overview_tab', 'tasks_tab'])
@@ -45,7 +45,7 @@ describe('removeEmptyOverviewTabIfUnused', () => {
       fields: [],
       layoutNodes: [],
       bindings: {},
-      dependsOn: [],
+      fieldRules: [],
     }
     const next = removeEmptyOverviewTabIfUnused(tracker)
     expect(next.tabs?.length).toBe(1)

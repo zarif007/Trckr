@@ -13,7 +13,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { TrackerCell } from '../../TrackerCell'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
-import { resolveDependsOnOverrides } from '@/lib/depends-on'
+import { resolveFieldRuleOverrides } from '@/lib/field-rules'
 import type { TrackerFieldType, TrackerOption } from '../../types'
 import type { FieldMetadata } from '../data-table/utils'
 
@@ -39,7 +39,7 @@ export interface KanbanCardProps {
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   gridId: string
   gridData: Record<string, Array<Record<string, unknown>>>
-  dependsOn?: import('../../types').DependsOnRules
+  fieldRules?: import('../../types').FieldRules
   fieldMetadata?: FieldMetadata
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
@@ -52,7 +52,7 @@ export function KanbanCard({
   cardFields,
   gridId,
   gridData,
-  dependsOn,
+  fieldRules,
   fieldMetadata,
   isOverlay = false,
   onEditRow,
@@ -64,7 +64,7 @@ export function KanbanCard({
   const showSettingsButton = !isOverlay && onDeleteRow != null
   const overrides =
     typeof rowIndex === 'number'
-      ? resolveDependsOnOverrides(dependsOn ?? [], gridData, gridId, rowIndex, card)
+      ? resolveFieldRuleOverrides(fieldRules ?? [], gridData, gridId, rowIndex, card)
       : {}
 
   const {

@@ -1,10 +1,10 @@
 /**
- * Merge depends-on field overrides onto base config.
+ * Merge field-rule overrides onto base config.
  */
 
 import type { FieldOverride } from './types'
 
-/** Applies dependsOn overrides over base config. Override values take priority when defined. */
+/** Applies field rule overrides over base config. Override values take priority when defined. */
 export function applyFieldOverrides<T extends Record<string, unknown>>(
   base: T | null | undefined,
   override?: FieldOverride

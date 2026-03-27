@@ -7,8 +7,8 @@
 /** Renders a tracker with tabs, sections, and grid views (table, kanban, form). */
 export { TrackerDisplayInline as TrackerDisplay } from './TrackerDisplayInline'
 
-/** Standalone table for displaying depends-on rules (e.g. in an admin or rules-editor view). */
-export { DependsOnTable } from './DependsOnTable'
+/** Standalone table for displaying field rules (e.g. in an admin or rules-editor view). */
+export { FieldRulesTable } from './FieldRulesTable'
 
 /** Error boundary so one broken grid does not take down the page. */
 export { TrackerDisplayErrorBoundary } from './TrackerDisplayErrorBoundary'
@@ -42,7 +42,7 @@ export type {
   FieldCalculationRule,
   FieldValidationRule,
   StyleOverrides,
-  DependsOnRules,
+  FieldRules,
 } from './types'
 export type { SectionBarProps, InlineEditableNameProps } from './layout'
 export type { GridBlockHeaderProps, GridBlockContentProps } from './blocks'

@@ -12,7 +12,7 @@
 - `app/components/tracker-page/*`: tracker chat and page-level presentation.
 - `app/components/tracker-display/*`: schema runtime renderer/editor.
 - `app/api/*`: HTTP boundary, auth check, request/response validation, service calls.
-- `lib/tracker-data`, `lib/teams`, `lib/dynamic-options`, `lib/binding`, `lib/depends-on`, `lib/validate-tracker`: domain logic and data operations.
+- `lib/tracker-data`, `lib/teams`, `lib/dynamic-options`, `lib/binding`, `lib/field-rules`, `lib/validate-tracker`: domain logic and data operations.
 
 ## Dependency Direction
 

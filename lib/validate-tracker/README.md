@@ -4,10 +4,10 @@ Technical documentation for the tracker schema validation and auto-fix module.
 
 ## What it is
 
-`validate-tracker` checks **tracker schema integrity**: that layout, bindings, and dependency rules are consistent and reference real entities. It does **not** validate business rules or runtime data—only the structure of the tracker config (tabs, sections, grids, fields, layoutNodes, bindings, dependsOn).
+`validate-tracker` checks **tracker schema integrity**: that layout, bindings, and dependency rules are consistent and reference real entities. It does **not** validate business rules or runtime data—only the structure of the tracker config (tabs, sections, grids, fields, layoutNodes, bindings, fieldRules).
 
 - **Errors** = structural problems (e.g. layoutNode pointing to a missing grid). `valid: false` when any error exists.
-- **Warnings** = things that will be skipped or degraded at runtime (e.g. options field with no binding, invalid dependsOn source). The tracker can still be considered “valid” for schema purposes.
+- **Warnings** = things that will be skipped or degraded at runtime (e.g. options field with no binding, invalid fieldRules source). The tracker can still be considered “valid” for schema purposes.
 
 It also provides **auto-fix**: creating missing bindings and Shared-tab infrastructure for options/multiselect fields so schemas can be repaired instead of only reported.
 
@@ -17,7 +17,7 @@ It also provides **auto-fix**: creating missing bindings and Shared-tab infrastr
 
 1. **Entry:** `validateTracker(tracker)` is the main API.
 2. **Context:** The tracker is normalized into a **validation context**: id sets (`tabIds`, `sectionIds`, `gridIds`, `fieldIds`) and the same arrays (tabs, sections, grids, fields, layoutNodes, bindings). This is built once and passed to every validator.
-3. **Validators:** A fixed list of validator functions runs, each receiving the same context (and the raw tracker when needed, e.g. for `dependsOn`). Each returns `{ errors?: string[], warnings?: string[] }`.
+3. **Validators:** A fixed list of validator functions runs, each receiving the same context (and the raw tracker when needed, e.g. for `fieldRules`). Each returns `{ errors?: string[], warnings?: string[] }`.
 4. **Merge:** All errors and warnings are merged. `valid` is `true` only when there are zero errors (warnings do not affect `valid`).
 
 So: one context build → N validators → one merged result.
@@ -38,7 +38,7 @@ Validators are pure with respect to the context: they read only and do not mutat
 |-----------|------|----------|----------------|
 | **Layout** | `validators/layout.ts` | Errors | layoutNodes reference existing gridIds and fieldIds; sections reference existing tabIds; grids reference existing sectionIds. |
 | **Options fields** | `validators/options-fields.ts` | Warnings | Every `options` / `multiselect` field (that is placed in a grid) has a bindings entry. |
-| **DependsOn** | `validators/depends-on.ts` | Warnings | Each `dependsOn` rule has a valid `source` (grid + field) and each target path has valid grid + field. |
+| **Field rules** | `validators/field-rules.ts` | Warnings | Each `fieldRules` rule has a valid `source` (grid + field) and each target path has valid grid + field. |
 | **Bindings** | `validators/bindings.ts` | Warnings | Binding keys are valid grid.field paths; optionsGrid exists and is an options grid; labelField and fieldMappings reference existing fields; value mapping (to = field path) exists; dynamic_select/dynamic_multiselect function ids are valid (built-in or tracker-local); custom dynamic function and connector definitions are schema-valid; DSL `http_get` and graph `source.http_get` nodes reference existing connectors; select/multiselect fields in layout have a bindings entry. |
 | **Validations** | `validators/validations.ts` | Errors | Validation keys must be `"gridId.fieldId"` (like bindings, e.g. `main_grid.sku`). Every field is in a grid; there is no bare `fieldId` key. Expr rules must reference fields by `gridId.fieldId`. |
 | **Calculations** | `validators/calculations.ts` | Errors | Calculation keys must be `"gridId.fieldId"` target paths. Rules must have `{ expr }`; expression field references must be valid, in the same grid as target, and calculation dependencies must not form cycles. |
@@ -56,7 +56,7 @@ Layout, validations, and calculations produce **errors**; the rest produce **war
   - Adds a layoutNode for that field in the options grid.
   - Adds a bindings entry: `optionsGrid`, `labelField`, and a single fieldMapping from the option field to the select field.
 
-So after auto-fix, every such field has a minimal but valid binding. Other validators (e.g. layout, dependsOn) are unchanged by auto-fix.
+So after auto-fix, every such field has a minimal but valid binding. Other validators (e.g. layout, fieldRules) are unchanged by auto-fix.
 
 ## API
 
@@ -68,8 +68,8 @@ Import from `@/lib/validate-tracker`:
 - **`validateBindings(tracker)`** → `string[]`  
   Binding-specific warnings only. Useful when you only care about bindings.
 
-- **`validateDependsOn(tracker)`** → `string[]`  
-  dependsOn-specific warnings only.
+- **`validateFieldRules(tracker, ctx)`** → `ValidatorResult`  
+  fieldRules-specific warnings (usually used via `validateTracker`).
 
 - **`autoFixBindings(tracker)`** → `tracker` (same type)  
   Returns a new tracker with missing bindings and Shared infrastructure added.
@@ -90,7 +90,7 @@ validate-tracker/
     ├── index.ts        # Re-exports all validators
     ├── layout.ts       # Layout/section/grid reference checks
     ├── options-fields.ts
-    ├── depends-on.ts
+    ├── field-rules.ts
     ├── bindings.ts
     ├── validations.ts
     └── calculations.ts
@@ -107,6 +107,6 @@ Adding a new check: implement a function `(ctx: ValidationContext) => ValidatorR
 
 - **Before save / publish:** Run `validateTracker(tracker)` and surface `errors` (and optionally `warnings`) in the UI or API.
 - **After schema load or migration:** Optionally run `autoFixBindings(tracker)` to backfill missing bindings, then validate.
-- **Debugging:** Use `validateBindings` or `validateDependsOn` when you only care about one area.
+- **Debugging:** Use `validateBindings` or `validateFieldRules` when you only care about one area.
 
 Validation is designed to run in the same process as the app (e.g. in a hook or before persisting); it does not call external services.

@@ -1,5 +1,5 @@
 /**
- * Public input/output types for the Depends On option grids feature.
+ * Public input/output types for the Field Rules option grids feature.
  */
 
 import type {
@@ -9,18 +9,18 @@ import type {
   TrackerLayoutNode,
 } from '@/app/components/tracker-display/types'
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
-import type { DependsOnRules } from '@/lib/depends-on'
+import type { FieldRules } from '@/lib/field-rules'
 
-export interface DependsOnOptionGridsInput {
+export interface FieldRulesOptionGridsInput {
   grids: TrackerGrid[]
   fields: TrackerField[]
   sections: TrackerSection[]
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
-  dependsOn: DependsOnRules
+  fieldRules: FieldRules
 }
 
-export interface DependsOnOptionGridsResult {
+export interface FieldRulesOptionGridsResult {
   sections: TrackerSection[]
   grids: TrackerGrid[]
   fields: TrackerField[]

@@ -4,19 +4,15 @@
 
 import { MAX_CONTEXT_MESSAGES_PER_ROLE } from './constants'
 import { normalizeMasterDataScope } from '@/lib/master-data-scope'
+import {
+  SHARED_TAB_ID,
+  FIELD_RULES_OPTIONS_SECTION_ID,
+  FIELD_RULES_RULES_GRID,
+} from '@/lib/field-rules-options'
+import { RULES_GRID_FIELD_IDS } from '@/lib/field-rules-options/rules-grid-spec'
 
 const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
-const DEFAULT_SHARED_TAB_ID = 'shared_tab'
-const DEPENDS_ON_OPTIONS_SECTION_ID = 'depends_on_options_section'
-const DEPENDS_ON_RULES_GRID = 'depends_on_rules_grid'
-const RULES_GRID_FIELD_IDS = new Set([
-  'rule_source',
-  'rule_operator',
-  'rule_value',
-  'rule_action',
-  'rule_set',
-  'rule_targets',
-])
+const RULES_GRID_FIELD_ID_SET = new Set<string>(RULES_GRID_FIELD_IDS)
 
 /** Minimal shape for chat messages we read from */
 interface ChatMessage {
@@ -41,7 +37,7 @@ export interface NormalizedTrackerState {
   bindings?: Record<string, unknown>
   validations?: Record<string, unknown>
   calculations?: Record<string, unknown>
-  dependsOn?: unknown[]
+  fieldRules?: unknown[]
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -57,52 +53,52 @@ function isDefaultTabConfig(value: unknown): boolean {
   return true
 }
 
-function isDependsOnScaffoldSection(section: { id: string; tabId?: string }): boolean {
-  return section.id === DEPENDS_ON_OPTIONS_SECTION_ID && section.tabId === DEFAULT_SHARED_TAB_ID
+function isFieldRulesScaffoldSection(section: { id: string; tabId?: string }): boolean {
+  return section.id === FIELD_RULES_OPTIONS_SECTION_ID && section.tabId === SHARED_TAB_ID
 }
 
-function isDependsOnScaffoldGrid(grid: { id: string; sectionId?: string }): boolean {
-  return grid.id === DEPENDS_ON_RULES_GRID && grid.sectionId === DEPENDS_ON_OPTIONS_SECTION_ID
+function isFieldRulesScaffoldGrid(grid: { id: string; sectionId?: string }): boolean {
+  return grid.id === FIELD_RULES_RULES_GRID && grid.sectionId === FIELD_RULES_OPTIONS_SECTION_ID
 }
 
-function isDependsOnScaffoldField(field: { id: string }): boolean {
-  return RULES_GRID_FIELD_IDS.has(field.id)
+function isFieldRulesScaffoldField(field: { id: string }): boolean {
+  return RULES_GRID_FIELD_ID_SET.has(field.id)
 }
 
-function isDependsOnScaffoldLayoutNode(node: { gridId: string; fieldId: string }): boolean {
-  return node.gridId === DEPENDS_ON_RULES_GRID && RULES_GRID_FIELD_IDS.has(node.fieldId)
+function isFieldRulesScaffoldLayoutNode(node: { gridId: string; fieldId: string }): boolean {
+  return node.gridId === FIELD_RULES_RULES_GRID && RULES_GRID_FIELD_ID_SET.has(node.fieldId)
 }
 
 /**
  * First-run untouched scaffold:
  * - only default tabs (Overview, optional Shared)
  * - no user-created structural data
- * - ignore internal Depends On scaffold rows/fields if present
+ * - ignore internal Field Rules scaffold rows/fields if present
  */
 function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
   if (normalizeMasterDataScope(state.masterDataScope) != null) return false
-  const meaningfulSections = state.sections.filter((s) => !isDependsOnScaffoldSection(s))
-  const meaningfulGrids = state.grids.filter((g) => !isDependsOnScaffoldGrid(g))
-  const meaningfulFields = state.fields.filter((f) => !isDependsOnScaffoldField(f))
+  const meaningfulSections = state.sections.filter((s) => !isFieldRulesScaffoldSection(s))
+  const meaningfulGrids = state.grids.filter((g) => !isFieldRulesScaffoldGrid(g))
+  const meaningfulFields = state.fields.filter((f) => !isFieldRulesScaffoldField(f))
   const meaningfulLayout = (state.layoutNodes ?? [])
     .filter((n): n is { gridId: string; fieldId: string } => {
       if (!n || typeof n !== 'object') return false
       const o = n as Record<string, unknown>
       return typeof o.gridId === 'string' && typeof o.fieldId === 'string'
     })
-    .filter((n) => !isDependsOnScaffoldLayoutNode(n))
+    .filter((n) => !isFieldRulesScaffoldLayoutNode(n))
 
   const bindings = state.bindings ?? {}
   const validations = state.validations ?? {}
   const calculations = state.calculations ?? {}
   const meaningfulBindingKeys = Object.keys(bindings).filter(
-    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
   )
   const meaningfulValidationKeys = Object.keys(validations).filter(
-    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
   )
   const meaningfulCalculationKeys = Object.keys(calculations).filter(
-    (key) => !key.startsWith(`${DEPENDS_ON_RULES_GRID}.`),
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
   )
 
   if (
@@ -117,8 +113,8 @@ function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
     return false
   }
 
-  const dependsOn = Array.isArray(state.dependsOn) ? state.dependsOn : []
-  if (dependsOn.length > 0) return false
+  const fieldRules = Array.isArray(state.fieldRules) ? state.fieldRules : []
+  if (fieldRules.length > 0) return false
 
   if (state.tabs.length === 0 || state.tabs.length > 2) return false
 
@@ -133,7 +129,7 @@ function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
       continue
     }
 
-    if (tab.id === DEFAULT_SHARED_TAB_ID) {
+    if (tab.id === SHARED_TAB_ID) {
       if ((tab.name ?? 'Shared') !== 'Shared') return false
       continue
     }
@@ -192,7 +188,7 @@ export function normalizeTrackerState(source: unknown): NormalizedTrackerState |
     bindings: t.bindings && typeof t.bindings === 'object' ? (t.bindings as Record<string, unknown>) : {},
     validations: t.validations && typeof t.validations === 'object' ? (t.validations as Record<string, unknown>) : {},
     calculations: t.calculations && typeof t.calculations === 'object' ? (t.calculations as Record<string, unknown>) : {},
-    dependsOn: Array.isArray(t.dependsOn) ? t.dependsOn : [],
+    fieldRules: Array.isArray(t.fieldRules) ? t.fieldRules : [],
   }
 }
 

@@ -16,17 +16,17 @@ import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import { FieldWrapper } from '../../shared/FieldWrapper'
 import { FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
-import type { DependsOnRuleForTarget } from '@/lib/depends-on'
-import { DEPENDS_ON_OPERATORS } from '@/lib/dynamic-options/functions/all-operators'
-import { DEPENDS_ON_ACTIONS } from '@/lib/dynamic-options/functions/all-actions'
-import { DEPENDS_ON_SET_OPTIONS } from '@/lib/dynamic-options/functions/all-rule-set-values'
+import type { FieldRuleForTarget } from '@/lib/field-rules'
+import { FIELD_RULES_OPERATORS } from '@/lib/dynamic-options/functions/all-operators'
+import { FIELD_RULES_ACTIONS } from '@/lib/dynamic-options/functions/all-actions'
+import { FIELD_RULES_SET_OPTIONS } from '@/lib/dynamic-options/functions/all-rule-set-values'
 import {
-  DEPENDS_ON_ACTION_LABELS,
-  DEPENDS_ON_OPERATOR_LABELS,
+  FIELD_RULES_ACTION_LABELS,
+  FIELD_RULES_OPERATOR_LABELS,
 } from './constants'
 import type { TrackerField } from '../../types'
 
-const DEFAULT_RULE: DependsOnRuleForTarget = {
+const DEFAULT_RULE: FieldRuleForTarget = {
   source: '',
   operator: 'eq',
   value: undefined,
@@ -34,29 +34,29 @@ const DEFAULT_RULE: DependsOnRuleForTarget = {
   set: true,
 }
 
-export interface DependsOnTabProps {
+export interface FieldRulesTabProps {
   gridId: string
   field: TrackerField
-  dependsOnRules: DependsOnRuleForTarget[]
-  setDependsOnRules: React.Dispatch<React.SetStateAction<DependsOnRuleForTarget[]>>
+  fieldRules: FieldRuleForTarget[]
+  setFieldRules: React.Dispatch<React.SetStateAction<FieldRuleForTarget[]>>
   allFieldPathOptions: Array<{ value: string; label: string }>
   pathLabelMap: Map<string, string>
   resolvePathLabelFn: (path: string) => string
 }
 
-export function DependsOnTab({
+export function FieldRulesTab({
   gridId,
   field,
-  dependsOnRules,
-  setDependsOnRules,
+  fieldRules,
+  setFieldRules,
   allFieldPathOptions,
   pathLabelMap,
   resolvePathLabelFn,
-}: DependsOnTabProps) {
+}: FieldRulesTabProps) {
   const currentFieldPath = `${gridId}.${field.id}`
   const thisFieldLabel = field.ui?.label || field.id
 
-  if (dependsOnRules.length === 0) {
+  if (fieldRules.length === 0) {
     return (
       <div
         className={cn(
@@ -76,7 +76,7 @@ export function DependsOnTab({
         <Button
           size="sm"
           className="gap-2"
-          onClick={() => setDependsOnRules((prev) => [...prev, { ...DEFAULT_RULE }])}
+          onClick={() => setFieldRules((prev) => [...prev, { ...DEFAULT_RULE }])}
         >
           <Plus className="h-4 w-4" />
           Add condition
@@ -88,7 +88,7 @@ export function DependsOnTab({
   return (
     <div className="space-y-5">
       <div className="space-y-4">
-        {dependsOnRules.map((rule, index) => {
+        {fieldRules.map((rule, index) => {
           const sourceOptions = allFieldPathOptions.filter((o) => o.value !== currentFieldPath)
           const sourceLabel =
             rule.source &&
@@ -115,7 +115,7 @@ export function DependsOnTab({
                     'shrink-0 rounded-md p-2 -m-1 text-muted-foreground',
                     'hover:text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 transition-colors outline-none'
                   )}
-                  onClick={() => setDependsOnRules((prev) => prev.filter((_, i) => i !== index))}
+                  onClick={() => setFieldRules((prev) => prev.filter((_, i) => i !== index))}
                   aria-label="Remove condition"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -141,7 +141,7 @@ export function DependsOnTab({
                           type="button"
                           className="shrink-0 text-xs font-medium text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-1 -mx-1"
                           onClick={() =>
-                            setDependsOnRules((prev) =>
+                            setFieldRules((prev) =>
                               prev.map((r, i) => (i === index ? { ...r, source: '' } : r))
                             )
                           }
@@ -154,7 +154,7 @@ export function DependsOnTab({
                         options={sourceOptions}
                         value="__empty__"
                         onValueChange={(val) =>
-                          setDependsOnRules((prev) =>
+                          setFieldRules((prev) =>
                             prev.map((r, i) =>
                               i === index ? { ...r, source: val === '__empty__' ? '' : val } : r
                             )
@@ -181,7 +181,7 @@ export function DependsOnTab({
                       <Select
                         value={rule.operator ?? 'eq'}
                         onValueChange={(val) =>
-                          setDependsOnRules((prev) =>
+                          setFieldRules((prev) =>
                             prev.map((r, i) => (i === index ? { ...r, operator: val as typeof r.operator } : r))
                           )
                         }
@@ -190,9 +190,9 @@ export function DependsOnTab({
                           <SelectValue placeholder="Operator" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DEPENDS_ON_OPERATORS.map((op) => (
+                          {FIELD_RULES_OPERATORS.map((op) => (
                             <SelectItem key={op} value={op}>
-                              {DEPENDS_ON_OPERATOR_LABELS[op] ?? op}
+                              {FIELD_RULES_OPERATOR_LABELS[op] ?? op}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -203,7 +203,7 @@ export function DependsOnTab({
                         <Input
                           value={rule.value != null ? String(rule.value) : ''}
                           onChange={(e) =>
-                            setDependsOnRules((prev) =>
+                            setFieldRules((prev) =>
                               prev.map((r, i) => (i === index ? { ...r, value: e.target.value || undefined } : r))
                             )
                           }
@@ -233,7 +233,7 @@ export function DependsOnTab({
                       <Select
                         value={rule.action ?? 'isHidden'}
                         onValueChange={(val) =>
-                          setDependsOnRules((prev) =>
+                          setFieldRules((prev) =>
                             prev.map((r, i) => (i === index ? { ...r, action: val as typeof r.action } : r))
                           )
                         }
@@ -242,9 +242,9 @@ export function DependsOnTab({
                           <SelectValue placeholder="Action" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DEPENDS_ON_ACTIONS.map((a) => (
+                          {FIELD_RULES_ACTIONS.map((a) => (
                             <SelectItem key={a} value={a}>
-                              {DEPENDS_ON_ACTION_LABELS[a]}
+                              {FIELD_RULES_ACTION_LABELS[a]}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -260,7 +260,7 @@ export function DependsOnTab({
                               : 'true'
                         }
                         onValueChange={(val) =>
-                          setDependsOnRules((prev) =>
+                          setFieldRules((prev) =>
                             prev.map((r, i) => (i === index ? { ...r, set: val === 'true' } : r))
                           )
                         }
@@ -269,7 +269,7 @@ export function DependsOnTab({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {DEPENDS_ON_SET_OPTIONS.map((o) => (
+                          {FIELD_RULES_SET_OPTIONS.map((o) => (
                             <SelectItem key={o.value} value={o.value}>
                               {o.label}
                             </SelectItem>
@@ -289,7 +289,7 @@ export function DependsOnTab({
         size="sm"
         variant="outline"
         className="gap-2 border-dashed w-full sm:w-auto"
-        onClick={() => setDependsOnRules((prev) => [...prev, { ...DEFAULT_RULE }])}
+        onClick={() => setFieldRules((prev) => [...prev, { ...DEFAULT_RULE }])}
       >
         <Plus className="h-4 w-4" />
         Add another condition

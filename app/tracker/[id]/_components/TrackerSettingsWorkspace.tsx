@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FieldSettingsDialog } from '@/app/components/tracker-display/edit-mode/field-settings'
-import { getEffectiveDependsOn } from '@/lib/depends-on'
+import { getEffectiveFieldRules } from '@/lib/field-rules'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import type {
@@ -30,7 +30,7 @@ import type {
   TrackerField,
 } from '@/app/components/tracker-display/types'
 
-type WorkspaceMode = 'bindings' | 'validations' | 'calculations' | 'dependsOn'
+type WorkspaceMode = 'bindings' | 'validations' | 'calculations' | 'fieldRules'
 
 type TrackerRecord = {
   id: string
@@ -51,7 +51,7 @@ type EditableTarget = {
 function pageTitle(mode: WorkspaceMode): string {
   if (mode === 'bindings') return 'Bindings'
   if (mode === 'validations') return 'Validations'
-  if (mode === 'dependsOn') return 'Depends On'
+  if (mode === 'fieldRules') return 'Field Rules'
   return 'Calculations'
 }
 
@@ -62,20 +62,20 @@ function isBindable(field: TrackerField): boolean {
 function modeTab(mode: WorkspaceMode) {
   if (mode === 'bindings') return 'bindings' as const
   if (mode === 'validations') return 'validations' as const
-  if (mode === 'dependsOn') return 'dependsOn' as const
+  if (mode === 'fieldRules') return 'fieldRules' as const
   return 'calculations' as const
 }
 
 function modeCountLabel(mode: WorkspaceMode) {
   if (mode === 'bindings') return 'Links'
-  if (mode === 'validations' || mode === 'dependsOn') return 'Rules'
+  if (mode === 'validations' || mode === 'fieldRules') return 'Rules'
   return 'Formulas'
 }
 
 function modeSingularTitle(mode: WorkspaceMode) {
   if (mode === 'bindings') return 'Binding'
   if (mode === 'validations') return 'Validation'
-  if (mode === 'dependsOn') return 'Depends-on rule'
+  if (mode === 'fieldRules') return 'Field rule'
   return 'Calculation'
 }
 
@@ -140,8 +140,8 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
     const validations = schema.validations ?? {}
     const calculations = schema.calculations ?? {}
     const bindings = schema.bindings ?? {}
-    const dependsOnByTarget = schema.dependsOnByTarget ?? {}
-    const effectiveDependsOn = getEffectiveDependsOn(schema)
+    const fieldRulesByTarget = schema.fieldRulesByTarget ?? {}
+    const effectiveFieldRules = getEffectiveFieldRules(schema)
 
     const seen = new Set<string>()
     const rows: EditableTarget[] = []
@@ -160,9 +160,9 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
             : 0
           : mode === 'validations'
             ? (validations[key]?.length ?? 0)
-            : mode === 'dependsOn'
-              ? (dependsOnByTarget[key]?.length ??
-                effectiveDependsOn.filter((rule) => rule.targets?.includes(key)).length)
+            : mode === 'fieldRules'
+              ? (fieldRulesByTarget[key]?.length ??
+                effectiveFieldRules.filter((rule) => rule.targets?.includes(key)).length)
             : calculations[key]
               ? 1
               : 0
@@ -264,11 +264,11 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
           ...schema,
           validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
         }
-      } else if (mode === 'dependsOn') {
-        const nextDependsOnByTarget = { ...(schema.dependsOnByTarget ?? {}) }
-        delete nextDependsOnByTarget[key]
-        const nextDependsOn = Array.isArray(schema.dependsOn)
-          ? schema.dependsOn
+      } else if (mode === 'fieldRules') {
+        const nextFieldRulesByTarget = { ...(schema.fieldRulesByTarget ?? {}) }
+        delete nextFieldRulesByTarget[key]
+        const nextFieldRules = Array.isArray(schema.fieldRules)
+          ? schema.fieldRules
               .map((rule) => ({
                 ...rule,
                 targets: Array.isArray(rule.targets)
@@ -279,9 +279,9 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
           : undefined
         nextSchema = {
           ...schema,
-          dependsOnByTarget:
-            Object.keys(nextDependsOnByTarget).length > 0 ? nextDependsOnByTarget : undefined,
-          dependsOn: nextDependsOn && nextDependsOn.length > 0 ? nextDependsOn : undefined,
+          fieldRulesByTarget:
+            Object.keys(nextFieldRulesByTarget).length > 0 ? nextFieldRulesByTarget : undefined,
+          fieldRules: nextFieldRules && nextFieldRules.length > 0 ? nextFieldRules : undefined,
         }
       } else {
         const nextCalculations = { ...(schema.calculations ?? {}) }

@@ -44,7 +44,7 @@ export function getCombinedSystemPrompt(): string {
   - For bindings, set keys in "bindings"; set a key to null to delete it. Optionally list keys in "bindingsRemove".
   - For validations, set keys in "validations"; set a key to null to delete it. Optionally list keys in "validationsRemove".
   - For calculations, set keys in "calculations"; set a key to null to delete it. Optionally list keys in "calculationsRemove".
-  - For dependsOn, include the full updated dependsOn array if it changed.
+  - For fieldRules, include the full updated fieldRules array if it changed.
 
   GREENFIELD (no "Current Tracker State (JSON)" in this request): Put primary sections/grids on **overview_tab** by default. Do **not** emit an empty **overview_tab** while placing all main content on another tab. For multi-tab requests, give every tab at least one section.
 

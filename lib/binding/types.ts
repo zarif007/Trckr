@@ -29,7 +29,7 @@ export interface TrackerLike {
       fieldMappings: Array<{ from: string; to: string }>
     }
   >
-  dependsOn?: Array<Record<string, unknown>>
+  fieldRules?: Array<Record<string, unknown>>
 }
 
 /** Context passed when resolving options. Same shape as DynamicOptionsContext for compatibility. */

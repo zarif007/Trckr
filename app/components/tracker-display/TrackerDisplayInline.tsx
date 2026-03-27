@@ -17,9 +17,9 @@ import { TrackerTabContent } from './sections'
 import { InlineEditableName } from './layout'
 import { TrackerOptionsProvider } from './tracker-options-context'
 import { EditModeProvider } from './edit-mode'
-import { SHARED_TAB_ID } from '@/lib/depends-on-options'
+import { SHARED_TAB_ID } from '@/lib/field-rules-options'
 import { collectOptionsSourceSchemaIds } from '@/lib/resolve-bindings'
-import { getEffectiveDependsOn } from '@/lib/depends-on'
+import { getEffectiveFieldRules } from '@/lib/field-rules'
 import { cn } from '@/lib/utils'
 import { useTrackerTabs } from './state/useTrackerTabs'
 import { useGridDataEngine } from './state/useGridDataEngine'
@@ -123,8 +123,8 @@ export function TrackerDisplayInline({
   dynamicOptions,
   initialGridData,
   getDataRef,
-  dependsOn,
-  dependsOnByTarget,
+  fieldRules,
+  fieldRulesByTarget,
   onGridDataChange,
   readOnly,
   editMode,
@@ -198,9 +198,9 @@ export function TrackerDisplayInline({
     }
   }, [])
 
-  const effectiveDependsOn = useMemo(
-    () => getEffectiveDependsOn({ dependsOn, dependsOnByTarget }),
-    [dependsOn, dependsOnByTarget]
+  const effectiveFieldRules = useMemo(
+    () => getEffectiveFieldRules({ fieldRules, fieldRulesByTarget }),
+    [fieldRules, fieldRulesByTarget]
   )
 
   useEffect(() => {
@@ -231,11 +231,12 @@ export function TrackerDisplayInline({
           validations,
           calculations,
           styles,
-          dependsOn,
+          fieldRules,
+          fieldRulesByTarget,
           dynamicOptions,
         }
         : undefined,
-    [editMode, tabs, sections, grids, fields, formActions, layoutNodes, bindings, validations, calculations, styles, dependsOn, dynamicOptions]
+    [editMode, tabs, sections, grids, fields, formActions, layoutNodes, bindings, validations, calculations, styles, fieldRules, fieldRulesByTarget, dynamicOptions]
   )
   const { handleAddTab, handleRemoveTab, handleRenameTab, handleTabDragEnd } = useSchemaTabActions({
     tabs,
@@ -247,7 +248,7 @@ export function TrackerDisplayInline({
     validations,
     calculations,
     styles,
-    dependsOn,
+    fieldRules,
     dynamicOptions,
     onSchemaChange,
     normalizedTabs,
@@ -340,7 +341,7 @@ export function TrackerDisplayInline({
             validations={validations}
             calculations={calculations}
             styles={styles}
-            dependsOn={effectiveDependsOn}
+            fieldRules={effectiveFieldRules}
             gridData={gridData}
             gridDataRef={gridDataRef}
             readOnly={readOnly}

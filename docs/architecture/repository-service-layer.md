@@ -15,7 +15,7 @@ Separate HTTP concerns from persistence logic without changing API contracts.
   - ownership filtering (`project.userId` checks)
   - common CRUD flows shared by multiple routes
 - `lib/*` domain engines
-  - business logic (bindings, depends-on, validation, dynamic-options)
+  - business logic (bindings, field rules, validation, dynamic-options)
 
 ## Current examples
 

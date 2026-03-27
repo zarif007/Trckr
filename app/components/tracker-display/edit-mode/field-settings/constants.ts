@@ -4,15 +4,15 @@
 
 import type { FieldValidationRule, ExprNode } from '@/lib/functions/types'
 import type { TrackerFieldType } from '../../types'
-import { DEPENDS_ON_OPERATORS } from '@/lib/dynamic-options/functions/all-operators'
+import { FIELD_RULES_OPERATORS } from '@/lib/dynamic-options/functions/all-operators'
 
-export const DEPENDS_ON_ACTION_LABELS: Record<'isHidden' | 'isRequired' | 'isDisabled', string> = {
+export const FIELD_RULES_ACTION_LABELS: Record<'isHidden' | 'isRequired' | 'isDisabled', string> = {
   isHidden: 'Hide',
   isRequired: 'Require',
   isDisabled: 'Disable',
 }
 
-export const DEPENDS_ON_OPERATOR_LABELS: Record<(typeof DEPENDS_ON_OPERATORS)[number], string> = {
+export const FIELD_RULES_OPERATOR_LABELS: Record<(typeof FIELD_RULES_OPERATORS)[number], string> = {
   eq: 'Equals',
   neq: 'Not equal',
   gt: 'Greater than',

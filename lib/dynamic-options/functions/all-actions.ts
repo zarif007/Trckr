@@ -1,14 +1,14 @@
 /**
- * Dynamic options: all actions (e.g. for depends-on rules).
+ * Dynamic options: all actions (e.g. for field rules).
  */
 
 import type { DynamicOptionsContext, DynamicOption } from '../types'
 
 export const ID = 'all_actions'
 
-export const DEPENDS_ON_ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as const
+export const FIELD_RULES_ACTIONS = ['isHidden', 'isRequired', 'isDisabled'] as const
 
-const ACTIONS = DEPENDS_ON_ACTIONS
+const ACTIONS = FIELD_RULES_ACTIONS
 
 export function allActions(context: DynamicOptionsContext): DynamicOption[] {
   void context
