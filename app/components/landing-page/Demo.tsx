@@ -27,7 +27,6 @@ import { filterDraftFromQueryPlan } from '@/app/report/lib/replay-overrides'
 import { ReportRecipeFilters } from '@/app/report/components/ReportRecipeFilters'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
-import { theme } from '@/lib/theme'
 import type { ExprNode } from '@/lib/functions/types'
 
 type DemoSurface = 'tracker' | 'expression' | 'report' | 'analysis'
