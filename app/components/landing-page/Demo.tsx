@@ -30,15 +30,6 @@ import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import type { ExprNode } from '@/lib/functions/types'
 
-const DEMO_BADGES = [
-  'Live',
-  'Formula',
-  'AST builder',
-  'Reports',
-  'Analysis',
-  'Bindings',
-] as const
-
 type DemoSurface = 'tracker' | 'expression' | 'report' | 'analysis'
 
 function isDemoSurface(v: string): v is DemoSurface {
@@ -120,34 +111,9 @@ export default function Demo() {
       contentClassName="relative p-4 sm:p-6 md:p-8 bg-secondary/30"
     >
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-5">
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-          <div className="text-center sm:text-left space-y-1 sm:min-w-0">
-            <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-              Real UI
-            </h3>
-            <p className="text-muted-foreground text-[11px] sm:text-xs font-medium leading-snug max-w-xl">
-              Switch between the embedded tracker, the visual expression builder (calculations &
-              validations), and the same report and analysis surfaces as the signed-in app.
-            </p>
-          </div>
-          <div
-            className="flex flex-wrap justify-center sm:justify-end gap-1 shrink-0"
-            aria-hidden
-          >
-            {DEMO_BADGES.map((label) => (
-              <span
-                key={label}
-                className={cn(
-                  'rounded border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider',
-                  theme.border.subtle,
-                  'bg-background/90 text-muted-foreground'
-                )}
-              >
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
+        <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+          The full platform, live.
+        </h3>
 
         <Tabs
           value={surface}
