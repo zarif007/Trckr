@@ -60,6 +60,18 @@ export default function AnalyticsSpotlight() {
           <p className="text-sm text-muted-foreground leading-relaxed">
             Ask plain questions. Get summaries, trends, and suggestions — grounded in your actual rows.
           </p>
+          <ul className="mt-1 space-y-1.5">
+            {[
+              'Plain language questions, structured answers',
+              'Summaries, trends, and suggestions',
+              'Grounded in your actual rows — no hallucination',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-2 text-xs text-muted-foreground/70">
+                <span className="mt-[0.4em] inline-flex h-1 w-1 flex-shrink-0 rounded-full bg-foreground/25" aria-hidden />
+                {item}
+              </li>
+            ))}
+          </ul>
         </motion.div>
       </div>
     </motion.section>
