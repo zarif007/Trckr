@@ -1,12 +1,12 @@
 'use client'
 
 import Hero from './components/landing-page/Hero'
-import Features from './components/landing-page/Features'
-import LandingPlatformPower from './components/landing-page/LandingPlatformPower'
-import Examples from './components/landing-page/Examples'
+import Platform from './components/landing-page/Platform'
+import Demo from './components/landing-page/Demo'
+import IntelligenceSpotlight from './components/landing-page/IntelligenceSpotlight'
+import AnalyticsSpotlight from './components/landing-page/AnalyticsSpotlight'
 import Protocol from './components/landing-page/Protocol'
 import CTA from './components/landing-page/CTA'
-import Demo from './components/landing-page/Demo'
 
 export default function Home() {
   return (
@@ -19,10 +19,10 @@ export default function Home() {
         <Hero />
 
         <section className='max-w-7xl mx-auto flex flex-col space-y-10 border-t border-border/35 px-4 pt-10 sm:space-y-12 sm:pt-12 md:space-y-14 md:px-4 md:pt-16 lg:space-y-20'>
-          <Features />
-          <LandingPlatformPower />
+          <Platform />
           <Demo />
-          <Examples />
+          <IntelligenceSpotlight />
+          <AnalyticsSpotlight />
           <Protocol />
           <CTA />
         </section>
