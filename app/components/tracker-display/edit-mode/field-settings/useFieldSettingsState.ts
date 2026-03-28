@@ -71,7 +71,7 @@ export function useFieldSettingsState({
   const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
   const [fieldRules, setFieldRules] = useState<FieldRuleForTarget[]>([])
   const [fieldRulesV2, setFieldRulesV2] = useState<FieldRuleV2[]>([])
-const [bindingEnabled, setBindingEnabled] = useState(false)
+  const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
   const [siblingTrackers, setSiblingTrackers] = useState<Array<{ id: string; name: string | null }>>(
     []

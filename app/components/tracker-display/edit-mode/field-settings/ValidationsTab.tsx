@@ -93,8 +93,11 @@ export function ValidationsTab({
   }
 
   function handleAdd() {
-    setRules((prev) => [...prev, { type: 'required', enabled: true }])
-    setExpandedIndex(rules.length) // open the new card
+    setRules((prev) => {
+      const next = [...prev, { type: 'required', enabled: true }] as typeof prev
+      setExpandedIndex(next.length - 1)
+      return next
+    })
   }
 
   if (rules.length === 0) {
@@ -150,7 +153,15 @@ export function ValidationsTab({
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-muted-foreground hover:text-destructive"
-              onClick={() => setRules((prev) => prev.filter((_, i) => i !== index))}
+              onClick={() => {
+                setRules((prev) => prev.filter((_, i) => i !== index))
+                setExpandedIndex((prev) => {
+                  if (prev === null) return null
+                  if (prev === index) return null
+                  if (prev > index) return prev - 1
+                  return prev
+                })
+              }}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
