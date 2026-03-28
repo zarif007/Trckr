@@ -1,169 +1,77 @@
 /**
- * Resolve field rules against grid data to produce per-field overrides
- * (isHidden, isRequired, isDisabled, value) for a target grid row.
+ * Resolve field rules against row values to produce per-field overrides
+ * for a target grid row. Only SYNC_TRIGGER_TYPES are evaluated here.
+ * Async triggers (onExternalBinding, onDependencyResolve) require React state.
+ *
+ * Called at render time — must be pure and fast.
  */
 
-import type { FieldPath } from '@/lib/types/tracker-bindings'
-import { getValueByPath, parsePath } from '@/lib/resolve-bindings'
-import type {
-  FieldRule,
-  FieldOverride,
-  EnrichedFieldRule,
-  ParsedPath,
-  ResolveFieldRuleOptions,
+import { evaluateExpr } from '@/lib/functions/evaluator'
+import type { FunctionContext } from '@/lib/functions/types'
+import {
+  SYNC_TRIGGER_TYPES,
+  type FieldRulesMap,
+  type FieldRulesResult,
+  type FieldRuleOverride,
 } from './types'
-import { compareValues } from './compare'
 
-function normalizeAction(action: unknown): keyof FieldOverride | null {
-  if (!action) return null
-  if (
-    action === 'isHidden' ||
-    action === 'isRequired' ||
-    action === 'isDisabled'
-  ) {
-    return action as keyof FieldOverride
-  }
-  const normalized = String(action)
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z]/g, '')
-  if (normalized === 'hidden' || normalized === 'ishidden') return 'isHidden'
-  if (normalized === 'required' || normalized === 'isrequired')
-    return 'isRequired'
-  if (normalized === 'disabled' || normalized === 'isdisabled')
-    return 'isDisabled'
-  return null
-}
+export function resolveFieldRulesForRow(
+  fieldRules: FieldRulesMap | undefined,
+  gridId: string,
+  rowValues: Record<string, unknown>,
+  _rowIndex: number,
+): FieldRulesResult {
+  const overrides: Record<string, FieldRuleOverride> = {}
+  const valueOverrides: Record<string, unknown> = {}
 
-export function resolveFieldRuleOverrides(
-  rules: FieldRule[] | undefined,
-  gridData: Record<string, Array<Record<string, unknown>>>,
-  targetGridId: string,
-  rowIndex: number,
-  rowDataOverride?: Record<string, unknown>,
-  options?: ResolveFieldRuleOptions
-): Record<string, FieldOverride> {
-  if (!rules || rules.length === 0) return {}
+  if (!fieldRules) return { overrides, valueOverrides }
 
-  const onlyUseRowDataForSource = options?.onlyUseRowDataForSource === true
+  const prefix = `${gridId}.`
 
-  type DecisionValue = { priority: number; order: number; value: boolean }
-  const decisions: Record<
-    string,
-    Partial<Record<keyof FieldOverride, DecisionValue>>
-  > = {}
-  const ruleMeta: Record<
-    string,
-    Record<keyof FieldOverride, { hasShowRule: boolean }>
-  > = {}
+  for (const [targetPath, rules] of Object.entries(fieldRules)) {
+    if (!targetPath.startsWith(prefix)) continue
+    const fieldId = targetPath.slice(prefix.length)
 
-  rules.forEach((rule, order) => {
-    if (!rule?.source || !rule?.targets || rule.targets.length === 0) return
+    const fnCtx: FunctionContext = { rowValues, fieldId }
 
-    const enriched = rule as EnrichedFieldRule
-    const sourceGridId =
-      enriched._parsedSource?.gridId ?? parsePath(rule.source as FieldPath).gridId
-    const sourceFieldId =
-      enriched._parsedSource?.fieldId ??
-      parsePath(rule.source as FieldPath).fieldId
-    if (!sourceGridId || !sourceFieldId) return
+    for (const rule of rules) {
+      if (!rule.enabled) continue
+      if (!SYNC_TRIGGER_TYPES.includes(rule.trigger)) continue
 
-    const sourceRowIndex = sourceGridId === targetGridId ? rowIndex : 0
-    const useRowDataOnly =
-      sourceGridId === targetGridId &&
-      (onlyUseRowDataForSource ||
-        (rowDataOverride && sourceFieldId in rowDataOverride))
-    const sourceValue = useRowDataOnly
-      ? rowDataOverride?.[sourceFieldId]
-      : getValueByPath(
-        gridData,
-        rule.source as FieldPath,
-        sourceRowIndex
-      )
-
-    const matches = enriched._compare
-      ? enriched._compare(sourceValue)
-      : compareValues(
-        sourceValue,
-        rule.operator ?? 'eq',
-        rule.value
-      )
-
-    const setValue = rule.set ?? true
-    const priority = typeof rule.priority === 'number' ? rule.priority : 0
-
-    const targetsToIterate =
-      enriched._parsedTargets ??
-      rule.targets
-        .map((t) => parsePath(t))
-        .filter((p): p is ParsedPath => !!p.gridId && !!p.fieldId)
-    for (const target of targetsToIterate) {
-      const targetId =
-        'gridId' in target ? target.gridId : parsePath(target as FieldPath).gridId
-      const targetFieldId =
-        'fieldId' in target
-          ? target.fieldId
-          : parsePath(target as FieldPath).fieldId
-      if (!targetId || !targetFieldId) continue
-      if (targetId !== targetGridId) continue
-
-      const action = normalizeAction(rule.action)
-      if (!action) continue
-
-      ruleMeta[targetFieldId] = ruleMeta[targetFieldId] ?? {}
-      ruleMeta[targetFieldId][action] = ruleMeta[targetFieldId][action] ?? {
-        hasShowRule: false,
-      }
-      if (action === 'isHidden' && setValue === false) {
-        ruleMeta[targetFieldId][action].hasShowRule = true
+      if (rule.condition) {
+        const pass = evaluateExpr(rule.condition as never, fnCtx)
+        if (!pass) continue
       }
 
-      if (!matches) continue
+      const value = evaluateExpr(rule.outcome as never, fnCtx)
 
-      decisions[targetFieldId] = decisions[targetFieldId] ?? {}
-      const existing = decisions[targetFieldId][action]
-      if (
-        !existing ||
-        priority > existing.priority ||
-        (priority === existing.priority && order > existing.order)
-      ) {
-        decisions[targetFieldId][action] = {
-          priority,
-          order,
-          value: !!setValue,
+      if (rule.engineType === 'value') {
+        valueOverrides[fieldId] = value
+      } else {
+        const override = overrides[fieldId] ?? {}
+        switch (rule.property) {
+          case 'visibility':
+            override.visibility = Boolean(value)
+            break
+          case 'label':
+            if (typeof value === 'string') override.label = value
+            break
+          case 'required':
+            override.required = Boolean(value)
+            break
+          case 'disabled':
+            override.disabled = Boolean(value)
+            break
+          case 'options':
+            if (Array.isArray(value)) {
+              override.options = value as FieldRuleOverride['options']
+            }
+            break
         }
-      }
-    }
-  })
-
-  for (const [fieldId, actions] of Object.entries(ruleMeta)) {
-    for (const [action, meta] of Object.entries(actions) as Array<
-      [keyof FieldOverride, { hasShowRule: boolean }]
-    >) {
-      if (action !== 'isHidden') continue
-      if (!meta?.hasShowRule) continue
-      const existing = decisions[fieldId]?.[action]
-      if (!existing) {
-        decisions[fieldId] = decisions[fieldId] ?? {}
-        decisions[fieldId][action] = {
-          priority: -Infinity,
-          order: -Infinity,
-          value: true,
-        }
+        overrides[fieldId] = override
       }
     }
   }
 
-  const overrides: Record<string, FieldOverride> = {}
-  Object.entries(decisions).forEach(([fieldId, actions]) => {
-    overrides[fieldId] = {
-      isHidden: (actions.isHidden?.value as boolean | undefined) ?? undefined,
-      isRequired:
-        (actions.isRequired?.value as boolean | undefined) ?? undefined,
-      isDisabled:
-        (actions.isDisabled?.value as boolean | undefined) ?? undefined,
-    }
-  })
-
-  return overrides
+  return { overrides, valueOverrides }
 }

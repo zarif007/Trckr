@@ -1,23 +1,27 @@
 /**
- * Merge field-rule overrides onto base config.
+ * Merge field-rule overrides onto a field config.
+ *
+ * FieldRuleOverride uses visibility/required/disabled naming.
+ * Field configs use isHidden/isRequired/isDisabled (persisted schema shape — unchanged).
+ * This function bridges between the two: visibility:false → isHidden:true, etc.
  */
 
-import type { FieldOverride } from './types'
+import type { FieldRuleOverride } from './types'
 
-/** Applies field rule overrides over base config. Override values take priority when defined. */
 export function applyFieldOverrides<T extends Record<string, unknown>>(
   base: T | null | undefined,
-  override?: FieldOverride
+  override?: FieldRuleOverride
 ): T {
-  const b = (base ?? {}) as T & FieldOverride
-  const o = override
-  const next = { ...b } as T & FieldOverride
-  if (!o) return next as T
-  next.isHidden = o.isHidden !== undefined ? o.isHidden : b.isHidden
-  next.isRequired = o.isRequired !== undefined ? o.isRequired : b.isRequired
-  next.isDisabled = o.isDisabled !== undefined ? o.isDisabled : b.isDisabled
-  if (o.value !== undefined) next.value = o.value
-  if (o.label !== undefined) next.label = o.label
-  if (o.options !== undefined) next.options = o.options
+  const next = { ...(base ?? {}) } as T & Record<string, unknown>
+  if (!override) return next as T
+
+  // visibility (true = shown) maps to isHidden (true = hidden) — inverted
+  if (override.visibility !== undefined) next.isHidden = !override.visibility
+  if (override.required !== undefined) next.isRequired = override.required
+  if (override.disabled !== undefined) next.isDisabled = override.disabled
+  if (override.value !== undefined) next.value = override.value
+  if (override.label !== undefined) next.label = override.label
+  if (override.options !== undefined) next.options = override.options
+
   return next as T
 }

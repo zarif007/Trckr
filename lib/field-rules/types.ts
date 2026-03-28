@@ -1,80 +1,91 @@
-/**
- * Types for the field rules engine: rule shape, overrides, and index.
- */
+// lib/field-rules/types.ts
 
-import type { FieldPath } from '@/lib/types/tracker-bindings'
+import type { ExprNode } from '@/lib/functions/types'
 
-export type FieldRuleOperator =
-  | '='
-  | '=='
-  | '!='
-  | '!=='
-  | 'eq'
-  | 'neq'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
-  | '>'
-  | '>='
-  | '<'
-  | '<='
-  | 'in'
-  | 'not_in'
-  | 'contains'
-  | 'not_contains'
-  | 'starts_with'
-  | 'ends_with'
-  | 'is_empty'
-  | 'not_empty'
+export type RuleProperty =
+  | 'visibility'  // true = visible (shown), false = hidden
+  | 'label'
+  | 'required'
+  | 'disabled'
+  | 'options'
+  | 'value'       // routed to valueOverrides
 
-export type FieldRuleAction = 'isHidden' | 'isRequired' | 'isDisabled'
+export type NodeTriggerType =
+  | 'onMount'
+  | 'onRowCreate'
+  | 'onRowCopy'
+  | 'onFieldChange'
+  | 'onConditionMet'
+  | 'onUserContext'
+  | 'onExternalBinding'
+  | 'onRowFocus'
+  | 'onDependencyResolve'
 
-export type FieldRule = {
-  source: FieldPath
-  operator?: FieldRuleOperator
-  value?: unknown
-  action: FieldRuleAction
-  /** For isHidden/isRequired/isDisabled: value to set (default true). */
-  set?: boolean | unknown
-  targets: FieldPath[]
-  priority?: number
+export type EngineType = 'property' | 'value'
+
+export function deriveEngineType(property: RuleProperty): EngineType {
+  return property === 'value' ? 'value' : 'property'
 }
 
-export type FieldRules = FieldRule[]
-
-/** Rule shape when stored per target (target is the key; no targets array). */
-export type FieldRuleForTarget = Omit<FieldRule, 'targets'>
-
-/** Pre-parsed path for hot-path use (no parsePath in loops). Must match resolve-bindings.ParsedPath shape for type predicates. */
-export type ParsedPath = { tabId: null; gridId: string; fieldId: string }
-
-/** Rule with optional pre-parsed and pre-compiled data (set by buildFieldRuleIndex). */
-export type EnrichedFieldRule = FieldRule & {
-  _parsedSource?: ParsedPath
-  _parsedTargets?: ParsedPath[]
-  _compare?: (sourceValue: unknown) => boolean
-}
-
-export type FieldOverride = {
-  isHidden?: boolean
-  isRequired?: boolean
-  isDisabled?: boolean
-  value?: unknown
-  /** Label override from Field Rules V2. Rendered in place of field.ui.label. */
+export interface FieldRule {
+  id: string
+  enabled: boolean
+  trigger: NodeTriggerType
+  /** For onFieldChange: which field to watch. For onConditionMet: the condition expr. */
+  triggerConfig?: {
+    watchedFieldId?: string
+    contextVar?: 'user' | 'role' | 'team' | 'timezone'
+    sourceSchemaId?: string
+    fieldPath?: string
+    refreshIntervalMs?: number
+    linkedFieldId?: string
+    recordPath?: string
+    condition?: ExprNode
+  }
+  /** Guard expression — rule only fires when this evaluates truthy. */
+  condition?: ExprNode
+  property: RuleProperty
+  outcome: ExprNode
+  engineType: EngineType
   label?: string
-  /** Options override from Field Rules V2. Replaces bound/static options. */
-  options?: unknown[]
 }
 
-/** Index for O(1) lookup by source, target, or grid. All maps reference EnrichedFieldRule. */
-export interface FieldRuleIndex {
-  rulesBySource: Map<string, EnrichedFieldRule[]>
-  rulesByTarget: Map<string, EnrichedFieldRule[]>
-  rulesByGridId: Map<string, EnrichedFieldRule[]>
+/** Top-level map stored in schema: keyed by "gridId.fieldId" (target field). */
+export type FieldRulesMap = Record<string, FieldRule[]>
+
+/**
+ * Resolved property overrides for one field.
+ * visibility: true = shown, false = hidden (inverted from field config isHidden).
+ * value is stored here when grids merge it from valueOverrides for cell consumption.
+ */
+export interface FieldRuleOverride {
+  visibility?: boolean
+  required?: boolean
+  disabled?: boolean
+  label?: string
+  options?: Array<{ label: string; value: unknown; id?: string }>
+  value?: unknown
 }
 
-export interface ResolveFieldRuleOptions {
-  /** When true, for source fields in the same grid use only rowDataOverride (e.g. Add form / new row). Never use gridData for same-grid source. */
-  onlyUseRowDataForSource?: boolean
+/** Full output of resolveFieldRulesForRow. */
+export interface FieldRulesResult {
+  overrides: Record<string, FieldRuleOverride>
+  valueOverrides: Record<string, unknown>
 }
+
+/** Triggers evaluated synchronously at render time. */
+export const SYNC_TRIGGER_TYPES: NodeTriggerType[] = [
+  'onMount',
+  'onRowCreate',
+  'onRowCopy',
+  'onFieldChange',
+  'onConditionMet',
+  'onUserContext',
+  'onRowFocus',
+]
+
+/** Triggers requiring async resolution (not yet implemented). */
+export const ASYNC_TRIGGER_TYPES: NodeTriggerType[] = [
+  'onExternalBinding',
+  'onDependencyResolve',
+]

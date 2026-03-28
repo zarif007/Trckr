@@ -1,30 +1,20 @@
 /**
- * Field rules engine: types, index build/query, condition evaluation,
- * and resolution of field overrides from rules + grid data.
+ * Field rules engine: expression-based conditional field behavior
+ * (visibility, required, disabled, label, options, value).
  *
  * Import from @/lib/field-rules.
  */
 
 export type {
-  FieldRuleOperator,
-  FieldRuleAction,
+  RuleProperty,
+  NodeTriggerType,
+  EngineType,
   FieldRule,
-  FieldRuleForTarget,
-  FieldRules,
-  ParsedPath,
-  EnrichedFieldRule,
-  FieldOverride,
-  FieldRuleIndex,
-  ResolveFieldRuleOptions,
+  FieldRulesMap,
+  FieldRuleOverride,
+  FieldRulesResult,
 } from './types'
-export { getEffectiveFieldRules } from './effective'
-export type { SchemaWithFieldRules } from './effective'
-
-export { buildFieldRuleIndex } from './index-build'
-export {
-  getRulesForGrid,
-  getRulesForSource,
-  filterFieldRulesForGrid,
-} from './index-query'
+export { deriveEngineType, SYNC_TRIGGER_TYPES, ASYNC_TRIGGER_TYPES } from './types'
+export { resolveFieldRulesForRow } from './resolve'
 export { applyFieldOverrides } from './overrides'
-export { resolveFieldRuleOverrides } from './resolve'
+export { fieldRuleSchema, fieldRulesSchema } from './schema'

@@ -51,7 +51,6 @@ These are local technical docs closest to each module implementation.
 - [lib/api](../lib/api/README.md)
 - [lib/auth/server](../lib/auth/server/README.md)
 - [lib/ai](../lib/ai/README.md)
-- [lib/field-rules](../lib/field-rules/README.md)
 - [lib/field-rules-options](../lib/field-rules-options/README.md)
 - [lib/dynamic-options](../lib/dynamic-options/README.md)
 - [lib/functions](../lib/functions/README.md)
