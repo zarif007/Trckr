@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check } from 'lucide-react'
+import { Calculator, EyeOff, Link2, Wand2 } from 'lucide-react'
 import { ExprFlowBuilder } from '@/app/components/tracker-display/edit-mode/expr/ExprFlowBuilder'
 import {
   LANDING_DEMO_EXPR_FIELDS,
@@ -13,11 +13,31 @@ import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import type { ExprNode } from '@/lib/functions/types'
 
-const BULLETS = [
-  'Computed fields update live as data changes',
-  'Show, require, or disable fields conditionally',
-  'Dropdowns powered by live data from other trackers',
-  'AI writes formula logic from plain language',
+const FEATURES: {
+  icon: React.ElementType
+  label: string
+  desc: string
+}[] = [
+  {
+    icon: Calculator,
+    label: 'Computed fields',
+    desc: 'Update live as row data changes',
+  },
+  {
+    icon: EyeOff,
+    label: 'Conditional logic',
+    desc: 'Show, require, or disable by rule',
+  },
+  {
+    icon: Link2,
+    label: 'Live bindings',
+    desc: 'Dropdowns backed by other trackers',
+  },
+  {
+    icon: Wand2,
+    label: 'AI-generated',
+    desc: 'Describe it — AI writes the formula',
+  },
 ]
 
 export default function IntelligenceSpotlight() {
@@ -34,7 +54,7 @@ export default function IntelligenceSpotlight() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-10 items-start">
         {/* Copy */}
         <motion.div
-          className="lg:col-span-2 space-y-4 lg:pt-3"
+          className="lg:col-span-2 space-y-5 lg:pt-3"
           initial={{ opacity: 0, x: -12 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true }}
@@ -48,29 +68,42 @@ export default function IntelligenceSpotlight() {
               Formulas, rules, and bindings — built visually.
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Build smart fields without writing a single line. Conditional logic, computed values, and live dropdown bindings — all visual, all no-code.
+              Build smart fields without writing a line of code. Conditional logic, computed
+              values, and live bindings — all visual.
             </p>
           </div>
 
-          <ul className="space-y-2">
-            {BULLETS.map((item) => (
-              <li key={item} className="flex items-start gap-2.5 text-xs text-muted-foreground/80">
-                <span
+          {/* 2×2 feature icon cards */}
+          <div className="grid grid-cols-2 gap-2">
+            {FEATURES.map(({ icon: Icon, label, desc }) => (
+              <div
+                key={label}
+                className={cn(
+                  'flex flex-col gap-2 rounded-md border p-3',
+                  theme.border.subtle,
+                  theme.surface.secondarySubtle
+                )}
+              >
+                <div
                   className={cn(
-                    'mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full',
-                    theme.surface.secondarySubtle
+                    'flex h-6 w-6 items-center justify-center rounded border',
+                    theme.border.subtle,
+                    theme.surface.background
                   )}
                 >
-                  <Check className="h-2 w-2 text-foreground/50" strokeWidth={3} />
-                </span>
-                {item}
-              </li>
+                  <Icon className="h-3 w-3 text-foreground/50" strokeWidth={1.5} />
+                </div>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-foreground/80 leading-tight">{label}</p>
+                  <p className="text-[10px] text-muted-foreground/60 leading-snug">{desc}</p>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
 
           <span
             className={cn(
-              'inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/55',
+              'inline-flex items-center rounded-md border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50',
               theme.border.subtle,
               theme.surface.secondarySubtle
             )}
@@ -79,7 +112,7 @@ export default function IntelligenceSpotlight() {
           </span>
         </motion.div>
 
-        {/* Component */}
+        {/* Live demo */}
         <motion.div
           className="lg:col-span-3"
           initial={{ opacity: 0, x: 12 }}
@@ -89,7 +122,7 @@ export default function IntelligenceSpotlight() {
         >
           <div
             className={cn(
-              'rounded-md overflow-hidden border bg-background',
+              'overflow-hidden rounded-md border bg-background',
               theme.border.subtle
             )}
           >

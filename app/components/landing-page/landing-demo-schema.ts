@@ -45,18 +45,18 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
       {
         id: 'project_list',
         name: 'Projects',
-        type: 'table' as const,
         sectionId: 'projects_section',
         placeId: 1,
         config: {},
-      },
-      {
-        id: 'projects_by_status',
-        name: 'By status',
-        type: 'kanban' as const,
-        sectionId: 'projects_section',
-        placeId: 2,
-        config: { groupBy: 'kb_status' },
+        views: [
+          { id: 'project_list_table', name: 'Table', type: 'table' as const },
+          {
+            id: 'project_list_kanban',
+            name: 'Kanban',
+            type: 'kanban' as const,
+            config: { groupBy: 'project_status' },
+          },
+        ],
       },
       {
         id: 'logic_lines_grid',
@@ -151,45 +151,6 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
         config: {},
       },
       {
-        id: 'kb_project_name',
-        dataType: 'string' as const,
-        ui: { label: 'Project' },
-      },
-      {
-        id: 'kb_project_owner',
-        dataType: 'string' as const,
-        ui: { label: 'Owner' },
-      },
-      {
-        id: 'kb_project_due_date',
-        dataType: 'date' as const,
-        ui: { label: 'Due date' },
-      },
-      {
-        id: 'kb_est_hours',
-        dataType: 'number' as const,
-        ui: { label: 'Est. hours' },
-        config: { numberDecimalPlaces: 0 },
-      },
-      {
-        id: 'kb_hourly_rate',
-        dataType: 'number' as const,
-        ui: { label: 'Rate ($/hr)' },
-        config: { numberDecimalPlaces: 0, prefix: '$' },
-      },
-      {
-        id: 'kb_budget',
-        dataType: 'number' as const,
-        ui: { label: 'Est. budget' },
-        config: { isDisabled: true, numberDecimalPlaces: 0, prefix: '$' },
-      },
-      {
-        id: 'kb_status',
-        dataType: 'options' as const,
-        ui: { label: 'Status' },
-        config: {},
-      },
-      {
         id: 'logic_item_label',
         dataType: 'string' as const,
         ui: { label: 'Item' },
@@ -257,17 +218,6 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
       { gridId: 'project_list', fieldId: 'project_budget', order: 7 },
       { gridId: 'project_list', fieldId: 'project_priority', order: 8 },
       { gridId: 'project_list', fieldId: 'project_status', order: 9 },
-      { gridId: 'projects_by_status', fieldId: 'kb_project_name', order: 1 },
-      { gridId: 'projects_by_status', fieldId: 'kb_project_owner', order: 2 },
-      {
-        gridId: 'projects_by_status',
-        fieldId: 'kb_project_due_date',
-        order: 3,
-      },
-      { gridId: 'projects_by_status', fieldId: 'kb_est_hours', order: 4 },
-      { gridId: 'projects_by_status', fieldId: 'kb_hourly_rate', order: 5 },
-      { gridId: 'projects_by_status', fieldId: 'kb_budget', order: 6 },
-      { gridId: 'projects_by_status', fieldId: 'kb_status', order: 7 },
       { gridId: 'logic_lines_grid', fieldId: 'logic_item_label', order: 1 },
       { gridId: 'logic_lines_grid', fieldId: 'logic_qty', order: 2 },
       { gridId: 'logic_lines_grid', fieldId: 'logic_unit_rate', order: 3 },
@@ -312,16 +262,6 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
           },
         ],
       },
-      'projects_by_status.kb_status': {
-        optionsGrid: 'status_options_grid',
-        labelField: 'status_options_grid.project_status_option',
-        fieldMappings: [
-          {
-            from: 'status_options_grid.project_status_option',
-            to: 'projects_by_status.kb_status',
-          },
-        ],
-      },
       'cond_demo_grid.cond_category': {
         optionsGrid: 'category_options_grid',
         labelField: 'category_options_grid.cond_category_option',
@@ -340,15 +280,6 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
           args: [
             { op: 'field', fieldId: 'project_list.project_est_hours' },
             { op: 'field', fieldId: 'project_list.project_hourly_rate' },
-          ],
-        },
-      },
-      'projects_by_status.kb_budget': {
-        expr: {
-          op: 'mul',
-          args: [
-            { op: 'field', fieldId: 'projects_by_status.kb_est_hours' },
-            { op: 'field', fieldId: 'projects_by_status.kb_hourly_rate' },
           ],
         },
       },
@@ -397,18 +328,8 @@ export function buildLandingDemoGridData() {
     project_status: e.status,
   }))
 
-  const kanbanRows = PIPELINE_DEMO_ROWS.map((e) => ({
-    kb_project_name: e.project,
-    kb_project_owner: e.owner,
-    kb_project_due_date: e.dueDate,
-    kb_est_hours: e.estHours,
-    kb_hourly_rate: e.hourlyRate,
-    kb_status: e.status,
-  }))
-
   return {
     project_list: projectListRows,
-    projects_by_status: kanbanRows,
     logic_lines_grid: [
       {
         logic_item_label: 'Design systems audit',

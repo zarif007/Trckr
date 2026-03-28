@@ -190,11 +190,18 @@ function TrackerTableGridInner({
     const out: Record<number, Record<string, import('@/lib/field-rules').FieldOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
+      const enrichedRow: Record<string, unknown> = { ...row }
+      for (const [k, v] of Object.entries(row)) {
+        enrichedRow[`${grid.id}.${k}`] = v
+      }
       const v1Overrides = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, idx, row)
-      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, row, idx)
+      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, enrichedRow, idx)
       const merged: Record<string, import('@/lib/field-rules').FieldOverride> = { ...v1Overrides }
       for (const fieldId of Object.keys(v2Result.propertyOverrides)) {
         merged[fieldId] = mergeV1V2Overrides(v1Overrides[fieldId], v2Result.propertyOverrides[fieldId])
+      }
+      for (const [fieldId, val] of Object.entries(v2Result.valueOverrides)) {
+        merged[fieldId] = { ...merged[fieldId], value: val }
       }
       out[idx] = merged
     })
@@ -240,8 +247,14 @@ function TrackerTableGridInner({
       const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values, {
         onlyUseRowDataForSource: true,
       })[fieldId]
-      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, 0)
-      return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+      const enrichedValues: Record<string, unknown> = { ...values }
+      for (const [k, v] of Object.entries(values)) {
+        enrichedValues[`${grid.id}.${k}`] = v
+      }
+      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, enrichedValues, 0)
+      const base = mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+      const valOverride = v2Result.valueOverrides[fieldId]
+      return valOverride !== undefined ? { ...base, value: valOverride } : base
     },
     [rulesForGrid, fullGridData, grid.id, fieldRulesV2]
   )

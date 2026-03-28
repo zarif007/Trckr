@@ -413,7 +413,43 @@ function nextId() {
 }
 
 function placeNode(depth: number, row: number): XYPosition {
-  return { x: depth * 240, y: row * 120 }
+  return { x: depth * 280, y: row * 110 }
+}
+
+/**
+ * Center each node vertically between its input nodes.
+ * The current sequential row assignment places every parent at the top of
+ * its subtree, causing all its input edges to fan downward and overlap.
+ * Sorting left-to-right (by x) and averaging source y-positions fixes this
+ * in one linear pass because inputs are always further left than their target.
+ */
+function centerNodesBetweenInputs(
+  nodes: ExprFlowNode[],
+  edges: Edge[],
+): ExprFlowNode[] {
+  // Map each target node id → ids of its source nodes
+  const sourcesOf = new Map<string, string[]>()
+  for (const edge of edges) {
+    const existing = sourcesOf.get(edge.target) ?? []
+    existing.push(edge.source)
+    sourcesOf.set(edge.target, existing)
+  }
+
+  const positionById = new Map(nodes.map((n) => [n.id, { ...n.position }]))
+
+  // Process left-to-right so inputs are already settled when we center their target
+  const sorted = [...nodes].sort((a, b) => a.position.x - b.position.x)
+
+  for (const node of sorted) {
+    const sources = sourcesOf.get(node.id)
+    if (!sources || sources.length === 0) continue
+    const avgY =
+      sources.reduce((sum, sid) => sum + (positionById.get(sid)?.y ?? 0), 0) /
+      sources.length
+    positionById.set(node.id, { ...positionById.get(node.id)!, y: avgY })
+  }
+
+  return nodes.map((n) => ({ ...n, position: positionById.get(n.id)! }))
 }
 
 function toBinaryTree(op: 'add' | 'mul', args: ExprNode[]): ExprNode {
@@ -709,13 +745,13 @@ export function exprToGraph(expr: ExprNode): { nodes: ExprFlowNode[]; edges: Edg
 
   const orientedNodes = nodes.map((node) => {
     if (node.id === resultId) {
-      return { ...node, position: { ...node.position, x: maxDepth * 240 } }
+      return { ...node, position: { ...node.position, x: maxDepth * 280 } }
     }
     const depth = depthById.get(node.id) ?? 1
-    return { ...node, position: { ...node.position, x: (maxDepth - depth) * 240 } }
+    return { ...node, position: { ...node.position, x: (maxDepth - depth) * 280 } }
   })
 
-  return { nodes: orientedNodes, edges }
+  return { nodes: centerNodesBetweenInputs(orientedNodes, edges), edges }
 }
 
 export const FLOW_CONSTANTS = {

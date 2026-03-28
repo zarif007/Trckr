@@ -647,11 +647,18 @@ function TrackerDivGridInner({
   )
 
   const fieldOverrides = useMemo(() => {
+    const enrichedData: Record<string, unknown> = { ...data }
+    for (const [k, v] of Object.entries(data)) {
+      enrichedData[`${grid.id}.${k}`] = v
+    }
     const v1Overrides = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, data)
-    const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, data, 0)
+    const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, enrichedData, 0)
     const merged: typeof v1Overrides = { ...v1Overrides }
     for (const fieldId of Object.keys(v2Result.propertyOverrides)) {
       merged[fieldId] = mergeV1V2Overrides(v1Overrides[fieldId], v2Result.propertyOverrides[fieldId])
+    }
+    for (const [fieldId, val] of Object.entries(v2Result.valueOverrides)) {
+      merged[fieldId] = { ...merged[fieldId], value: val }
     }
     return merged
   }, [rulesForGrid, fullGridData, grid.id, data, fieldRulesV2])

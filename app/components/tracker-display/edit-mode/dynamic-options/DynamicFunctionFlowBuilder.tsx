@@ -202,25 +202,25 @@ const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transit
 const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2.5 text-xs font-semibold'
 const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
 
-// Enhanced edge styling with animated connections
 const EDGE_STYLE: CSSProperties = {
-  stroke: 'hsl(var(--primary) / 0.5)',
-  strokeWidth: 2.5,
+  stroke: 'hsl(var(--primary) / 0.6)',
+  strokeWidth: 1.5,
   strokeLinecap: 'round',
 }
 
 const EDGE_MARKER = {
   type: MarkerType.ArrowClosed,
-  color: 'hsl(var(--primary) / 0.6)',
-  width: 18,
-  height: 18,
+  color: 'hsl(var(--primary) / 0.7)',
+  width: 14,
+  height: 14,
 }
 
 const EDGE_DEFAULTS = {
   type: 'smoothstep' as const,
   style: EDGE_STYLE,
   markerEnd: EDGE_MARKER,
-  animated: true,
+  animated: false,
+  pathOptions: { borderRadius: 8 },
 }
 function getNodeSummary(
   kind: DynamicFunctionNodeKind,
