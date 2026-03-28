@@ -1,5 +1,6 @@
 import type { TrackerFieldType } from '@/lib/tracker-field-types'
 export type { TrackerFieldType } from '@/lib/tracker-field-types'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 
 /** Tab config: isHidden, etc. */
 export type TrackerTabConfig = {
@@ -199,6 +200,8 @@ export interface TrackerDisplayProps {
   fieldRules?: FieldRules
   /** Field rules keyed by target field path (grid_id.field_id). When set, used instead of fieldRules array. */
   fieldRulesByTarget?: Record<string, import('@/lib/field-rules').FieldRuleForTarget[]>
+  /** AST-based field behavior rules (V2). Keyed by target field path (gridId.fieldId). */
+  fieldRulesV2?: FieldRulesV2Map
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings
   /** Optional style overrides keyed by grid id or view id. */

@@ -135,9 +135,9 @@ export type ExprNode =
  * ```
  */
 export type FieldValidationRule =
-  | { type: 'required'; message?: string }
-  | { type: 'min' | 'max' | 'minLength' | 'maxLength'; value: number; message?: string }
-  | { type: 'expr'; expr: ExprNode; message?: string }
+  | { type: 'required'; message?: string; enabled?: boolean }
+  | { type: 'min' | 'max' | 'minLength' | 'maxLength'; value: number; message?: string; enabled?: boolean }
+  | { type: 'expr'; expr: ExprNode; message?: string; enabled?: boolean }
 
 /**
  * Field Calculation Rule

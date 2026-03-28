@@ -12,6 +12,7 @@ import type {
 } from './types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { GridType } from './types'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import { TrackerTableGrid } from './TrackerTableGrid'
 import { TrackerKanbanGrid } from './TrackerKanbanGrid'
 import { TrackerDivGrid } from './grids/div'
@@ -30,6 +31,7 @@ export interface GridViewContentProps {
   calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: RefObject<GridDataRecord> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -54,6 +56,7 @@ export function GridViewContent({
   calculations,
   styleOverrides,
   fieldRules,
+  fieldRulesV2,
   gridData,
   gridDataRef,
   gridDataForThisGrid,
@@ -104,6 +107,7 @@ export function GridViewContent({
           calculations={calculations}
           styleOverrides={styleOverrides}
           fieldRules={fieldRules}
+          fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}
@@ -128,6 +132,7 @@ export function GridViewContent({
           calculations={calculations}
           styleOverrides={styleOverrides}
           fieldRules={fieldRules}
+          fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}
@@ -152,6 +157,7 @@ export function GridViewContent({
           calculations={calculations}
           styleOverrides={styleOverrides}
           fieldRules={fieldRules}
+          fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridDataForThisGrid}

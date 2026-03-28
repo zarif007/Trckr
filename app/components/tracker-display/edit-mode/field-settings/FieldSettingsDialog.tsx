@@ -9,14 +9,14 @@ import {
 } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Settings2, ShieldCheck, Sigma, ArrowRight, Wand2, Link2 } from 'lucide-react'
+import { Settings2, ShieldCheck, Sigma, ArrowRight, Wand2, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useFieldSettingsState } from './useFieldSettingsState'
 import type { FieldSettingsDialogProps } from './types'
 import { GeneralTab } from './GeneralTab'
 import { BindingsTab } from './BindingsTab'
 import { CalculationsTab } from './CalculationsTab'
-import { FieldRulesTab } from './FieldRulesTab'
+import { FieldRulesV2Tab } from './FieldRulesV2Tab'
 import { ValidationsTab } from './ValidationsTab'
 import { DynamicOptionsBuilder } from '../dynamic-options'
 
@@ -33,7 +33,8 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
     disableSave,
     rules,
     calculationRule,
-    fieldRules,
+    fieldRulesV2,
+    setFieldRulesV2,
     isBindable,
     isDynamicField,
     bindingEnabled,
@@ -125,11 +126,11 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                 )}
                 {resolvedAllowedTabs.includes('fieldRules') && gridId && field && (
                   <TabsTrigger value="fieldRules" className="gap-1.5 text-xs">
-                    <Link2 className="h-3.5 w-3.5" />
+                    <Zap className="h-3.5 w-3.5" />
                     <span>Field rules</span>
-                    {fieldRules.length > 0 && (
-                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-muted text-muted-foreground flex items-center justify-center">
-                        {fieldRules.length}
+                    {fieldRulesV2.length > 0 && (
+                      <span className="ml-1 h-4 min-w-[16px] px-1 rounded-md text-[10px] font-medium bg-success/15 text-success flex items-center justify-center">
+                        {fieldRulesV2.length}
                       </span>
                     )}
                   </TabsTrigger>
@@ -279,15 +280,15 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                 )}
 
                 {resolvedAllowedTabs.includes('fieldRules') && gridId && field && (
-                  <TabsContent value="fieldRules" className="mt-5 space-y-5">
-                    <FieldRulesTab
+                  <TabsContent value="fieldRules" className="mt-0 space-y-5">
+                    <FieldRulesV2Tab
                       gridId={gridId}
-                      field={field}
-                      fieldRules={state.fieldRules}
-                      setFieldRules={state.setFieldRules}
-                      allFieldPathOptions={state.allFieldPathOptions}
-                      pathLabelMap={state.pathLabelMap}
-                      resolvePathLabelFn={state.resolvePathLabelFn}
+                      fieldId={field.id}
+                      fieldRulesV2={fieldRulesV2}
+                      setFieldRulesV2={setFieldRulesV2}
+                      availableFields={state.availableFields}
+                      currentTracker={schema as import('../../types').TrackerDisplayProps}
+                      trackerSchemaId={trackerSchemaId}
                     />
                   </TabsContent>
                 )}
@@ -303,10 +304,6 @@ export function FieldSettingsDialog(props: FieldSettingsDialogProps) {
                     updateRule={state.updateRule}
                     handleRuleTypeChange={state.handleRuleTypeChange}
                     availableFields={state.availableFields}
-                    structureOpen={state.structureOpen}
-                    setStructureOpen={state.setStructureOpen}
-                    showJsonInStructure={state.showJsonInStructure}
-                    setShowJsonInStructure={state.setShowJsonInStructure}
                     trackerSchemaId={trackerSchemaId ?? undefined}
                   />
                   </TabsContent>

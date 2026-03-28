@@ -125,6 +125,7 @@ export function TrackerDisplayInline({
   getDataRef,
   fieldRules,
   fieldRulesByTarget,
+  fieldRulesV2,
   onGridDataChange,
   readOnly,
   editMode,
@@ -233,10 +234,11 @@ export function TrackerDisplayInline({
           styles,
           fieldRules,
           fieldRulesByTarget,
+          fieldRulesV2,
           dynamicOptions,
         }
         : undefined,
-    [editMode, tabs, sections, grids, fields, formActions, layoutNodes, bindings, validations, calculations, styles, fieldRules, fieldRulesByTarget, dynamicOptions]
+    [editMode, tabs, sections, grids, fields, formActions, layoutNodes, bindings, validations, calculations, styles, fieldRules, fieldRulesByTarget, fieldRulesV2, dynamicOptions]
   )
   const { handleAddTab, handleRemoveTab, handleRenameTab, handleTabDragEnd } = useSchemaTabActions({
     tabs,
@@ -342,6 +344,7 @@ export function TrackerDisplayInline({
             calculations={calculations}
             styles={styles}
             fieldRules={effectiveFieldRules}
+            fieldRulesV2={fieldRulesV2}
             gridData={gridData}
             gridDataRef={gridDataRef}
             readOnly={readOnly}

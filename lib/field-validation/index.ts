@@ -311,7 +311,7 @@ export function compileValidationPlan({
   config,
   rules,
 }: CompileValidationPlanInput): CompiledValidationPlan {
-  const combinedRules = [...configRules(config), ...(rules ?? [])]
+  const combinedRules = [...configRules(config), ...(rules ?? []).filter((r) => r.enabled !== false)]
   return {
     fieldId,
     fieldType,

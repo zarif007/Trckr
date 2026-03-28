@@ -11,6 +11,7 @@ import type {
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GridViewContent } from '../GridViewContent'
 import { normalizeGridViews } from '../view-utils'
@@ -28,6 +29,7 @@ export interface GridBlockContentProps {
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -57,6 +59,7 @@ export function GridBlockContent({
   calculations,
   styles,
   fieldRules,
+  fieldRulesV2,
   gridData,
   gridDataRef,
   readOnly,
@@ -100,6 +103,7 @@ export function GridBlockContent({
           calculations={calculations}
           styleOverrides={viewOverrides}
           fieldRules={fieldRules}
+          fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
           gridDataForThisGrid={gridData?.[grid.id] ?? []}
@@ -149,6 +153,7 @@ export function GridBlockContent({
                 calculations={calculations}
                 styleOverrides={viewOverrides}
                 fieldRules={fieldRules}
+                fieldRulesV2={fieldRulesV2}
                 gridData={gridData}
                 gridDataRef={gridDataRef}
                 gridDataForThisGrid={gridData?.[grid.id] ?? []}

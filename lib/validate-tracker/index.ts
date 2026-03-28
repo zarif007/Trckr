@@ -13,6 +13,7 @@ import {
   validateBindings,
   validateValidations,
   validateCalculations,
+  validateFieldRulesV2,
 } from './validators'
 
 export type { TrackerLike, ValidationResult, BindingEntry } from './types'
@@ -45,6 +46,7 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
     validateBindings(ctx),
     validateValidations(ctx),
     validateCalculations(ctx),
+    validateFieldRulesV2(tracker.fieldRulesV2, ctx),
   ]
 
   const { errors, warnings } = mergeResults(results)

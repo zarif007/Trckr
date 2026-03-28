@@ -21,6 +21,7 @@ import {
 import { parsePath } from '@/lib/resolve-bindings'
 import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
 import type { FieldRuleForTarget } from '@/lib/field-rules'
+import type { FieldRuleV2 } from '@/lib/field-rules-v2/types'
 import {
   defaultExpr,
   ensureRuleDefaults,
@@ -69,9 +70,8 @@ export function useFieldSettingsState({
   const [rules, setRules] = useState<FieldValidationRule[]>([])
   const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
   const [fieldRules, setFieldRules] = useState<FieldRuleForTarget[]>([])
-  const [structureOpen, setStructureOpen] = useState(false)
-  const [showJsonInStructure, setShowJsonInStructure] = useState(false)
-  const [bindingEnabled, setBindingEnabled] = useState(false)
+  const [fieldRulesV2, setFieldRulesV2] = useState<FieldRuleV2[]>([])
+const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
   const [siblingTrackers, setSiblingTrackers] = useState<Array<{ id: string; name: string | null }>>(
     []
@@ -367,10 +367,12 @@ export function useFieldSettingsState({
             }))
           : []
     setFieldRules(nextFieldRules)
+    const nextFieldRulesV2 = validationKey
+      ? ((schema?.fieldRulesV2?.[validationKey] ?? []) as FieldRuleV2[])
+      : []
+    setFieldRulesV2(nextFieldRulesV2)
     setCalculationRule(nextCalculation && nextCalculation.expr ? nextCalculation : null)
-    setStructureOpen(false)
-    setShowJsonInStructure(false)
-    const isBindableField = field.dataType === 'options' || field.dataType === 'multiselect'
+const isBindableField = field.dataType === 'options' || field.dataType === 'multiselect'
     if (isBindableField && bindingKey) {
       const existingBinding = schema?.bindings?.[bindingKey] as TrackerBindingEntry | undefined
       if (existingBinding) {
@@ -704,6 +706,15 @@ export function useFieldSettingsState({
       }
     }
 
+    const nextFieldRulesV2Map = { ...((schema as any).fieldRulesV2 ?? {}) }
+    if (vKey) {
+      if (fieldRulesV2.length > 0) {
+        nextFieldRulesV2Map[vKey] = fieldRulesV2
+      } else {
+        delete nextFieldRulesV2Map[vKey]
+      }
+    }
+
     onSchemaChange({
       ...schema,
       fields: nextFields,
@@ -711,6 +722,7 @@ export function useFieldSettingsState({
       calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
       bindings: nextBindings,
       fieldRulesByTarget: Object.keys(nextFieldRulesByTarget).length > 0 ? nextFieldRulesByTarget : undefined,
+      fieldRulesV2: Object.keys(nextFieldRulesV2Map).length > 0 ? nextFieldRulesV2Map : undefined,
       dynamicOptions: dynamicOptionsDraft,
     })
 
@@ -746,6 +758,7 @@ export function useFieldSettingsState({
     rules,
     calculationRule,
     fieldRules,
+    fieldRulesV2,
     bindingEnabled,
     bindingDraft,
     isBindable,
@@ -892,10 +905,8 @@ export function useFieldSettingsState({
     setCalculationRule,
     fieldRules,
     setFieldRules,
-    structureOpen,
-    setStructureOpen,
-    showJsonInStructure,
-    setShowJsonInStructure,
+    fieldRulesV2,
+    setFieldRulesV2,
     bindingEnabled,
     setBindingEnabled,
     bindingDraft,

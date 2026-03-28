@@ -25,8 +25,10 @@ function StatusIcon({ status }: { status: ToolCallEntry['status'] }) {
   }
 }
 
-function purposeLabel(purpose: 'validation' | 'calculation') {
-  return purpose === 'calculation' ? 'Calculate' : 'Validate'
+function purposeLabel(purpose: 'validation' | 'calculation' | 'field-rule') {
+  if (purpose === 'calculation') return 'Calculate'
+  if (purpose === 'field-rule') return 'Field Rule'
+  return 'Validate'
 }
 
 export function ToolCallProgress({ toolCalls, className }: ToolCallProgressProps) {

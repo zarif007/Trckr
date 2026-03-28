@@ -4,7 +4,7 @@ export interface ExprPromptInputs {
   prompt: string
   gridId: string
   fieldId: string
-  purpose: 'validation' | 'calculation' | 'report'
+  purpose: 'validation' | 'calculation' | 'report' | 'field-rule'
   availableFields: AvailableField[]
 }
 
@@ -14,13 +14,23 @@ export function buildSystemPrompt(purpose: ExprPromptInputs['purpose']): string 
       ? '- The expression should evaluate to a boolean/truthy result suitable for validation checks.'
       : purpose === 'calculation'
         ? '- The expression should compute the target field value (number/string/boolean/etc), not a validation boolean unless explicitly requested.'
-        : '- The expression should compute one value **per report row** (e.g. line total = quantity × unit_price, margin, conditional adjustments). Use numeric result when the user asks for totals or amounts.'
+        : purpose === 'field-rule'
+          ? [
+              '- The expression evaluates to the new value for the target field property:',
+              '  - visibility/required/disabled: boolean',
+              '  - label: string',
+              '  - options: array of { label: string, value: unknown }',
+              '  - value: any type matching the target field',
+            ].join('\n')
+          : '- The expression should compute one value **per report row** (e.g. line total = quantity × unit_price, margin, conditional adjustments). Use numeric result when the user asks for totals or amounts.'
   const taskLabel =
     purpose === 'validation'
       ? 'field validation'
       : purpose === 'calculation'
         ? 'field calculation'
-        : 'report row calculation'
+        : purpose === 'field-rule'
+          ? 'field rule outcome'
+          : 'report row calculation'
 
   return `
 You are generating a JSON expression AST for ${taskLabel}.
@@ -110,8 +120,11 @@ ${prompt}
 Generate the expression AST.
 `.trim()
   }
+  const modeLabel =
+    purpose === 'field-rule' ? 'field rule outcome expression' : purpose
+
   return `
-Mode: ${purpose}
+Mode: ${modeLabel}
 Target grid: ${gridId}
 Target field: ${fieldId}
 Target field path: ${gridId}.${fieldId}

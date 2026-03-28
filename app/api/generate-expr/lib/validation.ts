@@ -10,7 +10,7 @@ export type ParseResult =
       prompt: string
       gridId: string
       fieldId: string
-      purpose: 'validation' | 'calculation'
+      purpose: 'validation' | 'calculation' | 'field-rule'
       currentTracker: unknown
       trackerSchemaId?: string
       projectId?: string
@@ -78,7 +78,7 @@ export function parseRequestBody(body: unknown): ParseResult {
   }
 
   const normalizedPurpose =
-    purpose === 'calculation' || purpose === 'validation'
+    purpose === 'calculation' || purpose === 'validation' || purpose === 'field-rule'
       ? purpose
       : 'validation'
 

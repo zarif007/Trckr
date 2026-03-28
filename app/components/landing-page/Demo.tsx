@@ -99,6 +99,18 @@ export default function Demo() {
         accessorKey: 'deal_count',
         header: 'Deals',
       },
+      {
+        id: 'pipeline_share',
+        accessorKey: 'pipeline_share',
+        header: 'Share of total',
+        cell: ({ getValue }) => {
+          const v = getValue()
+          if (typeof v === 'number' && Number.isFinite(v)) {
+            return `${(v * 100).toFixed(1)}%`
+          }
+          return v == null ? '' : String(v)
+        },
+      },
     ],
     []
   )
@@ -118,7 +130,7 @@ export default function Demo() {
             The full platform, live.
           </h3>
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {(['Tracker', 'Formulas', 'Reports', 'Analysis'] as const).map((label, i) => (
+            {(['Tracker', 'Expressions', 'Reports', 'Analysis'] as const).map((label, i) => (
               <span key={label} className="flex items-center gap-1.5">
                 {i > 0 && <span className="text-border" aria-hidden>·</span>}
                 <span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
@@ -137,56 +149,63 @@ export default function Demo() {
           }}
           className="w-full gap-3"
         >
-          <div className="flex w-full flex-wrap items-center justify-end gap-2">
-            {surface === 'tracker' ? (
-              <div
-                className="inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 p-0.5"
-                role="group"
-                aria-label="Data or layout editing"
-              >
-                <button
-                  type="button"
-                  onClick={() => handleLayoutToggle(false)}
-                  className={cn(
-                    'px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3',
-                    !layoutPlayground
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                  aria-pressed={!layoutPlayground}
+          <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex h-8 shrink-0 items-center sm:w-[10.25rem]">
+              {surface === 'tracker' ? (
+                <div
+                  className="inline-flex items-center rounded-md border border-border/60 bg-background/80 p-0.5"
+                  role="group"
+                  aria-label="Data or layout editing"
                 >
-                  Data
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleLayoutToggle(true)}
+                  <button
+                    type="button"
+                    onClick={() => handleLayoutToggle(false)}
+                    className={cn(
+                      'px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3',
+                      !layoutPlayground
+                        ? 'bg-foreground text-background'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    aria-pressed={!layoutPlayground}
+                  >
+                    Data
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLayoutToggle(true)}
+                    className={cn(
+                      'px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3',
+                      layoutPlayground
+                        ? 'bg-foreground text-background'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                    aria-pressed={layoutPlayground}
+                  >
+                    Layout
+                  </button>
+                </div>
+              ) : null}
+            </div>
+            <div className="min-w-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch]">
+              <div className="flex min-w-min justify-start sm:justify-end">
+                <TabsList
                   className={cn(
-                    'px-2 py-1 text-xs font-semibold rounded-md transition-colors duration-150 ease-out sm:px-3',
-                    layoutPlayground
-                      ? 'bg-foreground text-background'
-                      : 'text-muted-foreground hover:text-foreground'
+                    'min-h-8 inline-flex w-max max-w-none shrink-0',
+                    '[&_[data-slot=tabs-trigger]]:min-h-7 [&_[data-slot=tabs-trigger]]:px-2 [&_[data-slot=tabs-trigger]]:py-0.5',
+                    '[&_[data-slot=tabs-trigger]]:text-xs [&_[data-slot=tabs-trigger]]:gap-1.5',
+                    '[&_[data-slot=tabs-trigger]]:font-semibold',
+                    '[&_[data-slot=tabs-trigger]]:shrink-0 [&_[data-slot=tabs-trigger]]:flex-none'
                   )}
-                  aria-pressed={layoutPlayground}
                 >
-                  Layout
-                </button>
+                  {SURFACE_TABS.map(({ id, label, icon: Icon }) => (
+                    <TabsTrigger key={id} value={id} className="shrink-0 flex-none gap-1.5">
+                      <Icon className="h-3.5 w-3.5" aria-hidden />
+                      {label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
               </div>
-            ) : null}
-            <TabsList
-              className={cn(
-                'min-h-8 w-fit shrink-0',
-                '[&_[data-slot=tabs-trigger]]:min-h-7 [&_[data-slot=tabs-trigger]]:px-2 [&_[data-slot=tabs-trigger]]:py-0.5',
-                '[&_[data-slot=tabs-trigger]]:text-xs [&_[data-slot=tabs-trigger]]:gap-1.5',
-                '[&_[data-slot=tabs-trigger]]:font-semibold'
-              )}
-            >
-              {SURFACE_TABS.map(({ id, label, icon: Icon }) => (
-                <TabsTrigger key={id} value={id} className="gap-1.5">
-                  <Icon className="h-3.5 w-3.5" aria-hidden />
-                  {label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            </div>
           </div>
 
           <TabsContent
@@ -209,6 +228,13 @@ export default function Demo() {
             className="data-[state=inactive]:hidden mt-0"
           >
             <div className="rounded-lg border border-border/60 bg-background shadow-sm overflow-hidden min-h-[min(52vh,520px)]">
+              <p className="border-b border-border/50 bg-muted/25 px-4 py-2.5 text-xs leading-relaxed text-muted-foreground sm:px-5">
+                Same calculation as the <span className="font-medium text-foreground/90">Logic</span>{' '}
+                tab&apos;s{' '}
+                <span className="font-medium text-foreground/90">Line total</span> field:
+                quantity × unit rate (matches the live formula on{' '}
+                <span className="font-medium text-foreground/90">Line items</span>).
+              </p>
               <ExprFlowBuilder
                 key="landing-expr"
                 expr={demoExpr}

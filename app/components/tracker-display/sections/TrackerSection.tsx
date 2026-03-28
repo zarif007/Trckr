@@ -12,6 +12,7 @@ import {
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import { SectionBar, ViewBlockWrapper, GRIDS_CONTAINER, GRID_BLOCK_INNER } from '../layout'
 import { GridBlockHeader, GridBlockContent } from '../blocks'
 
@@ -28,6 +29,7 @@ export interface TrackerSectionProps {
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -54,6 +56,7 @@ export function TrackerSection({
   calculations,
   styles,
   fieldRules,
+  fieldRulesV2,
   gridData,
   gridDataRef,
   readOnly,
@@ -91,6 +94,7 @@ export function TrackerSection({
                   calculations={calculations}
                   styles={styles}
                   fieldRules={fieldRules}
+                  fieldRulesV2={fieldRulesV2}
                   gridData={gridData}
                   gridDataRef={gridDataRef}
                   readOnly={readOnly}

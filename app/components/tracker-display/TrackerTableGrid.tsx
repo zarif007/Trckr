@@ -16,6 +16,9 @@ import { resolveFieldOptionsV2, resolveFieldOptionsV2Async } from '@/lib/binding
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
 import { resolveFieldRuleOverrides } from '@/lib/field-rules'
+import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
+import { mergeV1V2Overrides } from '@/lib/field-rules-v2/merge'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import { useTrackerOptionsContext } from './tracker-options-context'
 import { useGridFieldRules } from './hooks/useGridFieldRules'
 import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
@@ -42,6 +45,7 @@ interface TrackerTableGridProps {
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -67,6 +71,7 @@ function TrackerTableGridInner({
   calculations,
   styleOverrides,
   fieldRules,
+  fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
   readOnly = false,
@@ -185,10 +190,16 @@ function TrackerTableGridInner({
     const out: Record<number, Record<string, import('@/lib/field-rules').FieldOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
-      out[idx] = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, idx, row)
+      const v1Overrides = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, idx, row)
+      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, row, idx)
+      const merged: Record<string, import('@/lib/field-rules').FieldOverride> = { ...v1Overrides }
+      for (const fieldId of Object.keys(v2Result.propertyOverrides)) {
+        merged[fieldId] = mergeV1V2Overrides(v1Overrides[fieldId], v2Result.propertyOverrides[fieldId])
+      }
+      out[idx] = merged
     })
     return out
-  }, [rulesForGrid, fullGridData, grid.id, rows])
+  }, [rulesForGrid, fullGridData, grid.id, rows, fieldRulesV2])
 
   const hiddenTargetFields = useMemo(() => {
     const targets = new Set<string>()
@@ -225,11 +236,14 @@ function TrackerTableGridInner({
   )
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
-    (values: Record<string, unknown>, fieldId: string) =>
-      resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values, {
+    (values: Record<string, unknown>, fieldId: string) => {
+      const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values, {
         onlyUseRowDataForSource: true,
-      })[fieldId],
-    [rulesForGrid, fullGridData, grid.id]
+      })[fieldId]
+      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, 0)
+      return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+    },
+    [rulesForGrid, fullGridData, grid.id, fieldRulesV2]
   )
 
   const handleAddColumnConfirm = useCallback(

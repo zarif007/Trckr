@@ -3,7 +3,7 @@
  * that are resolved to ExprNode via the same AST generator (generate-expr).
  */
 
-export type ExprIntentPurpose = 'validation' | 'calculation'
+export type ExprIntentPurpose = 'validation' | 'calculation' | 'field-rule'
 
 export interface ExprIntent {
   fieldPath: string

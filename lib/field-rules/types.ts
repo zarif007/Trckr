@@ -61,6 +61,10 @@ export type FieldOverride = {
   isRequired?: boolean
   isDisabled?: boolean
   value?: unknown
+  /** Label override from Field Rules V2. Rendered in place of field.ui.label. */
+  label?: string
+  /** Options override from Field Rules V2. Replaces bound/static options. */
+  options?: unknown[]
 }
 
 /** Index for O(1) lookup by source, target, or grid. All maps reference EnrichedFieldRule. */

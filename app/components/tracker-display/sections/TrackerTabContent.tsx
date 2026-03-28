@@ -13,6 +13,7 @@ import type {
   FieldRules,
   GridDataRecord,
 } from '../types'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import { TrackerSection } from './TrackerSection'
 import { useCanEditLayout, BlockEditor } from '../edit-mode'
@@ -29,6 +30,7 @@ export interface TrackerTabContentProps {
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -56,6 +58,7 @@ function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabC
     prev.calculations !== next.calculations ||
     prev.styles !== next.styles ||
     prev.fieldRules !== next.fieldRules ||
+    prev.fieldRulesV2 !== next.fieldRulesV2 ||
     prev.readOnly !== next.readOnly ||
     prev.onUpdate !== next.onUpdate ||
     prev.onAddEntry !== next.onAddEntry ||
@@ -81,6 +84,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   calculations,
   styles,
   fieldRules,
+  fieldRulesV2,
   gridData,
   gridDataRef,
   readOnly,
@@ -148,6 +152,7 @@ export const TrackerTabContent = memo(function TrackerTabContent({
             calculations={calculations}
             styles={styles}
             fieldRules={fieldRules}
+            fieldRulesV2={fieldRulesV2}
             gridData={gridData}
             gridDataRef={gridDataRef}
             readOnly={readOnly}

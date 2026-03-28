@@ -3,7 +3,7 @@ import type { MasterDataBuildAudit } from '@/lib/master-data/chat-audit'
 export type ConversationMode = 'BUILDER' | 'ANALYST'
 
 export interface ToolCallPayload {
-  purpose: 'validation' | 'calculation'
+  purpose: 'validation' | 'calculation' | 'field-rule'
   fieldPath: string
   description: string
   status: 'pending' | 'running' | 'done' | 'error'

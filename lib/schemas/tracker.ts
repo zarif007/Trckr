@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options/user-functions/schema'
 import { TRACKER_FIELD_TYPES } from '@/lib/tracker-field-types'
+import { fieldRulesV2Schema } from '@/lib/field-rules-v2/schema'
 
 const tabId = () =>
   z
@@ -363,6 +364,8 @@ export const trackerSchema = z
     fieldRules: fieldRulesSchema,
 
     fieldRulesByTarget: fieldRulesByTargetSchema,
+
+    fieldRulesV2: fieldRulesV2Schema,
 
     bindings: bindingsSchema,
 

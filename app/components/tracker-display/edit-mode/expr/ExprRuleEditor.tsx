@@ -20,7 +20,7 @@ interface ExprRuleEditorProps {
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
   trackerSchemaId?: string | null
-  mode?: 'validation' | 'calculation'
+  mode?: 'validation' | 'calculation' | 'field-rule'
   onChange: (expr: ExprNode) => void
 }
 
@@ -124,12 +124,18 @@ export function ExprRuleEditor({
     <div className="space-y-3">
       <div>
         <p className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase">
-          {mode === 'calculation' ? 'Calculation expression' : 'Custom expression'}
+          {mode === 'calculation'
+            ? 'Calculation expression'
+            : mode === 'field-rule'
+              ? 'Field rule outcome expression'
+              : 'Custom expression'}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           {mode === 'calculation'
             ? 'Expression output becomes the target field value. Use JSON, AI, or the visual builder.'
-            : 'Validation passes when the expression returns true. Use JSON, AI, or the visual builder.'}
+            : mode === 'field-rule'
+              ? 'Expression evaluates to the new value for the target field property (e.g. boolean for visibility/required/disabled, string for label). Use JSON, AI, or the visual builder.'
+              : 'Validation passes when the expression returns true. Use JSON, AI, or the visual builder.'}
         </p>
       </div>
       {mode === 'validation' && (

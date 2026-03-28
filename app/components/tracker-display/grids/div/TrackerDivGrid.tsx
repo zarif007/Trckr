@@ -20,6 +20,8 @@ import { useEditMode, useLayoutActions, SortableFieldRowEdit, fieldSortableId, p
 import { DIV_GRID_MAX_COLS } from '../../edit-mode/utils'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import { applyFieldOverrides, resolveFieldRuleOverrides } from '@/lib/field-rules'
+import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
+import { mergeV1V2Overrides } from '@/lib/field-rules-v2/merge'
 import { useTrackerOptionsContext } from '../../tracker-options-context'
 import { useGridFieldRules } from '../../hooks/useGridFieldRules'
 import type { OptionsGridFieldDef } from '../data-table/utils'
@@ -49,6 +51,7 @@ function TrackerDivGridInner({
   calculations,
   styleOverrides,
   fieldRules,
+  fieldRulesV2,
   gridData = {},
   gridDataRef,
   gridDataForThisGrid,
@@ -643,10 +646,15 @@ function TrackerDivGridInner({
     [addOptionConfigByFieldId, isGridReadOnly]
   )
 
-  const fieldOverrides = useMemo(
-    () => resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, data),
-    [rulesForGrid, fullGridData, grid.id, data]
-  )
+  const fieldOverrides = useMemo(() => {
+    const v1Overrides = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, data)
+    const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, data, 0)
+    const merged: typeof v1Overrides = { ...v1Overrides }
+    for (const fieldId of Object.keys(v2Result.propertyOverrides)) {
+      merged[fieldId] = mergeV1V2Overrides(v1Overrides[fieldId], v2Result.propertyOverrides[fieldId])
+    }
+    return merged
+  }, [rulesForGrid, fullGridData, grid.id, data, fieldRulesV2])
 
   const rowKeys = useMemo(() => [...nodesByRow.keys()].sort((a, b) => a - b), [nodesByRow])
 

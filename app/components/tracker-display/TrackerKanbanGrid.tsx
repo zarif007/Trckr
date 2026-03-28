@@ -32,6 +32,9 @@ import {
 } from '@dnd-kit/sortable'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
 import { resolveFieldRuleOverrides } from '@/lib/field-rules'
+import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
+import { mergeV1V2Overrides } from '@/lib/field-rules-v2/merge'
+import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
 import { resolveKanbanStyles } from '@/lib/style-utils'
 import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
 import { useTrackerOptionsContext } from './tracker-options-context'
@@ -70,6 +73,7 @@ export interface TrackerKanbanGridProps {
   calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
   fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesV2Map
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -91,6 +95,7 @@ function TrackerKanbanGridInner({
   calculations,
   styleOverrides,
   fieldRules,
+  fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
   readOnly = false,
@@ -472,9 +477,11 @@ function TrackerKanbanGridInner({
               }}
               onSaveAnother={(values) => onAddEntry(values)}
               getBindingUpdates={getBindingUpdates}
-              getFieldOverrides={(values, fieldId) =>
-                resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values)[fieldId]
-              }
+              getFieldOverrides={(values, fieldId) => {
+                const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values)[fieldId]
+                const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, 0)
+                return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+              }}
               gridId={grid.id}
               calculations={calculations}
             />
@@ -493,15 +500,12 @@ function TrackerKanbanGridInner({
           initialValues={editRowIndex != null ? rows[editRowIndex] ?? {} : {}}
           onSave={handleEditSave}
           getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={(values, fieldId) =>
-            resolveFieldRuleOverrides(
-              rulesForGrid,
-              fullGridData,
-              grid.id,
-              editRowIndex ?? 0,
-              values
-            )[fieldId]
-          }
+          getFieldOverrides={(values, fieldId) => {
+            const rowIndex = editRowIndex ?? 0
+            const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, rowIndex, values)[fieldId]
+            const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, rowIndex)
+            return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+          }}
           gridId={grid.id}
           calculations={calculations}
         />

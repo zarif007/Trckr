@@ -11,7 +11,7 @@ export type ToolCallStatus = 'pending' | 'running' | 'done' | 'error'
 export interface ToolCallEntry {
   id: string
   fieldPath: string
-  purpose: 'validation' | 'calculation'
+  purpose: 'validation' | 'calculation' | 'field-rule'
   description: string
   status: ToolCallStatus
   error?: string
