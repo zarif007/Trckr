@@ -2,7 +2,10 @@
 
 import { motion } from 'framer-motion'
 import { AnalysisDocumentView } from '@/app/analysis/components/AnalysisDocumentView'
-import { LANDING_DEMO_ANALYSIS_DOCUMENT } from '@/app/components/landing-page/landing-demo-insights'
+import {
+  LANDING_DEMO_ANALYSIS_DOCUMENT,
+  LANDING_DEMO_SNAPSHOT_AS_OF_ISO,
+} from '@/app/components/landing-page/landing-demo-insights'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 
@@ -34,8 +37,8 @@ export default function AnalyticsSpotlight() {
               document={LANDING_DEMO_ANALYSIS_DOCUMENT}
               header={{
                 title: 'Pipeline concentration',
-                asOfIso: null,
-                projectName: 'Demo org',
+                asOfIso: LANDING_DEMO_SNAPSHOT_AS_OF_ISO,
+                projectName: 'Northwind Ops',
                 moduleName: 'Go-to-market',
                 trackerName: 'Project pipeline',
               }}

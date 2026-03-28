@@ -1,48 +1,10 @@
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
+import {
+  PIPELINE_DEMO_ROWS,
+  type LandingPipelineSeedRow,
+} from '@/app/components/landing-page/landing-demo-pipeline-seed'
 
-/** Sample rows for the pipeline tab */
-export const PIPELINE_DEMO_ROWS = [
-  {
-    project: 'New onboarding flow',
-    owner: 'Sara',
-    team: 'Product',
-    dueDate: '2026-01-25',
-    priority: 'High',
-    status: 'In Progress',
-    estHours: 120,
-    hourlyRate: 85,
-  },
-  {
-    project: 'Vendor consolidation',
-    owner: 'David',
-    team: 'Operations',
-    dueDate: '2026-02-05',
-    priority: 'Medium',
-    status: 'Not Started',
-    estHours: 40,
-    hourlyRate: 95,
-  },
-  {
-    project: 'Laptop refresh Q1',
-    owner: 'Priya',
-    team: 'IT',
-    dueDate: '2026-01-30',
-    priority: 'High',
-    status: 'Blocked',
-    estHours: 60,
-    hourlyRate: 90,
-  },
-  {
-    project: 'Office move checklist',
-    owner: 'Alex',
-    team: 'People',
-    dueDate: '2026-03-15',
-    priority: 'Low',
-    status: 'Completed',
-    estHours: 24,
-    hourlyRate: 75,
-  },
-]
+export { PIPELINE_DEMO_ROWS, type LandingPipelineSeedRow }
 
 export function buildLandingDemoSchema(): TrackerDisplayProps {
   return {
@@ -430,6 +392,7 @@ export function buildLandingDemoGridData() {
     project_due_date: e.dueDate,
     project_est_hours: e.estHours,
     project_hourly_rate: e.hourlyRate,
+    project_budget: e.estHours * e.hourlyRate,
     project_priority: e.priority,
     project_status: e.status,
   }))
@@ -448,36 +411,59 @@ export function buildLandingDemoGridData() {
     projects_by_status: kanbanRows,
     logic_lines_grid: [
       {
-        logic_item_label: 'Design review',
+        logic_item_label: 'Design systems audit',
         logic_qty: 8,
         logic_unit_rate: 120,
       },
       {
-        logic_item_label: 'Implementation',
+        logic_item_label: 'Core implementation',
         logic_qty: 24,
         logic_unit_rate: 95,
       },
       {
-        logic_item_label: 'QA pass',
+        logic_item_label: 'Regression QA',
         logic_qty: 6,
         logic_unit_rate: 75,
+      },
+      {
+        logic_item_label: 'Technical writing',
+        logic_qty: 14,
+        logic_unit_rate: 68,
+      },
+      {
+        logic_item_label: 'On-call hardening',
+        logic_qty: 18,
+        logic_unit_rate: 110,
       },
     ],
     category_options_grid: [
       { cond_category_option: 'Product' },
       { cond_category_option: 'Operations' },
       { cond_category_option: 'People' },
+      { cond_category_option: 'Engineering' },
+      { cond_category_option: 'Security' },
+      { cond_category_option: 'RevOps' },
     ],
     cond_demo_grid: [
       {
-        cond_title: 'Launch checklist',
+        cond_title: 'Launch checklist — v1 cut line',
         cond_category: 'Product',
-        cond_notes: 'Cut scope for v1; ship analytics last.',
+        cond_notes: 'Defer cohort exports; keep activation funnel + SSO only.',
       },
       {
-        cond_title: 'Office lease renewal',
+        cond_title: 'Vendor MSA renewal',
         cond_category: 'Operations',
-        cond_notes: 'Legal review by Friday.',
+        cond_notes: 'Redlines with counsel by Thu; escalate if payment terms slip past Net 45.',
+      },
+      {
+        cond_title: 'Access review cadence',
+        cond_category: 'Security',
+        cond_notes: 'Sample 20% of seats; attach evidence IDs for SOC 2 TS.',
+      },
+      {
+        cond_title: 'Lead scoring refresh',
+        cond_category: 'RevOps',
+        cond_notes: 'Backtest six months; ship model card to RevComm.',
       },
       {
         cond_title: 'Pick a category first',

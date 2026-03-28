@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { ExprFlowBuilder } from '@/app/components/tracker-display/edit-mode/expr/ExprFlowBuilder'
 import {
   LANDING_DEMO_EXPR_FIELDS,
+  LANDING_DEMO_EXPR_RESULT_LABEL,
   LANDING_DEMO_INITIAL_EXPR,
 } from '@/app/components/landing-page/landing-demo-insights'
 import { cn } from '@/lib/utils'
@@ -74,8 +75,8 @@ export default function IntelligenceSpotlight() {
               availableFields={LANDING_DEMO_EXPR_FIELDS}
               onChange={setExpr}
               resultFieldId="logic_lines_grid.logic_line_total"
-              resultFieldLabel="Line total"
-              flowHeightClassName="h-[min(36vh,360px)]"
+              resultFieldLabel={LANDING_DEMO_EXPR_RESULT_LABEL}
+              flowHeightClassName="h-[min(48vh,480px)]"
             />
           </div>
         </motion.div>

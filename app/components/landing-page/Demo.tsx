@@ -15,12 +15,14 @@ import {
 } from '@/app/components/landing-page/landing-demo-schema'
 import {
   LANDING_DEMO_ANALYSIS_DOCUMENT,
-  LANDING_DEMO_FIELD_CATALOG,
   LANDING_DEMO_EXPR_FIELDS,
+  LANDING_DEMO_EXPR_RESULT_LABEL,
+  LANDING_DEMO_FIELD_CATALOG,
   LANDING_DEMO_INITIAL_EXPR,
   LANDING_DEMO_QUERY_PLAN,
   LANDING_DEMO_REPORT_MARKDOWN,
   LANDING_DEMO_REPORT_ROWS,
+  LANDING_DEMO_SNAPSHOT_AS_OF_ISO,
 } from '@/app/components/landing-page/landing-demo-insights'
 import { AnalysisDocumentView } from '@/app/analysis/components/AnalysisDocumentView'
 import { filterDraftFromQueryPlan } from '@/app/report/lib/replay-overrides'
@@ -81,7 +83,7 @@ export default function Demo() {
     (): ColumnDef<Record<string, unknown>, unknown>[] => [
       {
         id: 'status',
-        accessorKey: 'project_list.project_status',
+        accessorKey: 'project_status',
         header: 'Status',
       },
       {
@@ -98,6 +100,28 @@ export default function Demo() {
         id: 'deal_count',
         accessorKey: 'deal_count',
         header: 'Deals',
+      },
+      {
+        id: 'avg_rate',
+        accessorKey: 'avg_rate',
+        header: 'Avg $/hr',
+        cell: ({ getValue }) => {
+          const v = getValue()
+          if (typeof v === 'number' && Number.isFinite(v)) {
+            return `$${v.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
+          }
+          return v == null ? '' : String(v)
+        },
+      },
+      {
+        id: 'max_budget',
+        accessorKey: 'max_budget',
+        header: 'Largest deal',
+        cell: ({ getValue }) => {
+          const v = getValue()
+          if (typeof v === 'number' && Number.isFinite(v)) return v.toLocaleString()
+          return v == null ? '' : String(v)
+        },
       },
       {
         id: 'pipeline_share',
@@ -229,11 +253,14 @@ export default function Demo() {
           >
             <div className="rounded-lg border border-border/60 bg-background shadow-sm overflow-hidden min-h-[min(52vh,520px)]">
               <p className="border-b border-border/50 bg-muted/25 px-4 py-2.5 text-xs leading-relaxed text-muted-foreground sm:px-5">
-                Same calculation as the <span className="font-medium text-foreground/90">Logic</span>{' '}
-                tab&apos;s{' '}
-                <span className="font-medium text-foreground/90">Line total</span> field:
-                quantity × unit rate (matches the live formula on{' '}
-                <span className="font-medium text-foreground/90">Line items</span>).
+                Example <span className="font-medium text-foreground/90">quoted line</span> on{' '}
+                <span className="font-medium text-foreground/90">Line items</span>:{' '}
+                <span className="font-medium text-foreground/90">quantity × unit rate</span> plus a{' '}
+                <span className="font-medium text-foreground/90">rush add-on</span> ($50 for each unit
+                above 10). The graph uses the same fields as the{' '}
+                <span className="font-medium text-foreground/90">Logic</span> tab; the saved{' '}
+                <span className="font-medium text-foreground/90">Line total</span> field in the demo
+                tracker stays the simple product — this canvas shows a deeper formula.
               </p>
               <ExprFlowBuilder
                 key="landing-expr"
@@ -241,8 +268,8 @@ export default function Demo() {
                 availableFields={LANDING_DEMO_EXPR_FIELDS}
                 onChange={setDemoExpr}
                 resultFieldId="logic_lines_grid.logic_line_total"
-                resultFieldLabel="Line total"
-                flowHeightClassName="h-[min(42vh,440px)]"
+                resultFieldLabel={LANDING_DEMO_EXPR_RESULT_LABEL}
+                flowHeightClassName="h-[min(52vh,560px)]"
               />
             </div>
           </TabsContent>
@@ -255,7 +282,7 @@ export default function Demo() {
               <ReportRecipeFilters
                 defaultOpen
                 disabled
-                userRequirementPrompt="For high-priority projects, sum estimated budget and group by status."
+                userRequirementPrompt="For High and Medium priority work that is not Completed, sum estimated budget, count initiatives, average hourly rate, and max deal size — grouped by status."
                 queryPlan={LANDING_DEMO_QUERY_PLAN}
                 formatterOnlyGroupBy={false}
                 fieldCatalog={LANDING_DEMO_FIELD_CATALOG}
@@ -291,8 +318,8 @@ export default function Demo() {
                 document={LANDING_DEMO_ANALYSIS_DOCUMENT}
                 header={{
                   title: 'Pipeline concentration',
-                  asOfIso: null,
-                  projectName: 'Demo org',
+                  asOfIso: LANDING_DEMO_SNAPSHOT_AS_OF_ISO,
+                  projectName: 'Northwind Ops',
                   moduleName: 'Go-to-market',
                   trackerName: 'Project pipeline',
                 }}
