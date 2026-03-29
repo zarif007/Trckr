@@ -1,6 +1,6 @@
 import type { TrackerFieldType } from '@/lib/tracker-field-types'
 export type { TrackerFieldType } from '@/lib/tracker-field-types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 
 /** Tab config: isHidden, etc. */
 export type TrackerTabConfig = {
@@ -163,10 +163,9 @@ export type {
   TrackerBindings,
 } from '@/lib/types/tracker-bindings'
 
-export type { FieldRule, FieldRules, FieldOverride } from '@/lib/field-rules'
+export type { FieldRule, FieldRulesMap, FieldRuleOverride } from '@/lib/field-rules'
 
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
-import type { FieldRules } from '@/lib/field-rules'
 import type { GridDataSnapshot } from '@/lib/tracker-data'
 
 /** Grid data map: grid id -> array of row objects. Used in refs to avoid TSX >> parsing. */
@@ -196,12 +195,8 @@ export interface TrackerDisplayProps {
   validations?: Record<string, FieldValidationRule[]>
   /** Field calculations keyed by "gridId.fieldId" (target path). */
   calculations?: Record<string, FieldCalculationRule>
-  /** Conditional field actions (hide/require/disable). */
-  fieldRules?: FieldRules
-  /** Field rules keyed by target field path (grid_id.field_id). When set, used instead of fieldRules array. */
-  fieldRulesByTarget?: Record<string, import('@/lib/field-rules').FieldRuleForTarget[]>
-  /** AST-based field behavior rules (V2). Keyed by target field path (gridId.fieldId). */
-  fieldRulesV2?: FieldRulesV2Map
+  /** AST-based field behavior rules. Keyed by target field path (gridId.fieldId). */
+  fieldRulesV2?: FieldRulesMap
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings
   /** Optional style overrides keyed by grid id or view id. */

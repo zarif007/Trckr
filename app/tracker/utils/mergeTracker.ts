@@ -1,6 +1,5 @@
 import type { TrackerDisplayProps, TrackerLayoutNode } from '@/app/components/tracker-display/types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
-import type { FieldRuleForTarget } from '@/lib/field-rules'
 import type { TrackerPatchSchema } from '@/lib/schemas/multi-agent'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options'
 
@@ -289,10 +288,7 @@ export function applyTrackerPatch(
     bindings,
     validations: normalizedValidations,
     calculations: normalizedCalculations,
-    fieldRules: patch.fieldRules ?? base.fieldRules,
-    fieldRulesByTarget: (patch.fieldRulesByTarget ?? base.fieldRulesByTarget) as
-      | Record<string, FieldRuleForTarget[]>
-      | undefined,
+    fieldRulesV2: (patch as { fieldRulesV2?: import('@/lib/field-rules').FieldRulesMap }).fieldRulesV2 ?? base.fieldRulesV2,
     styles,
     dynamicOptions,
   }

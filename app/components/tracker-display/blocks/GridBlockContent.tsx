@@ -7,11 +7,10 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
   GridDataRecord,
 } from '../types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GridViewContent } from '../GridViewContent'
 import { normalizeGridViews } from '../view-utils'
@@ -28,8 +27,7 @@ export interface GridBlockContentProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData?: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -58,7 +56,6 @@ export function GridBlockContent({
   validations,
   calculations,
   styles,
-  fieldRules,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -102,7 +99,6 @@ export function GridBlockContent({
           validations={validations}
           calculations={calculations}
           styleOverrides={viewOverrides}
-          fieldRules={fieldRules}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -152,7 +148,6 @@ export function GridBlockContent({
                 validations={validations}
                 calculations={calculations}
                 styleOverrides={viewOverrides}
-                fieldRules={fieldRules}
                 fieldRulesV2={fieldRulesV2}
                 gridData={gridData}
                 gridDataRef={gridDataRef}

@@ -1,26 +1,29 @@
 'use client'
 
 import { useMemo } from 'react'
-import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
-import type { FieldRulesV2Map, FieldRulesV2Overrides } from '@/lib/field-rules-v2/types'
+import { resolveFieldRulesForRow } from '@/lib/field-rules'
+import type { FieldRulesMap, FieldRulesResult } from '@/lib/field-rules'
 
 /**
- * Resolves Field Rules V2 for a single grid row.
+ * Resolves field rules for a single grid row.
  *
- * Sync triggers are resolved inline (pure function, no state).
+ * Sync triggers are resolved inline (pure, no state).
  * Async triggers (onExternalBinding, onDependencyResolve) are not yet
- * implemented — they will require a separate effect-based extension.
+ * implemented — they require a separate effect-based extension.
  */
-export function useFieldRulesV2(
-  fieldRulesV2: FieldRulesV2Map | undefined,
+export function useFieldRules(
+  fieldRules: FieldRulesMap | undefined,
   gridId: string,
   rowValues: Record<string, unknown>,
   rowIndex: number,
-): FieldRulesV2Overrides {
+): FieldRulesResult {
   return useMemo(
-    () => resolveFieldRulesV2ForRow(fieldRulesV2, gridId, rowValues, rowIndex),
-    // rowValues identity changes per-render in grids; stable via JSON.stringify
+    () => resolveFieldRulesForRow(fieldRules, gridId, rowValues, rowIndex),
+    // rowValues identity changes per-render; stable via JSON.stringify
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [fieldRulesV2, gridId, rowIndex, JSON.stringify(rowValues)],
+    [fieldRules, gridId, rowIndex, JSON.stringify(rowValues)],
   )
 }
+
+/** @deprecated Use useFieldRules */
+export const useFieldRulesV2 = useFieldRules

@@ -14,7 +14,6 @@ import {
   validateValidations,
   validateCalculations,
 } from './validators'
-import { validateFieldRules as validateFieldRulesOld } from './validators/field-rules'
 
 export type { TrackerLike, ValidationResult, BindingEntry } from './types'
 export { autoFixBindings } from './auto-fix'
@@ -42,7 +41,6 @@ export function validateTracker(tracker: TrackerLike | null | undefined): Valida
     validateLayout(ctx),
     validateOptionsFields(ctx),
     validateReservedFieldIds(ctx),
-    validateFieldRulesOld(tracker, ctx),
     validateFieldRules(tracker.fieldRulesV2, ctx),
     validateBindings(ctx),
     validateValidations(ctx),

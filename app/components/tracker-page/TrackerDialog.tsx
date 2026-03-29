@@ -42,8 +42,7 @@ function toDisplayProps(data: TrackerResponse): TrackerDisplayProps {
     validations: data.validations ?? {},
     calculations: data.calculations ?? {},
     styles: data.styles,
-    fieldRules: data.fieldRules ?? [],
-    fieldRulesByTarget: data.fieldRulesByTarget,
+    fieldRulesV2: data.fieldRulesV2,
   }
 }
 
@@ -64,7 +63,7 @@ export function TrackerDialog({
   onSchemaChange,
 }: TrackerDialogProps) {
   const object = streamedObject as {
-    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; fieldRules?: unknown[]; fieldRulesByTarget?: Record<string, unknown[]> }
+    tracker?: { tabs?: unknown[]; sections?: unknown[]; grids?: unknown[]; fields?: unknown[]; layoutNodes?: unknown[]; bindings?: unknown; validations?: unknown; calculations?: unknown; styles?: unknown; fieldRulesV2?: unknown }
     trackerPatch?: unknown
   } | undefined
   const handleOpenChange = (next: boolean) => {
@@ -101,8 +100,7 @@ export function TrackerDialog({
       validations: schema.validations ?? {},
       calculations: schema.calculations ?? {},
       styles: schema.styles,
-      fieldRules: schema.fieldRules ?? [],
-      fieldRulesByTarget: schema.fieldRulesByTarget,
+      fieldRulesV2: schema.fieldRulesV2,
     }
     onSchemaChange?.(next)
   }
@@ -162,8 +160,7 @@ export function TrackerDialog({
               validations={(tracker.validations || {}) as TrackerResponse['validations']}
               calculations={(tracker.calculations || {}) as TrackerResponse['calculations']}
               styles={(tracker.styles || {}) as TrackerResponse['styles']}
-              fieldRules={(tracker.fieldRules || []) as TrackerResponse['fieldRules']}
-              fieldRulesByTarget={(tracker as TrackerResponse).fieldRulesByTarget}
+              fieldRulesV2={(tracker as TrackerResponse).fieldRulesV2}
               getDataRef={trackerDataRef}
             />
           ) : activeTrackerData ? (
@@ -197,8 +194,7 @@ export function TrackerDialog({
                   validations={activeTrackerData.validations}
                   calculations={activeTrackerData.calculations}
                   styles={activeTrackerData.styles}
-                  fieldRules={activeTrackerData.fieldRules}
-                  fieldRulesByTarget={activeTrackerData.fieldRulesByTarget}
+                  fieldRulesV2={activeTrackerData.fieldRulesV2}
                   getDataRef={trackerDataRef}
                 />
               )}

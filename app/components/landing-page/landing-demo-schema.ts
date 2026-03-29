@@ -10,8 +10,8 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
   return {
     tabs: [
       { id: 'projects_tab', name: 'Pipeline', placeId: 1 },
-      { id: 'logic_tab', name: 'Logic', placeId: 2 },
-      { id: 'conditional_tab', name: 'Conditional', placeId: 3 },
+      { id: 'logic_tab', name: 'Line items', placeId: 2 },
+      { id: 'conditional_tab', name: 'Category & detail', placeId: 3 },
       { id: 'master_data_tab', name: 'Master data', placeId: 999, config: {} },
     ],
     sections: [
@@ -303,15 +303,6 @@ export function buildLandingDemoSchema(): TrackerDisplayProps {
         { type: 'min', value: 0, message: 'Rate cannot be negative' },
       ],
     },
-    fieldRules: [
-      {
-        source: 'cond_demo_grid.cond_category',
-        operator: 'is_empty',
-        action: 'isHidden',
-        set: true,
-        targets: ['cond_demo_grid.cond_notes'],
-      },
-    ],
   }
 }
 

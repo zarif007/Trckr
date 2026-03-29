@@ -10,7 +10,7 @@ import { RuleCardShell } from '../shared'
 import { FieldRuleV2Editor } from './FieldRuleV2Editor'
 import type { AvailableField } from '../expr/expr-types'
 import type { TrackerDisplayProps } from '../../types'
-import type { FieldRuleV2, NodeTriggerType, RuleProperty } from '@/lib/field-rules-v2/types'
+import type { FieldRule, NodeTriggerType, RuleProperty } from '@/lib/field-rules'
 
 // ---- Trigger group → visual color ----
 type TriggerGroup = 'lifecycle' | 'reactive' | 'external'
@@ -67,14 +67,14 @@ const PROPERTY_LABELS: Record<RuleProperty, string> = {
   value: 'Value',
 }
 
-interface FieldRuleV2CardProps {
-  rule: FieldRuleV2
+interface FieldRuleCardProps {
+  rule: FieldRule
   gridId: string
   fieldId: string
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
   trackerSchemaId?: string | null
-  onChange: (rule: FieldRuleV2) => void
+  onChange: (rule: FieldRule) => void
   onRemove: () => void
 }
 
@@ -87,7 +87,7 @@ export function FieldRuleV2Card({
   trackerSchemaId,
   onChange,
   onRemove,
-}: FieldRuleV2CardProps) {
+}: FieldRuleCardProps) {
   const [expanded, setExpanded] = useState(false)
 
   const group = TRIGGER_GROUP[rule.trigger] ?? 'external'

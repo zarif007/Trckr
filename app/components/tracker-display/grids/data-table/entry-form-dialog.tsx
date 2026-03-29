@@ -6,6 +6,7 @@ import { FormDialog } from './form-dialog'
 import { FieldWrapper } from '../../shared/FieldWrapper'
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react'
 import { applyFieldOverrides } from '@/lib/field-rules'
+import type { FieldRuleOverride } from '@/lib/field-rules'
 import { applyCompiledCalculationsForRow, compileCalculationsForGrid } from '@/lib/field-calculation'
 import type { FieldCalculationRule } from '@/lib/functions/types'
 
@@ -24,7 +25,7 @@ export interface EntryFormDialogProps {
   /** When a select/multiselect field changes, return extra field updates (e.g. from bindings) to merge into form. */
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
   /** Resolve field overrides (hidden/required/disabled) based on current form values. */
-  getFieldOverrides?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
+  getFieldOverrides?: (values: Record<string, unknown>, fieldId: string) => FieldRuleOverride | undefined
   /** Optional: "add" vs "edit" mode for different accents */
   mode?: 'add' | 'edit'
   /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */

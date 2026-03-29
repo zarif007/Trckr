@@ -9,7 +9,6 @@ import type {
   TrackerLayoutNode,
 } from '@/app/components/tracker-display/types'
 import type { TrackerBindings } from '@/lib/types/tracker-bindings'
-import type { FieldRules } from '@/lib/field-rules'
 
 export interface FieldRulesOptionGridsInput {
   grids: TrackerGrid[]
@@ -17,7 +16,6 @@ export interface FieldRulesOptionGridsInput {
   sections: TrackerSection[]
   layoutNodes: TrackerLayoutNode[]
   bindings: TrackerBindings
-  fieldRules: FieldRules
 }
 
 export interface FieldRulesOptionGridsResult {

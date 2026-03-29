@@ -258,9 +258,9 @@ export default function Demo() {
                 <span className="font-medium text-foreground/90">quantity × unit rate</span> plus a{' '}
                 <span className="font-medium text-foreground/90">rush add-on</span> ($50 for each unit
                 above 10). The graph uses the same fields as the{' '}
-                <span className="font-medium text-foreground/90">Logic</span> tab; the saved{' '}
-                <span className="font-medium text-foreground/90">Line total</span> field in the demo
-                tracker stays the simple product — this canvas shows a deeper formula.
+                <span className="font-medium text-foreground/90">Line items</span> tab in the tracker.
+                The saved <span className="font-medium text-foreground/90">Line total</span> field there
+                stays a simple product — this canvas shows a richer example for the demo.
               </p>
               <ExprFlowBuilder
                 key="landing-expr"

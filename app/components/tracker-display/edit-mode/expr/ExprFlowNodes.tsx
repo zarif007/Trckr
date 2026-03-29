@@ -102,50 +102,50 @@ export const STRING_OP_LABELS: Record<StringOp, string> = {
 
 const NODE_STYLES = {
   field: {
-    border: 'border-blue-500/60',
-    bg: 'bg-blue-500/10',
+    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-500/15',
     icon: <Database className="h-3.5 w-3.5 text-blue-600" />,
     label: 'Field',
   },
   const: {
-    border: 'border-emerald-500/60',
-    bg: 'bg-emerald-500/10',
+    accent: 'bg-emerald-500',
+    iconBg: 'bg-emerald-500/15',
     icon: <Type className="h-3.5 w-3.5 text-emerald-600" />,
     label: 'Value',
   },
   op: {
-    border: 'border-violet-500/60',
-    bg: 'bg-violet-500/10',
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
     icon: <Calculator className="h-3.5 w-3.5 text-violet-600" />,
     label: 'Operation',
   },
   result: {
-    border: 'border-amber-500/60',
-    bg: 'bg-amber-500/10',
+    accent: 'bg-amber-500',
+    iconBg: 'bg-amber-500/15',
     icon: <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" />,
     label: 'Result',
   },
   accumulator: {
-    border: 'border-cyan-500/60',
-    bg: 'bg-cyan-500/10',
+    accent: 'bg-cyan-500',
+    iconBg: 'bg-cyan-500/15',
     icon: <Sigma className="h-3.5 w-3.5 text-cyan-600" />,
     label: 'Accumulator',
   },
   logic: {
-    border: 'border-indigo-500/60',
-    bg: 'bg-indigo-500/10',
+    accent: 'bg-indigo-500',
+    iconBg: 'bg-indigo-500/15',
     icon: <GitBranch className="h-3.5 w-3.5 text-indigo-600" />,
     label: 'Logic',
   },
   math: {
-    border: 'border-orange-500/60',
-    bg: 'bg-orange-500/10',
+    accent: 'bg-orange-500',
+    iconBg: 'bg-orange-500/15',
     icon: <FunctionSquare className="h-3.5 w-3.5 text-orange-600" />,
     label: 'Math',
   },
   string: {
-    border: 'border-rose-500/60',
-    bg: 'bg-rose-500/10',
+    accent: 'bg-rose-500',
+    iconBg: 'bg-rose-500/15',
     icon: <CaseSensitive className="h-3.5 w-3.5 text-rose-600" />,
     label: 'String',
   },
@@ -157,13 +157,14 @@ const ACCUMULATOR_ACTION_OPTIONS: { value: AccumulateAction; label: string }[] =
   { value: 'mul', label: 'Multiply (×)' },
 ]
 
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md'
-const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2 text-xs font-semibold'
-const NODE_BODY_CLASSES = 'px-3 pb-3 pt-1'
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border border-border/50 shadow-md bg-background transition-all duration-200 hover:shadow-lg hover:-translate-y-px'
+const NODE_HEADER_CLASSES = 'flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold border-b border-border/30'
+const NODE_BODY_CLASSES = 'px-3 pb-3 pt-2'
+const NODE_ICON_CLASSES = 'h-[22px] w-[22px] rounded-md flex items-center justify-center flex-shrink-0'
 const NODE_DELETE_BUTTON_CLASSES =
-  'nodrag inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/70 hover:text-destructive hover:bg-destructive/10 transition-colors'
-const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
-const HANDLE_OFFSET_START = 40
+  'nodrag inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors'
+const HANDLE_CLASSES = '!h-3.5 !w-3.5 !rounded-full !border-2 !bg-background !border-muted-foreground/30 hover:!border-primary hover:!bg-primary/20 transition-all duration-150'
+const HANDLE_OFFSET_START = 46
 const HANDLE_OFFSET_STEP = 20
 
 const LOGIC_OP_HINTS: Record<LogicOp, string> = {
@@ -199,10 +200,11 @@ function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
   const options = data.availableFields ?? []
   const style = NODE_STYLES.field
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-blue-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[200px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{style.label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -234,10 +236,11 @@ function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
 function ConstNode({ id, data }: { id: string; data: FlowNodeData }) {
   const style = NODE_STYLES.const
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[180px] border-emerald-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[180px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{style.label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -265,10 +268,11 @@ function OpNode({ id, data }: { id: string; data: FlowNodeData }) {
   const icon = data.op ? OPERATOR_ICONS[data.op] : <Calculator className="h-3.5 w-3.5" />
   const style = NODE_STYLES.op
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[180px] border-violet-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {icon}
-        <span className="text-foreground/80">{label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[180px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{icon}</span>
+        <span className="text-foreground/80 font-medium">{label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -320,10 +324,11 @@ function ResultNode({ data }: { data: FlowNodeData }) {
           ? `Value of ${id}`
           : 'Final expression output'
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[160px] border-amber-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{style.label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[160px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{style.label}</span>
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'text-[11px] text-muted-foreground')}>
         {bodyText}
@@ -351,10 +356,11 @@ function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
   const headerLabel = kind === 'count' ? 'Count' : kind === 'sum' ? 'Sum' : style.label
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-cyan-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{headerLabel}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[200px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{headerLabel}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -474,10 +480,11 @@ function LogicNode({ id, data }: { id: string; data: FlowNodeData }) {
   const isNot = logicOp === 'not'
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'border-indigo-500/40 bg-background', style.border, isIf ? 'w-[240px]' : 'w-[200px]')}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{label}</span>
+    <div className={cn(NODE_BASE_CLASSES, isIf ? 'w-[240px]' : 'w-[200px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -562,10 +569,11 @@ function MathNode({ id, data }: { id: string; data: FlowNodeData }) {
   const inputCount = data.inputCount ?? 2
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[200px] border-orange-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[200px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}
@@ -651,10 +659,11 @@ function StringNode({ id, data }: { id: string; data: FlowNodeData }) {
   const inputCount = data.inputCount ?? 2
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'w-[210px] border-rose-500/40 bg-background', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="text-foreground/80">{label}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'w-[210px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="text-foreground/80 font-medium">{label}</span>
         <button
           type="button"
           onClick={() => data.onDelete?.(id)}

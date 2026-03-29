@@ -1,4 +1,4 @@
-import { compareValues } from '@/lib/field-rules/compare'
+import { compareValues } from '@/lib/insights-query'
 import { evaluateExpr } from '@/lib/functions/evaluator'
 import type { ExprNode } from '@/lib/functions/types'
 import type {

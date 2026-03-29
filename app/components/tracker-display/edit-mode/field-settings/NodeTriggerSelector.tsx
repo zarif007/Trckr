@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import type { NodeTriggerType } from '@/lib/field-rules-v2/types'
+import type { NodeTriggerType } from '@/lib/field-rules'
 
 interface NodeTriggerOption {
   value: NodeTriggerType

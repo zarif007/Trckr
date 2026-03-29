@@ -9,18 +9,14 @@ import {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
 } from './types'
 import { TrackerCell } from './TrackerCell'
 import { resolveFieldOptionsV2, resolveFieldOptionsV2Async } from '@/lib/binding'
 import { getBindingForField, findOptionRow, applyBindings, parsePath, getValueFieldIdFromBinding } from '@/lib/resolve-bindings'
 import type { OptionsGridFieldDef } from './grids/data-table/utils'
-import { resolveFieldRuleOverrides } from '@/lib/field-rules'
-import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
-import { mergeV1V2Overrides } from '@/lib/field-rules-v2/merge'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import { resolveFieldRulesForRow } from '@/lib/field-rules'
+import type { FieldRulesMap, FieldRuleOverride } from '@/lib/field-rules'
 import { useTrackerOptionsContext } from './tracker-options-context'
-import { useGridFieldRules } from './hooks/useGridFieldRules'
 import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
 import { useMemo, useCallback, useState, useEffect, memo } from 'react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
@@ -44,8 +40,7 @@ interface TrackerTableGridProps {
   calculations?: Record<string, FieldCalculationRule>
   /** Optional style overrides for this table view. */
   styleOverrides?: StyleOverrides
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -70,7 +65,6 @@ function TrackerTableGridInner({
   validations,
   calculations,
   styleOverrides,
-  fieldRules,
   fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
@@ -102,7 +96,6 @@ function TrackerTableGridInner({
   const { remove, move, add, reorder } = useLayoutActions(grid.id, schema, onSchemaChange)
   const canEditLayout = editMode && !!schema && !!onSchemaChange
 
-  const { rulesForGrid } = useGridFieldRules(grid.id, fieldRules)
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>()
     fields.forEach((field) => map.set(field.id, field))
@@ -187,55 +180,35 @@ function TrackerTableGridInner({
 
   /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
   const rowOverridesCache = useMemo(() => {
-    const out: Record<number, Record<string, import('@/lib/field-rules').FieldOverride>> = {}
+    const out: Record<number, Record<string, FieldRuleOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
       const enrichedRow: Record<string, unknown> = { ...row }
       for (const [k, v] of Object.entries(row)) {
         enrichedRow[`${grid.id}.${k}`] = v
       }
-      const v1Overrides = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, idx, row)
-      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, enrichedRow, idx)
-      const merged: Record<string, import('@/lib/field-rules').FieldOverride> = { ...v1Overrides }
-      for (const fieldId of Object.keys(v2Result.propertyOverrides)) {
-        merged[fieldId] = mergeV1V2Overrides(v1Overrides[fieldId], v2Result.propertyOverrides[fieldId])
-      }
-      for (const [fieldId, val] of Object.entries(v2Result.valueOverrides)) {
+      const { overrides, valueOverrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, enrichedRow, idx)
+      const merged: Record<string, FieldRuleOverride> = { ...overrides }
+      for (const [fieldId, val] of Object.entries(valueOverrides)) {
         merged[fieldId] = { ...merged[fieldId], value: val }
       }
       out[idx] = merged
     })
     return out
-  }, [rulesForGrid, fullGridData, grid.id, rows, fieldRulesV2])
-
-  const hiddenTargetFields = useMemo(() => {
-    const targets = new Set<string>()
-    rulesForGrid.forEach((rule) => {
-      if (!rule?.targets || !rule.action) return
-      const action = String(rule.action).toLowerCase()
-      if (!action.includes('hidden')) return
-      rule.targets.forEach((target) => {
-        const { gridId, fieldId } = parsePath(target)
-        if (gridId === grid.id && fieldId) targets.add(fieldId)
-      })
-    })
-    return targets
-  }, [rulesForGrid, grid.id])
+  }, [grid.id, rows, fieldRulesV2])
 
   const hiddenColumnIds = useMemo(() => {
     const hidden = new Set<string>()
-    if (hiddenTargetFields.size === 0) return hidden
-    hiddenTargetFields.forEach((fieldId) => {
-      let anyVisible = false
-      Object.keys(rowOverridesCache).forEach((k) => {
-        const idx = Number(k)
-        const overrides = rowOverridesCache[idx]
-        if (overrides?.[fieldId]?.isHidden !== true) anyVisible = true
-      })
-      if (!anyVisible) hidden.add(fieldId)
+    const allFieldIds = new Set(Object.values(rowOverridesCache).flatMap((r) => Object.keys(r)))
+    allFieldIds.forEach((fieldId) => {
+      const rowCount = Object.keys(rowOverridesCache).length
+      const allHidden = rowCount > 0 && Object.values(rowOverridesCache).every(
+        (r) => r[fieldId]?.visibility === false
+      )
+      if (allHidden) hidden.add(fieldId)
     })
     return hidden
-  }, [hiddenTargetFields, rowOverridesCache])
+  }, [rowOverridesCache])
 
   const getFieldOverrides = useCallback(
     (rowIndex: number, fieldId: string) => rowOverridesCache[rowIndex]?.[fieldId],
@@ -244,19 +217,16 @@ function TrackerTableGridInner({
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
     (values: Record<string, unknown>, fieldId: string) => {
-      const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values, {
-        onlyUseRowDataForSource: true,
-      })[fieldId]
       const enrichedValues: Record<string, unknown> = { ...values }
       for (const [k, v] of Object.entries(values)) {
         enrichedValues[`${grid.id}.${k}`] = v
       }
-      const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, enrichedValues, 0)
-      const base = mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
-      const valOverride = v2Result.valueOverrides[fieldId]
+      const { overrides, valueOverrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, enrichedValues, 0)
+      const base = overrides[fieldId]
+      const valOverride = valueOverrides[fieldId]
       return valOverride !== undefined ? { ...base, value: valOverride } : base
     },
-    [rulesForGrid, fullGridData, grid.id, fieldRulesV2]
+    [grid.id, fieldRulesV2]
   )
 
   const handleAddColumnConfirm = useCallback(

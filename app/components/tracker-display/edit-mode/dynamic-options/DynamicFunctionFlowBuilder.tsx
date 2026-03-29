@@ -116,91 +116,78 @@ interface FlowNodeData {
 
 type FlowNode = Node<FlowNodeData>
 
-// Modern n8n-inspired node styling with color coding by category
-const NODE_CATEGORY_STYLES: Record<string, { border: string; bg: string; icon: ReactNode; color: string }> = {
-  'control.start': { 
-    border: 'border-green-500/60', 
-    bg: 'bg-green-500/10', 
-    icon: <Play className="h-4 w-4 text-green-600" />,
-    color: 'green'
+const NODE_CATEGORY_STYLES: Record<string, { accent: string; iconBg: string; icon: ReactNode }> = {
+  'control.start': {
+    accent: 'bg-green-500',
+    iconBg: 'bg-green-500/15',
+    icon: <Play className="h-3.5 w-3.5 text-green-600" />,
   },
-  'output.options': { 
-    border: 'border-amber-500/60', 
-    bg: 'bg-amber-500/10', 
-    icon: <CheckCircle2 className="h-4 w-4 text-amber-600" />,
-    color: 'amber'
+  'output.options': {
+    accent: 'bg-amber-500',
+    iconBg: 'bg-amber-500/15',
+    icon: <CheckCircle2 className="h-3.5 w-3.5 text-amber-600" />,
   },
-  'source.grid_rows': { 
-    border: 'border-blue-500/60', 
-    bg: 'bg-blue-500/10', 
-    icon: <Database className="h-4 w-4 text-blue-600" />,
-    color: 'blue'
+  'source.grid_rows': {
+    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-500/15',
+    icon: <Database className="h-3.5 w-3.5 text-blue-600" />,
   },
-  'source.current_context': { 
-    border: 'border-blue-500/60', 
-    bg: 'bg-blue-500/10', 
-    icon: <LayoutGrid className="h-4 w-4 text-blue-600" />,
-    color: 'blue'
+  'source.current_context': {
+    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-500/15',
+    icon: <LayoutGrid className="h-3.5 w-3.5 text-blue-600" />,
   },
-  'source.layout_fields': { 
-    border: 'border-blue-500/60', 
-    bg: 'bg-blue-500/10', 
-    icon: <Layers className="h-4 w-4 text-blue-600" />,
-    color: 'blue'
+  'source.layout_fields': {
+    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-500/15',
+    icon: <Layers className="h-3.5 w-3.5 text-blue-600" />,
   },
-  'source.http_get': { 
-    border: 'border-blue-500/60', 
-    bg: 'bg-blue-500/10', 
-    icon: <Globe className="h-4 w-4 text-blue-600" />,
-    color: 'blue'
+  'source.http_get': {
+    accent: 'bg-blue-500',
+    iconBg: 'bg-blue-500/15',
+    icon: <Globe className="h-3.5 w-3.5 text-blue-600" />,
   },
-  'transform.filter': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <Filter className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.filter': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <Filter className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'transform.map_fields': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <MapIcon className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.map_fields': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <MapIcon className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'transform.unique': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <Fingerprint className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.unique': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <Fingerprint className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'transform.sort': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <ArrowUpDown className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.sort': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <ArrowUpDown className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'transform.limit': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <ListFilter className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.limit': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <ListFilter className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'transform.flatten_path': { 
-    border: 'border-violet-500/60', 
-    bg: 'bg-violet-500/10', 
-    icon: <ChevronsUpDown className="h-4 w-4 text-violet-600" />,
-    color: 'violet'
+  'transform.flatten_path': {
+    accent: 'bg-violet-500',
+    iconBg: 'bg-violet-500/15',
+    icon: <ChevronsUpDown className="h-3.5 w-3.5 text-violet-600" />,
   },
-  'ai.extract_options': { 
-    border: 'border-pink-500/60', 
-    bg: 'bg-pink-500/10', 
-    icon: <Sparkles className="h-4 w-4 text-pink-600" />,
-    color: 'pink'
+  'ai.extract_options': {
+    accent: 'bg-pink-500',
+    iconBg: 'bg-pink-500/15',
+    icon: <Sparkles className="h-3.5 w-3.5 text-pink-600" />,
   },
 }
 
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-md border-2 shadow-sm transition-all duration-200 hover:shadow-md bg-background'
-const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-3 py-2.5 text-xs font-semibold'
-const HANDLE_CLASSES = '!h-3 !w-3 !border-2 !bg-background !border-foreground/40 hover:!border-primary hover:!bg-primary transition-colors'
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border border-border/50 shadow-md bg-background transition-all duration-200 hover:shadow-lg hover:-translate-y-px'
+const NODE_HEADER_CLASSES = 'flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold'
+const NODE_ICON_CLASSES = 'h-[22px] w-[22px] rounded-md flex items-center justify-center flex-shrink-0'
+const HANDLE_CLASSES = '!h-3.5 !w-3.5 !rounded-full !border-2 !bg-background !border-muted-foreground/30 hover:!border-primary hover:!bg-primary/20 transition-all duration-150'
 
 const EDGE_STYLE: CSSProperties = {
   stroke: 'hsl(var(--primary) / 0.6)',
@@ -550,19 +537,19 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
     (() => ctx.setExpandedNodeId(expanded ? null : id))
   
   const style = NODE_CATEGORY_STYLES[data.kind] || {
-    border: 'border-gray-500/60',
-    bg: 'bg-gray-500/10',
-    icon: <Settings className="h-4 w-4 text-gray-600" />,
-    color: 'gray'
+    accent: 'bg-gray-500',
+    iconBg: 'bg-gray-500/15',
+    icon: <Settings className="h-3.5 w-3.5 text-gray-600" />,
   }
 
   const isDeletable = data.kind !== 'control.start' && data.kind !== 'output.options'
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, 'min-w-[190px] max-w-[300px]', style.border)}>
-      <div className={cn(NODE_HEADER_CLASSES, style.bg)}>
-        {style.icon}
-        <span className="min-w-0 truncate text-foreground/80">{nodeKindLabel(data.kind)}</span>
+    <div className={cn(NODE_BASE_CLASSES, 'min-w-[190px] max-w-[300px]')}>
+      <div className={cn('h-[3px] w-full', style.accent)} />
+      <div className={NODE_HEADER_CLASSES}>
+        <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
+        <span className="min-w-0 truncate text-foreground/80 font-medium">{nodeKindLabel(data.kind)}</span>
         {ctx && isDeletable && (
           <button
             type="button"
@@ -570,11 +557,11 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
               e.preventDefault()
               onToggle?.()
             }}
-            className="nodrag nopan shrink-0 rounded-md p-1 hover:bg-background/80 transition-colors"
+            className="nodrag nopan shrink-0 rounded-md p-1 hover:bg-muted/60 transition-colors ml-auto"
             aria-label={expanded ? 'Collapse' : 'Expand'}
           >
             <ChevronDown
-              className={cn('h-4 w-4 text-foreground/60 transition-transform duration-200', expanded && 'rotate-180')}
+              className={cn('h-3.5 w-3.5 text-foreground/50 transition-transform duration-200', expanded && 'rotate-180')}
             />
           </button>
         )}
@@ -582,7 +569,7 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
           <button
             type="button"
             onClick={() => data.onDelete?.(id)}
-            className={NODE_DELETE_BUTTON_CLASSES}
+            className={cn(NODE_DELETE_BUTTON_CLASSES, !isDeletable || !ctx ? 'ml-auto' : '')}
             aria-label="Delete node"
           >
             <Trash2 className="h-3 w-3" />
@@ -590,12 +577,12 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
         )}
       </div>
       {summary ? (
-        <div className="px-3 py-2 text-[11px] text-muted-foreground truncate border-t border-border/30" title={id}>
+        <div className="px-3 py-1.5 text-[11px] text-muted-foreground truncate border-t border-border/30" title={id}>
           {summary}
         </div>
       ) : null}
       {expanded && ctx && (
-        <div className="border-t border-border/40 bg-muted/20 px-3 py-3 space-y-2 nodrag nopan">
+        <div className="border-t border-border/30 bg-muted/20 px-3 py-3 space-y-2 nodrag nopan">
           <DynamicNodeCardInlineConfig
             nodeId={id}
             kind={data.kind}
@@ -608,8 +595,8 @@ function DynamicNodeCard({ id, data }: { id: string; data: FlowNodeData }) {
           />
         </div>
       )}
-      <Handle type="target" position={Position.Left} className={cn(HANDLE_CLASSES, `!border-${style.color}-500`)} />
-      <Handle type="source" position={Position.Right} className={cn(HANDLE_CLASSES, `!border-${style.color}-500`)} />
+      <Handle type="target" position={Position.Left} className={HANDLE_CLASSES} />
+      <Handle type="source" position={Position.Right} className={HANDLE_CLASSES} />
     </div>
   )
 }

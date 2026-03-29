@@ -13,7 +13,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { TrackerCell } from '../../TrackerCell'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
-import { resolveFieldRuleOverrides } from '@/lib/field-rules'
+import { resolveFieldRulesForRow } from '@/lib/field-rules'
+import type { FieldRulesMap, FieldRuleOverride } from '@/lib/field-rules'
 import type { TrackerFieldType, TrackerOption } from '../../types'
 import type { FieldMetadata } from '../data-table/utils'
 
@@ -39,7 +40,7 @@ export interface KanbanCardProps {
   cardFields: Array<{ id: string; dataType: TrackerFieldType; label: string }>
   gridId: string
   gridData: Record<string, Array<Record<string, unknown>>>
-  fieldRules?: import('../../types').FieldRules
+  fieldRules?: FieldRulesMap
   fieldMetadata?: FieldMetadata
   isOverlay?: boolean
   onEditRow?: (rowIndex: number) => void
@@ -62,9 +63,9 @@ export function KanbanCard({
   const rowIndex = card._originalIdx
   const showEditButton = !isOverlay && onEditRow != null && typeof rowIndex === 'number'
   const showSettingsButton = !isOverlay && onDeleteRow != null
-  const overrides =
+  const overrides: Record<string, FieldRuleOverride> =
     typeof rowIndex === 'number'
-      ? resolveFieldRuleOverrides(fieldRules ?? [], gridData, gridId, rowIndex, card)
+      ? resolveFieldRulesForRow(fieldRules, gridId, card, rowIndex).overrides
       : {}
 
   const {
@@ -145,7 +146,7 @@ export function KanbanCard({
       </div>
       <div className={cn('min-w-0', (showEditButton || showSettingsButton) && 'pr-16')}>
         {cardFields.map((field) => {
-          if (overrides[field.id]?.isHidden) return null
+          if (overrides[field.id]?.visibility === false) return null
           const options = toTrackerOptions(fieldMetadata?.[field.id]?.options)
           return (
             <div key={field.id} className="mb-2.5 last:mb-0">

@@ -7,10 +7,10 @@ import { theme } from '@/lib/theme'
 import { FieldRuleV2Card } from './FieldRuleV2Card'
 import type { AvailableField } from '../expr/expr-types'
 import type { TrackerDisplayProps } from '../../types'
-import type { FieldRuleV2 } from '@/lib/field-rules-v2/types'
-import { deriveEngineType } from '@/lib/field-rules-v2/types'
+import type { FieldRule } from '@/lib/field-rules'
+import { deriveEngineType } from '@/lib/field-rules'
 
-function createDefaultRule(): FieldRuleV2 {
+function createDefaultRule(): FieldRule {
   return {
     id: crypto.randomUUID(),
     enabled: true,
@@ -24,8 +24,8 @@ function createDefaultRule(): FieldRuleV2 {
 interface FieldRulesV2TabProps {
   gridId: string
   fieldId: string
-  fieldRulesV2: FieldRuleV2[]
-  setFieldRulesV2: (rules: FieldRuleV2[]) => void
+  fieldRulesV2: FieldRule[]
+  setFieldRulesV2: (rules: FieldRule[]) => void
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
   trackerSchemaId?: string | null
@@ -40,7 +40,7 @@ export function FieldRulesV2Tab({
   currentTracker,
   trackerSchemaId,
 }: FieldRulesV2TabProps) {
-  function handleChange(index: number, updated: FieldRuleV2) {
+  function handleChange(index: number, updated: FieldRule) {
     const next = [...fieldRulesV2]
     next[index] = updated
     setFieldRulesV2(next)

@@ -6,13 +6,14 @@ import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { DEFAULT_INPUT_FONT_CLASS, type ResolvedTableStyles } from '@/lib/style-utils'
 import { applyFieldOverrides } from '@/lib/field-rules'
+import type { FieldRuleOverride } from '@/lib/field-rules'
 
 interface DataTableCellProps<TData> {
   cell: Cell<TData, any>
   row: Row<TData>
   fieldMetadata?: FieldMetadata
   rowValues: Record<string, unknown>
-  rowOverrides?: Record<string, Record<string, unknown>>
+  rowOverrides?: Record<string, FieldRuleOverride>
 }
 
 export function DataTableCell<TData>({
@@ -27,7 +28,7 @@ export function DataTableCell<TData>({
   const meta = cell.getContext().table.options.meta as {
     updateData?: (rowIndex: number, columnId: string, value: any) => void
     tableStyles?: ResolvedTableStyles
-    getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
+    getFieldOverrides?: (rowIndex: number, fieldId: string) => FieldRuleOverride | undefined
     editable?: boolean
     gridId?: string
   }

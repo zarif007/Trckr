@@ -45,6 +45,7 @@ import type { EntryWayDefinition } from '../../entry-way/entry-way-types'
 import type { StyleOverrides } from '../../types'
 import { resolveTableStyles } from '@/lib/style-utils'
 import type { FieldCalculationRule } from '@/lib/functions/types'
+import type { FieldRuleOverride } from '@/lib/field-rules'
 import type { ReactNode } from 'react'
 
 /** Map a table row back to its index in grid data (selection uses getRowId, not indices). */
@@ -75,20 +76,20 @@ interface DataTableProps<TData, TValue> {
   /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
   getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
   /** For table cells/row details: resolve per-row field overrides (hidden/required/disabled). */
-  getFieldOverrides?: (rowIndex: number, fieldId: string) => Record<string, unknown> | undefined
+  getFieldOverrides?: (rowIndex: number, fieldId: string) => FieldRuleOverride | undefined
   /** For table cells: resolve all field overrides for a row in one call. */
   getRowOverrides?: (
     rowIndex: number,
     rowData: Record<string, unknown>
-  ) => Record<string, Record<string, unknown>> | undefined
+  ) => Record<string, FieldRuleOverride> | undefined
   /** For table cells/row details: resolve overrides using the current row values. */
   getFieldOverridesForRow?: (
     rowIndex: number,
     rowData: Record<string, unknown>,
     fieldId: string
-  ) => Record<string, unknown> | undefined
+  ) => FieldRuleOverride | undefined
   /** For Add Entry dialog: resolve field overrides based on current form values. */
-  getFieldOverridesForAdd?: (values: Record<string, unknown>, fieldId: string) => Record<string, unknown> | undefined
+  getFieldOverridesForAdd?: (values: Record<string, unknown>, fieldId: string) => FieldRuleOverride | undefined
   /** Force-hide specific columns (e.g., conditional visibility). */
   hiddenColumns?: string[]
   /** When false, hide Add Entry button and add-dialog. Default true. */

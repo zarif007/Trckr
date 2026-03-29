@@ -9,15 +9,7 @@ export {
 } from './compute-expr'
 export { buildFieldCatalog, formatCatalogForPrompt, type FieldCatalog, type FieldCatalogEntry } from './field-catalog'
 export { fingerprintFromCatalog } from './fingerprint'
-export { loadTrackerDataForQueryPlan } from './load-tracker-rows'
 export { needsMultiFairPoolForAggregates } from './multi-load-policy'
-export {
-  buildQueryPlanUserPrompt,
-  generateQueryPlanV1,
-  type AnalysisOutlineForQueryPlan,
-  type GenerateQueryPlanV1Result,
-  type QueryPlanUserContext,
-} from './query-plan-agent'
 export {
   buildTrackerDataWhere,
   compareValues,
@@ -46,4 +38,3 @@ export {
   structuredJsonValueSchema,
   timePresetSchema,
 } from './schemas'
-export { listTrackersForScope } from './tracker-list'

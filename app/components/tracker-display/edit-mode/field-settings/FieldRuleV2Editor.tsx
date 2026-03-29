@@ -10,20 +10,20 @@ import { NodeTriggerSelector } from './NodeTriggerSelector'
 import { PropertySelector } from './PropertySelector'
 import type { AvailableField } from '../expr/expr-types'
 import type { TrackerDisplayProps } from '../../types'
-import type { FieldRuleV2 } from '@/lib/field-rules-v2/types'
+import type { FieldRule } from '@/lib/field-rules'
 import type { ExprNode } from '@/lib/functions/types'
 
 // Minimal placeholder expression used when a rule has no condition/outcome yet.
 const EMPTY_EXPR: ExprNode = { op: 'const', value: null } as unknown as ExprNode
 
-interface FieldRuleV2EditorProps {
-  rule: FieldRuleV2
+interface FieldRuleEditorProps {
+  rule: FieldRule
   gridId: string
   fieldId: string
   availableFields: AvailableField[]
   currentTracker?: TrackerDisplayProps
   trackerSchemaId?: string | null
-  onChange: (rule: FieldRuleV2) => void
+  onChange: (rule: FieldRule) => void
 }
 
 export function FieldRuleV2Editor({
@@ -34,10 +34,10 @@ export function FieldRuleV2Editor({
   currentTracker,
   trackerSchemaId,
   onChange,
-}: FieldRuleV2EditorProps) {
+}: FieldRuleEditorProps) {
   const [showCondition, setShowCondition] = useState(Boolean(rule.condition))
 
-  function patch(updates: Partial<FieldRuleV2>) {
+  function patch(updates: Partial<FieldRule>) {
     onChange({ ...rule, ...updates })
   }
 

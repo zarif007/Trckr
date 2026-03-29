@@ -1,43 +1,62 @@
+// lib/validate-tracker/validators/field-rules.ts
+
+import type { ValidationContext, ValidatorResult } from '../types'
+import type { FieldRulesMap } from '@/lib/field-rules'
+import { deriveEngineType } from '@/lib/field-rules'
+
 /**
- * Validates fieldRules (warning-level only).
+ * Validates fieldRulesV2 entries.
+ * Issues warnings (not errors) to remain forward-compatible with new rule shapes.
  */
+export function validateFieldRules(
+  fieldRulesV2: FieldRulesMap | undefined,
+  ctx: ValidationContext,
+): ValidatorResult {
+  if (!fieldRulesV2) return { errors: [], warnings: [] }
 
-import { parsePath } from '@/lib/resolve-bindings'
-import type { TrackerLike, ValidationContext, ValidatorResult } from '../types'
-
-export function validateFieldRules(tracker: TrackerLike, ctx: ValidationContext): ValidatorResult {
   const warnings: string[] = []
-  const rules = tracker.fieldRules ?? []
+  const seenIds = new Map<string, Set<string>>()
 
-  if (!Array.isArray(rules) || rules.length === 0) return {}
-
-  for (const [idx, rule] of rules.entries()) {
-    if (!rule?.source) {
-      warnings.push(`fieldRules[${idx}]: missing source`)
+  for (const [path, rules] of Object.entries(fieldRulesV2)) {
+    const dotIdx = path.indexOf('.')
+    if (dotIdx < 1) {
+      warnings.push(`fieldRulesV2: key "${path}" must be "gridId.fieldId" format`)
       continue
     }
-    const sourceParsed = parsePath(rule.source)
-    if (!sourceParsed.gridId || !ctx.gridIds.has(sourceParsed.gridId)) {
-      warnings.push(`fieldRules[${idx}]: source grid "${sourceParsed.gridId}" not found`)
+    const gridId = path.slice(0, dotIdx)
+    const fieldId = path.slice(dotIdx + 1)
+
+    if (!ctx.gridIds.has(gridId)) {
+      warnings.push(`fieldRulesV2: key "${path}" references unknown grid "${gridId}"`)
     }
-    if (!sourceParsed.fieldId || !ctx.fieldIds.has(sourceParsed.fieldId)) {
-      warnings.push(`fieldRules[${idx}]: source field "${sourceParsed.fieldId}" not found`)
+    if (!ctx.fieldPaths.has(path)) {
+      warnings.push(`fieldRulesV2: key "${path}" references unknown field "${fieldId}" in grid "${gridId}"`)
     }
-    const targets = rule.targets ?? []
-    if (!Array.isArray(targets) || targets.length === 0) {
-      warnings.push(`fieldRules[${idx}]: no targets provided`)
-      continue
-    }
-    for (const target of targets) {
-      const targetParsed = parsePath(target)
-      if (!targetParsed.gridId || !ctx.gridIds.has(targetParsed.gridId)) {
-        warnings.push(`fieldRules[${idx}]: target grid "${targetParsed.gridId}" not found`)
+
+    const idsForPath = seenIds.get(path) ?? new Set()
+    seenIds.set(path, idsForPath)
+
+    for (const rule of rules) {
+      if (!rule.id) {
+        warnings.push(`fieldRulesV2["${path}"]: rule is missing required "id"`)
+      } else if (idsForPath.has(rule.id)) {
+        warnings.push(`fieldRulesV2["${path}"]: duplicate rule id "${rule.id}"`)
+      } else {
+        idsForPath.add(rule.id)
       }
-      if (!targetParsed.fieldId || !ctx.fieldIds.has(targetParsed.fieldId)) {
-        warnings.push(`fieldRules[${idx}]: target field "${targetParsed.fieldId}" not found`)
+
+      if (!rule.outcome) {
+        warnings.push(`fieldRulesV2["${path}"] rule "${rule.id}": missing "outcome" expression`)
+      }
+
+      const expectedEngine = deriveEngineType(rule.property)
+      if (rule.engineType !== expectedEngine) {
+        warnings.push(
+          `fieldRulesV2["${path}"] rule "${rule.id}": engineType "${rule.engineType}" does not match property "${rule.property}" (expected "${expectedEngine}")`,
+        )
       }
     }
   }
 
-  return { warnings }
+  return { errors: [], warnings }
 }

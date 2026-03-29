@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { deriveEngineType, type RuleProperty, type EngineType } from '@/lib/field-rules-v2/types'
+import { deriveEngineType, type RuleProperty, type EngineType } from '@/lib/field-rules'
 
 interface PropertyOption {
   value: RuleProperty

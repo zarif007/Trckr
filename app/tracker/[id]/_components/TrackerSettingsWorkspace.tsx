@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { FieldSettingsDialog } from '@/app/components/tracker-display/edit-mode/field-settings'
-import { getEffectiveFieldRules } from '@/lib/field-rules'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import type {
@@ -140,8 +139,7 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
     const validations = schema.validations ?? {}
     const calculations = schema.calculations ?? {}
     const bindings = schema.bindings ?? {}
-    const fieldRulesByTarget = schema.fieldRulesByTarget ?? {}
-    const effectiveFieldRules = getEffectiveFieldRules(schema)
+    const fieldRulesV2 = schema.fieldRulesV2 ?? {}
 
     const seen = new Set<string>()
     const rows: EditableTarget[] = []
@@ -161,8 +159,7 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
           : mode === 'validations'
             ? (validations[key]?.length ?? 0)
             : mode === 'fieldRules'
-              ? (fieldRulesByTarget[key]?.length ??
-                effectiveFieldRules.filter((rule) => rule.targets?.includes(key)).length)
+              ? (fieldRulesV2[key]?.length ?? 0)
             : calculations[key]
               ? 1
               : 0
@@ -265,23 +262,11 @@ export function TrackerSettingsWorkspace({ mode }: { mode: WorkspaceMode }) {
           validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
         }
       } else if (mode === 'fieldRules') {
-        const nextFieldRulesByTarget = { ...(schema.fieldRulesByTarget ?? {}) }
-        delete nextFieldRulesByTarget[key]
-        const nextFieldRules = Array.isArray(schema.fieldRules)
-          ? schema.fieldRules
-              .map((rule) => ({
-                ...rule,
-                targets: Array.isArray(rule.targets)
-                  ? rule.targets.filter((target) => target !== key)
-                  : [],
-              }))
-              .filter((rule) => (rule.targets?.length ?? 0) > 0)
-          : undefined
+        const nextFieldRulesV2 = { ...(schema.fieldRulesV2 ?? {}) }
+        delete nextFieldRulesV2[key]
         nextSchema = {
           ...schema,
-          fieldRulesByTarget:
-            Object.keys(nextFieldRulesByTarget).length > 0 ? nextFieldRulesByTarget : undefined,
-          fieldRules: nextFieldRules && nextFieldRules.length > 0 ? nextFieldRules : undefined,
+          fieldRulesV2: Object.keys(nextFieldRulesV2).length > 0 ? nextFieldRulesV2 : undefined,
         }
       } else {
         const nextCalculations = { ...(schema.calculations ?? {}) }

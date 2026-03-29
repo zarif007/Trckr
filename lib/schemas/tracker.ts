@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { dynamicOptionsDefinitionsSchema } from '@/lib/dynamic-options/user-functions/schema'
 import { TRACKER_FIELD_TYPES } from '@/lib/tracker-field-types'
-import { fieldRulesV2Schema } from '@/lib/field-rules-v2/schema'
+import { fieldRulesSchema as fieldRulesV2ZodSchema } from '@/lib/field-rules'
 
 const tabId = () =>
   z
@@ -135,35 +135,6 @@ export const stylesSchema = z
   .describe('Style overrides keyed by grid or view id. Only when user asks for visual changes.')
 
 // FIELD RULES (conditional field actions)
-
-const fieldRuleActionEnum = z
-  .enum(['isHidden', 'isRequired', 'isDisabled'])
-  .catch('isHidden')
-
-export const fieldRuleSchema = z
-  .object({
-    source: z.string().describe('Source field path (grid_id.field_id)'),
-    operator: z.string().optional().describe('Comparison operator (e.g. =, !=, >, contains, in, is_empty)'),
-    value: z.any().optional().describe('Value to compare against'),
-    action: fieldRuleActionEnum.describe('Target field property to set (hide/require/disable)'),
-    set: z.union([z.boolean(), z.any()]).optional().describe('For isHidden/isRequired/isDisabled: value to set (default true).'),
-    targets: z.array(z.string()).default([]).describe('Target field paths (grid_id.field_id)'),
-    priority: z.coerce.number().optional().describe('Priority for conflict resolution; higher wins'),
-  })
-  .passthrough()
-
-/** Per-target rule (target implied by key); used when editing Field Rules in field settings. */
-export const fieldRuleForTargetSchema = fieldRuleSchema.omit({ targets: true })
-
-export const fieldRulesSchema = z
-  .array(fieldRuleSchema)
-  .default([])
-  .describe('Conditional field actions: evaluate source field, apply action to targets.')
-
-export const fieldRulesByTargetSchema = z
-  .record(z.string(), z.array(fieldRuleForTargetSchema))
-  .optional()
-  .describe('Field rules keyed by target field path (grid_id.field_id). When set, used instead of fieldRules array.')
 
 // BINDINGS - select/multiselect auto-population
 
@@ -361,11 +332,7 @@ export const trackerSchema = z
       .default([])
       .describe('Places fields into grids. Each node links one field to one grid with an order.'),
 
-    fieldRules: fieldRulesSchema,
-
-    fieldRulesByTarget: fieldRulesByTargetSchema,
-
-    fieldRulesV2: fieldRulesV2Schema,
+    fieldRulesV2: fieldRulesV2ZodSchema,
 
     bindings: bindingsSchema,
 

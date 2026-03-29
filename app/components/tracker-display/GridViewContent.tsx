@@ -7,12 +7,11 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
   GridDataRecord,
 } from './types'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { GridType } from './types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 import { TrackerTableGrid } from './TrackerTableGrid'
 import { TrackerKanbanGrid } from './TrackerKanbanGrid'
 import { TrackerDivGrid } from './grids/div'
@@ -30,8 +29,7 @@ export interface GridViewContentProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: RefObject<GridDataRecord> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -55,7 +53,6 @@ export function GridViewContent({
   validations,
   calculations,
   styleOverrides,
-  fieldRules,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -106,7 +103,6 @@ export function GridViewContent({
           validations={validations}
           calculations={calculations}
           styleOverrides={styleOverrides}
-          fieldRules={fieldRules}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -131,7 +127,6 @@ export function GridViewContent({
           validations={validations}
           calculations={calculations}
           styleOverrides={styleOverrides}
-          fieldRules={fieldRules}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -156,7 +151,6 @@ export function GridViewContent({
           validations={validations}
           calculations={calculations}
           styleOverrides={styleOverrides}
-          fieldRules={fieldRules}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}

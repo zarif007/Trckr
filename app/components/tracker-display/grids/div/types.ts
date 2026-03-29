@@ -6,10 +6,9 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
 } from '../../types'
 import type { FieldCalculationRule } from '@/lib/functions/types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 
 export type DropPlacement = 'left' | 'right' | 'above' | 'below'
 export type DropIndicator = { overId: string; placement: DropPlacement } | null
@@ -34,8 +33,7 @@ export interface TrackerDivGridProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>

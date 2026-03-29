@@ -31,14 +31,11 @@ import {
   sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import { getBindingForField, findOptionRow, applyBindings, parsePath } from '@/lib/resolve-bindings'
-import { resolveFieldRuleOverrides } from '@/lib/field-rules'
-import { resolveFieldRulesV2ForRow } from '@/lib/field-rules-v2/resolve'
-import { mergeV1V2Overrides } from '@/lib/field-rules-v2/merge'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import { resolveFieldRulesForRow } from '@/lib/field-rules'
+import type { FieldRulesMap } from '@/lib/field-rules'
 import { resolveKanbanStyles } from '@/lib/style-utils'
 import { EntryFormDialog } from './grids/data-table/entry-form-dialog'
 import { useTrackerOptionsContext } from './tracker-options-context'
-import { useGridFieldRules } from './hooks/useGridFieldRules'
 import { EntryWayButton } from './entry-way/EntryWayButton'
 import { buildEntryWaysForGrid } from './entry-way/entry-way-registry'
 import {
@@ -54,7 +51,6 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
 } from './types'
 import type { TrackerContextForOptions } from '@/lib/binding'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -72,8 +68,7 @@ export interface TrackerKanbanGridProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styleOverrides?: StyleOverrides
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData?: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: React.RefObject<Record<string, Array<Record<string, unknown>>>> | null
   gridDataForThisGrid?: Array<Record<string, unknown>>
@@ -94,7 +89,6 @@ function TrackerKanbanGridInner({
   validations,
   calculations,
   styleOverrides,
-  fieldRules,
   fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
@@ -130,7 +124,6 @@ function TrackerKanbanGridInner({
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null)
   const [cardFieldVisibility, setCardFieldVisibility] = useState<Record<string, boolean>>({})
 
-  const { rulesForGrid } = useGridFieldRules(grid.id, fieldRules)
   const ks = useMemo(() => resolveKanbanStyles(styleOverrides), [styleOverrides])
 
   const kanbanState = useKanbanGroups({
@@ -478,9 +471,8 @@ function TrackerKanbanGridInner({
               onSaveAnother={(values) => onAddEntry(values)}
               getBindingUpdates={getBindingUpdates}
               getFieldOverrides={(values, fieldId) => {
-                const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, 0, values)[fieldId]
-                const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, 0)
-                return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+                const { overrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, values, 0)
+                return overrides[fieldId] as Record<string, unknown> | undefined
               }}
               gridId={grid.id}
               calculations={calculations}
@@ -502,9 +494,8 @@ function TrackerKanbanGridInner({
           getBindingUpdates={getBindingUpdates}
           getFieldOverrides={(values, fieldId) => {
             const rowIndex = editRowIndex ?? 0
-            const v1Override = resolveFieldRuleOverrides(rulesForGrid, fullGridData, grid.id, rowIndex, values)[fieldId]
-            const v2Result = resolveFieldRulesV2ForRow(fieldRulesV2, grid.id, values, rowIndex)
-            return mergeV1V2Overrides(v1Override, v2Result.propertyOverrides[fieldId])
+            const { overrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, values, rowIndex)
+            return overrides[fieldId] as Record<string, unknown> | undefined
           }}
           gridId={grid.id}
           calculations={calculations}
@@ -552,7 +543,7 @@ function TrackerKanbanGridInner({
                               cardFields={visibleCardFields}
                               gridId={grid.id}
                               gridData={gridDataForKanban}
-                              fieldRules={rulesForGrid}
+                              fieldRules={fieldRulesV2}
                               fieldMetadata={fieldMetadata}
                               onEditRow={editable ? setEditRowIndex : undefined}
                               onDeleteRow={
@@ -578,7 +569,7 @@ function TrackerKanbanGridInner({
                       cardFields={visibleCardFields}
                       gridId={grid.id}
                       gridData={gridDataForKanban}
-                      fieldRules={rulesForGrid}
+                      fieldRules={fieldRulesV2}
                       fieldMetadata={fieldMetadata}
                       styles={cardStyles}
                     />
@@ -617,7 +608,7 @@ function TrackerKanbanGridInner({
             cardFields={visibleCardFields}
             gridId={grid.id}
             gridData={gridDataForKanban}
-            fieldRules={rulesForGrid}
+            fieldRules={fieldRulesV2}
             fieldMetadata={fieldMetadata}
             isOverlay
             styles={cardStyles}

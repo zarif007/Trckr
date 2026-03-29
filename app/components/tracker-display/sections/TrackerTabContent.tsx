@@ -10,10 +10,9 @@ import type {
   TrackerLayoutNode,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
   GridDataRecord,
 } from '../types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import { TrackerSection } from './TrackerSection'
 import { useCanEditLayout, BlockEditor } from '../edit-mode'
@@ -29,8 +28,7 @@ export interface TrackerTabContentProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  fieldRules?: FieldRules
-  fieldRulesV2?: FieldRulesV2Map
+  fieldRulesV2?: FieldRulesMap
   gridData: GridDataRecord
   gridDataRef?: RefObject<GridDataRecord> | null
   readOnly?: boolean
@@ -57,7 +55,6 @@ function areTabContentPropsEqual(prev: TrackerTabContentProps, next: TrackerTabC
     prev.validations !== next.validations ||
     prev.calculations !== next.calculations ||
     prev.styles !== next.styles ||
-    prev.fieldRules !== next.fieldRules ||
     prev.fieldRulesV2 !== next.fieldRulesV2 ||
     prev.readOnly !== next.readOnly ||
     prev.onUpdate !== next.onUpdate ||
@@ -83,7 +80,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   validations,
   calculations,
   styles,
-  fieldRules,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -122,7 +118,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
           validations={validations}
           calculations={calculations}
           styles={styles}
-          fieldRules={fieldRules}
           gridData={gridData}
           gridDataRef={gridDataRef}
           onUpdate={onUpdate}
@@ -151,7 +146,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
             validations={validations}
             calculations={calculations}
             styles={styles}
-            fieldRules={fieldRules}
             fieldRulesV2={fieldRulesV2}
             gridData={gridData}
             gridDataRef={gridDataRef}

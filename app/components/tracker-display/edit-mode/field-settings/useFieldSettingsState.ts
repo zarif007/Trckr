@@ -20,8 +20,7 @@ import {
 } from '../../bindings/bindings-utils'
 import { parsePath } from '@/lib/resolve-bindings'
 import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
-import type { FieldRuleForTarget } from '@/lib/field-rules'
-import type { FieldRuleV2 } from '@/lib/field-rules-v2/types'
+import type { FieldRule } from '@/lib/field-rules'
 import {
   defaultExpr,
   ensureRuleDefaults,
@@ -69,8 +68,7 @@ export function useFieldSettingsState({
   const [statusOptionsText, setStatusOptionsText] = useState('')
   const [rules, setRules] = useState<FieldValidationRule[]>([])
   const [calculationRule, setCalculationRule] = useState<FieldCalculationRule | null>(null)
-  const [fieldRules, setFieldRules] = useState<FieldRuleForTarget[]>([])
-  const [fieldRulesV2, setFieldRulesV2] = useState<FieldRuleV2[]>([])
+  const [fieldRulesV2, setFieldRulesV2] = useState<FieldRule[]>([])
   const [bindingEnabled, setBindingEnabled] = useState(false)
   const [bindingDraft, setBindingDraft] = useState<BindingDraft | null>(null)
   const [siblingTrackers, setSiblingTrackers] = useState<Array<{ id: string; name: string | null }>>(
@@ -351,24 +349,8 @@ export function useFieldSettingsState({
     const nextRules = (schema?.validations?.[validationKey] ?? []).map(ensureRuleDefaults)
     setRules(nextRules)
     const nextCalculation = validationKey ? (schema?.calculations?.[validationKey] ?? null) : null
-    const nextFieldRules =
-      validationKey && schema?.fieldRulesByTarget?.[validationKey]
-        ? schema.fieldRulesByTarget[validationKey]
-        : validationKey && Array.isArray(schema?.fieldRules)
-          ? schema.fieldRules
-            .filter((r) => r?.targets?.includes(validationKey))
-            .map((r) => ({
-              source: r.source,
-              operator: r.operator,
-              value: r.value,
-              action: r.action,
-              set: r.set,
-              priority: r.priority,
-            }))
-          : []
-    setFieldRules(nextFieldRules)
     const nextFieldRulesV2 = validationKey
-      ? ((schema?.fieldRulesV2?.[validationKey] ?? []) as FieldRuleV2[])
+      ? ((schema?.fieldRulesV2?.[validationKey] ?? []) as FieldRule[])
       : []
     setFieldRulesV2(nextFieldRulesV2)
     setCalculationRule(nextCalculation && nextCalculation.expr ? nextCalculation : null)
@@ -696,16 +678,6 @@ const isBindableField = field.dataType === 'options' || field.dataType === 'mult
       }
     }
 
-    const nextFieldRulesByTarget = { ...(schema.fieldRulesByTarget ?? {}) }
-    if (vKey) {
-      const validFieldRules = fieldRules.filter((r) => r.source?.trim())
-      if (validFieldRules.length > 0) {
-        nextFieldRulesByTarget[vKey] = validFieldRules
-      } else {
-        delete nextFieldRulesByTarget[vKey]
-      }
-    }
-
     const nextFieldRulesV2Map = { ...((schema as any).fieldRulesV2 ?? {}) }
     if (vKey) {
       if (fieldRulesV2.length > 0) {
@@ -721,7 +693,6 @@ const isBindableField = field.dataType === 'options' || field.dataType === 'mult
       validations: Object.keys(nextValidations).length > 0 ? nextValidations : undefined,
       calculations: Object.keys(nextCalculations).length > 0 ? nextCalculations : undefined,
       bindings: nextBindings,
-      fieldRulesByTarget: Object.keys(nextFieldRulesByTarget).length > 0 ? nextFieldRulesByTarget : undefined,
       fieldRulesV2: Object.keys(nextFieldRulesV2Map).length > 0 ? nextFieldRulesV2Map : undefined,
       dynamicOptions: dynamicOptionsDraft,
     })
@@ -757,7 +728,6 @@ const isBindableField = field.dataType === 'options' || field.dataType === 'mult
     statusOptionsText,
     rules,
     calculationRule,
-    fieldRules,
     fieldRulesV2,
     bindingEnabled,
     bindingDraft,
@@ -903,8 +873,6 @@ const isBindableField = field.dataType === 'options' || field.dataType === 'mult
     handleRuleTypeChange,
     calculationRule,
     setCalculationRule,
-    fieldRules,
-    setFieldRules,
     fieldRulesV2,
     setFieldRulesV2,
     bindingEnabled,

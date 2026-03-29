@@ -14,8 +14,8 @@ import type {
   TrackerGrid,
   TrackerBindings,
   StyleOverrides,
-  FieldRules,
 } from '../types'
+import type { FieldRulesMap } from '@/lib/field-rules'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 
 // ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ export interface BlockEditorProps {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, StyleOverrides>
-  fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesMap
   gridData: Record<string, Array<Record<string, unknown>>>
   gridDataRef?: RefObject<GridDataRecord> | null
   onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
@@ -62,7 +62,7 @@ export interface EditModeSchema {
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   styles?: Record<string, unknown>
-  fieldRules?: FieldRules
+  fieldRulesV2?: FieldRulesMap
 }
 
 /** Result of "Add column" or "Add field" dialog. */
