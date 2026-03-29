@@ -1,15 +1,15 @@
 // lib/validate-tracker/validators/field-rules-v2.ts
 
 import type { ValidationContext, ValidatorResult } from '../types'
-import type { FieldRulesV2Map } from '@/lib/field-rules-v2/types'
-import { deriveEngineType } from '@/lib/field-rules-v2/types'
+import type { FieldRulesMap } from '@/lib/field-rules'
+import { deriveEngineType } from '@/lib/field-rules'
 
 /**
  * Validates fieldRulesV2 entries.
  * Issues warnings (not errors) to remain forward-compatible with new rule shapes.
  */
-export function validateFieldRulesV2(
-  fieldRulesV2: FieldRulesV2Map | undefined,
+export function validateFieldRules(
+  fieldRulesV2: FieldRulesMap | undefined,
   ctx: ValidationContext,
 ): ValidatorResult {
   if (!fieldRulesV2) return { errors: [], warnings: [] }

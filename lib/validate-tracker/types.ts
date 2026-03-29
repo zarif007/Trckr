@@ -29,7 +29,7 @@ export interface TrackerLike {
   calculations?: Record<string, FieldCalculationRule>
   fieldRules?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>
   dynamicOptions?: DynamicOptionsDefinitions
-  fieldRulesV2?: import('@/lib/field-rules-v2/types').FieldRulesV2Map
+  fieldRulesV2?: import('@/lib/field-rules').FieldRulesMap
 }
 
 export interface ValidationResult {
