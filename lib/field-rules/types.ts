@@ -7,19 +7,20 @@ export type RuleProperty =
   | 'label'
   | 'required'
   | 'disabled'
-  | 'options'
   | 'value'       // routed to valueOverrides
 
+/**
+ * Trigger types for field rules.
+ * Lifecycle triggers fire at specific row events.
+ * onFieldChange fires reactively whenever any field referenced in the
+ * rule's condition/outcome changes (auto-detected from the expression AST).
+ */
 export type NodeTriggerType =
   | 'onMount'
   | 'onRowCreate'
   | 'onRowCopy'
-  | 'onFieldChange'
-  | 'onConditionMet'
-  | 'onUserContext'
-  | 'onExternalBinding'
   | 'onRowFocus'
-  | 'onDependencyResolve'
+  | 'onFieldChange'
 
 export type EngineType = 'property' | 'value'
 
@@ -31,18 +32,10 @@ export interface FieldRule {
   id: string
   enabled: boolean
   trigger: NodeTriggerType
-  /** For onFieldChange: which field to watch. For onConditionMet: the condition expr. */
-  triggerConfig?: {
-    watchedFieldId?: string
-    contextVar?: 'user' | 'role' | 'team' | 'timezone'
-    sourceSchemaId?: string
-    fieldPath?: string
-    refreshIntervalMs?: number
-    linkedFieldId?: string
-    recordPath?: string
-    condition?: ExprNode
-  }
-  /** Guard expression — rule only fires when this evaluates truthy. */
+  /**
+   * Guard expression — for boolean properties this IS the outcome (field is active when truthy).
+   * For label/value properties this is an optional gate before the outcome is applied.
+   */
   condition?: ExprNode
   property: RuleProperty
   outcome: ExprNode
@@ -63,7 +56,6 @@ export interface FieldRuleOverride {
   required?: boolean
   disabled?: boolean
   label?: string
-  options?: Array<{ label: string; value: unknown; id?: string }>
   value?: unknown
 }
 
@@ -72,20 +64,3 @@ export interface FieldRulesResult {
   overrides: Record<string, FieldRuleOverride>
   valueOverrides: Record<string, unknown>
 }
-
-/** Triggers evaluated synchronously at render time. */
-export const SYNC_TRIGGER_TYPES: NodeTriggerType[] = [
-  'onMount',
-  'onRowCreate',
-  'onRowCopy',
-  'onFieldChange',
-  'onConditionMet',
-  'onUserContext',
-  'onRowFocus',
-]
-
-/** Triggers requiring async resolution (not yet implemented). */
-export const ASYNC_TRIGGER_TYPES: NodeTriggerType[] = [
-  'onExternalBinding',
-  'onDependencyResolve',
-]

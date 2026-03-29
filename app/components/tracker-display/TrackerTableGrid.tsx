@@ -178,8 +178,27 @@ function TrackerTableGridInner({
     [grid.id, uniqueFieldLayoutNodes, reorder]
   )
 
-  /** Per-row override cache: compute once per row, reuse for all cells and hiddenColumnIds. */
-  const rowOverridesCache = useMemo(() => {
+  /**
+   * Merges overrides + valueOverrides from the resolver into one flat map.
+   * Used by both the snapshot cache (for hiddenColumnIds) and the live callback.
+   */
+  function mergeRowOverrides(
+    overrides: Record<string, FieldRuleOverride>,
+    valueOverrides: Record<string, unknown>,
+  ): Record<string, FieldRuleOverride> {
+    const merged: Record<string, FieldRuleOverride> = { ...overrides }
+    for (const [fieldId, val] of Object.entries(valueOverrides)) {
+      merged[fieldId] = { ...merged[fieldId], value: val }
+    }
+    return merged
+  }
+
+  /**
+   * Snapshot-based cache: resolves overrides from saved row data.
+   * Only used for hiddenColumnIds (column-level static visibility) so we don't
+   * re-evaluate on every keystroke when computing which columns to suppress entirely.
+   */
+  const rowOverridesSnapshot = useMemo(() => {
     const out: Record<number, Record<string, FieldRuleOverride>> = {}
     const rowsToCompute = rows.length > 0 ? rows : [{} as Record<string, unknown>]
     rowsToCompute.forEach((row, idx) => {
@@ -188,31 +207,40 @@ function TrackerTableGridInner({
         enrichedRow[`${grid.id}.${k}`] = v
       }
       const { overrides, valueOverrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, enrichedRow, idx)
-      const merged: Record<string, FieldRuleOverride> = { ...overrides }
-      for (const [fieldId, val] of Object.entries(valueOverrides)) {
-        merged[fieldId] = { ...merged[fieldId], value: val }
-      }
-      out[idx] = merged
+      out[idx] = mergeRowOverrides(overrides, valueOverrides)
     })
     return out
   }, [grid.id, rows, fieldRulesV2])
 
   const hiddenColumnIds = useMemo(() => {
     const hidden = new Set<string>()
-    const allFieldIds = new Set(Object.values(rowOverridesCache).flatMap((r) => Object.keys(r)))
+    const allFieldIds = new Set(Object.values(rowOverridesSnapshot).flatMap((r) => Object.keys(r)))
     allFieldIds.forEach((fieldId) => {
-      const rowCount = Object.keys(rowOverridesCache).length
-      const allHidden = rowCount > 0 && Object.values(rowOverridesCache).every(
+      const rowCount = Object.keys(rowOverridesSnapshot).length
+      const allHidden = rowCount > 0 && Object.values(rowOverridesSnapshot).every(
         (r) => r[fieldId]?.visibility === false
       )
       if (allHidden) hidden.add(fieldId)
     })
     return hidden
-  }, [rowOverridesCache])
+  }, [rowOverridesSnapshot])
 
-  const getFieldOverrides = useCallback(
-    (rowIndex: number, fieldId: string) => rowOverridesCache[rowIndex]?.[fieldId],
-    [rowOverridesCache]
+  /**
+   * Live override resolution: called by DataTable with the current in-memory row data
+   * (including unsaved edits). This makes onFieldChange rules — and all other rules —
+   * react immediately when any field in the row changes during an editing session.
+   */
+  const getRowOverrides = useCallback(
+    (rowIndex: number, rowData: Record<string, unknown>): Record<string, FieldRuleOverride> | undefined => {
+      if (!fieldRulesV2) return undefined
+      const enrichedRow: Record<string, unknown> = { ...rowData }
+      for (const [k, v] of Object.entries(rowData)) {
+        enrichedRow[`${grid.id}.${k}`] = v
+      }
+      const { overrides, valueOverrides } = resolveFieldRulesForRow(fieldRulesV2, grid.id, enrichedRow, rowIndex)
+      return mergeRowOverrides(overrides, valueOverrides)
+    },
+    [grid.id, fieldRulesV2],
   )
   /** For Add Entry form: resolve overrides using only the form values, not row 0 data. */
   const getFieldOverridesForAdd = useCallback(
@@ -603,8 +631,7 @@ function TrackerTableGridInner({
         columns={columns}
         data={rows}
         fieldMetadata={fieldMetadata}
-        getFieldOverrides={getFieldOverrides}
-        getRowOverrides={(rowIndex) => rowOverridesCache[rowIndex]}
+        getRowOverrides={getRowOverrides}
         hiddenColumns={[...hiddenColumnIds]}
         getFieldOverridesForAdd={getFieldOverridesForAdd}
         onCellUpdate={handleCellUpdate}

@@ -90,8 +90,6 @@ describe('resolveFieldRulesForRow', () => {
     const map: FieldRulesMap = {
       'tasks_grid.blocked_reason': [
         makeRule({
-          trigger: 'onFieldChange',
-          triggerConfig: { watchedFieldId: 'tasks_grid.status' },
           condition: eqExpr(fieldExpr('tasks_grid.status'), constExpr('blocked')),
           property: 'visibility',
           outcome: constExpr(true),
@@ -124,11 +122,14 @@ describe('resolveFieldRulesForRow', () => {
     expect(result.overrides).toEqual({})
   })
 
-  it('skips async trigger types', () => {
-    const map: FieldRulesMap = {
-      'tasks_grid.title': [makeRule({ trigger: 'onExternalBinding', outcome: constExpr(true) })],
+  it('all lifecycle triggers are evaluated', () => {
+    const triggers: Array<FieldRule['trigger']> = ['onMount', 'onRowCreate', 'onRowCopy', 'onRowFocus']
+    for (const trigger of triggers) {
+      const map: FieldRulesMap = {
+        'tasks_grid.title': [makeRule({ trigger, outcome: constExpr(true) })],
+      }
+      const result = resolveFieldRulesForRow(map, 'tasks_grid', {}, 0)
+      expect(result.overrides['title']?.visibility).toBe(true)
     }
-    const result = resolveFieldRulesForRow(map, 'tasks_grid', {}, 0)
-    expect(result.overrides['title']).toBeUndefined()
   })
 })

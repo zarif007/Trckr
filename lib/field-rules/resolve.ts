@@ -1,19 +1,12 @@
 /**
  * Resolve field rules against row values to produce per-field overrides
- * for a target grid row. Only SYNC_TRIGGER_TYPES are evaluated here.
- * Async triggers (onExternalBinding, onDependencyResolve) require React state.
- *
- * Called at render time — must be pure and fast.
+ * for a target grid row. All triggers are lifecycle-based and evaluated
+ * synchronously at render time — must be pure and fast.
  */
 
 import { evaluateExpr } from '@/lib/functions/evaluator'
 import type { FunctionContext } from '@/lib/functions/types'
-import {
-  SYNC_TRIGGER_TYPES,
-  type FieldRulesMap,
-  type FieldRulesResult,
-  type FieldRuleOverride,
-} from './types'
+import type { FieldRulesMap, FieldRulesResult, FieldRuleOverride } from './types'
 
 export function resolveFieldRulesForRow(
   fieldRules: FieldRulesMap | undefined,
@@ -36,7 +29,6 @@ export function resolveFieldRulesForRow(
 
     for (const rule of rules) {
       if (!rule.enabled) continue
-      if (!SYNC_TRIGGER_TYPES.includes(rule.trigger)) continue
 
       if (rule.condition) {
         const pass = evaluateExpr(rule.condition as never, fnCtx)
@@ -61,11 +53,6 @@ export function resolveFieldRulesForRow(
             break
           case 'disabled':
             override.disabled = Boolean(value)
-            break
-          case 'options':
-            if (Array.isArray(value)) {
-              override.options = value as FieldRuleOverride['options']
-            }
             break
         }
         overrides[fieldId] = override

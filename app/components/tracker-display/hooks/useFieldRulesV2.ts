@@ -6,10 +6,7 @@ import type { FieldRulesMap, FieldRulesResult } from '@/lib/field-rules'
 
 /**
  * Resolves field rules for a single grid row.
- *
- * Sync triggers are resolved inline (pure, no state).
- * Async triggers (onExternalBinding, onDependencyResolve) are not yet
- * implemented — they require a separate effect-based extension.
+ * All triggers are lifecycle-based and evaluated synchronously — pure, no state.
  */
 export function useFieldRules(
   fieldRules: FieldRulesMap | undefined,

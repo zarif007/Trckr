@@ -1,10 +1,10 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
-import { Check, AlertCircle } from 'lucide-react'
+import { Check, AlertCircle, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 export interface FlowBuilderLayoutProps {
   /** Short instruction text (e.g. "Drag nodes from the palette, connect them, then click Apply.") */
@@ -48,6 +48,8 @@ export function FlowBuilderLayout({
   paletteClassName,
   applySuccess = false,
 }: FlowBuilderLayoutProps) {
+  const [paletteOpen, setPaletteOpen] = useState(true)
+
   return (
     <div
       className={cn(
@@ -71,16 +73,36 @@ export function FlowBuilderLayout({
 
       {/* Main Content: Palette + Canvas */}
       <div className="flex min-h-0 min-w-0 w-full flex-1 gap-4">
-        {/* Palette Sidebar — scrollable when content exceeds viewport */}
+        {/* Palette Sidebar — collapsible */}
         <div
           className={cn(
-            'flex max-h-[70vh] shrink-0 flex-col gap-3 overflow-y-auto border bg-muted/30 p-3',
+            'flex shrink-0 flex-col border bg-muted/30 overflow-hidden transition-all duration-200 min-h-0',
             theme.radius.md,
             theme.border.verySubtle,
-            paletteClassName ?? 'w-[160px]'
+            paletteOpen ? (paletteClassName ?? 'w-[180px]') : 'w-9'
           )}
         >
-          {palette}
+          {/* Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setPaletteOpen((v) => !v)}
+            className="flex h-8 w-full shrink-0 items-center justify-center border-b border-border/20 hover:bg-muted/60 transition-colors"
+            title={paletteOpen ? 'Hide palette' : 'Show palette'}
+            aria-label={paletteOpen ? 'Hide palette' : 'Show palette'}
+          >
+            {paletteOpen ? (
+              <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <PanelLeftOpen className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+
+          {/* Palette Content — only shown when open */}
+          {paletteOpen && (
+            <div className="flex flex-col gap-3 overflow-y-auto p-3 flex-1">
+              {palette}
+            </div>
+          )}
         </div>
 
         {/* Canvas Area */}

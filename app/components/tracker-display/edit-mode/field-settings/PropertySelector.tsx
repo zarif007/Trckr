@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { deriveEngineType, type RuleProperty, type EngineType } from '@/lib/field-rules'
 
 interface PropertyOption {
@@ -18,15 +17,14 @@ interface PropertyOption {
   description: string
 }
 
-const UI_PROPERTIES: PropertyOption[] = [
+const STATE_PROPERTIES: PropertyOption[] = [
   { value: 'visibility', label: 'Show / Hide', description: 'Controls field visibility' },
   { value: 'required', label: 'Required', description: 'Marks field as required' },
   { value: 'disabled', label: 'Disabled', description: 'Makes field read-only' },
-  { value: 'label', label: 'Label text', description: 'Overrides the field label' },
-  { value: 'options', label: 'Options', description: 'Replaces select/multiselect options' },
 ]
 
-const DATA_PROPERTIES: PropertyOption[] = [
+const CONTENT_PROPERTIES: PropertyOption[] = [
+  { value: 'label', label: 'Label text', description: 'Overrides the field label' },
   { value: 'value', label: 'Value', description: 'Sets the field value programmatically' },
 ]
 
@@ -38,42 +36,37 @@ interface PropertySelectorProps {
 
 export function PropertySelector({ value, onChange, disabled }: PropertySelectorProps) {
   return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={value}
-        onValueChange={(v) => {
-          const prop = v as RuleProperty
-          onChange(prop, deriveEngineType(prop))
-        }}
-        disabled={disabled}
-      >
-        <SelectTrigger className="h-8 text-xs flex-1">
-          <SelectValue placeholder="Select property…" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">UI State</SelectLabel>
-            {UI_PROPERTIES.map((p) => (
-              <SelectItem key={p.value} value={p.value} className="text-xs">
-                <span className="font-medium">{p.label}</span>
-                <span className="ml-2 text-muted-foreground text-[11px]">{p.description}</span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-          <SelectGroup>
-            <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Data</SelectLabel>
-            {DATA_PROPERTIES.map((p) => (
-              <SelectItem key={p.value} value={p.value} className="text-xs">
-                <span className="font-medium">{p.label}</span>
-                <span className="ml-2 text-muted-foreground text-[11px]">{p.description}</span>
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      <Badge variant="outline" className="shrink-0 text-[10px] h-5 px-1.5 font-mono border-border/60">
-        {deriveEngineType(value) === 'property' ? 'UI' : 'Data'}
-      </Badge>
-    </div>
+    <Select
+      value={value}
+      onValueChange={(v) => {
+        const prop = v as RuleProperty
+        onChange(prop, deriveEngineType(prop))
+      }}
+      disabled={disabled}
+    >
+      <SelectTrigger className="h-8 text-xs">
+        <SelectValue placeholder="Select property…" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectGroup>
+          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">State</SelectLabel>
+          {STATE_PROPERTIES.map((p) => (
+            <SelectItem key={p.value} value={p.value} className="text-xs">
+              <span className="font-medium">{p.label}</span>
+              <span className="ml-2 text-muted-foreground text-[11px]">{p.description}</span>
+            </SelectItem>
+          ))}
+        </SelectGroup>
+        <SelectGroup>
+          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Content</SelectLabel>
+          {CONTENT_PROPERTIES.map((p) => (
+            <SelectItem key={p.value} value={p.value} className="text-xs">
+              <span className="font-medium">{p.label}</span>
+              <span className="ml-2 text-muted-foreground text-[11px]">{p.description}</span>
+            </SelectItem>
+          ))}
+        </SelectGroup>
+      </SelectContent>
+    </Select>
   )
 }

@@ -11,47 +11,16 @@ import { FieldRuleV2Editor } from './FieldRuleV2Editor'
 import type { AvailableField } from '../expr/expr-types'
 import type { TrackerDisplayProps } from '../../types'
 import type { FieldRule, NodeTriggerType, RuleProperty } from '@/lib/field-rules'
-
-// ---- Trigger group → visual color ----
-type TriggerGroup = 'lifecycle' | 'reactive' | 'external'
-
-const TRIGGER_GROUP: Record<NodeTriggerType, TriggerGroup> = {
-  onMount: 'lifecycle',
-  onRowCreate: 'lifecycle',
-  onRowCopy: 'lifecycle',
-  onRowFocus: 'lifecycle',
-  onFieldChange: 'reactive',
-  onConditionMet: 'reactive',
-  onUserContext: 'external',
-  onExternalBinding: 'external',
-  onDependencyResolve: 'external',
-}
-
-const TRIGGER_ICON_CLASS: Record<TriggerGroup, string> = {
-  lifecycle: 'bg-primary/10 text-primary',
-  reactive: 'bg-yellow-500/10 text-yellow-400',
-  external: 'bg-muted text-muted-foreground',
-}
-
-const TRIGGER_BADGE_CLASS: Record<TriggerGroup, string> = {
-  lifecycle: 'bg-primary/10 border-primary/20 text-primary',
-  reactive: 'bg-yellow-500/10 border-yellow-500/25 text-yellow-400',
-  external: '', // intentional: falls back to default badge variant styling
-}
+import { extractFieldRefsFromExpr } from '@/lib/field-rules'
 
 const TRIGGER_LABELS: Record<NodeTriggerType, string> = {
   onMount: 'On Load',
-  onRowCreate: 'On Create',
+  onRowCreate: 'On New Row',
   onRowCopy: 'On Copy',
   onRowFocus: 'On Focus',
-  onFieldChange: 'Field Change',
-  onConditionMet: 'Condition',
-  onUserContext: 'User Context',
-  onExternalBinding: 'External',
-  onDependencyResolve: 'Dependency',
+  onFieldChange: 'On Change',
 }
 
-// ---- Property → badge color ----
 const PROPERTY_BADGE_CLASS: Partial<Record<RuleProperty, string>> = {
   visibility: 'bg-green-500/10 border-green-500/25 text-green-400',
   required: 'bg-red-500/10 border-red-500/25 text-red-400',
@@ -63,7 +32,6 @@ const PROPERTY_LABELS: Record<RuleProperty, string> = {
   required: 'Required',
   disabled: 'Disabled',
   label: 'Label',
-  options: 'Options',
   value: 'Value',
 }
 
@@ -90,24 +58,29 @@ export function FieldRuleV2Card({
 }: FieldRuleCardProps) {
   const [expanded, setExpanded] = useState(false)
 
-  const group = TRIGGER_GROUP[rule.trigger] ?? 'external'
-
   const icon = (
-    <div
-      className={cn(
-        'flex h-5 w-5 items-center justify-center rounded-[4px] shrink-0',
-        TRIGGER_ICON_CLASS[group]
-      )}
-    >
+    <div className="flex h-5 w-5 items-center justify-center rounded-[4px] shrink-0 bg-primary/10 text-primary">
       <Zap className="h-3 w-3" />
     </div>
   )
+
+  const watchedFieldLabels: string[] = (() => {
+    if (rule.trigger !== 'onFieldChange') return []
+    const refs = new Set([
+      ...extractFieldRefsFromExpr(rule.condition as never),
+      ...extractFieldRefsFromExpr(rule.outcome as never),
+    ])
+    return Array.from(refs).map((ref) => {
+      const match = availableFields.find((f) => f.fieldId === ref)
+      return match?.label ?? ref.split('.').pop() ?? ref
+    })
+  })()
 
   const badges = (
     <>
       <Badge
         variant="outline"
-        className={cn('text-[10px] h-4 px-1.5 shrink-0 font-mono', TRIGGER_BADGE_CLASS[group])}
+        className="text-[10px] h-4 px-1.5 shrink-0 font-mono bg-primary/10 border-primary/20 text-primary"
       >
         {TRIGGER_LABELS[rule.trigger] ?? rule.trigger}
       </Badge>
@@ -118,6 +91,12 @@ export function FieldRuleV2Card({
       >
         {PROPERTY_LABELS[rule.property] ?? rule.property}
       </Badge>
+      {rule.trigger === 'onFieldChange' && watchedFieldLabels.length > 0 && (
+        <span className="text-[11px] text-muted-foreground truncate">
+          watching: {watchedFieldLabels.slice(0, 2).join(', ')}
+          {watchedFieldLabels.length > 2 && ` +${watchedFieldLabels.length - 2}`}
+        </span>
+      )}
       {rule.label && (
         <span className="text-[11px] text-muted-foreground truncate">{rule.label}</span>
       )}

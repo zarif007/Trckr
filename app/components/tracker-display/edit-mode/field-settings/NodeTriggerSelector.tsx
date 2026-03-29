@@ -3,9 +3,7 @@
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -17,22 +15,12 @@ interface NodeTriggerOption {
   description: string
 }
 
-const LIFECYCLE_TRIGGERS: NodeTriggerOption[] = [
-  { value: 'onMount', label: 'On Load', description: 'Fires when the tracker first loads' },
-  { value: 'onRowCreate', label: 'On Row Create', description: 'Fires when a new row is added' },
-  { value: 'onRowCopy', label: 'On Row Copy', description: 'Fires when a row is duplicated' },
-  { value: 'onRowFocus', label: 'On Row Focus', description: 'Fires when a row enters edit mode' },
-]
-
-const REACTIVE_TRIGGERS: NodeTriggerOption[] = [
-  { value: 'onFieldChange', label: 'On Field Change', description: 'Fires when a specific field value changes' },
-  { value: 'onConditionMet', label: 'On Condition Met', description: 'Fires when a boolean expression becomes true' },
-  { value: 'onUserContext', label: 'On User Context', description: 'Fires based on current user, role, or team' },
-]
-
-const EXTERNAL_TRIGGERS: NodeTriggerOption[] = [
-  { value: 'onExternalBinding', label: 'On External Binding', description: 'Fires when data is pulled from another tracker or API' },
-  { value: 'onDependencyResolve', label: 'On Dependency Resolve', description: 'Fires when a linked record field gets a value' },
+const TRIGGERS: NodeTriggerOption[] = [
+  { value: 'onMount', label: 'On Load', description: 'Every time the tracker loads' },
+  { value: 'onRowCreate', label: 'On New Row', description: 'When a new row is created' },
+  { value: 'onRowCopy', label: 'On Copy', description: 'When a row is duplicated' },
+  { value: 'onRowFocus', label: 'On Focus', description: 'When a row is selected for editing' },
+  { value: 'onFieldChange', label: 'When Field Changes', description: 'Re-evaluates live as other fields in the row change' },
 ]
 
 interface NodeTriggerSelectorProps {
@@ -48,33 +36,14 @@ export function NodeTriggerSelector({ value, onChange, disabled }: NodeTriggerSe
         <SelectValue placeholder="Select trigger…" />
       </SelectTrigger>
       <SelectContent>
-        <SelectGroup>
-          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Lifecycle</SelectLabel>
-          {LIFECYCLE_TRIGGERS.map((t) => (
-            <SelectItem key={t.value} value={t.value} className="text-xs">
+        {TRIGGERS.map((t) => (
+          <SelectItem key={t.value} value={t.value} className="text-xs">
+            <div className="flex flex-col">
               <span className="font-medium">{t.label}</span>
-              <span className="ml-2 text-muted-foreground text-[11px]">{t.description}</span>
-            </SelectItem>
-          ))}
-        </SelectGroup>
-        <SelectGroup>
-          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Reactive</SelectLabel>
-          {REACTIVE_TRIGGERS.map((t) => (
-            <SelectItem key={t.value} value={t.value} className="text-xs">
-              <span className="font-medium">{t.label}</span>
-              <span className="ml-2 text-muted-foreground text-[11px]">{t.description}</span>
-            </SelectItem>
-          ))}
-        </SelectGroup>
-        <SelectGroup>
-          <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">External</SelectLabel>
-          {EXTERNAL_TRIGGERS.map((t) => (
-            <SelectItem key={t.value} value={t.value} className="text-xs">
-              <span className="font-medium">{t.label}</span>
-              <span className="ml-2 text-muted-foreground text-[11px]">{t.description}</span>
-            </SelectItem>
-          ))}
-        </SelectGroup>
+              <span className="text-muted-foreground text-[11px]">{t.description}</span>
+            </div>
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   )

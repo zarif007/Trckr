@@ -3,6 +3,7 @@
 import { Handle, Position } from 'reactflow'
 import type { Node } from 'reactflow'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import {
   Trash2,
   Database,
@@ -18,9 +19,16 @@ import {
   GitBranch,
   FunctionSquare,
   CaseSensitive,
+  Copy,
+  MoreVertical,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import { FLOW_CONSTANTS, variadicHandleId, type ExprFlowNodeData } from './expr-graph'
 import { cn } from '@/lib/utils'
 import type {
@@ -37,6 +45,7 @@ export type NodeUpdater = (id: string, partial: Partial<ExprFlowNodeData>) => vo
 export interface FlowNodeData extends ExprFlowNodeData {
   onChange?: NodeUpdater
   onDelete?: (id: string) => void
+  onDuplicate?: (id: string) => void
   availableFields?: AvailableField[]
   resultFieldLabel?: string
   resultFieldId?: string
@@ -157,9 +166,9 @@ const ACCUMULATOR_ACTION_OPTIONS: { value: AccumulateAction; label: string }[] =
   { value: 'mul', label: 'Multiply (×)' },
 ]
 
-const NODE_BASE_CLASSES = 'overflow-hidden rounded-xl border border-border/50 shadow-md bg-background transition-all duration-200 hover:shadow-lg hover:-translate-y-px'
-const NODE_HEADER_CLASSES = 'flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold border-b border-border/30'
-const NODE_BODY_CLASSES = 'px-3 pb-3 pt-2'
+const NODE_BASE_CLASSES = 'overflow-hidden rounded-lg border border-border/50 shadow-sm bg-background transition-all duration-150 hover:shadow-md'
+const NODE_HEADER_CLASSES = 'flex items-center gap-2 px-2.5 py-2 text-xs font-semibold border-b border-border/25'
+const NODE_BODY_CLASSES = 'px-2.5 py-2'
 const NODE_ICON_CLASSES = 'h-[22px] w-[22px] rounded-md flex items-center justify-center flex-shrink-0'
 const NODE_DELETE_BUTTON_CLASSES =
   'nodrag inline-flex h-5 w-5 items-center justify-center rounded-md text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors'
@@ -195,28 +204,74 @@ function getStringShape(op: StringOp): StringNodeShape {
   return 'regex'
 }
 
+function NodeContextMenu({ id, data, canDelete = true }: { id: string; data: FlowNodeData; canDelete?: boolean }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
+          aria-label="Node options"
+        >
+          <MoreVertical className="h-3.5 w-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-40 p-0" align="end">
+        <div className="flex flex-col">
+          <button
+            type="button"
+            onClick={() => {
+              data.onDuplicate?.(id)
+              setOpen(false)
+            }}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted/50 transition-colors text-left"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span>Duplicate</span>
+          </button>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => {
+                data.onDelete?.(id)
+                setOpen(false)
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors text-left border-t border-border/30"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span>Delete</span>
+            </button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
   const value = data.fieldId ?? ''
   const options = data.availableFields ?? []
+  const selectedLabel = options.find((f) => f.fieldId === value)?.label
   const style = NODE_STYLES.field
+
   return (
     <div className={cn(NODE_BASE_CLASSES, 'w-[200px]')}>
       <div className={cn('h-[3px] w-full', style.accent)} />
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
-        <span className="text-foreground/80 font-medium">{style.label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <span className="text-foreground/80 font-medium text-xs flex-1 truncate">{style.label}</span>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={NODE_BODY_CLASSES}>
+        {selectedLabel && (
+          <div className="mb-1.5 text-[11px] text-foreground/60 truncate">
+            {selectedLabel}
+          </div>
+        )}
         <select
-          className="w-full rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-foreground/90 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          className="w-full rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-xs text-foreground/80 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
           value={value}
           onChange={(e) => data.onChange?.(id, { fieldId: e.target.value })}
         >
@@ -235,27 +290,27 @@ function FieldNode({ id, data }: { id: string; data: FlowNodeData }) {
 
 function ConstNode({ id, data }: { id: string; data: FlowNodeData }) {
   const style = NODE_STYLES.const
+  const value = data.value ?? ''
+
   return (
     <div className={cn(NODE_BASE_CLASSES, 'w-[180px]')}>
       <div className={cn('h-[3px] w-full', style.accent)} />
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
-        <span className="text-foreground/80 font-medium">{style.label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <span className="text-foreground/80 font-medium text-xs flex-1">{style.label}</span>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={NODE_BODY_CLASSES}>
+        {value && (
+          <div className="mb-1 px-2 py-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-foreground/70 truncate font-mono">
+            {value}
+          </div>
+        )}
         <Input
-          value={data.value ?? ''}
+          value={value}
           onChange={(e) => data.onChange?.(id, { value: e.target.value })}
-          className="h-9 border-border/60 bg-muted/30 text-xs text-foreground/90 focus:ring-2 focus:ring-emerald-500/30 rounded-md"
-          placeholder="Enter value (e.g., 10, true, text)"
+          className="h-8 border-border/60 bg-muted/30 text-xs text-foreground/80 focus:ring-2 focus:ring-emerald-500/30 rounded-md"
+          placeholder="Value"
         />
       </div>
       <Handle type="source" position={Position.Right} id="out" className={cn(HANDLE_CLASSES, '!border-emerald-500')} />
@@ -273,14 +328,7 @@ function OpNode({ id, data }: { id: string; data: FlowNodeData }) {
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{icon}</span>
         <span className="text-foreground/80 font-medium">{label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'flex items-center gap-3 text-[11px] text-muted-foreground')}>
         <div className="flex items-center gap-1">
@@ -361,14 +409,7 @@ function AccumulatorNode({ id, data }: { id: string; data: FlowNodeData }) {
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
         <span className="text-foreground/80 font-medium">{headerLabel}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'space-y-2')}>
         {!isCount && (
@@ -485,14 +526,7 @@ function LogicNode({ id, data }: { id: string; data: FlowNodeData }) {
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
         <span className="text-foreground/80 font-medium">{label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'space-y-1.5')}>
         <p className="text-[10px] text-muted-foreground">{LOGIC_OP_HINTS[logicOp]}</p>
@@ -574,14 +608,7 @@ function MathNode({ id, data }: { id: string; data: FlowNodeData }) {
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
         <span className="text-foreground/80 font-medium">{label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'space-y-1.5')}>
         {shape === 'unary' && <p className="text-[10px] text-muted-foreground">Single numeric input</p>}
@@ -664,14 +691,7 @@ function StringNode({ id, data }: { id: string; data: FlowNodeData }) {
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>{style.icon}</span>
         <span className="text-foreground/80 font-medium">{label}</span>
-        <button
-          type="button"
-          onClick={() => data.onDelete?.(id)}
-          className={cn(NODE_DELETE_BUTTON_CLASSES, 'ml-auto')}
-          aria-label="Delete node"
-        >
-          <Trash2 className="h-3 w-3" />
-        </button>
+        <NodeContextMenu id={id} data={data} />
       </div>
       <div className={cn(NODE_BODY_CLASSES, 'space-y-1.5')}>
         {shape === 'unary' && <p className="text-[10px] text-muted-foreground">Single string input</p>}

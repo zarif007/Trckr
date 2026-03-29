@@ -5,6 +5,7 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   ConnectionLineType,
+  Controls,
   Handle,
   MarkerType,
   Position,
@@ -823,6 +824,12 @@ export function DynamicFunctionFlowBuilder({
     )
   }, [setNodes, stableDeleteNode])
 
+  const isValidConnection = useCallback((connection: Connection) => {
+    // Prevent self-loops
+    if (connection.source === connection.target) return false
+    return true
+  }, [])
+
   const onConnect = useCallback(
     (params: Connection) => setEdges((prev) => addEdge({ ...params, ...EDGE_DEFAULTS }, prev)),
     [setEdges]
@@ -1040,6 +1047,7 @@ export function DynamicFunctionFlowBuilder({
             defaultEdgeOptions={EDGE_DEFAULTS}
             connectionLineType={ConnectionLineType.SmoothStep}
             connectionLineStyle={EDGE_STYLE}
+            isValidConnection={isValidConnection}
             fitView
             onInit={setRfInstance}
             onDrop={onDrop}
@@ -1055,6 +1063,11 @@ export function DynamicFunctionFlowBuilder({
               size={1}
               color="hsl(var(--foreground) / 0.14)"
               variant={BackgroundVariant.Dots}
+            />
+            <Controls
+              showFitView
+              showInteractive
+              className="!bottom-3 !left-3 !top-auto !right-auto !bg-background !border-border/50 !rounded-lg !shadow-md"
             />
           </ReactFlow>
         </div>

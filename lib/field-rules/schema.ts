@@ -9,36 +9,17 @@ const nodeTriggerTypeSchema = z.enum([
   'onMount',
   'onRowCreate',
   'onRowCopy',
-  'onFieldChange',
-  'onConditionMet',
-  'onUserContext',
-  'onExternalBinding',
   'onRowFocus',
-  'onDependencyResolve',
+  'onFieldChange',
 ])
-
-const triggerConfigSchema = z
-  .object({
-    watchedFieldId: z.string().optional(),
-    contextVar: z.enum(['user', 'role', 'team', 'timezone']).optional(),
-    sourceSchemaId: z.string().optional(),
-    fieldPath: z.string().optional(),
-    refreshIntervalMs: z.number().optional(),
-    linkedFieldId: z.string().optional(),
-    recordPath: z.string().optional(),
-    condition: exprNodeSchema.optional(),
-  })
-  .passthrough()
-  .optional()
 
 export const fieldRuleSchema = z
   .object({
     id: z.string(),
     enabled: z.boolean().default(true),
     trigger: nodeTriggerTypeSchema,
-    triggerConfig: triggerConfigSchema,
     condition: exprNodeSchema.optional(),
-    property: z.enum(['visibility', 'label', 'required', 'disabled', 'options', 'value']),
+    property: z.enum(['visibility', 'label', 'required', 'disabled', 'value']),
     outcome: exprNodeSchema,
     engineType: z.enum(['property', 'value']),
     label: z.string().optional(),

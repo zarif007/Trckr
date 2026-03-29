@@ -5,6 +5,7 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   ConnectionLineType,
+  Controls,
   MarkerType,
   addEdge,
   useEdgesState,
@@ -74,6 +75,8 @@ export function ExprFlowBuilder({
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNodeData>(
     initialGraph.nodes as Node<FlowNodeData>[]
   )
+
+  const nodeCountExcludingResult = nodes.filter((n) => n.type !== 'result').length
   const [edges, setEdges, onEdgesChange] = useEdgesState(
     initialGraph.edges.map((edge) => ({
       ...EDGE_DEFAULTS,
@@ -100,6 +103,26 @@ export function ExprFlowBuilder({
       setSelectedEdgeIds([])
     },
     [setEdges, setNodes]
+  )
+
+  const duplicateNode = useCallback(
+    (id: string) => {
+      setNodes((prev) => {
+        const nodeToClone = prev.find((n) => n.id === id)
+        if (!nodeToClone) return prev
+        const newId = `expr_ui_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        const newNode = {
+          ...nodeToClone,
+          id: newId,
+          position: {
+            x: nodeToClone.position.x + 30,
+            y: nodeToClone.position.y + 30,
+          },
+        }
+        return [...prev, newNode]
+      })
+    },
+    [setNodes]
   )
 
   const deleteSelection = useCallback(() => {
@@ -145,13 +168,14 @@ export function ExprFlowBuilder({
         ...node.data,
         onChange: updateNodeData,
         onDelete: deleteNode,
+        onDuplicate: duplicateNode,
         availableFields,
         ...(node.type === 'result'
           ? { resultFieldId, resultFieldLabel }
           : {}),
       },
     }),
-    [availableFields, deleteNode, updateNodeData, resultFieldId, resultFieldLabel]
+    [availableFields, deleteNode, duplicateNode, updateNodeData, resultFieldId, resultFieldLabel]
   )
 
   useEffect(() => {
@@ -178,6 +202,19 @@ export function ExprFlowBuilder({
       prev.map((n) => ({ ...n, data: { ...n.data, availableFields } }))
     )
   }, [availableFields, availableFieldsKey, setNodes])
+
+  const isValidConnection = useCallback((connection: Connection) => {
+    // Prevent self-loops
+    if (connection.source === connection.target) return false
+    // Prevent connecting two source handles
+    const sourceNode = nodes.find((n) => n.id === connection.source)
+    const targetNode = nodes.find((n) => n.id === connection.target)
+    if (!sourceNode || !targetNode) return false
+    // Result node can only be a target
+    if (sourceNode.type === 'result') return false
+    // Allow any other valid connection
+    return true
+  }, [nodes])
 
   const onConnect = useCallback(
     (params: Connection) => setEdges((eds) => addEdge({ ...params, ...EDGE_DEFAULTS }, eds)),
@@ -281,16 +318,26 @@ export function ExprFlowBuilder({
       applyError={compileError}
       onApply={handleCompile}
       applyLabel="Apply visual expression"
-      paletteClassName="w-[148px]"
+      paletteClassName="w-[180px]"
       canvasClassName="min-h-0"
     >
       <div
         ref={wrapperRef}
         className={cn(
-          'flex min-h-0 min-w-0 w-full flex-1 flex-col min-h-[320px]',
+          'flex min-h-0 min-w-0 w-full flex-1 flex-col min-h-[320px] relative',
           flowHeightClassName ?? 'h-[360px]'
         )}
       >
+        {nodeCountExcludingResult === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-background/50 to-background/30 pointer-events-none z-10">
+            <div className="text-center space-y-3">
+              <div className="text-sm font-medium text-muted-foreground">Drag nodes from the palette to get started</div>
+              <div className="text-xs text-muted-foreground/70 max-w-xs">
+                Try dragging a <span className="font-mono text-blue-600 dark:text-blue-400">Field</span> or <span className="font-mono text-emerald-600 dark:text-emerald-400">Value</span> to create your first node
+              </div>
+            </div>
+          </div>
+        )}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -302,6 +349,7 @@ export function ExprFlowBuilder({
           defaultEdgeOptions={EDGE_DEFAULTS}
           connectionLineType={ConnectionLineType.SmoothStep}
           connectionLineStyle={EDGE_STYLE}
+          isValidConnection={isValidConnection}
           fitView
           onInit={setRfInstance}
           onDrop={onDrop}
@@ -315,6 +363,11 @@ export function ExprFlowBuilder({
             size={1}
             color="hsl(var(--foreground) / 0.14)"
             variant={BackgroundVariant.Dots}
+          />
+          <Controls
+            showFitView
+            showInteractive
+            className="!bottom-3 !left-3 !top-auto !right-auto !bg-background !border-border/50 !rounded-lg !shadow-md"
           />
         </ReactFlow>
       </div>

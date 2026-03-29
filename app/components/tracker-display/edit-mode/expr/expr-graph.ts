@@ -413,7 +413,7 @@ function nextId() {
 }
 
 function placeNode(depth: number, row: number): XYPosition {
-  return { x: depth * 280, y: row * 110 }
+  return { x: depth * 280, y: row * 140 }
 }
 
 /**

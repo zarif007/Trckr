@@ -1,6 +1,6 @@
 /**
  * Field rules engine: expression-based conditional field behavior
- * (visibility, required, disabled, label, options, value).
+ * (visibility, required, disabled, label, value).
  *
  * Import from @/lib/field-rules.
  */
@@ -14,7 +14,8 @@ export type {
   FieldRuleOverride,
   FieldRulesResult,
 } from './types'
-export { deriveEngineType, SYNC_TRIGGER_TYPES, ASYNC_TRIGGER_TYPES } from './types'
+export { deriveEngineType } from './types'
 export { resolveFieldRulesForRow } from './resolve'
 export { applyFieldOverrides } from './overrides'
 export { fieldRuleSchema, fieldRulesSchema } from './schema'
+export { extractFieldRefsFromExpr } from './extract-field-refs'

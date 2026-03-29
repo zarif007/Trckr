@@ -21,7 +21,5 @@ export function applyFieldOverrides<T extends Record<string, unknown>>(
   if (override.disabled !== undefined) next['isDisabled'] = override.disabled
   if (override.value !== undefined) next['value'] = override.value
   if (override.label !== undefined) next['label'] = override.label
-  if (override.options !== undefined) next['options'] = override.options
-
   return next as T
 }
