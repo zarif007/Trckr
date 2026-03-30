@@ -109,7 +109,7 @@ export async function GET(
     },
     include: {
       conversations: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Prisma ConversationWhereInput may not include mode in generated types
+         
         where: mode != null ? ({ mode } as any) : undefined,
         orderBy: { createdAt: 'desc' },
         take: 1,

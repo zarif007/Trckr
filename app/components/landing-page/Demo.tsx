@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import type { ColumnDef } from '@tanstack/react-table'
 import Markdown from 'react-markdown'
 import { BarChart3, BookOpen, Table2, Workflow } from 'lucide-react'
@@ -140,20 +141,26 @@ export default function Demo() {
   )
 
   return (
-    <LandingAxisFrame
-      id="demo"
-      className="mt-6 sm:mt-8 relative"
-      contentClassName="relative p-4 sm:p-6 md:p-8 bg-secondary/30"
+    <motion.section
+      initial={{ opacity: 0 }}
+      whileInView={{ opacity: 1 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
     >
-      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-5">
-        <div className="space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            Demo
-          </p>
-          <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            The full platform, live.
-          </h3>
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+      <LandingAxisFrame
+        id="demo"
+        className="relative"
+        contentClassName="relative p-5 sm:p-7 md:p-8 bg-secondary/20"
+      >
+        <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6">
+          <div className="space-y-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Demo
+            </p>
+            <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+              The full platform, live.
+            </h3>
+            <div className="flex flex-wrap items-center gap-2.5 sm:gap-3.5">
             {(['Tracker', 'Expressions', 'Reports', 'Analysis'] as const).map((label, i) => (
               <span key={label} className="flex items-center gap-1.5">
                 {i > 0 && <span className="text-border" aria-hidden>·</span>}
@@ -328,6 +335,7 @@ export default function Demo() {
           </TabsContent>
         </Tabs>
       </div>
-    </LandingAxisFrame>
+      </LandingAxisFrame>
+    </motion.section>
   )
 }

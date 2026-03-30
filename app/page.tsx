@@ -15,10 +15,15 @@ export default function Home() {
         aria-hidden
         className="pointer-events-none fixed inset-0 z-0 bg-grid opacity-[0.06] dark:opacity-[0.11]"
       />
-      <div className="relative z-10 max-w-full mx-auto px-0 py-0 space-y-16 md:space-y-24">
+      <div className="relative z-10 max-w-full mx-auto px-0 py-0 space-y-20 md:space-y-32">
         <Hero />
 
-        <section className='max-w-7xl mx-auto flex flex-col space-y-10 border-t border-border/35 px-4 pt-10 sm:space-y-12 sm:pt-12 md:space-y-14 md:px-4 md:pt-16 lg:space-y-20'>
+        <section className='max-w-7xl mx-auto flex flex-col space-y-16 sm:space-y-20 md:space-y-24 lg:space-y-28 px-4 pt-6 sm:pt-8 md:pt-10 md:px-4'>
+          {/* Gradient divider */}
+          <div
+            aria-hidden
+            className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent"
+          />
           <Platform />
           <Demo />
           <IntelligenceSpotlight />

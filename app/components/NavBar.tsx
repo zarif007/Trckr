@@ -234,7 +234,7 @@ export default function NavBar() {
                   <button
                     type="button"
                     className={cn(
-                      'flex items-center gap-2.5 border px-2 py-1.5 pr-3 text-sm text-foreground backdrop-blur-sm',
+                      'flex items-center gap-2.5 border p-1 text-sm text-foreground backdrop-blur-sm',
                       theme.border.subtleAlt,
                       theme.surface.secondaryLight,
                       'rounded-md outline-none transition-colors hover:bg-muted/40',
@@ -246,8 +246,8 @@ export default function NavBar() {
                       <Image
                         src={session.user.image}
                         alt=""
-                        width={21}
-                        height={21}
+                        width={27}
+                        height={27}
                         className="rounded-md ring-1 ring-border/50"
                       />
                     ) : (
@@ -257,9 +257,6 @@ export default function NavBar() {
                           .toUpperCase()}
                       </span>
                     )}
-                    <span className="max-w-[100px] truncate font-medium">
-                      {session.user.name ?? session.user.email ?? 'User'}
-                    </span>
                   </button>
                 }
               />

@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { Zap, Grid3x3, TrendingUp } from 'lucide-react'
 import LandingAxisFrame from '@/app/components/landing-page/LandingAxisFrame'
 import { CapabilityVisual, UseCaseVisual } from '@/app/components/landing-page/landing-mini-visuals'
 import { cn } from '@/lib/utils'
@@ -115,79 +116,101 @@ const USE_CASES = [
 export default function Platform() {
   return (
     <motion.section
-      className="space-y-3"
+      className="space-y-6"
       initial={{ opacity: 0 }}
       whileInView={{ opacity: 1 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
     >
-      <div className="space-y-1.5">
-        <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground leading-tight">
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-2">
+          <Zap className="h-4 w-4 text-foreground/50" strokeWidth={2} />
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Platform
+          </p>
+        </div>
+        <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
           One platform — built for the way teams actually work.
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground/80 leading-relaxed max-w-2xl">
           No code. No spreadsheet chaos. Describe it, and Trckr handles the rest.
         </p>
       </div>
 
       {/* Bento grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         {/* Hero Build card */}
         <motion.div
           className="lg:col-span-3"
-          initial={{ opacity: 0, y: 6 }}
+          initial={{ opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.35 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          <LandingAxisFrame
-            contentClassName={cn(
-              theme.surface.secondarySubtle,
-              'flex h-full flex-col gap-4 p-5 sm:p-6'
-            )}
-          >
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Build
-              </p>
-              <h4 className="text-base sm:text-lg font-bold text-foreground tracking-tight leading-tight">
-                Describe it. Your tracker is ready in seconds.
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed pt-0.5">
-                One sentence is all it takes. Trckr generates tabs, fields, views, validations,
-                and dropdown bindings — instantly.
-              </p>
-            </div>
-            <AiBuildIllustration />
-          </LandingAxisFrame>
+          <div className="relative h-full">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-md bg-gradient-to-br from-foreground/5 via-transparent to-transparent opacity-0"
+            />
+            <LandingAxisFrame
+              contentClassName={cn(
+                theme.surface.secondarySubtle,
+                'relative flex h-full flex-col gap-5 p-6 sm:p-7'
+              )}
+            >
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5 text-foreground/40" strokeWidth={2} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Build
+                  </p>
+                </div>
+                <h4 className="text-base sm:text-lg font-bold text-foreground tracking-tight leading-tight">
+                  Describe it. Your tracker is ready in seconds.
+                </h4>
+                <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                  One sentence is all it takes. Trckr generates tabs, fields, views, validations,
+                  and dropdown bindings — instantly.
+                </p>
+              </div>
+              <AiBuildIllustration />
+            </LandingAxisFrame>
+          </div>
         </motion.div>
 
         {/* Work + Analyze stacked */}
-        <div className="lg:col-span-2 flex flex-col gap-2.5">
+        <div className="lg:col-span-2 flex flex-col gap-3">
           {SECONDARY_CARDS.map((card, idx) => (
             <motion.div
               key={card.overline}
               className="flex-1"
-              initial={{ opacity: 0, y: 6 }}
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.35, delay: 0.07 + idx * 0.07 }}
+              transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: 0.12 + idx * 0.1 }}
             >
               <LandingAxisFrame
                 contentClassName={cn(
                   theme.surface.secondarySubtle,
-                  'flex h-full flex-col gap-3 p-4 sm:p-5'
+                  'relative flex h-full flex-col gap-3.5 p-5 sm:p-6'
                 )}
               >
                 {card.visual}
                 <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    {card.overline}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {idx === 0 ? (
+                      <Grid3x3 className="h-3 w-3 text-foreground/40" strokeWidth={2} />
+                    ) : (
+                      <TrendingUp className="h-3 w-3 text-foreground/40" strokeWidth={2} />
+                    )}
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {card.overline}
+                    </p>
+                  </div>
                   <h4 className="text-sm font-bold text-foreground tracking-tight leading-tight">
                     {card.title}
                   </h4>
-                  <p className="text-xs text-muted-foreground leading-snug">
+                  <p className="text-xs text-muted-foreground/80 leading-snug">
                     {card.body}
                   </p>
                 </div>
@@ -199,27 +222,31 @@ export default function Platform() {
 
       {/* Use cases strip */}
       <motion.div
-        className="space-y-2.5 pt-1"
+        className="space-y-3 pt-4"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.5, delay: 0.2 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
       >
-        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
           Teams use Trckr for
         </p>
-        <div className="flex flex-wrap gap-1.5">
-          {USE_CASES.map((uc) => (
-            <span
+        <div className="flex flex-wrap gap-2">
+          {USE_CASES.map((uc, idx) => (
+            <motion.span
               key={uc}
+              initial={{ opacity: 0, scale: 0.95 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.25, delay: 0.3 + idx * 0.03 }}
               className={cn(
-                'inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground/65',
+                'inline-flex items-center rounded-md border px-3 py-1.5 text-xs font-medium text-muted-foreground/70',
                 theme.border.subtle,
                 theme.surface.secondarySubtle
               )}
             >
               {uc}
-            </span>
+            </motion.span>
           ))}
         </div>
       </motion.div>

@@ -104,7 +104,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
   const firstRunUserDraftRef = useRef<TrackerResponse | null>(initialTracker ?? null)
   const conversationIdRef = useRef<string | null>(conversationIdProp ?? null)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const submitRef = useRef<(input: any) => void>(() => { })
 
   useEffect(() => {
