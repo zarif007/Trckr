@@ -92,6 +92,28 @@ const { userId } = await requireAuthenticatedUser()
 // 4. Return jsonOk / jsonError from lib/api/http
 ```
 
+### Prompt-Building Functions (Agent & AI Flows)
+
+**Critical rule**: All variables used in template literals must be function parameters.
+
+When building prompts for AI agents/tools, prompt functions receive context data. **Every variable referenced in a template literal must be explicitly passed as a parameter** — never rely on outer scope or expect TypeScript to infer it.
+
+**Anti-pattern**:
+```typescript
+export function buildSystemPrompt(purpose: string): string {
+  return `Use gridId: ${gridId}` // ❌ gridId undefined — not a parameter
+}
+```
+
+**Correct pattern**:
+```typescript
+export function buildSystemPrompt(purpose: string, gridId: string): string {
+  return `Use gridId: ${gridId}` // ✅ gridId is a parameter
+}
+```
+
+Apply this to all prompt builders (`buildSystemPrompt`, `buildUserPrompt`, etc.) in `app/api/agent/*/lib/prompts.ts`. Type-check with `npm run typecheck` to catch missing parameters at compile time.
+
 ## Code Conventions
 
 ### Theming

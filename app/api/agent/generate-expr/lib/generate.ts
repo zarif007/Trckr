@@ -12,7 +12,7 @@ export interface GenerateExprResult {
 
 export async function generateExpr(inputs: ExprPromptInputs): Promise<GenerateExprResult> {
   const provider = getDefaultAiProvider()
-  const system = buildSystemPrompt(inputs.purpose)
+  const system = buildSystemPrompt(inputs.purpose, inputs.gridId)
   const prompt = buildUserPrompt(inputs)
   const { object, usage } = await provider.generateObject<{ expr: unknown }>({
     system,

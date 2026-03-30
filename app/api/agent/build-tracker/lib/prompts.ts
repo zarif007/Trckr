@@ -40,9 +40,50 @@ OUTPUT LIMIT: ~2K token budget — be concise and focused.`.trim()
 export function getBuilderSystemPrompt(): string {
   return `${trackerBuilderPrompt}
 
-You are the Builder Agent. The Manager Agent has analyzed the requirements and provided a structured plan
-in the user message (between the "=== Manager Plan ===" markers). Implement the tracker schema
-exactly according to that plan.
+=== BUILDER PHILOSOPHY ===
+
+You are the Builder Agent. The Tracker Architect (Manager Agent) has designed the complete information architecture
+and decomposed it into detailed builderTodo phases. Your ONLY job is to implement that design exactly.
+
+The Manager has:
+1. Analyzed domain requirements
+2. Designed information architecture (tabs, sections, grids)
+3. Designed data model (fields, types, constraints)
+4. Planned interactions (bindings, rules, validations, calculations)
+5. Validated the architecture for scalability and correctness
+6. Decomposed it into sequential, phased builderTodo tasks
+
+YOUR JOB: Execute builderTodo faithfully. Do not simplify, override, or redesign. Honor every architectural decision.
+
+=== CRITICAL RULES ===
+
+FOLLOW BUILDERTHREAD PHASES IN ORDER:
+- Phase 1: TAB STRUCTURE — create all tabs exactly as specified
+- Phase 2: SECTIONS & LAYOUT — create sections on each tab
+- Phase 3: PRIMARY GRIDS & FIELDS — create main data grids with all fields
+- Phase 4: MASTER DATA GRIDS — create all reference/options grids
+- Phase 5: BINDINGS — wire all select/multiselect fields to grids
+- Phase 6: FIELD RULES — add conditional visibility/required/disabled
+- Phase 7: VALIDATIONS — add complex validation rules
+- Phase 8: CALCULATIONS — add computed/derived fields
+
+BUILD COMPLETENESS:
+- If the Manager designed 4 tabs, create all 4 tabs with all their sections and grids.
+- If the Manager designed 2 grids per tab, create all grids on all tabs.
+- If the Manager specified field-level constraints, configs, and bindings, implement them all.
+- Never skip phases or defer parts to later — implement each phase fully.
+
+NO OVERRIDES:
+- Do not consolidate multiple tabs into one.
+- Do not skip master data grids.
+- Do not omit field rules or validations.
+- Do not alter the tab/section/grid structure.
+- The Manager justified every structural decision.
+
+OUTPUT COMPLETENESS:
+- Your schema must reflect the ENTIRE builderTodo plan.
+- Every tab, section, grid, and field listed in builderTodo MUST appear in your output.
+- Every binding, rule, validation, and calculation in builderTodo MUST be in your output.
 
 CRITICAL OUTPUT RULES:
 - Output EITHER "tracker" (full schema) OR "trackerPatch" (incremental changes). Never both.
@@ -137,27 +178,51 @@ export function buildBuilderFallbackPrompts(
 function formatManagerPlan(manager: ManagerSchema): string {
   const lines: string[] = ['=== Manager Plan ===']
 
+  // PRD section
   if (manager.prd?.name) {
-    lines.push(`Name: ${manager.prd.name}`)
+    lines.push(`\n📋 TRACKER: ${manager.prd.name}`)
   }
 
   if (manager.prd?.keyFeatures?.length) {
-    lines.push(`Key Features:`)
+    lines.push(`\nKey Features:`)
     for (const feature of manager.prd.keyFeatures) {
-      lines.push(`  - ${feature}`)
+      lines.push(`  • ${feature}`)
     }
   }
 
+  // Architectural thinking (if available in thinking field)
+  if (manager.thinking) {
+    lines.push(`\n🏗️ ARCHITECTURAL THINKING:`)
+    lines.push(manager.thinking)
+  }
+
+  // BuilderTodo organized by phase
   if (manager.builderTodo?.length) {
-    lines.push(`Builder Tasks:`)
+    lines.push(`\n📐 ARCHITECTURE BLUEPRINT (${manager.builderTodo.length} tasks):`)
+
+    let currentPhase = ''
+    let phaseNumber = 0
+
     manager.builderTodo.forEach((item, i) => {
       const action = item.action ?? 'create'
       const target = item.target ?? ''
       const task = item.task ?? ''
-      lines.push(`  ${i + 1}. [${action}] ${target}: ${task}`)
+
+      // Detect phase changes based on comments or task descriptions
+      const phaseMatch = task.match(/PHASE (\d+):\s*([A-Z_\s]+)/i)
+      if (phaseMatch) {
+        const newPhase = phaseMatch[2].trim()
+        if (newPhase !== currentPhase) {
+          currentPhase = newPhase
+          phaseNumber++
+          lines.push(`\n  ➤ PHASE ${phaseNumber}: ${currentPhase}`)
+        }
+      }
+
+      lines.push(`    ${i + 1}. [${action}] ${target}: ${task}`)
     })
   }
 
-  lines.push('=== End Manager Plan ===')
+  lines.push('\n=== End Manager Plan ===')
   return lines.join('\n')
 }

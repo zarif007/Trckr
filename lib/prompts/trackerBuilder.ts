@@ -30,10 +30,11 @@ GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
 - When generating patches, you MUST respect existing ids in the Current Tracker State (do not rename them). For any NEW tab/section/grid/field you add, if the desired base id is already used anywhere, choose the next available numeric suffix instead.
 
 === GREENFIELD LAYOUT (no "Current Tracker State (JSON)") ===
-- **Default:** Unless the user explicitly asks for multiple top-level tabs, use **one** main tab: id **overview_tab** (name "Overview" or a name that fits the product). Put **all** primary sections and grids on **overview_tab** (every main section's tabId must be "overview_tab").
-- **Forbidden:** Do **not** leave **overview_tab** with **zero** sections while putting the main grids/fields on a different tab (e.g. empty Overview + full "Tasks" tab). That creates a useless empty Overview.
-- **Multi-tab:** If the user wants several tabs, **each** tab in tabs[] should have **at least one** section with tabId set to that tab (no tab may be a dead shell). Do not add an extra empty overview_tab alongside real content on other tabs unless the user explicitly wants an empty landing tab.
-- **Master Data tab:** When you add master_data_tab for options, it is separate; main user data still belongs on overview_tab (or the tab(s) the user asked for), not on an empty overview only.
+- **Follow the Manager Plan:** The Manager Agent has architected the tab/section/grid structure in builderTodo. Execute that plan exactly. Do not override the manager's architectural decisions.
+- **Single Tab:** If builderTodo specifies one tab (overview_tab), put all content there.
+- **Multi-Tab:** If builderTodo specifies multiple tabs, create all of them. Each tab must have at least one section and at least one grid with actual data — no empty shells. Trust the manager's architecture; it has justified why each tab exists.
+- **Forbidden:** Do NOT override builderTodo by consolidating multiple tabs into one, or by adding an unsolicited overview_tab. The manager designed the structure; your job is to build it exactly.
+- **Master Data:** If the architecture includes a master_data_tab for options, it's separate from workflow tabs. Primary data goes on overview_tab or the specified workflow tabs, not orphaned into master data unless the manager's plan says otherwise.
 
 === MASTER DATA SCOPE (MANDATORY) ===
 

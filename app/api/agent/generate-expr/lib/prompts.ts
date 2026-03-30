@@ -8,7 +8,7 @@ export interface ExprPromptInputs {
   availableFields: AvailableField[]
 }
 
-export function buildSystemPrompt(purpose: ExprPromptInputs['purpose']): string {
+export function buildSystemPrompt(purpose: ExprPromptInputs['purpose'], gridId: string): string {
   const purposeRules =
     purpose === 'validation'
       ? '- The expression should evaluate to a boolean/truthy result suitable for validation checks.'
@@ -38,8 +38,8 @@ You are generating a JSON expression AST for ${taskLabel}.
 Rules:
 - Output ONLY valid JSON with a single top-level object: { "expr": <ExprNode> }.
 - "field" nodes must use fieldId in "gridId.fieldId" format from the provided list.
-- Prefer same-grid field references unless explicitly instructed otherwise.
-- Cross-grid references are allowed when the prompt mentions fields from other grids.
+- **IMPORTANT: All field references must stay within the target grid "${gridId}" unless explicitly instructed otherwise in the user prompt.**
+- Only use operators listed in the "Supported operators" section above — do not generate other operators.
 ${purpose === 'report' ? '- For reports, each evaluation uses one **flattened grid row**: row values include both bare field ids (e.g. quantity) and "gridId.fieldId" when __gridId is known — prefer "gridId.fieldId" from the available fields list for clarity.\n' : ''}${purposeRules}
 
 Supported operators and their canonical shapes:
@@ -62,27 +62,6 @@ LOGIC:
   - or: { "op": "or", "args": [<ExprNode>, ...] }
   - not: { "op": "not", "arg": <ExprNode> }
   - if: { "op": "if", "cond": <ExprNode>, "then": <ExprNode>, "else": <ExprNode> }
-
-MATH FUNCTIONS:
-  - abs: { "op": "abs", "arg": <ExprNode> }
-  - round: { "op": "round", "arg": <ExprNode> }
-  - floor: { "op": "floor", "arg": <ExprNode> }
-  - ceil: { "op": "ceil", "arg": <ExprNode> }
-  - mod: { "op": "mod", "left": <ExprNode>, "right": <ExprNode> }
-  - pow: { "op": "pow", "left": <ExprNode>, "right": <ExprNode> }
-  - min: { "op": "min", "args": [<ExprNode>, ...] }
-  - max: { "op": "max", "args": [<ExprNode>, ...] }
-  - clamp: { "op": "clamp", "value": <ExprNode>, "min": <ExprNode>, "max": <ExprNode> }
-
-STRING FUNCTIONS:
-  - concat: { "op": "concat", "args": [<ExprNode>, ...] }
-  - length: { "op": "length", "arg": <ExprNode> }
-  - trim: { "op": "trim", "arg": <ExprNode> }
-  - toUpper: { "op": "toUpper", "arg": <ExprNode> }
-  - toLower: { "op": "toLower", "arg": <ExprNode> }
-  - slice: { "op": "slice", "value": <ExprNode>, "start": <ExprNode>, "end": <ExprNode> }
-  - includes: { "op": "includes", "left": <ExprNode>, "right": <ExprNode> }
-  - regex: { "op": "regex", "value": <ExprNode>, "pattern": "<string>", "flags": "<string>" }
 
 TABLE AGGREGATION:
   - accumulate: { "op": "accumulate", "sourceFieldId": "gridId.fieldId", "action": "add"|"sub"|"mul", "startIndex": <number>, "endIndex": <number>, "increment": <number>, "initialValue": <number> }
