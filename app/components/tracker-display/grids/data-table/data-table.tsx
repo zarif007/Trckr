@@ -538,7 +538,7 @@ export function DataTable<TData, TValue>({
         gridData={gridDataProp}
         mode="edit"
       />
-      <div className={cn('rounded-md overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
+      <div className={cn('rounded-md overflow-x-auto border border-border/30', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
         <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
           <TableHeader className={ts.headerBg}>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -561,7 +561,7 @@ export function DataTable<TData, TValue>({
                       }}
                       className={cn(
                         ts.headerHeight,
-                        'text-muted-foreground font-medium border-r border-border/50 last:border-r-0',
+                        'text-muted-foreground font-medium border-r border-border/50 last:border-r-0 text-xs',
                         ts.headerFontSize,
                         isSelect || isActions
                           ? 'p-0 text-center min-w-[44px] w-[44px]'

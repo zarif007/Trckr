@@ -1,8 +1,8 @@
-/** Shadows disabled app-wide — placeholders for future use. */
+/** Shadows now enabled via CSS variables. Map to Tailwind classes. */
 export const shadow = {
-  xs: '',
-  sm: '',
-  md: '',
-  lg: '',
-  xl: '',
+  xs: 'shadow-xs',
+  sm: 'shadow-sm',
+  md: 'shadow-md',
+  lg: 'shadow-lg',
+  xl: 'shadow-xl',
 } as const

@@ -1,6 +1,7 @@
 'use client'
 
 import { Table2, LayoutGrid, FormInput } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { TrackerGrid } from '../types'
 import { InlineEditableName, useBlockControls, LabelWithBlockControls } from '../layout'
 
@@ -14,8 +15,16 @@ export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
   }
   const info = map[type] ?? map.table
   const Icon = info.icon
+
+  const colorClasses = {
+    table: 'bg-info/10 text-info border border-info/20',
+    kanban: 'bg-warning/10 text-warning border border-warning/20',
+    div: 'bg-success/10 text-success border border-success/20',
+  }
+  const badgeClass = colorClasses[type as keyof typeof colorClasses] || 'bg-muted/50 text-muted-foreground border border-muted/50'
+
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+    <span className={cn('inline-flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5', badgeClass)}>
       <Icon className="h-3 w-3" />
       {info.label}
     </span>

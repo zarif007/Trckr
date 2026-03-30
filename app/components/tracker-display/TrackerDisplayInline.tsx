@@ -303,7 +303,7 @@ export function TrackerDisplayInline({
     ) : null
 
   const content = (
-    <div className="w-full min-w-0 space-y-4 px-0 py-2 md:px-1 md:py-2 rounded-md bg-card">
+    <div className="w-full min-w-0 space-y-4 px-2 py-3 md:px-3 md:py-4 rounded-md bg-card">
       <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}

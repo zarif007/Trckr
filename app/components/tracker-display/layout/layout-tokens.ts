@@ -16,11 +16,11 @@ export const SECTION_TO_GRIDS_GAP = 'mt-2'
 export const GRID_STACK_GAP = 'space-y-4'
 
 /** Section group root: one section bar + its grids. Same in edit and view. */
-export const SECTION_GROUP_ROOT = 'w-full min-w-0 pt-3'
+export const SECTION_GROUP_ROOT = 'w-full min-w-0 pt-4'
 
 /** Grids container: gap from section bar + gap between grids. Flex wrap so multiple grids wrap. */
 export const GRIDS_CONTAINER =
-  'flex flex-wrap gap-2 mt-1.5 w-full min-w-0'
+  'flex flex-wrap gap-3 mt-2 w-full min-w-0'
 
 /** Wrapper for each grid block (edit SortableBlockItem content, view ViewBlockWrapper content). */
 export const GRID_ITEM_WRAPPER = 'w-full min-w-0'
@@ -29,10 +29,10 @@ export const GRID_ITEM_WRAPPER = 'w-full min-w-0'
 export const GRID_BLOCK_INNER = 'w-full min-w-0 space-y-1.5'
 
 /** Tab content root: top margin only. Vertical stack lives on the inner wrapper. */
-export const TAB_CONTENT_ROOT = 'mt-3 w-full'
+export const TAB_CONTENT_ROOT = 'mt-4 w-full'
 
 /** Inner wrapper that holds section list — vertical separation between sections. */
 export const TAB_CONTENT_INNER = 'space-y-4 w-full min-w-0'
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
-export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 px-3 py-2 rounded-md bg-muted/45 border ${theme.border.verySubtle} text-foreground text-xs font-semibold tracking-tight`
+export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-md border-l-2 border-l-info/50 bg-muted/35 border border-border/30 text-foreground text-sm font-semibold tracking-tight`
