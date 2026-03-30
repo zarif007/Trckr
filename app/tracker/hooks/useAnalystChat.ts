@@ -66,7 +66,7 @@ export function useAnalystChat(options: UseAnalystChatOptions = {}) {
   }, [messages])
 
   const { object, submit, isLoading, error } = useObject({
-    api: '/api/generate-analysis',
+    api: '/api/agent/generate-analysis',
     schema: analystSchema,
     onFinish: ({ object: finishedObject }: { object?: AnalystSchema }) => {
       if (finishedObject?.content) {

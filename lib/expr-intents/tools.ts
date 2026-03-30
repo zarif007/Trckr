@@ -22,7 +22,7 @@ const validationDescription =
 const calculationDescription =
   'Generate an expression AST that computes the target field value from natural language. Use for calculated/read-only fields keyed by gridId.field_id in calculations.'
 
-/** Metadata for agentic flows; server execution lives in app/api/generate-expr/lib/run-intent.ts */
+/** Metadata for agentic flows; server execution lives in app/api/agent/generate-expr/lib/run-intent.ts */
 export const generateValidationExpressionTool = {
   name: 'generateValidationExpression' as const,
   purpose: 'validation' as const,

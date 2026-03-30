@@ -11,7 +11,7 @@ Result numbers are **not** stored. Re-running a report executes the saved query 
 1. **Intent** (`reportIntentSchema` in [`report-schemas.ts`](./report-schemas.ts)) — LLM extracts metrics, grids, filters, time range, output style, `generationPlan`.
 2. **Query plan** (`queryPlanV1Schema` in `@/lib/insights-query`) — LLM maps intent + field catalog to a safe AST (no SQL/JS).
 3. **Execute** — `loadTrackerDataForQueryPlan` + `executeQueryPlan` in `@/lib/insights-query`: Prisma load, flatten `TrackerData.data`, filters, optional aggregate, sort, limit. Aggregate **metrics** use either a single `path` or a per-row `expression` (same AST as formatter `compute_column`) for sums like **quantity × unit_price** — not `sum(unit_price)` for “total value”.
-4. **Calc** (`reportCalcIntentSchema` → `reportCalcPlanV1Schema`) — After execute, an LLM pass may list 0..N derived columns; each column’s **ExprNode** is produced by **`generateReportExprAst`** (same stack as [`app/api/generate-expr/route.ts`](../../app/api/generate-expr/route.ts): imports **`generateExpr`**, not an HTTP self-call). Rows are enriched with **`applyCalcPlanToRows`** / **`evaluateReportExprOnRow`** ([`calc-plan.ts`](./calc-plan.ts), [`report-expr.ts`](./report-expr.ts)). The persisted **`calcPlan`** JSON on `ReportDefinition` enables replay without re-running the expr LLM.
+4. **Calc** (`reportCalcIntentSchema` → `reportCalcPlanV1Schema`) — After execute, an LLM pass may list 0..N derived columns; each column’s **ExprNode** is produced by **`generateReportExprAst`** (same stack as [`app/api/agent/generate-expr/route.ts`](../../app/api/agent/generate-expr/route.ts): imports **`generateExpr`**, not an HTTP self-call). Rows are enriched with **`applyCalcPlanToRows`** / **`evaluateReportExprOnRow`** ([`calc-plan.ts`](./calc-plan.ts), [`report-expr.ts`](./report-expr.ts)). The persisted **`calcPlan`** JSON on `ReportDefinition` enables replay without re-running the expr LLM.
 5. **Formatter plan** (`formatterPlanV1Schema` in `@/lib/insights-query`) — LLM sees column schema + sample **after** calc enrichment; emits ordered ops (`drop_columns`, `filter`, `sort`, `rename`, `limit`, `group_by`, `compute_column`).
 6. **Apply** — `applyFormatterPlan` on enriched rows, then `formatOutputMarkdown`.
 
@@ -39,7 +39,7 @@ Fingerprint is a short SHA-256 prefix of a stable JSON blob derived from the tra
 
 ## Tracker expression AST (`generate-expr` capability)
 
-**Implemented** as orchestrator phase **`calc`** (between execute and formatter). It uses the same **ExprNode** AST and **`generateExpr`** implementation as [`app/api/generate-expr/route.ts`](../../app/api/generate-expr/route.ts); the route is only the HTTP wrapper — the report pipeline calls **`generateReportExprAst`** in [`report-generate-expr.ts`](./report-generate-expr.ts) so auth and streaming stay in one place.
+**Implemented** as orchestrator phase **`calc`** (between execute and formatter). It uses the same **ExprNode** AST and **`generateExpr`** implementation as [`app/api/agent/generate-expr/route.ts`](../../app/api/agent/generate-expr/route.ts); the route is only the HTTP wrapper — the report pipeline calls **`generateReportExprAst`** in [`report-generate-expr.ts`](./report-generate-expr.ts) so auth and streaming stay in one place.
 
 That path supports **richer** row math than the formatter `compute_column` DSL (conditionals, `min`/`max`, string ops, etc.). Formatting stays in the formatter agent; **calc** only adds named columns via Expr evaluation.
 

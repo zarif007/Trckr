@@ -1,10 +1,10 @@
 import 'server-only'
 
-import { generateExpr } from '@/app/api/generate-expr/lib/generate'
-import { deriveAvailableFields } from '@/app/api/generate-expr/lib/prompts'
+import { generateExpr } from '@/app/api/agent/generate-expr/lib/generate'
+import { deriveAvailableFields } from '@/app/api/agent/generate-expr/lib/prompts'
 
 /**
- * Reuses the same LLM + schema as `/api/generate-expr` with `purpose: 'report'`.
+ * Reuses the same LLM + schema as `/api/agent/generate-expr` with `purpose: 'report'`.
  * Call from the report orchestrator (do not HTTP to your own API).
  */
 export async function generateReportExprAst(params: {

@@ -29,7 +29,7 @@ async function callExprAgent(
 ): Promise<{ expr: unknown }> {
   const { gridId, fieldId } = parseFieldPath(intent.fieldPath)
 
-  const res = await fetch('/api/generate-expr', {
+  const res = await fetch('/api/agent/generate-expr', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

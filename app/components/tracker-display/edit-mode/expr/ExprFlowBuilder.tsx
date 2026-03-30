@@ -314,7 +314,7 @@ export function ExprFlowBuilder({
         ) : undefined)
       }
       palette={<ExprFlowPalette makeDragStart={makeDragStart} />}
-      canvasMinHeight="360px"
+      canvasMinHeight="600px"
       applyError={compileError}
       onApply={handleCompile}
       applyLabel="Apply visual expression"

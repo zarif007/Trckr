@@ -298,7 +298,7 @@ export function DynamicOptionsBuilder({
     setAiLoading(true)
     setAiError(null)
     try {
-      const response = await fetch('/api/generate-dynamic-options', {
+      const response = await fetch('/api/agent/generate-dynamic-options', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

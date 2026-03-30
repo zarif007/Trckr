@@ -17,6 +17,8 @@ export interface FlowBuilderLayoutProps {
   children: ReactNode
   /** Minimum height of the canvas (default 360px). Use larger for expandable view. */
   canvasMinHeight?: string
+  /** Height of the palette and canvas container (default same as canvasMinHeight). Both panels will be this height. */
+  containerHeight?: string
   /** Optional error message shown above Apply button */
   applyError?: string | null
   /** Called when user clicks Apply */
@@ -40,7 +42,8 @@ export function FlowBuilderLayout({
   headerRight,
   palette,
   children,
-  canvasMinHeight = '360px',
+  canvasMinHeight = '600px',
+  containerHeight,
   applyError,
   onApply,
   applyLabel = 'Apply',
@@ -49,6 +52,7 @@ export function FlowBuilderLayout({
   applySuccess = false,
 }: FlowBuilderLayoutProps) {
   const [paletteOpen, setPaletteOpen] = useState(true)
+  const panelHeight = containerHeight ?? canvasMinHeight
 
   return (
     <div
@@ -72,11 +76,14 @@ export function FlowBuilderLayout({
       </div>
 
       {/* Main Content: Palette + Canvas */}
-      <div className="flex min-h-0 min-w-0 w-full flex-1 gap-4">
+      <div
+        className="flex min-h-0 min-w-0 w-full gap-4"
+        style={{ height: panelHeight }}
+      >
         {/* Palette Sidebar — collapsible */}
         <div
           className={cn(
-            'flex shrink-0 flex-col border bg-muted/30 overflow-hidden transition-all duration-200 min-h-0',
+            'flex shrink-0 flex-col border bg-muted/30 overflow-hidden transition-all duration-200 h-full',
             theme.radius.md,
             theme.border.verySubtle,
             paletteOpen ? (paletteClassName ?? 'w-[180px]') : 'w-9'
@@ -108,12 +115,11 @@ export function FlowBuilderLayout({
         {/* Canvas Area */}
         <div
           className={cn(
-            'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden border bg-background/80 shadow-inner',
+            'flex min-h-0 min-w-0 w-full flex-1 flex-col overflow-hidden border bg-background/80 shadow-inner h-full',
             theme.radius.md,
             theme.border.subtleAlt,
             canvasClassName
           )}
-          style={{ minHeight: canvasMinHeight }}
         >
           {children}
         </div>

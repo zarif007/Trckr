@@ -1025,7 +1025,7 @@ export function DynamicFunctionFlowBuilder({
           ) : undefined
         }
         palette={paletteMinimal}
-        canvasMinHeight="420px"
+        canvasMinHeight="600px"
         applyError={applyError ?? null}
         onApply={handleApply}
         applyLabel="Apply visual pipeline"

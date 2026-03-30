@@ -4,7 +4,7 @@ Editing UI for field validation and calculation expressions. Supports a visual f
 
 ## What it is
 
-- **ExprRuleEditor**: Tabbed editor (Visual, JSON, AI prompt) for a single expression. Used for "Custom expression" validation rules and calculation expressions. Calls `/api/generate-expr` for AI generation.
+- **ExprRuleEditor**: Tabbed editor (Visual, JSON, AI prompt) for a single expression. Used for "Custom expression" validation rules and calculation expressions. Calls `/api/agent/generate-expr` for AI generation.
 - **ExprFlowBuilder**: Visual node-based editor: field nodes, const nodes, operator nodes (add, sub, eq, etc.), and a result node. Compiles the graph to an `ExprNode` and passes it to `onChange`.
 - **expr-graph**: Compiles a React Flow graph to `ExprNode` (`compileExprFromGraph`) and serializes an `ExprNode` to nodes/edges (`exprToGraph`). Defines `ExprFlowNodeData`, handle IDs, and binary tree handling for add/mul.
 - **expr-types**: `ExprFlowOperator`, `AvailableField`, `ExprFlowNodeType` for the flow builder and for consumers (e.g. generate-expr API).
@@ -29,4 +29,4 @@ Editing UI for field validation and calculation expressions. Supports a visual f
 ## Usage
 
 - **ExprRuleEditor** is used by **FieldSettingsDialog** in the Validations and Calculations tabs.
-- **AvailableField** (and optionally other expr-types) are exported from the edit-mode barrel for **app/api/generate-expr** and other consumers.
+- **AvailableField** (and optionally other expr-types) are exported from the edit-mode barrel for **app/api/agent/generate-expr** and other consumers.

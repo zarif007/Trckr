@@ -5,8 +5,9 @@
 Applies to:
 
 - `/api/generate-tracker`
-- `/api/generate-expr`
-- `/api/generate-dynamic-options`
+- `/api/agent/generate-expr`
+- `/api/agent/generate-analysis`
+- `/api/agent/generate-dynamic-options`
 - `/api/dynamic-options/resolve` (AI extraction path)
 
 ## Architecture

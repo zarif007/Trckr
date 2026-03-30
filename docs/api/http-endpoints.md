@@ -31,8 +31,9 @@
 ## Generation
 
 - `POST /api/generate-tracker`
-- `POST /api/generate-expr`
-- `POST /api/generate-dynamic-options`
+- `POST /api/agent/generate-expr`
+- `POST /api/agent/generate-analysis`
+- `POST /api/agent/generate-dynamic-options`
 - `POST /api/dynamic-options/resolve`
 
 ## Teams
