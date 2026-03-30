@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { experimental_useObject as useObject } from '@ai-sdk/react'
-import { multiAgentSchema, MultiAgentSchema } from '@/lib/schemas/multi-agent'
+import { MultiAgentSchema } from '@/lib/schemas/multi-agent'
+import { useAgentStream } from './useAgentStream'
 import { validateTracker, autoFixBindings, type TrackerLike } from '@/lib/validate-tracker'
 import { buildBindingsFromSchema, enrichBindingsFromSchema } from '@/lib/binding'
 import { applyTrackerPatch } from '@/app/tracker/utils/mergeTracker'
@@ -392,9 +392,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     }
   }, [setResolvedTrackerData, trackerId])
 
-  const { object, submit, isLoading, error } = useObject({
-    api: '/api/generate-tracker',
-    schema: multiAgentSchema,
+  const { object, submit, isLoading, error, phase, statusMessage } = useAgentStream({
+    api: '/api/agent/build-tracker',
     onFinish: ({ object: finishedObject }: { object?: MultiAgentSchema }) => {
       setGenerationErrorMessage(null)
       setResumingAfterError(false)
@@ -776,5 +775,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     clearDialogError,
     toolCalls,
     isResolvingExpressions,
+    phase,
+    statusMessage,
   }
 }

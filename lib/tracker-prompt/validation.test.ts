@@ -49,4 +49,3 @@ describe('parseRequestBody', () => {
     expect(result.error).toBe('DEEPSEEK_API_KEY is not configured')
   })
 })
-

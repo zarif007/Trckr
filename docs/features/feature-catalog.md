@@ -11,7 +11,6 @@ This catalog is used for onboarding and docs coverage checks. Every path below m
 | Tracker renderer/editor | `app/components/tracker-display` | Tabs/sections/grids/edit mode. |
 | Tracker page UI shell | `app/components/tracker-page` | Input, message list, empty state. |
 | Tracker persistence APIs | `app/api/trackers`, `app/api/conversations` | Schema/data/conversation endpoints. |
-| Generation APIs | `app/api/generate-tracker`, `app/api/generate-expr`, `app/api/generate-dynamic-options` | AI-assisted generation. |
 | Dynamic options engine | `lib/dynamic-options` | Built-ins + graph/user function execution. |
 | Binding + path resolution | `lib/binding`, `lib/resolve-bindings` | Select options and mapping propagation. |
 | Field rules and validation | `lib/field-rules`, `lib/validate-tracker`, `lib/field-validation`, `lib/field-calculation` | Runtime field behavior and schema validation. |

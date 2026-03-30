@@ -1,7 +1,7 @@
 import { hasDeepSeekApiKey } from '@/lib/ai'
 
 /**
- * Request validation and error helpers for generate-tracker.
+ * Request validation and error helpers for tracker generation endpoints.
  */
 
 export type ParseResult =

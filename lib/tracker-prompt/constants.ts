@@ -1,5 +1,5 @@
 /**
- * Constants for the generate-tracker API.
+ * Constants for tracker prompt assembly.
  * Tune token limits and retry behavior here.
  */
 import { DEEPSEEK_CHAT_MAX_OUTPUT, getConfiguredMaxOutputTokens } from '@/lib/ai'

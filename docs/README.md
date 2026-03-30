@@ -60,5 +60,4 @@ These are local technical docs closest to each module implementation.
 - [lib/teams](../lib/teams/README.md)
 - [lib/tracker-data](../lib/tracker-data/README.md)
 - [lib/validate-tracker](../lib/validate-tracker/README.md)
-- [app/api/generate-tracker](../app/api/generate-tracker/README.md)
 - [app/api/teams](../app/api/teams/README.md)
