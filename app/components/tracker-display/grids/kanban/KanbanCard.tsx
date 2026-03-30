@@ -83,7 +83,7 @@ export function KanbanCard({
         cardPadding,
         fontWeight,
         theme.radius.md,
-        'border-border/30'
+        'border-border/60'
       )}
     >
       <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">

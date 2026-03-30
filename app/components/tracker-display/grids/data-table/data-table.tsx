@@ -196,127 +196,127 @@ export function DataTable<TData, TValue>({
     () => {
       const actionColumnEnabled = Boolean(renderRowAction) || showRowDetails
       return [
-      ...(deletable
-        ? [
-          {
-            id: 'select',
+        ...(deletable
+          ? [
+            {
+              id: 'select',
+              size: 44,
+              minSize: 44,
+              maxSize: 44,
+              header: ({ table }) => (
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={
+                      table.getIsAllPageRowsSelected() ||
+                      (table.getIsSomePageRowsSelected() && 'indeterminate')
+                    }
+                    onCheckedChange={(value) =>
+                      table.toggleAllPageRowsSelected(!!value)
+                    }
+                    aria-label="Select all rows on this page"
+                  />
+                </div>
+              ),
+              cell: ({ row }) => (
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label={`Select row ${row.index + 1}`}
+                  />
+                </div>
+              ),
+            } as ColumnDef<TData, TValue>,
+          ]
+          : []),
+        ...columns,
+        ...(actionColumnEnabled
+          ? [{
+            id: 'actions',
             size: 44,
             minSize: 44,
             maxSize: 44,
-            header: ({ table }) => (
-              <div className="flex items-center justify-center">
-                <Checkbox
-                  checked={
-                    table.getIsAllPageRowsSelected() ||
-                    (table.getIsSomePageRowsSelected() && 'indeterminate')
-                  }
-                  onCheckedChange={(value) =>
-                    table.toggleAllPageRowsSelected(!!value)
-                  }
-                  aria-label="Select all rows on this page"
-                />
-              </div>
-            ),
-            cell: ({ row }) => (
-              <div className="flex items-center justify-center">
-                <Checkbox
-                  checked={row.getIsSelected()}
-                  onCheckedChange={(value) => row.toggleSelected(!!value)}
-                  aria-label={`Select row ${row.index + 1}`}
-                />
-              </div>
-            ),
-          } as ColumnDef<TData, TValue>,
-        ]
-        : []),
-      ...columns,
-      ...(actionColumnEnabled
-        ? [{
-        id: 'actions',
-        size: 44,
-        minSize: 44,
-        maxSize: 44,
-        header: ({ table }) =>
-          editLayoutAble ? (
-            <Dialog>
-              <DialogTrigger asChild>
+            header: ({ table }) =>
+              editLayoutAble ? (
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 p-0 hover:bg-muted"
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      <span className="sr-only">View settings</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent
+                    className="sm:max-w-[300px]"
+                    onInteractOutside={(e) => e.preventDefault()}
+                  >
+                    <DialogHeader>
+                      <DialogTitle>Toggle Columns</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-2">
+                      <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                        {table
+                          .getAllColumns()
+                          .filter(
+                            (column) =>
+                              typeof column.accessorFn !== 'undefined' &&
+                              column.getCanHide(),
+                          )
+                          .map((column) => {
+                            return (
+                              <div
+                                key={column.id}
+                                className="flex items-center space-x-2"
+                              >
+                                <Checkbox
+                                  checked={column.getIsVisible()}
+                                  onCheckedChange={(value) =>
+                                    column.toggleVisibility(!!value)
+                                  }
+                                  id={`col-${column.id}`}
+                                />
+                                <label
+                                  htmlFor={`col-${column.id}`}
+                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
+                                >
+                                  {typeof column.columnDef.header === 'string'
+                                    ? column.columnDef.header
+                                    : column.id}
+                                </label>
+                              </div>
+                            )
+                          })}
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ) : null,
+            cell: ({ row }) => {
+              if (renderRowAction) {
+                return (
+                  <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                    {renderRowAction({ row: row.original as TData, rowIndex: row.index })}
+                  </div>
+                )
+              }
+              if (!showRowDetails) return null
+              return (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 p-0 hover:bg-muted"
+                  className="h-6 w-6 p-0"
+                  onClick={() => setRowDetailsOpenForIndex(row.index)}
+                  aria-label={`View full details for row ${row.index + 1}`}
                 >
-                  <Settings2 className="h-4 w-4" />
-                  <span className="sr-only">View settings</span>
+                  <ChevronDown className="h-4 w-4" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent
-                className="sm:max-w-[300px]"
-                onInteractOutside={(e) => e.preventDefault()}
-              >
-                <DialogHeader>
-                  <DialogTitle>Toggle Columns</DialogTitle>
-                </DialogHeader>
-                <div className="py-2">
-                  <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
-                    {table
-                      .getAllColumns()
-                      .filter(
-                        (column) =>
-                          typeof column.accessorFn !== 'undefined' &&
-                          column.getCanHide(),
-                      )
-                      .map((column) => {
-                        return (
-                          <div
-                            key={column.id}
-                            className="flex items-center space-x-2"
-                          >
-                            <Checkbox
-                              checked={column.getIsVisible()}
-                              onCheckedChange={(value) =>
-                                column.toggleVisibility(!!value)
-                              }
-                              id={`col-${column.id}`}
-                            />
-                            <label
-                              htmlFor={`col-${column.id}`}
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
-                            >
-                              {typeof column.columnDef.header === 'string'
-                                ? column.columnDef.header
-                                : column.id}
-                            </label>
-                          </div>
-                        )
-                      })}
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          ) : null,
-        cell: ({ row }) => {
-          if (renderRowAction) {
-            return (
-              <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
-                {renderRowAction({ row: row.original as TData, rowIndex: row.index })}
-              </div>
-            )
-          }
-          if (!showRowDetails) return null
-          return (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-0"
-              onClick={() => setRowDetailsOpenForIndex(row.index)}
-              aria-label={`View full details for row ${row.index + 1}`}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          )
-        },
-      } as ColumnDef<TData, TValue>] : []),
-    ]
+              )
+            },
+          } as ColumnDef<TData, TValue>] : []),
+      ]
     },
     [columns, deletable, editLayoutAble, renderRowAction, showRowDetails],
   )
@@ -495,7 +495,7 @@ export function DataTable<TData, TValue>({
                 onNewEntryClick={() => setShowAddDialog(true)}
                 entryWays={entryWays}
                 // For now, Entry Ways are just visible options; clicking does not create rows yet.
-                onSelectEntryWay={() => {}}
+                onSelectEntryWay={() => { }}
                 disabled={!onAddEntry}
               />
               <EntryFormDialog
@@ -544,7 +544,7 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="hover:bg-transparent border-b border-border/40"
+                className="bg-muted/40 hover:bg-muted/40 border-b border-border/40"
               >
                 {headerGroup.headers.map((header) => {
                   const isSelect = header.id === 'select'
