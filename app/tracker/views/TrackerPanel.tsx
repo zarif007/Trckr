@@ -102,6 +102,7 @@ interface TrackerPanelProps {
   previewSaveStatus?: 'idle' | 'saving' | 'saved' | 'error'
   onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void
   ownerScopeSettingsBanner?: OwnerScopeSettingsBanner
+  onImportData?: (data: GridDataSnapshot) => void
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -139,12 +140,15 @@ export const TrackerPanel = memo(function TrackerPanel({
   previewSaveStatus = 'idle',
   onForeignBindingNavUiChange,
   ownerScopeSettingsBanner,
+  onImportData,
 }: TrackerPanelProps) {
   const displayKey = 'tracker-display'
   const [debugView, setDebugView] = useState<'structure' | 'data' | null>(null)
   const [dataSnapshot, setDataSnapshot] = useState<Record<string, Array<Record<string, unknown>>> | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
   const [vcDrawerOpen, setVcDrawerOpen] = useState(false)
+  const [importJson, setImportJson] = useState('')
+  const [importError, setImportError] = useState<string | null>(null)
 
   useUndoKeyboardShortcut(editMode, canUndo ?? false, undo)
 
@@ -156,11 +160,40 @@ export const TrackerPanel = memo(function TrackerPanel({
     const data = trackerDataRef.current?.() ?? {}
     setDataSnapshot(data)
     setDebugView('data')
+    setImportJson('')
+    setImportError(null)
   }, [trackerDataRef])
 
   const getCurrentData = useCallback((): GridDataSnapshot => {
     return trackerDataRef.current?.() ?? {}
   }, [trackerDataRef])
+
+  const parseImportJson = useCallback((raw: string): GridDataSnapshot | string => {
+    try {
+      const parsed = JSON.parse(raw)
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        return 'Must be a JSON object (e.g. { "gridId": [...rows] })'
+      }
+      for (const [key, val] of Object.entries(parsed)) {
+        if (!Array.isArray(val)) return `Value for "${key}" must be an array of rows`
+      }
+      return parsed as GridDataSnapshot
+    } catch {
+      return 'Invalid JSON'
+    }
+  }, [])
+
+  const handleImportData = useCallback(() => {
+    const result = parseImportJson(importJson)
+    if (typeof result === 'string') {
+      setImportError(result)
+      return
+    }
+    onImportData?.(result)
+    setDebugView(null)
+    setImportJson('')
+    setImportError(null)
+  }, [importJson, parseImportJson, onImportData])
 
   const debugJson =
     debugView === 'structure'
@@ -368,15 +401,65 @@ export const TrackerPanel = memo(function TrackerPanel({
       </div>
 
       <Dialog open={debugView !== null} onOpenChange={(open) => !open && setDebugView(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogContent className={`max-w-2xl ${debugView === 'data' && onImportData ? 'max-h-[90vh]' : 'max-h-[85vh]'} flex flex-col`}>
           <DialogHeader>
             <DialogTitle className="text-base">
               {debugView === 'structure' ? 'Tracker structure' : 'Tracker data'}
             </DialogTitle>
           </DialogHeader>
-          <pre className="flex-1 min-h-0 overflow-auto rounded-md bg-muted/50 p-4 text-xs font-mono whitespace-pre-wrap break-words border border-border/60">
-            {debugJson || '{}'}
-          </pre>
+
+          {debugView === 'data' && onImportData ? (
+            <div className="flex-1 min-h-0 flex flex-col gap-4 overflow-y-auto">
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold text-foreground">Current data</p>
+                <pre className="flex-1 min-h-[120px] overflow-auto rounded-md bg-muted/50 p-3 text-xs font-mono whitespace-pre-wrap break-words border border-border/60">
+                  {debugJson || '{}'}
+                </pre>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-semibold text-foreground">Import data</p>
+                <textarea
+                  value={importJson}
+                  onChange={(e) => {
+                    setImportJson(e.target.value)
+                    setImportError(null)
+                  }}
+                  placeholder={`{ "gridId": [ { "fieldId": "value" } ] }`}
+                  className="flex-1 min-h-[120px] max-h-[200px] rounded-md border border-input bg-background px-3 py-2 text-xs font-mono resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+                {importError && (
+                  <p className="text-xs text-destructive">{importError}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setDebugView(null)
+                    setImportJson('')
+                    setImportError(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleImportData}
+                  disabled={!importJson.trim()}
+                >
+                  Import
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <pre className="flex-1 min-h-0 overflow-auto rounded-md bg-muted/50 p-4 text-xs font-mono whitespace-pre-wrap break-words border border-border/60">
+              {debugJson || '{}'}
+            </pre>
+          )}
         </DialogContent>
       </Dialog>
 

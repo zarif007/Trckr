@@ -241,6 +241,14 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     setVcLoadedSnapshot(s)
   }, [setVcLoadedSnapshot])
 
+  const handleImportData = useCallback((data: Record<string, Array<Record<string, unknown>>>) => {
+    setLoadedSnapshot({
+      id: `import-${Date.now()}`,
+      label: null,
+      data,
+    })
+  }, [])
+
   const formActionsState = useFormActionsState(schema, currentFormStatus)
   const { formActions, effectiveCurrentFormStatus, isReadOnly } = formActionsState
 
@@ -713,6 +721,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     handleVcBranchSwitch,
     handleVcBranchCreated,
     handleVcMergedToMain,
+    handleImportData,
     showPanelUtilities,
     showPreviewSaveButton: false,
     onPreviewSave,

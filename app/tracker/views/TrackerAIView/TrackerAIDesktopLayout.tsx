@@ -37,6 +37,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     handleVcBranchSwitch,
     handleVcBranchCreated,
     handleVcMergedToMain,
+    handleImportData,
     showPanelUtilities,
     showPreviewSaveButton,
     onPreviewSave,
@@ -53,6 +54,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     >
       <div ref={containerRef} className="flex-1 min-h-0 flex overflow-hidden">
         <TrackerPanel
+          key={loadedSnapshot?.id ?? 'default'}
           schema={effectiveDisplaySchema}
           editMode={editMode}
           setEditMode={setEditMode}
@@ -86,6 +88,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           previewSaveStatus={dataSaveStatus}
           onForeignBindingNavUiChange={reportForeignBindingNav}
           ownerScopeSettingsBanner={ownerScopeSettingsBanner}
+          onImportData={handleImportData}
         />
 
         {isChatOpen && (

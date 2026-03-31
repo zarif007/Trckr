@@ -38,6 +38,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     handleVcBranchSwitch,
     handleVcBranchCreated,
     handleVcMergedToMain,
+    handleImportData,
     showPanelUtilities,
     showPreviewSaveButton,
     onPreviewSave,
@@ -69,6 +70,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
             className="flex-1 min-h-0 overflow-hidden mt-0 data-[state=inactive]:hidden"
           >
             <TrackerPanel
+              key={loadedSnapshot?.id ?? 'default'}
               schema={effectiveDisplaySchema}
               editMode={editMode}
               setEditMode={setEditMode}
@@ -104,6 +106,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               previewSaveStatus={dataSaveStatus}
               onForeignBindingNavUiChange={reportForeignBindingNav}
               ownerScopeSettingsBanner={ownerScopeSettingsBanner}
+              onImportData={handleImportData}
             />
           </TabsContent>
           <TabsContent
