@@ -331,16 +331,24 @@ calculations: {
 Rules:
 1. Key must be "grid_id.field_id" (no tab).
 2. "_intent" must describe a computation that produces the target field's value (not a boolean).
-3. Reference other fields by their label or id so the expression agent can resolve them. Mention the grid name/id if cross-grid.
-4. Keep references in the same grid as the target field unless the user explicitly asks otherwise.
+3. **CRITICAL: All field references MUST stay within the target grid, UNLESS using aggregation operations (sum, accumulate, count).**
+   - ✓ CORRECT (same grid): "multiply quantity by unit_price in this grid"
+   - ✓ CORRECT (aggregation): "sum of all amounts from the amounts_grid"
+   - ✓ CORRECT (aggregation): "count of rows in the orders_grid"
+   - ✗ WRONG (cross-grid field reference): "multiply quantity by products_grid.cost" — this is invalid; use sum/accumulate instead
+4. When aggregating from another grid, explicitly mention "sum of", "count of", or "accumulate" to trigger the correct operation.
 5. If no calculations are needed, omit "calculations" or use an empty object.
 6. The "_intent" string is REQUIRED — do not leave it empty or omit it.
 
-Examples:
-  { "_intent": "multiply the quantity field by the unit_price field" }
-  { "_intent": "sum of all values in the amount field across all rows" }
-  { "_intent": "count of rows in the tasks_grid" }
-  { "_intent": "if status equals 'completed' then 100, otherwise calculate (completed_items / total_items) * 100" }
+Examples (CORRECT):
+  { "_intent": "multiply the quantity field by the unit_price field in orders_grid" }
+  { "_intent": "sum of all amount values from the line_items_grid" }
+  { "_intent": "count of rows in the orders_grid" }
+  { "_intent": "if status equals 'completed' then 100, otherwise calculate (completed_items / total_items) * 100 (all fields in this grid)" }
+
+Examples (WRONG — will be rejected):
+  ✗ "multiply quantity by products_grid.cost" — reference is from another grid but not an aggregation
+  ✗ "add the order_total from orders_grid to the price field" — cross-grid arithmetic reference
 
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `

@@ -38,7 +38,11 @@ You are generating a JSON expression AST for ${taskLabel}.
 Rules:
 - Output ONLY valid JSON with a single top-level object: { "expr": <ExprNode> }.
 - "field" nodes must use fieldId in "gridId.fieldId" format from the provided list.
-- **IMPORTANT: All field references must stay within the target grid "${gridId}" unless explicitly instructed otherwise in the user prompt.**
+- **CRITICAL: Regular field references in arithmetic/comparison operations must stay within target grid "${gridId}".**
+- **For cross-grid aggregation (summing values from another grid), use sum/accumulate/count with sourceFieldId, NOT field references in arithmetic.**
+  - ✓ CORRECT: { "op": "sum", "sourceFieldId": "other_grid.amount" }
+  - ✓ CORRECT: { "op": "accumulate", "sourceFieldId": "other_grid.price", "action": "add" }
+  - ✗ WRONG: { "op": "mul", "args": [{ "op": "field", "fieldId": "other_grid.cost" }, quantity] }
 - Only use operators listed in the "Supported operators" section above — do not generate other operators.
 ${purpose === 'report' ? '- For reports, each evaluation uses one **flattened grid row**: row values include both bare field ids (e.g. quantity) and "gridId.fieldId" when __gridId is known — prefer "gridId.fieldId" from the available fields list for clarity.\n' : ''}${purposeRules}
 
@@ -46,7 +50,7 @@ Supported operators and their canonical shapes:
 
 DATA:
   - const: { "op": "const", "value": <literal> }
-  - field: { "op": "field", "fieldId": "gridId.fieldId" }
+  - field: { "op": "field", "fieldId": "gridId.fieldId" } [MUST be within target grid]
 
 ARITHMETIC:
   - add: { "op": "add", "args": [<ExprNode>, ...] }
@@ -63,10 +67,10 @@ LOGIC:
   - not: { "op": "not", "arg": <ExprNode> }
   - if: { "op": "if", "cond": <ExprNode>, "then": <ExprNode>, "else": <ExprNode> }
 
-TABLE AGGREGATION:
-  - accumulate: { "op": "accumulate", "sourceFieldId": "gridId.fieldId", "action": "add"|"sub"|"mul", "startIndex": <number>, "endIndex": <number>, "increment": <number>, "initialValue": <number> }
-  - sum: { "op": "sum", "sourceFieldId": "gridId.fieldId", "startIndex": <number>, "endIndex": <number>, "increment": <number>, "initialValue": <number> }
-  - count: { "op": "count", "sourceFieldId": "gridId.fieldId" }
+TABLE AGGREGATION (for cross-grid summation):
+  - sum: { "op": "sum", "sourceFieldId": "gridId.fieldId" } — sums all values in sourceFieldId
+  - accumulate: { "op": "accumulate", "sourceFieldId": "gridId.fieldId", "action": "add"|"sub"|"mul", "startIndex": <number>, "endIndex": <number> } — cumulative operation across a grid
+  - count: { "op": "count", "sourceFieldId": "gridId.fieldId" } — counts rows in a grid
 
 Any slot that says <ExprNode> can be another operator (recursive nesting).
 - Do not include any extra keys or explanations.
