@@ -47,7 +47,6 @@ LLM usage sources include `report-query-plan`, `analysis-query-plan`, `analysis-
 |--------|----------|
 | Phase timeline state + NDJSON reader | `app/insights/lib/ndjson-timeline.ts` (`applyPhaseStreamEvent`, `consumeInsightNdjsonStream`) |
 | Timeline UI | `app/insights/components/GenerationTimeline.tsx` |
-| Optional fetch helper | `app/insights/hooks/useNdjsonPostStream.ts` |
 | Page chrome (header, stale banner, prompt shell) | `app/insights/components/InsightPageHeader.tsx`, `StaleDefinitionBanner.tsx`, `InsightPromptCard.tsx` |
 | Multiline prompt (report + analysis) | `app/insights/components/InsightMultilinePrompt.tsx` |
 | New report/analysis dialog | `app/insights/components/NewTrackerBackedItemDialog.tsx` |

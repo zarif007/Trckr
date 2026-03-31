@@ -23,6 +23,8 @@ export interface TrackerEditorViewProps {
   trackerId?: string | null
   /** Owning project (for inter-tracker bindings in schema editor). */
   projectId?: string | null
+  /** Owning module within the project (used for module-scope master data resolution). */
+  moduleId?: string | null
   instanceType?: 'SINGLE' | 'MULTI'
   instanceId?: string | null
   autoSave?: boolean

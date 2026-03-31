@@ -21,6 +21,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     effectiveDisplaySchema,
     isStreamingTracker,
     isResolvingMasterData,
+    isAgentRunning,
     trackerDataRef,
     handleGridDataChange,
     undoable,
@@ -79,6 +80,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               setIsChatOpen={setIsChatOpen}
               isStreamingTracker={isStreamingTracker}
               isResolvingMasterData={isResolvingMasterData}
+              isAgentRunning={isAgentRunning}
               trackerDataRef={trackerDataRef}
               onGridDataChange={handleGridDataChange}
               handleSchemaChange={canEditSchema && editMode ? undoable.onSchemaChange : undefined}

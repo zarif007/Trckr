@@ -9,6 +9,9 @@
 import managerPrompt from '@/lib/prompts/manager'
 import trackerBuilderPrompt from '@/lib/prompts/trackerBuilder'
 import type { ManagerSchema } from '@/lib/schemas/multi-agent'
+import type { ResolvedMasterDataEntry } from './master-data-agent'
+
+export type { ResolvedMasterDataEntry }
 
 export interface PromptInputs {
   query: string
@@ -17,6 +20,9 @@ export interface PromptInputs {
   hasFullTrackerStateForPatch: boolean
   conversationContext: string
   hasMessages: boolean
+  /** Pre-resolved master data entries (module/project scope). When present, builder uses real IDs. */
+  resolvedMasterData?: ResolvedMasterDataEntry[] | null
+  masterDataScope?: string | null
 }
 
 // ─── System Prompts ────────────────────────────────────────────────────────────
@@ -143,14 +149,15 @@ export function buildManagerUserPrompt(inputs: PromptInputs): string {
  * The plan block gives the builder clear, authoritative instructions.
  */
 export function buildBuilderUserPrompt(inputs: PromptInputs, manager: ManagerSchema): string {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch } = inputs
+  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData } = inputs
   const managerBlock = formatManagerPlan(manager)
   const prefix = currentStateBlock + conversationContext
   const stateTail = hasFullTrackerStateForPatch
     ? ' Start from the Current Tracker State above when present.'
     : ''
+  const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
 
-  return `${prefix}${managerBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`
+  return `${prefix}${mdBlock}${managerBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`
 }
 
 /**
@@ -161,13 +168,14 @@ export function buildBuilderFallbackPrompts(
   inputs: PromptInputs,
   manager: ManagerSchema,
 ): string[] {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch } = inputs
+  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData } = inputs
   const managerBlock = formatManagerPlan(manager)
   const stateHint =
     currentStateBlock && hasFullTrackerStateForPatch ? ' Start from the Current Tracker State above.' : ''
+  const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
 
   return [
-    `${currentStateBlock}${conversationContext}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
+    `${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
     `${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
     'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings.',
   ]
@@ -224,5 +232,18 @@ function formatManagerPlan(manager: ManagerSchema): string {
   }
 
   lines.push('\n=== End Manager Plan ===')
+  return lines.join('\n')
+}
+
+function formatResolvedMasterData(entries: ResolvedMasterDataEntry[]): string {
+  const lines = ['\n=== Pre-Resolved Master Data ===']
+  lines.push('These master data trackers are ALREADY IN THE DATABASE. Use their EXACT IDs in bindings.')
+  lines.push('Do NOT use "__master_data__" placeholder. Do NOT create local master data grids. Do NOT output masterDataTrackers.\n')
+  for (const e of entries) {
+    lines.push(`• key: "${e.key}"  name: "${e.name}"`)
+    lines.push(`  trackerId: "${e.trackerId}"  gridId: "${e.gridId}"  labelFieldId: "${e.labelFieldId}"`)
+    lines.push(`  → use binding: { optionsSourceSchemaId: "${e.trackerId}", optionsSourceKey: "${e.key}", optionsGrid: "${e.gridId}", labelField: "${e.gridId}.${e.labelFieldId}" }`)
+  }
+  lines.push('\n=== End Pre-Resolved Master Data ===\n')
   return lines.join('\n')
 }

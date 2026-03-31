@@ -38,6 +38,7 @@ interface TrackerChatPanelProps {
   toolCalls?: ToolCallEntry[]
   isResolvingExpressions?: boolean
   isResolvingMasterData?: boolean
+  statusMessage?: string
   mode?: 'schema' | 'data'
   isConversationLoading?: boolean
   /** Optional multi-conversation controls (Cursor-style chat tabs). */
@@ -71,6 +72,7 @@ export function TrackerChatPanel({
   toolCalls,
   isResolvingExpressions,
   isResolvingMasterData = false,
+  statusMessage,
   mode = 'schema',
   isConversationLoading = false,
   conversationWindows,
@@ -169,6 +171,7 @@ export function TrackerChatPanel({
                   toolCalls={toolCalls}
                   isResolvingExpressions={isResolvingExpressions}
                   isResolvingMasterData={isResolvingMasterData}
+                  statusMessage={statusMessage}
                   mode={mode}
                 />
               )}

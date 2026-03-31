@@ -1,5 +1,5 @@
 /**
- * Orchestrates the two-phase agent pipeline: Manager → Builder.
+ * Orchestrates the three-phase agent pipeline: Manager → Master Data → Builder.
  *
  * Writes phase markers and agent events to a stream controller, allowing the frontend
  * to track progress and show incremental schema previews in real time.
@@ -8,24 +8,31 @@
 import type { LanguageModelUsage } from 'ai'
 
 import type { RequestLogContext } from '@/lib/api'
-import { logAiStage } from '@/lib/ai'
+import { logAiError, logAiStage } from '@/lib/ai'
 import { encodeEvent, type AgentStreamEvent } from '@/lib/agent/events'
 import type { PromptInputs } from './prompts'
 import { runManagerAgent } from './manager-agent'
+import { runMasterDataAgent } from './master-data-agent'
 import { runBuilderAgent } from './builder-agent'
 
 export interface OrchestrateOptions {
   logContext?: RequestLogContext
+  userId?: string
+  projectId?: string | null
+  moduleId?: string | null
+  masterDataScope?: string | null
   onManagerLlmUsage?: (usage: LanguageModelUsage) => void
   onBuilderLlmUsage?: (usage: LanguageModelUsage) => void
 }
 
 /**
- * Run the full Manager → Builder pipeline, writing NDJSON events to the stream controller.
+ * Run the full Manager → Master Data → Builder pipeline, writing NDJSON events to the stream.
  *
  * Phases:
- * 1. Manager generates a structured plan (fast, ~2K tokens)
- * 2. Builder streams the tracker schema using the manager's plan as context
+ * 1. Manager generates a structured plan and declares required master data entities
+ * 2. Master Data Agent pre-creates/finds master data trackers in the right folder (skipped when
+ *    masterDataScope is "tracker" or no master data is needed)
+ * 3. Builder streams the tracker schema using the manager plan + resolved master data IDs
  *
  * Errors bubble up to the caller; the route handler writes an `error` event and closes the stream.
  */
@@ -42,22 +49,57 @@ export async function orchestrateBuildTracker(
 
   // ─── Phase 1: Manager ───────────────────────────────────────────────────────
   write({ t: 'phase', phase: 'manager' })
-  if (opts.logContext) {
-    logAiStage(opts.logContext, 'manager-start', 'Starting manager agent.')
-  }
+  if (opts.logContext) logAiStage(opts.logContext, 'manager-start', 'Starting manager agent.')
 
   const manager = await runManagerAgent(inputs, write, {
     logContext: opts.logContext,
     onLlmUsage: opts.onManagerLlmUsage,
   })
 
-  // ─── Phase 2: Builder ───────────────────────────────────────────────────────
-  write({ t: 'phase', phase: 'builder' })
-  if (opts.logContext) {
-    logAiStage(opts.logContext, 'builder-start', 'Starting builder agent.')
+  // ─── Phase 2: Master Data Agent ─────────────────────────────────────────────
+  const requiredMasterData = Array.isArray(
+    (manager as Record<string, unknown>).requiredMasterData,
+  )
+    ? ((manager as Record<string, unknown>).requiredMasterData as Array<{
+        key: string
+        name: string
+        labelFieldId?: string
+      }>)
+    : []
+
+  const effectiveScope = opts.masterDataScope?.trim()
+  const needsMasterData =
+    requiredMasterData.length > 0 &&
+    !!opts.userId &&
+    !!opts.projectId &&
+    (effectiveScope === 'module' || effectiveScope === 'project')
+
+  let builderInputs: PromptInputs = inputs
+
+  if (needsMasterData) {
+    write({ t: 'phase', phase: 'master-data' })
+    try {
+      const resolvedMasterData = await runMasterDataAgent(requiredMasterData, write, {
+        logContext: opts.logContext,
+        userId: opts.userId!,
+        projectId: opts.projectId!,
+        moduleId: opts.moduleId,
+        scope: effectiveScope as 'module' | 'project',
+      })
+      if (resolvedMasterData.length) {
+        builderInputs = { ...inputs, resolvedMasterData, masterDataScope: effectiveScope }
+      }
+    } catch (err) {
+      if (opts.logContext) logAiError(opts.logContext, 'master-data-agent-failed', err)
+      // Non-fatal — builder falls back to PATH B (placeholder approach)
+    }
   }
 
-  await runBuilderAgent(inputs, manager, write, {
+  // ─── Phase 3: Builder ───────────────────────────────────────────────────────
+  write({ t: 'phase', phase: 'builder' })
+  if (opts.logContext) logAiStage(opts.logContext, 'builder-start', 'Starting builder agent.')
+
+  await runBuilderAgent(builderInputs, manager, write, {
     logContext: opts.logContext,
     onLlmUsage: opts.onBuilderLlmUsage,
   })

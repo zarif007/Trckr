@@ -49,13 +49,20 @@ Scope behavior:
    - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
    - Create local master data grids (id ending with _options_grid) inside master_data_section.
 2) masterDataScope = "module" or "project"
-   - Do NOT create master_data_tab or any local options grids.
+   - NEVER create any local grids on this tracker for options/master data — not master_data_tab, not
+     _options_grid grids, not any grid whose id appears in a masterDataTrackers schema. The primary
+     tracker schema MUST have ZERO master data grids. All option sets live exclusively externally.
    - Still create bindings entries for every options/multiselect field.
+
+   PATH A — "Pre-Resolved Master Data" block is present in this message:
+   - Use the EXACT trackerId, gridId, and labelFieldId from that block. No placeholder. No masterDataTrackers output.
+   - Binding format: { optionsSourceSchemaId: "<trackerId>", optionsSourceKey: "<key>", optionsGrid: "<gridId>", labelField: "<gridId>.<labelFieldId>" }
+   - The binding section in that block shows the exact object to use — copy it verbatim for each entity.
+
+   PATH B — No pre-resolved block (fallback):
    - For each distinct option set, create a masterDataTrackers entry (see below).
-   - Set optionsSourceSchemaId to "__master_data__" placeholder.
-   - Set optionsSourceKey to the masterDataTrackers key.
-   - Use optionsGrid equal to the master data tracker's grid id (from its schema) and labelField "<optionsGrid>.<labelFieldId>".
-   - The server will replace the placeholder with a real master data tracker before saving.
+   - Set optionsSourceSchemaId to "__master_data__" placeholder and optionsSourceKey to the key.
+   - The server will replace the placeholder with a real tracker ID before saving.
 
 === CRITICAL: OPTIONS/MULTISELECT FIELDS USE BINDINGS ONLY ===
 
@@ -172,6 +179,7 @@ Before completing output, verify:
 [ ] Every LOCAL optionsGrid id ends with _options_grid (local master data grids only; never main data grids)
 [ ] If optionsSourceSchemaId is present, optionsGrid matches the masterDataTrackers schema grid id and optionsSourceKey matches a masterDataTrackers.key
 [ ] Master data tab infrastructure exists for all local options grids when masterDataScope = "tracker"
+[ ] If masterDataScope = "module" or "project": the primary tracker schema contains NO grids whose id matches any grid id used in the masterDataTrackers schemas — all option data lives exclusively in masterDataTrackers
 
 CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" object (can be {} if no options needed). The UI uses config to apply rules (disabled state, visibility, layout).
 

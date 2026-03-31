@@ -30,6 +30,7 @@ interface TrackerMessageListProps {
   toolCalls?: ToolCallEntry[]
   isResolvingExpressions?: boolean
   isResolvingMasterData?: boolean
+  statusMessage?: string
   mode?: 'schema' | 'data'
 }
 
@@ -56,6 +57,7 @@ export function TrackerMessageList({
   toolCalls = [],
   isResolvingExpressions = false,
   isResolvingMasterData = false,
+  statusMessage,
   mode = 'schema',
 }: TrackerMessageListProps) {
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false)
@@ -333,9 +335,11 @@ export function TrackerMessageList({
                       ? 'Linking master data…'
                       : isResolvingExpressions
                         ? 'Generating expressions…'
-                        : !object?.manager ? 'Consulting product manager…' :
-                          !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
-                            'Building your tracker…'}
+                        : statusMessage
+                          ? statusMessage
+                          : !object?.manager ? 'Consulting product manager…' :
+                            !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
+                              'Building your tracker…'}
                 </p>
               </div>
 

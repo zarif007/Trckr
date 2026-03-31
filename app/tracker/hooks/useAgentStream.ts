@@ -19,7 +19,7 @@ import { readAgentStream } from '@/lib/agent/stream-reader'
 import type { MultiAgentSchema, ManagerSchema } from '@/lib/schemas/multi-agent'
 import type { BuilderOutput } from '@/lib/agent/builder-schema'
 
-export type AgentPhase = 'idle' | 'manager' | 'builder'
+export type AgentPhase = 'idle' | 'manager' | 'master-data' | 'builder'
 
 export interface UseAgentStreamOptions {
   api: string
@@ -154,7 +154,17 @@ export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamRe
               case 'phase': {
                 setPhase(event.phase)
                 if (event.phase === 'manager') setStatusMessage('Analyzing your request...')
+                if (event.phase === 'master-data') setStatusMessage('Setting up master data...')
                 if (event.phase === 'builder') setStatusMessage('Generating schema...')
+                break
+              }
+              case 'master_data_progress': {
+                const { resolved, total, name } = event
+                if (resolved < total) {
+                  setStatusMessage(`Setting up master data (${resolved}/${total}: ${name})...`)
+                } else {
+                  setStatusMessage('Master data ready')
+                }
                 break
               }
               case 'manager_partial': {

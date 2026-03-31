@@ -1,14 +1,8 @@
 'use client'
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable react-hooks/exhaustive-deps */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
-  dynamicOptionFunctionSchema,
   getRegisteredDynamicOptionsIds,
   resolveDynamicOptions,
   type DynamicOptionFunctionDef,
@@ -17,11 +11,7 @@ import {
   type DynamicOptionsResolveResult,
 } from '@/lib/dynamic-options'
 import type { TrackerDisplayProps } from '../../types'
-import {
-  createTemplateGraphFunction,
-  ensureGraphFunction,
-} from './dynamic-function-graph'
-import { DynamicFunctionFlowBuilder } from './DynamicFunctionFlowBuilder'
+import { ensureGraphFunction } from './dynamic-function-graph'
 
 interface DynamicOptionsBuilderProps {
   schema: TrackerDisplayProps
@@ -42,15 +32,6 @@ interface DynamicOptionsBuilderProps {
   trackerSchemaId?: string | null
 }
 
-function sanitizeFunctionId(raw: string): string {
-  return raw
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '')
-}
-
 function parseJsonObject(input: string): Record<string, unknown> | null {
   if (!input.trim()) return {}
   try {
@@ -62,28 +43,13 @@ function parseJsonObject(input: string): Record<string, unknown> | null {
   }
 }
 
-function parseJsonAny(input: string): unknown {
-  if (!input.trim()) return undefined
-  try {
-    return JSON.parse(input)
-  } catch {
-    return undefined
-  }
-}
-
-function toPrettyJson(value: unknown): string {
-  return JSON.stringify(value ?? {}, null, 2)
-}
-
 export function DynamicOptionsBuilder({
   schema,
   fieldId,
   functionId,
   onFunctionIdChange,
   argsText,
-  onArgsTextChange,
   cacheTtlText,
-  onCacheTtlTextChange,
   dynamicOptionsDraft,
   onDynamicOptionsDraftChange,
   onValidationStateChange,
@@ -110,129 +76,71 @@ export function DynamicOptionsBuilder({
     [trackerSchemaId],
   )
 
-  const [activeTab, setActiveTab] = useState<'visual' | 'json' | 'ai'>('visual')
-  const [jsonDraft, setJsonDraft] = useState('')
-  const [jsonError, setJsonError] = useState<string | null>(null)
-
-  const [aiPrompt, setAiPrompt] = useState('')
-  const [aiSampleResponse, setAiSampleResponse] = useState('')
-  const [aiLoading, setAiLoading] = useState(false)
-  const [aiError, setAiError] = useState<string | null>(null)
-
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [preview, setPreview] = useState<DynamicOptionsResolveResult | null>(null)
 
-  const [flowValidation, setFlowValidation] = useState<{ valid: boolean; errors: string[] }>({
-    valid: false,
-    errors: ['Graph is not validated yet'],
-  })
-
   const functions = useMemo(
     () => dynamicOptionsDraft.functions ?? {},
-    [dynamicOptionsDraft.functions]
+    [dynamicOptionsDraft.functions],
   )
   const connectors = useMemo(
     () => dynamicOptionsDraft.connectors ?? {},
-    [dynamicOptionsDraft.connectors]
+    [dynamicOptionsDraft.connectors],
   )
 
   const builtInIds = useMemo(() => getRegisteredDynamicOptionsIds(), [])
-  const myFunctionsList = useMemo(
-    () => Object.values(functions).sort((a, b) => a.name.localeCompare(b.name)),
-    [functions]
-  )
 
   const isBuiltIn = Boolean(functionId && builtInIds.includes(functionId))
   const currentFunction = useMemo(
     () => (functionId && functions[functionId] ? functions[functionId] : undefined),
-    [functions, functionId]
+    [functions, functionId],
   )
   const isMyFunction = Boolean(currentFunction)
 
-  useEffect(() => {
-    if (!currentFunction) {
-      setJsonDraft('')
-      return
-    }
-    setJsonDraft(toPrettyJson(currentFunction))
-  }, [currentFunction])
-
-  const canSave = Boolean(
-    !functionId ||
-      isBuiltIn ||
-      (isMyFunction && flowValidation.valid && preview && !previewError)
+  const updateDraft = useCallback(
+    (next: DynamicOptionsDefinitions) => {
+      onDynamicOptionsDraftChange({
+        functions: next.functions ?? {},
+        connectors: next.connectors ?? {},
+      })
+    },
+    [onDynamicOptionsDraftChange],
   )
+
+  const upsertFunction = useCallback(
+    (nextFn: DynamicOptionFunctionDef, previousId?: string) => {
+      const nextFunctions = { ...(dynamicOptionsDraft.functions ?? {}) }
+      if (previousId && previousId !== nextFn.id) {
+        delete nextFunctions[previousId]
+      }
+      nextFunctions[nextFn.id] = nextFn
+      updateDraft({
+        ...dynamicOptionsDraft,
+        functions: nextFunctions,
+      })
+      onFunctionIdChange(nextFn.id)
+      setPreview(null)
+      setPreviewError(null)
+    },
+    [dynamicOptionsDraft, onFunctionIdChange, updateDraft],
+  )
+
+  const canSave = Boolean(!functionId || isBuiltIn || (isMyFunction && preview && !previewError))
 
   useEffect(() => {
     onValidationStateChange?.({
       canSave,
-      compileErrors: flowValidation.errors,
+      compileErrors: [],
       previewError,
     })
-  }, [canSave, flowValidation.errors, onValidationStateChange, previewError])
-
-  const updateDraft = (next: DynamicOptionsDefinitions) => {
-    onDynamicOptionsDraftChange({
-      functions: next.functions ?? {},
-      connectors: next.connectors ?? {},
-    })
-  }
-
-  const upsertFunction = (nextFn: DynamicOptionFunctionDef, previousId?: string) => {
-    const nextFunctions = { ...(dynamicOptionsDraft.functions ?? {}) }
-    if (previousId && previousId !== nextFn.id) {
-      delete nextFunctions[previousId]
-    }
-    nextFunctions[nextFn.id] = nextFn
-    updateDraft({
-      ...dynamicOptionsDraft,
-      functions: nextFunctions,
-    })
-    onFunctionIdChange(nextFn.id)
-    setPreview(null)
-    setPreviewError(null)
-  }
-
-  const deleteFunction = (id: string) => {
-    const nextFunctions = { ...(dynamicOptionsDraft.functions ?? {}) }
-    delete nextFunctions[id]
-    updateDraft({
-      ...dynamicOptionsDraft,
-      functions: nextFunctions,
-    })
-    const fallbackId = Object.keys(nextFunctions)[0] ?? ''
-    onFunctionIdChange(fallbackId)
-    setPreview(null)
-  }
-
-  const addFunction = () => {
-    const suggestedId =
-      sanitizeFunctionId(functionId || `${fieldId}_options`) ||
-      `${fieldId}_options`
-    const suggestedName = `${fieldId.replace(/_/g, ' ')} options`
-    const templateFn = createTemplateGraphFunction(
-      suggestedId,
-      suggestedName,
-      schema,
-      'grid_values',
-      connectors,
-    )
-    upsertFunction(templateFn)
-    setFlowValidation({ valid: false, errors: ['Run preview to confirm function output'] })
-  }
+  }, [canSave, onValidationStateChange, previewError])
 
   useEffect(() => {
-    if (activeTab !== 'visual') return
     if (!currentFunction || currentFunction.engine === 'graph_v1') return
     const converted = ensureGraphFunction(currentFunction, schema, connectors)
     upsertFunction(converted, currentFunction.id)
-  }, [activeTab, connectors, currentFunction, schema])
-
-  const graphFunction = useMemo(
-    () => (currentFunction && currentFunction.engine === 'graph_v1' ? currentFunction : null),
-    [currentFunction]
-  )
+  }, [connectors, currentFunction, schema, upsertFunction])
 
   const refreshPreview = async (forceRefresh = false) => {
     if (!functionId) {
@@ -283,81 +191,6 @@ export function DynamicOptionsBuilder({
     }
   }
 
-  const generateWithAi = async () => {
-    if (!aiPrompt.trim()) {
-      setAiError('Enter a prompt first.')
-      return
-    }
-
-    const aiFunctionId = sanitizeFunctionId(functionId || `${fieldId}_options`)
-    if (!aiFunctionId) {
-      setAiError('Function id is required.')
-      return
-    }
-
-    setAiLoading(true)
-    setAiError(null)
-    try {
-      const response = await fetch('/api/agent/generate-dynamic-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: aiPrompt,
-          functionId: aiFunctionId,
-          functionName: currentFunction?.name || `${fieldId.replace(/_/g, ' ')} options`,
-          currentTracker: {
-            tabs: schema.tabs,
-            sections: schema.sections,
-            grids: schema.grids,
-            fields: schema.fields,
-            layoutNodes: schema.layoutNodes,
-            dynamicOptions: dynamicOptionsDraft,
-          },
-          sampleResponse: parseJsonAny(aiSampleResponse),
-          ...(trackerSchemaId ? { trackerSchemaId } : {}),
-        }),
-      })
-
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        setAiError(data?.error ?? 'Failed to generate dynamic function')
-        return
-      }
-
-      const validated = dynamicOptionFunctionSchema.safeParse(data?.function)
-      if (!validated.success) {
-        setAiError('AI returned invalid function output')
-        return
-      }
-
-      const graphFirst =
-        validated.data.engine === 'graph_v1'
-          ? validated.data
-          : ensureGraphFunction(validated.data, schema, connectors)
-
-      upsertFunction(graphFirst)
-      setActiveTab('visual')
-      setFlowValidation({ valid: false, errors: ['Run preview to confirm function output'] })
-    } catch (error) {
-      setAiError(error instanceof Error ? error.message : 'AI generation failed')
-    } finally {
-      setAiLoading(false)
-    }
-  }
-
-  const applyJsonDraft = () => {
-    const parsed = parseJsonAny(jsonDraft)
-    const validated = dynamicOptionFunctionSchema.safeParse(parsed)
-    if (!validated.success) {
-      setJsonError('Invalid function JSON.')
-      return
-    }
-    const previousId = currentFunction?.id
-    upsertFunction(validated.data, previousId)
-    setJsonError(null)
-    setFlowValidation({ valid: false, errors: ['Run preview to confirm function output'] })
-  }
-
   return (
     <div className="space-y-4">
       <div className="rounded-md border border-border/60 bg-muted/20 p-4 space-y-3">
@@ -365,7 +198,8 @@ export function DynamicOptionsBuilder({
           Option source
         </p>
         <p className="text-xs text-muted-foreground">
-          Choose a built-in source, one of your functions, or add a new function. The selected source supplies options for this field.
+          Choose a built-in source, one of your functions, or add a new function. The selected
+          source supplies options for this field.
         </p>
 
         <div className="space-y-2">
@@ -400,152 +234,30 @@ export function DynamicOptionsBuilder({
             ))}
           </div>
         </div>
-        
-        {/* Add it later */}
-        {/* <div className="space-y-2">
-          <span className="text-xs font-medium text-foreground/80">My functions</span>
-          {myFunctionsList.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No custom functions yet.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {myFunctionsList.map((fn) => (
-                <div key={fn.id} className="flex items-center gap-1 rounded-md border border-border/60 bg-background/80 overflow-hidden">
-                  <button
-                    type="button"
-                    className={`px-3 py-1.5 text-left text-xs font-medium ${functionId === fn.id ? 'bg-primary/15 text-primary' : 'text-foreground/90 hover:bg-muted/50'}`}
-                    onClick={() => {
-                      onFunctionIdChange(fn.id)
-                      setPreview(null)
-                      setPreviewError(null)
-                    }}
-                  >
-                    {fn.name}
-                  </button>
-                  {functionId === fn.id && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs"
-                      onClick={() => deleteFunction(fn.id)}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={addFunction}>
-            Add function
-          </Button>
-        </div> */}
-
-        {/* {(isBuiltIn || isMyFunction) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-border/50">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-foreground/90">Args JSON</label>
-              <Input
-                value={argsText}
-                onChange={(e) => onArgsTextChange(e.target.value)}
-                placeholder='{"country":"US"}'
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-foreground/90">Cache TTL (sec)</label>
-              <Input
-                value={cacheTtlText}
-                onChange={(e) => onCacheTtlTextChange(e.target.value)}
-                placeholder="300"
-              />
-            </div>
-          </div>
-        )} */}
       </div>
-
-      {/* {currentFunction && (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="visual">Visual graph</TabsTrigger>
-            <TabsTrigger value="json">JSON</TabsTrigger>
-            <TabsTrigger value="ai">AI prompt</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="visual" className="mt-4 space-y-4">
-            {graphFunction ? (
-              <DynamicFunctionFlowBuilder
-                value={graphFunction}
-                grids={schema.grids.map((g) => ({ id: g.id, name: g.name }))}
-                connectors={connectors}
-                onChange={(nextGraph) =>
-                  upsertFunction(
-                    {
-                      ...graphFunction,
-                      graph: nextGraph,
-                    },
-                    currentFunction.id
-                  )
-                }
-                onValidationChange={setFlowValidation}
-                availableFields={schema.fields.map((f) => ({
-                  fieldId: f.id,
-                  label: f.ui?.label ?? f.id,
-                }))}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">Converting function to graph editor...</p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="json" className="mt-4 space-y-3">
-            <Textarea
-              value={jsonDraft}
-              onChange={(e) => setJsonDraft(e.target.value)}
-              className="min-h-[300px] font-mono text-xs"
-            />
-            {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}
-            <div className="flex justify-end">
-              <Button type="button" size="sm" onClick={applyJsonDraft}>Apply JSON</Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="ai" className="mt-4 space-y-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-foreground/90">Prompt</label>
-              <Textarea
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Example: Fetch all currencies from my countries API and use code as label/value"
-                className="min-h-[100px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-foreground/90">Sample response JSON (optional)</label>
-              <Textarea
-                value={aiSampleResponse}
-                onChange={(e) => setAiSampleResponse(e.target.value)}
-                placeholder='{"items":[{"code":"USD"}]}'
-                className="min-h-[100px] font-mono text-xs"
-              />
-            </div>
-            {aiError && <p className="text-xs text-destructive">{aiError}</p>}
-            <div className="flex justify-end">
-              <Button type="button" size="sm" onClick={generateWithAi} disabled={aiLoading}>
-                {aiLoading ? 'Generating...' : 'Generate graph'}
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
 
       <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">Live preview</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Live preview
+          </p>
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => refreshPreview(false)} disabled={previewLoading}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => refreshPreview(false)}
+              disabled={previewLoading}
+            >
               Refresh
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => refreshPreview(true)} disabled={previewLoading}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => refreshPreview(true)}
+              disabled={previewLoading}
+            >
               Force refresh
             </Button>
           </div>
@@ -559,12 +271,15 @@ export function DynamicOptionsBuilder({
         {preview && (
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">
-              fromCache: {String(preview.meta.fromCache)} · fetchedAt: {preview.meta.fetchedAt} · duration: {preview.meta.durationMs}ms
+              fromCache: {String(preview.meta.fromCache)} · fetchedAt: {preview.meta.fetchedAt} ·
+              duration: {preview.meta.durationMs}ms
             </p>
             {preview.warnings && preview.warnings.length > 0 && (
               <div className="space-y-1">
                 {preview.warnings.map((warning, index) => (
-                  <p key={index} className="text-xs text-amber-600">• {warning}</p>
+                  <p key={index} className="text-xs text-amber-600">
+                    • {warning}
+                  </p>
                 ))}
               </div>
             )}
@@ -575,11 +290,11 @@ export function DynamicOptionsBuilder({
             </div>
           </div>
         )}
-      </div> */}
+      </div>
 
       {!canSave && isMyFunction && (
         <p className="text-xs text-amber-600">
-          Save is blocked until graph validation passes and preview resolves successfully.
+          Save is blocked until preview resolves successfully.
         </p>
       )}
     </div>

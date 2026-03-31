@@ -6,19 +6,22 @@
  *
  * Event flow:
  *   phase(manager) → manager_partial* → manager_complete
+ *   → phase(master-data) → master_data_progress* (only when module/project scope needs resolution)
  *   → phase(builder) → builder_partial* → builder_finish
  */
 
 import type { ManagerSchema } from '@/lib/schemas/multi-agent'
 import type { BuilderOutput } from './builder-schema'
 
-export type AgentPhase = 'manager' | 'builder'
+export type AgentPhase = 'manager' | 'master-data' | 'builder'
 
 export type AgentStreamEvent =
   | { t: 'phase'; phase: AgentPhase }
   /** Streaming chunk from the manager — lets the frontend show thinking/plan as it arrives. */
   | { t: 'manager_partial'; partial: Partial<ManagerSchema> }
   | { t: 'manager_complete'; manager: ManagerSchema }
+  /** Progress during master data pre-resolution — emitted once all entities are resolved. */
+  | { t: 'master_data_progress'; resolved: number; total: number; name: string }
   | { t: 'builder_partial'; partial: Partial<BuilderOutput> }
   | { t: 'builder_finish'; output: BuilderOutput }
   | { t: 'error'; message: string }

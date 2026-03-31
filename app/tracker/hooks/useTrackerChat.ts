@@ -55,6 +55,10 @@ export interface UseTrackerChatOptions {
   initialTracker?: TrackerResponse | null
   /** Tracker (schema) id when viewing an existing tracker; enables persisting conversation to DB. */
   trackerId?: string | null
+  /** Project id for the owning project. Used for master data resolution when trackerId is not yet available (new tracker). */
+  projectId?: string | null
+  /** Module id within the project. Used for module-scope master data resolution when trackerId is not yet available. */
+  moduleId?: string | null
   /** Conversation id (from DB). When set, messages are persisted. Pass from parent to control active conversation (e.g. tab switch). */
   conversationId?: string | null
   /** Messages loaded from DB for this tracker; used to hydrate chat on open. */
@@ -76,6 +80,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const {
     initialTracker = null,
     trackerId,
+    projectId,
+    moduleId,
     conversationId: conversationIdProp,
     initialMessages,
     onConversationCreate,
@@ -230,7 +236,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       if (!tracker) return { tracker: null, masterDataBuildResult: undefined }
       const scope = normalizeMasterDataScope(tracker.masterDataScope)
       if (!scope || scope === 'tracker') return { tracker, masterDataBuildResult: undefined }
-      if (!trackerId) return { tracker, masterDataBuildResult: undefined }
+      if (!trackerId && !projectId) return { tracker, masterDataBuildResult: undefined }
 
       const isPlaceholderSourceId = (value: unknown) => {
         if (typeof value !== 'string') return false
@@ -269,7 +275,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tracker,
-            trackerSchemaId: trackerId,
+            ...(trackerId ? { trackerSchemaId: trackerId } : { projectId, ...(moduleId ? { moduleId } : {}) }),
             masterDataScope: scope,
             masterDataTrackers: masterDataSpecsRef.current,
           }),
@@ -288,7 +294,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         setIsResolvingMasterData(false)
       }
     },
-    [trackerId],
+    [trackerId, projectId, moduleId],
   )
 
   const finalizeTracker = useCallback((
@@ -327,6 +333,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         currentTracker: tracker as TrackerResponse,
         dirty: true,
         ...(trackerId ? { trackerSchemaId: trackerId } : {}),
+        ...(projectId ? { projectId } : {}),
+        ...(moduleId ? { moduleId } : {}),
       })
       return
     }
@@ -635,6 +643,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         : {},
       dirty,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
+      ...(projectId ? { projectId } : {}),
+      ...(moduleId ? { moduleId } : {}),
     })
   }
 

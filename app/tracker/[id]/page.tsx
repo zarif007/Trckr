@@ -267,6 +267,7 @@ function TrackerByIdContent({
       initialChatOpen={false}
       trackerId={id}
       projectId={state.tracker?.projectId ?? null}
+      moduleId={state.tracker?.moduleId ?? null}
       instanceType={state.tracker?.instance === 'MULTI' ? 'MULTI' : 'SINGLE'}
       instanceId={instanceId}
       autoSave={state.tracker?.autoSave ?? true}

@@ -72,6 +72,52 @@ function stripLocalOptionsGrids(tracker: Record<string, unknown>): Record<string
   }
 }
 
+/**
+ * Module/project scope: strip local grids whose IDs appear in masterDataTrackers spec schemas.
+ * These are grids the LLM duplicated on the primary tracker despite the prompt forbidding it.
+ * Only spec-declared IDs are stripped — binding optionsGrid values are NOT used, as those may
+ * legitimately reference primary tracker grids that share a name with a master data grid.
+ */
+function stripLocalMasterDataGrids(
+  tracker: Record<string, unknown>,
+  specGridIds: Set<string>,
+): Record<string, unknown> {
+  const foreignGridIds = specGridIds
+
+  if (foreignGridIds.size === 0) return tracker
+
+  const grids = Array.isArray(tracker.grids) ? (tracker.grids as Grid[]) : []
+  const layoutNodes = Array.isArray(tracker.layoutNodes) ? (tracker.layoutNodes as LayoutNode[]) : []
+  const fields = Array.isArray(tracker.fields) ? (tracker.fields as Field[]) : []
+  const sections = Array.isArray(tracker.sections) ? (tracker.sections as Array<{ id?: string; tabId?: string }>) : []
+  const tabs = Array.isArray(tracker.tabs) ? (tracker.tabs as Array<{ id?: string }>) : []
+
+  // Only strip grids that actually exist locally AND are foreign
+  const localForeignIds = new Set(grids.filter((g) => g.id && foreignGridIds.has(g.id)).map((g) => g.id!))
+  if (localForeignIds.size === 0) return tracker
+
+  const nextGrids = grids.filter((g) => !localForeignIds.has(g.id ?? ''))
+  const nextLayoutNodes = layoutNodes.filter((n) => !localForeignIds.has(n.gridId ?? ''))
+
+  const usedFieldIds = new Set(nextLayoutNodes.map((n) => n.fieldId).filter((id): id is string => typeof id === 'string'))
+  const nextFields = fields.filter((f) => usedFieldIds.has(f.id ?? ''))
+
+  const usedSectionIds = new Set(nextGrids.map((g) => g.sectionId).filter((id): id is string => typeof id === 'string'))
+  const nextSections = sections.filter((s) => usedSectionIds.has(s.id ?? ''))
+
+  const usedTabIds = new Set(nextSections.map((s) => s.tabId).filter((id): id is string => typeof id === 'string'))
+  const nextTabs = tabs.filter((t) => usedTabIds.has(t.id ?? ''))
+
+  return {
+    ...tracker,
+    grids: nextGrids,
+    layoutNodes: nextLayoutNodes,
+    fields: nextFields,
+    sections: nextSections,
+    tabs: nextTabs,
+  }
+}
+
 /** Module/project scope: remove local Master Data tab chrome (AI sometimes emits it despite prompts). */
 function stripModuleProjectMasterDataTab(tracker: Record<string, unknown>): Record<string, unknown> {
   const grids = Array.isArray(tracker.grids) ? (tracker.grids as Grid[]) : []
@@ -209,19 +255,26 @@ export async function applyMasterDataBindings(options: {
     gridByFieldId,
   })
 
-  if (unresolvedFields.length === 0) {
-    const afterOptions = stripLocalOptionsGrids(nextTracker)
-    const cleaned = stripModuleProjectMasterDataTab(afterOptions)
-    return { tracker: { ...cleaned, bindings }, createdTrackerIds: [], actions: [] }
-  }
-
+  // Build spec index and grid ID set now — needed for stripping even when unresolvedFields is empty
+  // (LLM may have placed master data grids locally even if all bindings were pre-resolved).
   const specs = Array.isArray(options.masterDataTrackers) ? options.masterDataTrackers : []
   const specsByKey = new Map<string, MasterDataTrackerSpec>()
+  const specGridIds = new Set<string>()
   for (const spec of specs) {
     if (!spec || typeof spec !== 'object') continue
     const key = typeof spec.key === 'string' ? spec.key.trim() : ''
-    if (!key) continue
-    specsByKey.set(key, spec)
+    if (key) specsByKey.set(key, spec)
+    if (spec.schema) {
+      const gridId = resolveMasterDataGridId(spec.schema as Record<string, unknown>)
+      if (gridId) specGridIds.add(gridId)
+    }
+  }
+
+  if (unresolvedFields.length === 0) {
+    const afterOptions = stripLocalOptionsGrids(nextTracker)
+    const afterForeign = stripLocalMasterDataGrids(afterOptions, specGridIds)
+    const cleaned = stripModuleProjectMasterDataTab(afterForeign)
+    return { tracker: { ...cleaned, bindings }, createdTrackerIds: [], actions: [] }
   }
 
   const masterDataModuleParent = scope === 'module' ? moduleId ?? null : null
@@ -374,7 +427,9 @@ export async function applyMasterDataBindings(options: {
       continue
     }
 
-    const label = field.ui?.label ?? field.id
+    // Prefer optionsSourceKey as entity name hint (survives token-exhaustion where masterDataTrackers
+    // is missing — rawKey was extracted from the binding earlier in the loop iteration).
+    const label = rawKey || field.ui?.label || field.id
     const entityName = titleCase(String(label))
     const normalized = normalizeName(entityName)
 
@@ -439,7 +494,8 @@ export async function applyMasterDataBindings(options: {
   }
 
   const afterOptions = stripLocalOptionsGrids(nextTracker)
-  const cleaned = stripModuleProjectMasterDataTab(afterOptions)
+  const afterForeign = stripLocalMasterDataGrids(afterOptions, specGridIds)
+  const cleaned = stripModuleProjectMasterDataTab(afterForeign)
   return {
     tracker: { ...cleaned, bindings },
     createdTrackerIds,

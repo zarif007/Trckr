@@ -26,6 +26,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     initialChatOpen = true,
     trackerId,
     projectId = null,
+    moduleId = null,
     instanceType = 'SINGLE',
     instanceId = null,
     autoSave = true,
@@ -113,9 +114,13 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     toolCalls,
     isResolvingExpressions,
     isResolvingMasterData,
+    phase,
+    statusMessage,
   } = useTrackerChat({
     initialTracker: initialSchema ?? undefined,
     trackerId: trackerId ?? undefined,
+    projectId: projectId ?? undefined,
+    moduleId: moduleId ?? undefined,
     conversationId: isDataPage
       ? undefined
       : (activeBuilderWindowId?.startsWith('draft-')
@@ -603,6 +608,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
         streamedObject?.tracker != null ||
         streamedObject?.trackerPatch != null),
   )
+  // True during all agent phases (manager, master-data, builder) — used for the progress bar.
+  const isAgentRunning = isLoading
   const hasAnyAssistantResponse = messages.some((m) => m.role === 'assistant')
   const showStatusPanel =
     Boolean(error) ||
@@ -678,6 +685,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       toolCalls,
       isResolvingExpressions,
       isResolvingMasterData,
+      statusMessage,
       mode: 'schema' as const,
       isConversationLoading: builderConversationLoading,
       conversationWindows: builderChatWindows,
@@ -705,6 +713,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     canEditSchema,
     isStreamingTracker,
     isResolvingMasterData,
+    isAgentRunning,
     trackerDataRef,
     handleGridDataChange,
     undoable,

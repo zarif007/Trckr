@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 type InsightPromptCardProps = {
   label: string
   labelHtmlFor: string
-  /** Prompt field (e.g. `ReportMultilinePrompt`). */
+  /** Prompt field (e.g. `InsightMultilinePrompt`). */
   prompt: ReactNode
   footer: ReactNode
   /** Shown under the card (errors, hints). */

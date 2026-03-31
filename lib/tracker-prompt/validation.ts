@@ -18,6 +18,7 @@ export type ParseResult =
       dirty?: boolean
       trackerSchemaId?: string
       projectId?: string
+      moduleId?: string
     }
   | { ok: false; error: string; status: number }
 
@@ -81,5 +82,6 @@ export function parseRequestBody(body: unknown): ParseResult {
     dirty: typeof dirtyRaw === 'boolean' ? dirtyRaw : undefined,
     trackerSchemaId: optionalId(b.trackerSchemaId),
     projectId: optionalId(b.projectId),
+    moduleId: optionalId(b.moduleId),
   }
 }

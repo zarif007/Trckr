@@ -213,6 +213,7 @@ function TrackerByIdEditContent({
       initialChatOpen={isNew}
       trackerId={id}
       projectId={state.tracker?.projectId ?? null}
+      moduleId={state.tracker?.moduleId ?? null}
       initialConversationId={conversation.conversationId}
       initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
       pageMode="schema"

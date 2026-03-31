@@ -2,7 +2,7 @@
  * POST /api/agent/build-tracker
  *
  * Multi-agent tracker generation endpoint.
- * Runs Manager → Builder sequentially and streams NDJSON events to the client.
+ * Runs Manager → Master Data Agent → Builder sequentially and streams NDJSON events to the client.
  *
  * Request body: same shape as /api/generate-tracker
  * Response: NDJSON stream of AgentStreamEvent objects (one per line)
@@ -64,6 +64,16 @@ export async function POST(request: Request) {
     const currentStateBlock = buildCurrentStateBlock(trackerForPrompt)
     const hasMessages = messages.length > 0
 
+    // Extract masterDataScope from the current tracker schema (available for existing trackers)
+    const masterDataScope = (() => {
+      const ct = parsed.currentTracker
+      if (ct && typeof ct === 'object' && !Array.isArray(ct)) {
+        const s = (ct as Record<string, unknown>).masterDataScope
+        if (typeof s === 'string' && s.trim()) return s.trim()
+      }
+      return undefined
+    })()
+
     const promptInputs: PromptInputs = {
       query,
       currentStateBlock,
@@ -80,6 +90,10 @@ export async function POST(request: Request) {
           logAiStage(logContext, 'orchestrate-start', 'Starting multi-agent build-tracker.')
           await orchestrateBuildTracker(promptInputs, controller, {
             logContext,
+            userId: authResult.user.id,
+            projectId: parsed.projectId,
+            moduleId: parsed.moduleId,
+            masterDataScope,
             onManagerLlmUsage: (usage) =>
               scheduleRecordLlmUsage({
                 userId: authResult.user.id,

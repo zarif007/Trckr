@@ -77,12 +77,32 @@ Examples of thinking:
 For multi-domain projects (5+ independent trackers): suggest modules to group related trackers.
 Single-tracker requests: omit suggestedModules.
 
+=== MASTER DATA ENTITIES (module/project scope only) ===
+
+When the tracker will use masterDataScope "module" or "project" (i.e. it lives in a project/module context
+and selects from shared reference data), output requiredMasterData listing every external entity needed.
+
+Each entry is a reference data entity whose records live in a separate master data tracker:
+- key: stable snake_case singular identifier (e.g. "customer", "product", "employee")
+- name: human-readable Title Case singular name (e.g. "Customer", "Product", "Employee")
+- labelFieldId: the field id to display in select dropdowns (e.g. "full_name", "product_name", "name")
+
+Example — a production order tracker that lets users pick Customers and Products:
+requiredMasterData: [
+  { key: "customer", name: "Customer", labelFieldId: "company_name" },
+  { key: "product", name: "Product", labelFieldId: "product_name" }
+]
+
+Omit requiredMasterData for "tracker" scope or when no shared reference data is needed.
+The server resolves these BEFORE the builder runs, so the builder gets real tracker IDs directly.
+
 === OUTPUT SCHEMA ===
 
 Your output is a ManagerSchema with:
 1. **thinking**: 3-5 paragraphs showing architectural work (workflows, tab justification, data model, interactions)
 2. **prd**: { name, description?, keyFeatures[] }
 3. **builderTodo**: [] — detailed 8-phase build plan with explicit tasks
+4. **requiredMasterData**: [] — (module/project scope only) external master data entities needed
 
 The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 
@@ -94,6 +114,7 @@ The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 [ ] Is my thinking 3-5 substantial paragraphs showing architectural work?
 [ ] Does builderTodo cover all 8 phases with explicit tasks (IDs, field names, constraints)?
 [ ] Is every select/multiselect field assigned a binding task?
+[ ] For module/project scope: did I output requiredMasterData for every external reference entity?
 
 KEY RULE: Decipher where tabs are NEEDED based on workflows. Don't stack unrelated grids. Don't over-separate. Get the boundaries right.
 `

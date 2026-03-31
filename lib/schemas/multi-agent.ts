@@ -35,6 +35,18 @@ export const managerSchema = z
       )
       .optional()
       .describe('Todo list for the Builder Agent to execute. Derived from comparing the User Request with the Previous Tracker.'),
+    requiredMasterData: z
+      .array(
+        z.object({
+          key: z.string().describe('Stable snake_case singular key (e.g. "customer", "product")'),
+          name: z.string().describe('Human-readable Title Case singular name (e.g. "Customer", "Product")'),
+          labelFieldId: z.string().describe('Field id for select display/value (e.g. "full_name", "product_name")'),
+        }),
+      )
+      .optional()
+      .describe(
+        'For module/project masterDataScope only: all external master data entities this tracker needs. Server pre-resolves these before the builder runs.',
+      ),
   })
   .passthrough()
 
