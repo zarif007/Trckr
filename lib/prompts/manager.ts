@@ -7,30 +7,30 @@ understand domain → analyze workflows → design IA → design data model → 
 1. **Understand Domain**: What is the user building? What problem? What workflows/activities?
 
 2. **Analyze Workflows** (DRIVES TAB DECISIONS):
-   - Identify distinct workflows: "log expense" vs. "manage budget" vs. "view reports"
-   - Which workflows are related (same tab) vs. separate (different tabs)?
-   - Where do users context-switch? Natural tab boundaries.
-   - Primary data vs. reference/helper data?
+ - Identify distinct workflows: "log expense" vs. "manage budget" vs. "view reports"
+ - Which workflows are related (same tab) vs. separate (different tabs)?
+ - Where do users context-switch? Natural tab boundaries.
+ - Primary data vs. reference/helper data?
 
 3. **Design Information Architecture**:
-   - Single tab: All grids serve ONE workflow (expense tracker: log + categorize)
-   - Multiple tabs: Different workflows require context switch (Projects vs. Tasks vs. Team)
-   - Each tab = one clear workflow focus
-   - Master Data tab: Separate when multiple reference grids exist
+ - Single tab: All grids serve ONE workflow (expense tracker: log + categorize)
+ - Multiple tabs: Different workflows require context switch (Projects vs. Tasks vs. Team)
+ - Each tab = one clear workflow focus
+ - Master Data tab: Separate when multiple reference grids exist
 
 4. **Design Data Model**: What grids (entities)? What fields? What relationships (bindings)?
 
 5. **Plan Interactions**: Select/multiselect bindings? Auto-population? Rules? Validations? Calculations?
 
 6. **Decompose into Build Tasks**:
-   - Phase 1: TAB STRUCTURE — all tabs
-   - Phase 2: SECTIONS & LAYOUT — sections per tab
-   - Phase 3: PRIMARY GRIDS & FIELDS — main data grids with all fields
-   - Phase 4: MASTER DATA GRIDS — reference/options grids
-   - Phase 5: BINDINGS — wire select fields to master data
-   - Phase 6: FIELD RULES — conditional visibility/required/disabled
-   - Phase 7: VALIDATIONS — complex validation rules
-   - Phase 8: CALCULATIONS — computed fields
+ - Phase 1: TAB STRUCTURE — all tabs
+ - Phase 2: SECTIONS & LAYOUT — sections per tab
+ - Phase 3: PRIMARY GRIDS & FIELDS — main data grids with all fields
+ - Phase 4: MASTER DATA GRIDS — reference/options grids
+ - Phase 5: BINDINGS — wire select fields to master data
+ - Phase 6: FIELD RULES — conditional visibility/required/disabled
+ - Phase 7: VALIDATIONS — complex validation rules
+ - Phase 8: CALCULATIONS — computed fields
 
 === TAB ARCHITECTURE DECISION ===
 
@@ -90,8 +90,8 @@ Each entry is a reference data entity whose records live in a separate master da
 
 Example — a production order tracker that lets users pick Customers and Products:
 requiredMasterData: [
-  { key: "customer", name: "Customer", labelFieldId: "company_name" },
-  { key: "product", name: "Product", labelFieldId: "product_name" }
+ { key: "customer", name: "Customer", labelFieldId: "company_name" },
+ { key: "product", name: "Product", labelFieldId: "product_name" }
 ]
 
 Omit requiredMasterData only when no select/multiselect entities are needed.

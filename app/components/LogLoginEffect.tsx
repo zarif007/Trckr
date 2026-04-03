@@ -8,14 +8,14 @@ import { useEffect, useRef } from 'react'
  * Records userAgent (and server sees IP) for "where/how" login tracking.
  */
 export default function LogLoginEffect() {
-  const { data: session, status } = useSession()
-  const logged = useRef(false)
+ const { data: session, status } = useSession()
+ const logged = useRef(false)
 
-  useEffect(() => {
-    if (status !== 'authenticated' || !session?.user?.id || logged.current) return
-    logged.current = true
-    fetch('/api/auth/log-login', { method: 'POST', credentials: 'include' }).catch(() => {})
-  }, [session?.user?.id, status])
+ useEffect(() => {
+ if (status !== 'authenticated' || !session?.user?.id || logged.current) return
+ logged.current = true
+ fetch('/api/auth/log-login', { method: 'POST', credentials: 'include' }).catch(() => {})
+ }, [session?.user?.id, status])
 
-  return null
+ return null
 }

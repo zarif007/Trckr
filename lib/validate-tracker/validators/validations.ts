@@ -8,378 +8,378 @@ import { normalizeExprOp } from '@/lib/functions/normalize'
 import { parsePath } from '@/lib/resolve-bindings'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
+ typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const isExprNode = (value: unknown): value is ExprNode => isRecord(value) && typeof value.op === 'string'
 
 /** Binary ops may be stored as { left, right } or { args: [left, right] }. */
 function getBinaryOperands(
-  node: Record<string, unknown>,
+ node: Record<string, unknown>,
 ): { left: unknown; right: unknown } | null {
-  if (node.left != null && node.right != null) {
-    return { left: node.left, right: node.right }
-  }
-  const args = node.args
-  if (Array.isArray(args) && args.length >= 2 && args[0] != null && args[1] != null) {
-    return { left: args[0], right: args[1] }
-  }
-  return null
+ if (node.left != null && node.right != null) {
+ return { left: node.left, right: node.right }
+ }
+ const args = node.args
+ if (Array.isArray(args) && args.length >= 2 && args[0] != null && args[1] != null) {
+ return { left: args[0], right: args[1] }
+ }
+ return null
 }
 
 function getVariadicArgs(node: Record<string, unknown>): unknown[] | null {
-  const args = node.args
-  if (Array.isArray(args) && args.length >= 1) return args
-  const pair = getBinaryOperands(node)
-  if (pair) return [pair.left, pair.right]
-  return null
+ const args = node.args
+ if (Array.isArray(args) && args.length >= 1) return args
+ const pair = getBinaryOperands(node)
+ if (pair) return [pair.left, pair.right]
+ return null
 }
 
 export function validateValidationExprNode(
-  node: ExprNode,
-  ctx: ValidationContext,
-  path: string,
+ node: ExprNode,
+ ctx: ValidationContext,
+ path: string,
 ): string[] {
-  const errors: string[] = []
+ const errors: string[] = []
 
-  const normalizedOp = normalizeExprOp(node.op)
-  const normalizedNode = (normalizedOp === node.op ? node : { ...node, op: normalizedOp }) as ExprNode
-  switch (normalizedNode.op) {
-    case 'const':
-      return errors
-    case 'field': {
-      const ref = normalizedNode.fieldId
-      if (typeof ref !== 'string' || ref.trim().length === 0) {
-        errors.push(`${path}.fieldId must be a non-empty string`)
-      } else if (!ref.includes('.')) {
-        errors.push(`${path}.fieldId must be "gridId.fieldId" (e.g. main_grid.sku), not bare fieldId`)
-      } else if (!ctx.fieldPaths.has(ref)) {
-        errors.push(`${path}.fieldId references missing field path "${ref}"`)
-      }
-      return errors
-    }
-    case 'add':
-    case 'mul':
-    case 'and':
-    case 'or':
-    case 'min':
-    case 'max':
-    case 'concat': {
-      const args = getVariadicArgs(normalizedNode as Record<string, unknown>)
-      if (!args || args.length === 0) {
-        errors.push(`${path}.args must be a non-empty array`)
-        return errors
-      }
-      args.forEach((arg, idx) => {
-        if (!isExprNode(arg)) {
-          errors.push(`${path}.args[${idx}] is not a valid expression node`)
-          return
-        }
-        errors.push(...validateValidationExprNode(arg, ctx, `${path}.args[${idx}]`))
-      })
-      return errors
-    }
-    case 'sub':
-    case 'div':
-    case 'mod':
-    case 'pow':
-    case 'includes':
-    case 'eq':
-    case 'neq':
-    case 'gt':
-    case 'gte':
-    case 'lt':
-    case 'lte': {
-      const pair = getBinaryOperands(normalizedNode as Record<string, unknown>)
-      if (!pair) {
-        errors.push(`${path} must have .left and .right, or .args with two expression nodes`)
-        return errors
-      }
-      if (!isExprNode(pair.left)) {
-        errors.push(`${path}.left (or .args[0]) is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(pair.left, ctx, `${path}.left`))
-      }
-      if (!isExprNode(pair.right)) {
-        errors.push(`${path}.right (or .args[1]) is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(pair.right, ctx, `${path}.right`))
-      }
-      return errors
-    }
-    case 'not':
-    case 'abs':
-    case 'round':
-    case 'floor':
-    case 'ceil':
-    case 'length':
-    case 'trim':
-    case 'toUpper':
-    case 'toLower': {
-      const arg = (normalizedNode as Extract<ExprNode, { op: 'not' }>).arg
-      if (!isExprNode(arg)) {
-        errors.push(`${path}.arg is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(arg, ctx, `${path}.arg`))
-      }
-      return errors
-    }
-    case 'if': {
-      const triple = normalizedNode as Extract<ExprNode, { op: 'if' }>
-      if (!isExprNode(triple.cond)) {
-        errors.push(`${path}.cond is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(triple.cond, ctx, `${path}.cond`))
-      }
-      if (!isExprNode(triple.then)) {
-        errors.push(`${path}.then is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(triple.then, ctx, `${path}.then`))
-      }
-      if (!isExprNode(triple.else)) {
-        errors.push(`${path}.else is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(triple.else, ctx, `${path}.else`))
-      }
-      return errors
-    }
-    case 'regex': {
-      const regex = normalizedNode as Extract<ExprNode, { op: 'regex' }>
-      if (!isExprNode(regex.value)) {
-        errors.push(`${path}.value is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(regex.value, ctx, `${path}.value`))
-      }
-      if (typeof regex.pattern !== 'string') {
-        errors.push(`${path}.pattern must be a string`)
-      } else {
-        try {
-          new RegExp(regex.pattern, regex.flags)
-        } catch {
-          errors.push(`${path}.pattern is not a valid regex`)
-        }
-      }
-      if (regex.flags != null && typeof regex.flags !== 'string') {
-        errors.push(`${path}.flags must be a string when provided`)
-      }
-      return errors
-    }
-    case 'clamp': {
-      const clamp = normalizedNode as Extract<ExprNode, { op: 'clamp' }>
-      if (!isExprNode(clamp.value)) {
-        errors.push(`${path}.value is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(clamp.value, ctx, `${path}.value`))
-      }
-      if (!isExprNode(clamp.min)) {
-        errors.push(`${path}.min is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(clamp.min, ctx, `${path}.min`))
-      }
-      if (!isExprNode(clamp.max)) {
-        errors.push(`${path}.max is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(clamp.max, ctx, `${path}.max`))
-      }
-      return errors
-    }
-    case 'slice': {
-      const slice = normalizedNode as Extract<ExprNode, { op: 'slice' }>
-      if (!isExprNode(slice.value)) {
-        errors.push(`${path}.value is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(slice.value, ctx, `${path}.value`))
-      }
-      if (!isExprNode(slice.start)) {
-        errors.push(`${path}.start is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(slice.start, ctx, `${path}.start`))
-      }
-      if (!isExprNode(slice.end)) {
-        errors.push(`${path}.end is not a valid expression node`)
-      } else {
-        errors.push(...validateValidationExprNode(slice.end, ctx, `${path}.end`))
-      }
-      return errors
-    }
-    case 'accumulate': {
-      const acc = normalizedNode as {
-        sourceFieldId: string
-        startIndex?: number
-        endIndex?: number
-        increment?: number
-        action: string
-      }
-      const ref = acc.sourceFieldId
-      if (typeof ref !== 'string' || ref.trim().length === 0) {
-        errors.push(`${path}.sourceFieldId must be a non-empty string`)
-        return errors
-      }
-      if (!ref.includes('.')) {
-        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
-        return errors
-      }
-      const parsedAcc = parsePath(ref)
-      if (!parsedAcc.gridId || !parsedAcc.fieldId) {
-        errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
-        return errors
-      }
-      if (!ctx.fieldPaths.has(ref)) {
-        errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
-        return errors
-      }
-      if (acc.startIndex != null && !Number.isInteger(acc.startIndex)) {
-        errors.push(`${path}.startIndex must be an integer when provided`)
-      }
-      if (acc.endIndex != null && !Number.isInteger(acc.endIndex)) {
-        errors.push(`${path}.endIndex must be an integer when provided`)
-      }
-      if (acc.increment != null) {
-        if (typeof acc.increment !== 'number' || !Number.isInteger(acc.increment) || acc.increment < 1) {
-          errors.push(`${path}.increment must be a positive integer`)
-        }
-      }
-      const validActions = ['add', 'sub', 'mul']
-      if (!validActions.includes(acc.action)) {
-        errors.push(`${path}.action must be one of: ${validActions.join(', ')}`)
-      }
-      return errors
-    }
-    case 'sum': {
-      const sumNode = normalizedNode as {
-        sourceFieldId: string
-        startIndex?: number
-        endIndex?: number
-        increment?: number
-        initialValue?: number
-      }
-      const refSum = sumNode.sourceFieldId
-      if (typeof refSum !== 'string' || refSum.trim().length === 0) {
-        errors.push(`${path}.sourceFieldId must be a non-empty string`)
-        return errors
-      }
-      if (!refSum.includes('.')) {
-        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
-        return errors
-      }
-      const parsedSum = parsePath(refSum)
-      if (!parsedSum.gridId || !parsedSum.fieldId) {
-        errors.push(`${path}.sourceFieldId "${refSum}" is not a valid field path`)
-        return errors
-      }
-      if (!ctx.fieldPaths.has(refSum)) {
-        errors.push(`${path}.sourceFieldId references missing field path "${refSum}"`)
-        return errors
-      }
-      if (sumNode.startIndex != null && !Number.isInteger(sumNode.startIndex)) {
-        errors.push(`${path}.startIndex must be an integer when provided`)
-      }
-      if (sumNode.endIndex != null && !Number.isInteger(sumNode.endIndex)) {
-        errors.push(`${path}.endIndex must be an integer when provided`)
-      }
-      if (sumNode.increment != null) {
-        if (typeof sumNode.increment !== 'number' || !Number.isInteger(sumNode.increment) || sumNode.increment < 1) {
-          errors.push(`${path}.increment must be a positive integer`)
-        }
-      }
-      return errors
-    }
-    case 'count': {
-      const countNode = normalizedNode as { sourceFieldId: string }
-      const refCount = countNode.sourceFieldId
-      if (typeof refCount !== 'string' || refCount.trim().length === 0) {
-        errors.push(`${path}.sourceFieldId must be a non-empty string`)
-        return errors
-      }
-      if (!refCount.includes('.')) {
-        errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. items_grid.id), not bare fieldId`)
-        return errors
-      }
-      const parsedCount = parsePath(refCount)
-      if (!parsedCount.gridId || !parsedCount.fieldId) {
-        errors.push(`${path}.sourceFieldId "${refCount}" is not a valid field path`)
-        return errors
-      }
-      if (!ctx.fieldPaths.has(refCount)) {
-        errors.push(`${path}.sourceFieldId references missing field path "${refCount}"`)
-        return errors
-      }
-      return errors
-    }
-    default:
-      errors.push(`${path}.op is not a supported operator`)
-      return errors
-  }
+ const normalizedOp = normalizeExprOp(node.op)
+ const normalizedNode = (normalizedOp === node.op ? node : { ...node, op: normalizedOp }) as ExprNode
+ switch (normalizedNode.op) {
+ case 'const':
+ return errors
+ case 'field': {
+ const ref = normalizedNode.fieldId
+ if (typeof ref !== 'string' || ref.trim().length === 0) {
+ errors.push(`${path}.fieldId must be a non-empty string`)
+ } else if (!ref.includes('.')) {
+ errors.push(`${path}.fieldId must be "gridId.fieldId" (e.g. main_grid.sku), not bare fieldId`)
+ } else if (!ctx.fieldPaths.has(ref)) {
+ errors.push(`${path}.fieldId references missing field path "${ref}"`)
+ }
+ return errors
+ }
+ case 'add':
+ case 'mul':
+ case 'and':
+ case 'or':
+ case 'min':
+ case 'max':
+ case 'concat': {
+ const args = getVariadicArgs(normalizedNode as Record<string, unknown>)
+ if (!args || args.length === 0) {
+ errors.push(`${path}.args must be a non-empty array`)
+ return errors
+ }
+ args.forEach((arg, idx) => {
+ if (!isExprNode(arg)) {
+ errors.push(`${path}.args[${idx}] is not a valid expression node`)
+ return
+ }
+ errors.push(...validateValidationExprNode(arg, ctx, `${path}.args[${idx}]`))
+ })
+ return errors
+ }
+ case 'sub':
+ case 'div':
+ case 'mod':
+ case 'pow':
+ case 'includes':
+ case 'eq':
+ case 'neq':
+ case 'gt':
+ case 'gte':
+ case 'lt':
+ case 'lte': {
+ const pair = getBinaryOperands(normalizedNode as Record<string, unknown>)
+ if (!pair) {
+ errors.push(`${path} must have .left and .right, or .args with two expression nodes`)
+ return errors
+ }
+ if (!isExprNode(pair.left)) {
+ errors.push(`${path}.left (or .args[0]) is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(pair.left, ctx, `${path}.left`))
+ }
+ if (!isExprNode(pair.right)) {
+ errors.push(`${path}.right (or .args[1]) is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(pair.right, ctx, `${path}.right`))
+ }
+ return errors
+ }
+ case 'not':
+ case 'abs':
+ case 'round':
+ case 'floor':
+ case 'ceil':
+ case 'length':
+ case 'trim':
+ case 'toUpper':
+ case 'toLower': {
+ const arg = (normalizedNode as Extract<ExprNode, { op: 'not' }>).arg
+ if (!isExprNode(arg)) {
+ errors.push(`${path}.arg is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(arg, ctx, `${path}.arg`))
+ }
+ return errors
+ }
+ case 'if': {
+ const triple = normalizedNode as Extract<ExprNode, { op: 'if' }>
+ if (!isExprNode(triple.cond)) {
+ errors.push(`${path}.cond is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(triple.cond, ctx, `${path}.cond`))
+ }
+ if (!isExprNode(triple.then)) {
+ errors.push(`${path}.then is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(triple.then, ctx, `${path}.then`))
+ }
+ if (!isExprNode(triple.else)) {
+ errors.push(`${path}.else is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(triple.else, ctx, `${path}.else`))
+ }
+ return errors
+ }
+ case 'regex': {
+ const regex = normalizedNode as Extract<ExprNode, { op: 'regex' }>
+ if (!isExprNode(regex.value)) {
+ errors.push(`${path}.value is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(regex.value, ctx, `${path}.value`))
+ }
+ if (typeof regex.pattern !== 'string') {
+ errors.push(`${path}.pattern must be a string`)
+ } else {
+ try {
+ new RegExp(regex.pattern, regex.flags)
+ } catch {
+ errors.push(`${path}.pattern is not a valid regex`)
+ }
+ }
+ if (regex.flags != null && typeof regex.flags !== 'string') {
+ errors.push(`${path}.flags must be a string when provided`)
+ }
+ return errors
+ }
+ case 'clamp': {
+ const clamp = normalizedNode as Extract<ExprNode, { op: 'clamp' }>
+ if (!isExprNode(clamp.value)) {
+ errors.push(`${path}.value is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(clamp.value, ctx, `${path}.value`))
+ }
+ if (!isExprNode(clamp.min)) {
+ errors.push(`${path}.min is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(clamp.min, ctx, `${path}.min`))
+ }
+ if (!isExprNode(clamp.max)) {
+ errors.push(`${path}.max is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(clamp.max, ctx, `${path}.max`))
+ }
+ return errors
+ }
+ case 'slice': {
+ const slice = normalizedNode as Extract<ExprNode, { op: 'slice' }>
+ if (!isExprNode(slice.value)) {
+ errors.push(`${path}.value is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(slice.value, ctx, `${path}.value`))
+ }
+ if (!isExprNode(slice.start)) {
+ errors.push(`${path}.start is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(slice.start, ctx, `${path}.start`))
+ }
+ if (!isExprNode(slice.end)) {
+ errors.push(`${path}.end is not a valid expression node`)
+ } else {
+ errors.push(...validateValidationExprNode(slice.end, ctx, `${path}.end`))
+ }
+ return errors
+ }
+ case 'accumulate': {
+ const acc = normalizedNode as {
+ sourceFieldId: string
+ startIndex?: number
+ endIndex?: number
+ increment?: number
+ action: string
+ }
+ const ref = acc.sourceFieldId
+ if (typeof ref !== 'string' || ref.trim().length === 0) {
+ errors.push(`${path}.sourceFieldId must be a non-empty string`)
+ return errors
+ }
+ if (!ref.includes('.')) {
+ errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+ return errors
+ }
+ const parsedAcc = parsePath(ref)
+ if (!parsedAcc.gridId || !parsedAcc.fieldId) {
+ errors.push(`${path}.sourceFieldId "${ref}" is not a valid field path`)
+ return errors
+ }
+ if (!ctx.fieldPaths.has(ref)) {
+ errors.push(`${path}.sourceFieldId references missing field path "${ref}"`)
+ return errors
+ }
+ if (acc.startIndex != null && !Number.isInteger(acc.startIndex)) {
+ errors.push(`${path}.startIndex must be an integer when provided`)
+ }
+ if (acc.endIndex != null && !Number.isInteger(acc.endIndex)) {
+ errors.push(`${path}.endIndex must be an integer when provided`)
+ }
+ if (acc.increment != null) {
+ if (typeof acc.increment !== 'number' || !Number.isInteger(acc.increment) || acc.increment < 1) {
+ errors.push(`${path}.increment must be a positive integer`)
+ }
+ }
+ const validActions = ['add', 'sub', 'mul']
+ if (!validActions.includes(acc.action)) {
+ errors.push(`${path}.action must be one of: ${validActions.join(', ')}`)
+ }
+ return errors
+ }
+ case 'sum': {
+ const sumNode = normalizedNode as {
+ sourceFieldId: string
+ startIndex?: number
+ endIndex?: number
+ increment?: number
+ initialValue?: number
+ }
+ const refSum = sumNode.sourceFieldId
+ if (typeof refSum !== 'string' || refSum.trim().length === 0) {
+ errors.push(`${path}.sourceFieldId must be a non-empty string`)
+ return errors
+ }
+ if (!refSum.includes('.')) {
+ errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. amounts_grid.amount), not bare fieldId`)
+ return errors
+ }
+ const parsedSum = parsePath(refSum)
+ if (!parsedSum.gridId || !parsedSum.fieldId) {
+ errors.push(`${path}.sourceFieldId "${refSum}" is not a valid field path`)
+ return errors
+ }
+ if (!ctx.fieldPaths.has(refSum)) {
+ errors.push(`${path}.sourceFieldId references missing field path "${refSum}"`)
+ return errors
+ }
+ if (sumNode.startIndex != null && !Number.isInteger(sumNode.startIndex)) {
+ errors.push(`${path}.startIndex must be an integer when provided`)
+ }
+ if (sumNode.endIndex != null && !Number.isInteger(sumNode.endIndex)) {
+ errors.push(`${path}.endIndex must be an integer when provided`)
+ }
+ if (sumNode.increment != null) {
+ if (typeof sumNode.increment !== 'number' || !Number.isInteger(sumNode.increment) || sumNode.increment < 1) {
+ errors.push(`${path}.increment must be a positive integer`)
+ }
+ }
+ return errors
+ }
+ case 'count': {
+ const countNode = normalizedNode as { sourceFieldId: string }
+ const refCount = countNode.sourceFieldId
+ if (typeof refCount !== 'string' || refCount.trim().length === 0) {
+ errors.push(`${path}.sourceFieldId must be a non-empty string`)
+ return errors
+ }
+ if (!refCount.includes('.')) {
+ errors.push(`${path}.sourceFieldId must be "gridId.fieldId" (e.g. items_grid.id), not bare fieldId`)
+ return errors
+ }
+ const parsedCount = parsePath(refCount)
+ if (!parsedCount.gridId || !parsedCount.fieldId) {
+ errors.push(`${path}.sourceFieldId "${refCount}" is not a valid field path`)
+ return errors
+ }
+ if (!ctx.fieldPaths.has(refCount)) {
+ errors.push(`${path}.sourceFieldId references missing field path "${refCount}"`)
+ return errors
+ }
+ return errors
+ }
+ default:
+ errors.push(`${path}.op is not a supported operator`)
+ return errors
+ }
 }
 
 /** Parse validation key; only "gridId.fieldId" (like bindings) is allowed. */
 function getValidationKeyPath(key: string): { gridId: string; fieldId: string } | null {
-  if (!key.includes('.')) return null
-  const { gridId, fieldId } = parsePath(key)
-  return gridId && fieldId ? { gridId, fieldId } : null
+ if (!key.includes('.')) return null
+ const { gridId, fieldId } = parsePath(key)
+ return gridId && fieldId ? { gridId, fieldId } : null
 }
 
 export function validateValidations(ctx: ValidationContext): ValidatorResult {
-  const errors: string[] = []
-  const validations = ctx.validations ?? {}
+ const errors: string[] = []
+ const validations = ctx.validations ?? {}
 
-  for (const [key, rules] of Object.entries(validations)) {
-    const parsed = getValidationKeyPath(key)
-    if (!parsed) {
-      errors.push(`validations key "${key}" must be "gridId.fieldId" (e.g. main_grid.sku), like bindings`)
-      continue
-    }
-    const { gridId } = parsed
-    if (!ctx.gridIds.has(gridId)) {
-      errors.push(`validations key "${key}": grid "${gridId}" not found`)
-      continue
-    }
-    if (!ctx.fieldPaths.has(key)) {
-      errors.push(`validations key "${key}": field path "${key}" not found (field must be placed in layout for that grid)`)
-      continue
-    }
+ for (const [key, rules] of Object.entries(validations)) {
+ const parsed = getValidationKeyPath(key)
+ if (!parsed) {
+ errors.push(`validations key "${key}" must be "gridId.fieldId" (e.g. main_grid.sku), like bindings`)
+ continue
+ }
+ const { gridId } = parsed
+ if (!ctx.gridIds.has(gridId)) {
+ errors.push(`validations key "${key}": grid "${gridId}" not found`)
+ continue
+ }
+ if (!ctx.fieldPaths.has(key)) {
+ errors.push(`validations key "${key}": field path "${key}" not found (field must be placed in layout for that grid)`)
+ continue
+ }
 
-    if (!Array.isArray(rules)) {
-      errors.push(`validations.${key} must be an array`)
-      continue
-    }
+ if (!Array.isArray(rules)) {
+ errors.push(`validations.${key} must be an array`)
+ continue
+ }
 
-    rules.forEach((rule, index) => {
-      const path = `validations.${key}[${index}]`
-      if (!isRecord(rule) || typeof rule.type !== 'string') {
-        errors.push(`${path}.type is required`)
-        return
-      }
+ rules.forEach((rule, index) => {
+ const path = `validations.${key}[${index}]`
+ if (!isRecord(rule) || typeof rule.type !== 'string') {
+ errors.push(`${path}.type is required`)
+ return
+ }
 
-      const typedRule = rule as FieldValidationRule
-      switch (typedRule.type) {
-        case 'required':
-          return
-        case 'min':
-        case 'max':
-        case 'minLength':
-        case 'maxLength':
-          if (typeof typedRule.value !== 'number' || Number.isNaN(typedRule.value)) {
-            errors.push(`${path}.value must be a number`)
-          }
-          return
-        case 'expr': {
-          if (typeof (rule as Record<string, unknown>)._intent === 'string') {
-            return
-          }
-          const expr = (rule as { expr?: unknown }).expr
-          if (!isExprNode(expr)) {
-            errors.push(`${path}.expr must be a valid expression node`)
-            return
-          }
-          errors.push(...validateValidationExprNode(expr, ctx, `${path}.expr`))
-          return
-        }
-        default:
-          errors.push(`${path}.type "${String((rule as { type?: unknown }).type)}" is not supported`)
-          return
-      }
-    })
-  }
+ const typedRule = rule as FieldValidationRule
+ switch (typedRule.type) {
+ case 'required':
+ return
+ case 'min':
+ case 'max':
+ case 'minLength':
+ case 'maxLength':
+ if (typeof typedRule.value !== 'number' || Number.isNaN(typedRule.value)) {
+ errors.push(`${path}.value must be a number`)
+ }
+ return
+ case 'expr': {
+ if (typeof (rule as Record<string, unknown>)._intent === 'string') {
+ return
+ }
+ const expr = (rule as { expr?: unknown }).expr
+ if (!isExprNode(expr)) {
+ errors.push(`${path}.expr must be a valid expression node`)
+ return
+ }
+ errors.push(...validateValidationExprNode(expr, ctx, `${path}.expr`))
+ return
+ }
+ default:
+ errors.push(`${path}.type "${String((rule as { type?: unknown }).type)}" is not supported`)
+ return
+ }
+ })
+ }
 
-  return errors.length > 0 ? { errors } : {}
+ return errors.length > 0 ? { errors } : {}
 }

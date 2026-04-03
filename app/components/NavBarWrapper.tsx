@@ -8,22 +8,22 @@ import NavBar from './NavBar'
  * (e.g. /tracker uses TrackerNavBar from its layout; /report has its own back link in-page).
  */
 export default function NavBarWrapper() {
-  const pathname = usePathname()
-  const isTrackerPage = pathname?.startsWith('/tracker') ?? false
-  const isDashboardPage = pathname?.startsWith('/dashboard') ?? false
-  const isProjectPage = pathname?.startsWith('/project') ?? false
-  const isReportPage = pathname?.startsWith('/report') ?? false
-  const isAnalysisPage = pathname?.startsWith('/analysis') ?? false
+ const pathname = usePathname()
+ const isTrackerPage = pathname?.startsWith('/tracker') ?? false
+ const isDashboardPage = pathname?.startsWith('/dashboard') ?? false
+ const isProjectPage = pathname?.startsWith('/project') ?? false
+ const isReportPage = pathname?.startsWith('/report') ?? false
+ const isAnalysisPage = pathname?.startsWith('/analysis') ?? false
 
-  if (
-    isTrackerPage ||
-    isDashboardPage ||
-    isProjectPage ||
-    isReportPage ||
-    isAnalysisPage
-  ) {
-    return null
-  }
+ if (
+ isTrackerPage ||
+ isDashboardPage ||
+ isProjectPage ||
+ isReportPage ||
+ isAnalysisPage
+ ) {
+ return null
+ }
 
-  return <NavBar />
+ return <NavBar />
 }

@@ -14,15 +14,15 @@ import type { ResolvedMasterDataEntry } from './master-data-agent'
 export type { ResolvedMasterDataEntry }
 
 export interface PromptInputs {
-  query: string
-  currentStateBlock: string
-  /** True when currentStateBlock is full "Current Tracker State (JSON)" (patch mode). */
-  hasFullTrackerStateForPatch: boolean
-  conversationContext: string
-  hasMessages: boolean
-  /** Pre-resolved master data entries (module/project scope). When present, builder uses real IDs. */
-  resolvedMasterData?: ResolvedMasterDataEntry[] | null
-  masterDataScope?: string | null
+ query: string
+ currentStateBlock: string
+ /** True when currentStateBlock is full "Current Tracker State (JSON)" (patch mode). */
+ hasFullTrackerStateForPatch: boolean
+ conversationContext: string
+ hasMessages: boolean
+ /** Pre-resolved master data entries (module/project scope). When present, builder uses real IDs. */
+ resolvedMasterData?: ResolvedMasterDataEntry[] | null
+ masterDataScope?: string | null
 }
 
 // ─── System Prompts ────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export interface PromptInputs {
  * The manager only plans — it does not generate the schema.
  */
 export function getManagerSystemPrompt(): string {
-  return `${managerPrompt}
+ return `${managerPrompt}
 
 Your structured output (thinking, prd, builderTodo) will be passed directly to the Builder Agent.
 Keep your thinking brief (2–4 sentences). Do not include a "summary" field in your response.
@@ -44,7 +44,7 @@ OUTPUT LIMIT: ~2K token budget — be concise and focused.`.trim()
  * The builder implements the schema from the manager's plan, which arrives in the user message.
  */
 export function getBuilderSystemPrompt(): string {
-  return `${trackerBuilderPrompt}
+ return `${trackerBuilderPrompt}
 
 === BUILDER PHILOSOPHY ===
 
@@ -123,26 +123,26 @@ If the tracker would be very large, output a complete but minimal tracker (fewer
  * Provides context and asks the manager to produce a PRD + builderTodo.
  */
 export function buildManagerUserPrompt(inputs: PromptInputs): string {
-  const { query, currentStateBlock, conversationContext, hasMessages, hasFullTrackerStateForPatch, masterDataScope } =
-    inputs
-  const scopeBlock = formatMasterDataScope(masterDataScope)
-  const prefix = scopeBlock + currentStateBlock + conversationContext
-  const stateTail = hasFullTrackerStateForPatch
-    ? ' There is an existing tracker in context — analyze it and plan specific changes.'
-    : ''
+ const { query, currentStateBlock, conversationContext, hasMessages, hasFullTrackerStateForPatch, masterDataScope } =
+ inputs
+ const scopeBlock = formatMasterDataScope(masterDataScope)
+ const prefix = scopeBlock + currentStateBlock + conversationContext
+ const stateTail = hasFullTrackerStateForPatch
+ ? ' There is an existing tracker in context — analyze it and plan specific changes.'
+ : ''
 
-  if (conversationContext) {
-    return (
-      prefix +
-      `User: ${query}\n\nBased on our conversation, analyze what the user wants to ${hasMessages ? 'update or create' : 'build'} and produce a comprehensive PRD + builderTodo.${stateTail}`
-    )
-  }
+ if (conversationContext) {
+ return (
+ prefix +
+ `User: ${query}\n\nBased on our conversation, analyze what the user wants to ${hasMessages ? 'update or create' : 'build'} and produce a comprehensive PRD + builderTodo.${stateTail}`
+ )
+ }
 
-  const createLine = hasFullTrackerStateForPatch
-    ? `Using the Current Tracker State above, analyze the user's request and produce a PRD + builderTodo for the changes needed.`
-    : `Analyze the user's request and produce a comprehensive PRD + builderTodo for what needs to be built.`
+ const createLine = hasFullTrackerStateForPatch
+ ? `Using the Current Tracker State above, analyze the user's request and produce a PRD + builderTodo for the changes needed.`
+ : `Analyze the user's request and produce a comprehensive PRD + builderTodo for what needs to be built.`
 
-  return prefix + `User: ${query}\n\n${createLine}`
+ return prefix + `User: ${query}\n\n${createLine}`
 }
 
 /**
@@ -150,16 +150,16 @@ export function buildManagerUserPrompt(inputs: PromptInputs): string {
  * The plan block gives the builder clear, authoritative instructions.
  */
 export function buildBuilderUserPrompt(inputs: PromptInputs, manager: ManagerSchema): string {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
-  const managerBlock = formatManagerPlan(manager)
-  const scopeBlock = formatMasterDataScope(masterDataScope)
-  const prefix = scopeBlock + currentStateBlock + conversationContext
-  const stateTail = hasFullTrackerStateForPatch
-    ? ' Start from the Current Tracker State above when present.'
-    : ''
-  const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
+ const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
+ const managerBlock = formatManagerPlan(manager)
+ const scopeBlock = formatMasterDataScope(masterDataScope)
+ const prefix = scopeBlock + currentStateBlock + conversationContext
+ const stateTail = hasFullTrackerStateForPatch
+ ? ' Start from the Current Tracker State above when present.'
+ : ''
+ const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
 
-  return `${prefix}${mdBlock}${managerBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`
+ return `${prefix}${mdBlock}${managerBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`
 }
 
 /**
@@ -167,92 +167,92 @@ export function buildBuilderUserPrompt(inputs: PromptInputs, manager: ManagerSch
  * Each is progressively simpler to maximize chance of valid JSON.
  */
 export function buildBuilderFallbackPrompts(
-  inputs: PromptInputs,
-  manager: ManagerSchema,
+ inputs: PromptInputs,
+ manager: ManagerSchema,
 ): string[] {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
-  const managerBlock = formatManagerPlan(manager)
-  const scopeBlock = formatMasterDataScope(masterDataScope)
-  const stateHint =
-    currentStateBlock && hasFullTrackerStateForPatch ? ' Start from the Current Tracker State above.' : ''
-  const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
+ const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
+ const managerBlock = formatManagerPlan(manager)
+ const scopeBlock = formatMasterDataScope(masterDataScope)
+ const stateHint =
+ currentStateBlock && hasFullTrackerStateForPatch ? ' Start from the Current Tracker State above.' : ''
+ const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
 
-  return [
-    `${scopeBlock}${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
-    `${scopeBlock}${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
-    'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings.',
-  ]
+ return [
+ `${scopeBlock}${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
+ `${scopeBlock}${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
+ 'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings.',
+ ]
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatManagerPlan(manager: ManagerSchema): string {
-  const lines: string[] = ['=== Manager Plan ===']
+ const lines: string[] = ['=== Manager Plan ===']
 
-  // PRD section
-  if (manager.prd?.name) {
-    lines.push(`\n📋 TRACKER: ${manager.prd.name}`)
-  }
+ // PRD section
+ if (manager.prd?.name) {
+ lines.push(`\n📋 TRACKER: ${manager.prd.name}`)
+ }
 
-  if (manager.prd?.keyFeatures?.length) {
-    lines.push(`\nKey Features:`)
-    for (const feature of manager.prd.keyFeatures) {
-      lines.push(`  • ${feature}`)
-    }
-  }
+ if (manager.prd?.keyFeatures?.length) {
+ lines.push(`\nKey Features:`)
+ for (const feature of manager.prd.keyFeatures) {
+ lines.push(` • ${feature}`)
+ }
+ }
 
-  // Architectural thinking (if available in thinking field)
-  if (manager.thinking) {
-    lines.push(`\n🏗️ ARCHITECTURAL THINKING:`)
-    lines.push(manager.thinking)
-  }
+ // Architectural thinking (if available in thinking field)
+ if (manager.thinking) {
+ lines.push(`\n🏗️ ARCHITECTURAL THINKING:`)
+ lines.push(manager.thinking)
+ }
 
-  // BuilderTodo organized by phase
-  if (manager.builderTodo?.length) {
-    lines.push(`\n📐 ARCHITECTURE BLUEPRINT (${manager.builderTodo.length} tasks):`)
+ // BuilderTodo organized by phase
+ if (manager.builderTodo?.length) {
+ lines.push(`\n📐 ARCHITECTURE BLUEPRINT (${manager.builderTodo.length} tasks):`)
 
-    let currentPhase = ''
-    let phaseNumber = 0
+ let currentPhase = ''
+ let phaseNumber = 0
 
-    manager.builderTodo.forEach((item, i) => {
-      const action = item.action ?? 'create'
-      const target = item.target ?? ''
-      const task = item.task ?? ''
+ manager.builderTodo.forEach((item, i) => {
+ const action = item.action ?? 'create'
+ const target = item.target ?? ''
+ const task = item.task ?? ''
 
-      // Detect phase changes based on comments or task descriptions
-      const phaseMatch = task.match(/PHASE (\d+):\s*([A-Z_\s]+)/i)
-      if (phaseMatch) {
-        const newPhase = phaseMatch[2].trim()
-        if (newPhase !== currentPhase) {
-          currentPhase = newPhase
-          phaseNumber++
-          lines.push(`\n  ➤ PHASE ${phaseNumber}: ${currentPhase}`)
-        }
-      }
+ // Detect phase changes based on comments or task descriptions
+ const phaseMatch = task.match(/PHASE (\d+):\s*([A-Z_\s]+)/i)
+ if (phaseMatch) {
+ const newPhase = phaseMatch[2].trim()
+ if (newPhase !== currentPhase) {
+ currentPhase = newPhase
+ phaseNumber++
+ lines.push(`\n ➤ PHASE ${phaseNumber}: ${currentPhase}`)
+ }
+ }
 
-      lines.push(`    ${i + 1}. [${action}] ${target}: ${task}`)
-    })
-  }
+ lines.push(` ${i + 1}. [${action}] ${target}: ${task}`)
+ })
+ }
 
-  lines.push('\n=== End Manager Plan ===')
-  return lines.join('\n')
+ lines.push('\n=== End Manager Plan ===')
+ return lines.join('\n')
 }
 
 function formatResolvedMasterData(entries: ResolvedMasterDataEntry[]): string {
-  const lines = ['\n=== Pre-Resolved Master Data ===']
-  lines.push('These master data trackers are ALREADY IN THE DATABASE. Use their EXACT IDs in bindings.')
-  lines.push('Do NOT use "__master_data__" placeholder. Do NOT create local master data grids. Do NOT output masterDataTrackers.\n')
-  for (const e of entries) {
-    lines.push(`• key: "${e.key}"  name: "${e.name}"`)
-    lines.push(`  trackerId: "${e.trackerId}"  gridId: "${e.gridId}"  labelFieldId: "${e.labelFieldId}"`)
-    lines.push(`  → use binding: { optionsSourceSchemaId: "${e.trackerId}", optionsSourceKey: "${e.key}", optionsGrid: "${e.gridId}", labelField: "${e.gridId}.${e.labelFieldId}" }`)
-  }
-  lines.push('\n=== End Pre-Resolved Master Data ===\n')
-  return lines.join('\n')
+ const lines = ['\n=== Pre-Resolved Master Data ===']
+ lines.push('These master data trackers are ALREADY IN THE DATABASE. Use their EXACT IDs in bindings.')
+ lines.push('Do NOT use "__master_data__" placeholder. Do NOT create local master data grids. Do NOT output masterDataTrackers.\n')
+ for (const e of entries) {
+ lines.push(`• key: "${e.key}" name: "${e.name}"`)
+ lines.push(` trackerId: "${e.trackerId}" gridId: "${e.gridId}" labelFieldId: "${e.labelFieldId}"`)
+ lines.push(` → use binding: { optionsSourceSchemaId: "${e.trackerId}", optionsSourceKey: "${e.key}", optionsGrid: "${e.gridId}", labelField: "${e.gridId}.${e.labelFieldId}" }`)
+ }
+ lines.push('\n=== End Pre-Resolved Master Data ===\n')
+ return lines.join('\n')
 }
 
 function formatMasterDataScope(scope?: string | null): string {
-  const trimmed = typeof scope === 'string' ? scope.trim() : ''
-  if (!trimmed) return ''
-  return `Master Data Scope: ${trimmed}\n\n`
+ const trimmed = typeof scope === 'string' ? scope.trim() : ''
+ if (!trimmed) return ''
+ return `Master Data Scope: ${trimmed}\n\n`
 }

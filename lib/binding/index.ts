@@ -7,9 +7,9 @@ export type { TrackerLike, TrackerContextForOptions, ResolvedOption } from './ty
 export { getOptionGridLabelAndValueFieldIds, buildBindingsFromSchema } from './schema-build'
 export { enrichBindingsFromSchema } from './enrich'
 export {
-  resolveFieldOptionsLegacy,
-  resolveFieldOptionsV2,
-  resolveFieldOptionsV2Async,
-  getFieldBinding,
+ resolveFieldOptionsLegacy,
+ resolveFieldOptionsV2,
+ resolveFieldOptionsV2Async,
+ getFieldBinding,
 } from './options'
 export { resolveSelfBindings } from './self-bindings'

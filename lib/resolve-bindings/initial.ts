@@ -13,29 +13,29 @@ import { normalizeOptionsGridId } from './path'
  * Each options grid is set to an empty array.
  */
 export function getInitialGridDataFromBindings(bindings: TrackerBindings): GridData {
-  const result: GridData = {}
-  if (!bindings || Object.keys(bindings).length === 0) return result
+ const result: GridData = {}
+ if (!bindings || Object.keys(bindings).length === 0) return result
 
-  const gridMeta: Record<string, { labelFieldId: string; valueFieldId: string }> = {}
+ const gridMeta: Record<string, { labelFieldId: string; valueFieldId: string }> = {}
 
-  for (const [fieldPath, entry] of Object.entries(bindings)) {
-    const sourceId = entry.optionsSourceSchemaId?.trim()
-    if (sourceId && sourceId !== '__self__') continue
-    const optionsGridId = normalizeOptionsGridId(entry.optionsGrid)
-    if (!optionsGridId) continue
+ for (const [fieldPath, entry] of Object.entries(bindings)) {
+ const sourceId = entry.optionsSourceSchemaId?.trim()
+ if (sourceId && sourceId !== '__self__') continue
+ const optionsGridId = normalizeOptionsGridId(entry.optionsGrid)
+ if (!optionsGridId) continue
 
-    const { fieldId: labelFieldId } = parsePath(entry.labelField)
-    const valueMapping = entry.fieldMappings?.find((m) => m.to === fieldPath)
-    const valueFieldId = valueMapping ? parsePath(valueMapping.from).fieldId : null
-    if (!labelFieldId || !valueFieldId) continue
+ const { fieldId: labelFieldId } = parsePath(entry.labelField)
+ const valueMapping = entry.fieldMappings?.find((m) => m.to === fieldPath)
+ const valueFieldId = valueMapping ? parsePath(valueMapping.from).fieldId : null
+ if (!labelFieldId || !valueFieldId) continue
 
-    if (!gridMeta[optionsGridId]) {
-      gridMeta[optionsGridId] = { labelFieldId, valueFieldId }
-    }
-  }
+ if (!gridMeta[optionsGridId]) {
+ gridMeta[optionsGridId] = { labelFieldId, valueFieldId }
+ }
+ }
 
-  for (const optionsGridId of Object.keys(gridMeta)) {
-    result[optionsGridId] = []
-  }
-  return result
+ for (const optionsGridId of Object.keys(gridMeta)) {
+ result[optionsGridId] = []
+ }
+ return result
 }

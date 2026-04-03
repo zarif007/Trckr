@@ -9,15 +9,15 @@ import { normalizeOptionsGridId } from './path'
 export type ForeignGridDataBySchemaId = Record<string, GridData>
 
 export function getOptionsGridRowsForBinding(
-  binding: TrackerBindingEntry,
-  localGridData: GridData,
-  foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null
+ binding: TrackerBindingEntry,
+ localGridData: GridData,
+ foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null
 ): Record<string, unknown>[] {
-  const gridId = normalizeOptionsGridId(binding.optionsGrid)
-  if (!gridId) return []
-  const sourceId = binding.optionsSourceSchemaId?.trim()
-  if (sourceId && sourceId !== '__self__') {
-    return foreignGridDataBySchemaId?.[sourceId]?.[gridId] ?? []
-  }
-  return localGridData[gridId] ?? []
+ const gridId = normalizeOptionsGridId(binding.optionsGrid)
+ if (!gridId) return []
+ const sourceId = binding.optionsSourceSchemaId?.trim()
+ if (sourceId && sourceId !== '__self__') {
+ return foreignGridDataBySchemaId?.[sourceId]?.[gridId] ?? []
+ }
+ return localGridData[gridId] ?? []
 }

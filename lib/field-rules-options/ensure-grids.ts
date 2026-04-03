@@ -7,14 +7,14 @@
 import type { FieldRulesOptionGridsInput, FieldRulesOptionGridsResult } from './types'
 
 export function ensureFieldRulesOptionGrids(
-  input: FieldRulesOptionGridsInput
+ input: FieldRulesOptionGridsInput
 ): FieldRulesOptionGridsResult {
-  return {
-    sections: input.sections,
-    grids: input.grids,
-    fields: input.fields,
-    layoutNodes: input.layoutNodes,
-    bindings: input.bindings,
-    seedGridData: {},
-  }
+ return {
+ sections: input.sections,
+ grids: input.grids,
+ fields: input.fields,
+ layoutNodes: input.layoutNodes,
+ bindings: input.bindings,
+ seedGridData: {},
+ }
 }

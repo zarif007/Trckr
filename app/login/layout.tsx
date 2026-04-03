@@ -1,13 +1,13 @@
 export default function LoginLayout({
-  children,
+ children,
 }: {
-  children: React.ReactNode
+ children: React.ReactNode
 }) {
-  return (
-    <>
-      {/* Hide the global NavBar on the login page via CSS */}
-      <style>{`header { display: none !important; }`}</style>
-      {children}
-    </>
-  )
+ return (
+ <>
+ {/* Hide the global NavBar on the login page via CSS */}
+ <style>{`header { display: none !important; }`}</style>
+ {children}
+ </>
+ )
 }

@@ -3,15 +3,15 @@ import LogLoginEffect from '@/app/components/LogLoginEffect'
 import { TrackerNavProvider } from './TrackerNavContext'
 
 export default function TrackerLayout({
-  children,
+ children,
 }: {
-  children: React.ReactNode
+ children: React.ReactNode
 }) {
-  return (
-    <TrackerNavProvider>
-      <LogLoginEffect />
-      <TrackerNavBar />
-      {children}
-    </TrackerNavProvider>
-  )
+ return (
+ <TrackerNavProvider>
+ <LogLoginEffect />
+ <TrackerNavBar />
+ {children}
+ </TrackerNavProvider>
+ )
 }

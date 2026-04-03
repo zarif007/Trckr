@@ -7,8 +7,8 @@ import type { QueryPlanV1 } from './schemas'
  * and breaks pooled totals.
  */
 export function needsMultiFairPoolForAggregates(plan: QueryPlanV1): boolean {
-  const agg = plan.aggregate
-  if (!agg || agg.metrics.length === 0) return false
-  if (agg.groupBy.length > 0) return false
-  return agg.metrics.some((m) => m.op === 'sum' || m.op === 'avg')
+ const agg = plan.aggregate
+ if (!agg || agg.metrics.length === 0) return false
+ if (agg.groupBy.length > 0) return false
+ return agg.metrics.some((m) => m.op === 'sum' || m.op === 'avg')
 }

@@ -6,13 +6,13 @@
 import type { TrackerLike, ValidationResult } from './types'
 import { buildValidationContext } from './context'
 import {
-  validateLayout,
-  validateOptionsFields,
-  validateReservedFieldIds,
-  validateFieldRules,
-  validateBindings,
-  validateValidations,
-  validateCalculations,
+ validateLayout,
+ validateOptionsFields,
+ validateReservedFieldIds,
+ validateFieldRules,
+ validateBindings,
+ validateValidations,
+ validateCalculations,
 } from './validators'
 
 export type { TrackerLike, ValidationResult } from './types'
@@ -20,37 +20,37 @@ export { autoFixBindings } from './auto-fix'
 export { validateBindings, validateFieldRules, validateValidations, validateCalculations } from './validators'
 
 function mergeResults(
-  results: Array<{ errors?: string[]; warnings?: string[] }>
+ results: Array<{ errors?: string[]; warnings?: string[] }>
 ): { errors: string[]; warnings: string[] } {
-  const errors: string[] = []
-  const warnings: string[] = []
-  for (const r of results) {
-    if (r.errors) errors.push(...r.errors)
-    if (r.warnings) warnings.push(...r.warnings)
-  }
-  return { errors, warnings }
+ const errors: string[] = []
+ const warnings: string[] = []
+ for (const r of results) {
+ if (r.errors) errors.push(...r.errors)
+ if (r.warnings) warnings.push(...r.warnings)
+ }
+ return { errors, warnings }
 }
 
 export function validateTracker(tracker: TrackerLike | null | undefined): ValidationResult {
-  if (!tracker) {
-    return { valid: true, errors: [], warnings: [] }
-  }
+ if (!tracker) {
+ return { valid: true, errors: [], warnings: [] }
+ }
 
-  const ctx = buildValidationContext(tracker)
-  const results = [
-    validateLayout(ctx),
-    validateOptionsFields(ctx),
-    validateReservedFieldIds(ctx),
-    validateFieldRules(tracker.fieldRulesV2, ctx),
-    validateBindings(ctx),
-    validateValidations(ctx),
-    validateCalculations(ctx),
-  ]
+ const ctx = buildValidationContext(tracker)
+ const results = [
+ validateLayout(ctx),
+ validateOptionsFields(ctx),
+ validateReservedFieldIds(ctx),
+ validateFieldRules(tracker.fieldRulesV2, ctx),
+ validateBindings(ctx),
+ validateValidations(ctx),
+ validateCalculations(ctx),
+ ]
 
-  const { errors, warnings } = mergeResults(results)
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-  }
+ const { errors, warnings } = mergeResults(results)
+ return {
+ valid: errors.length === 0,
+ errors,
+ warnings,
+ }
 }

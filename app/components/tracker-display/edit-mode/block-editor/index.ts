@@ -10,12 +10,12 @@ export { AddColumnOrFieldDialog } from './AddColumnOrFieldDialog'
 export { ColumnHeaderEdit } from './ColumnHeaderEdit'
 export { FieldRowEdit } from './FieldRowEdit'
 export {
-  SortableColumnHeaderEdit,
-  SortableFieldRowEdit,
-  fieldSortableId,
-  parseFieldId,
+ SortableColumnHeaderEdit,
+ SortableFieldRowEdit,
+ fieldSortableId,
+ parseFieldId,
 } from './SortableBlock'
 export type {
-  SortableColumnHeaderEditProps,
-  SortableFieldRowEditProps,
+ SortableColumnHeaderEditProps,
+ SortableFieldRowEditProps,
 } from './SortableBlock'

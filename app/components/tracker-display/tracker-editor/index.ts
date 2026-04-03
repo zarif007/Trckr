@@ -5,12 +5,12 @@
  */
 
 export {
-  createEmptyTrackerSchema,
-  INITIAL_TRACKER_SCHEMA,
-  DEFAULT_FIRST_TAB_NAME,
-  DEFAULT_FIRST_TAB_PLACE_ID,
-  DEFAULT_FORM_ACTION,
-  DEFAULT_FORM_ACTION_ID,
+ createEmptyTrackerSchema,
+ INITIAL_TRACKER_SCHEMA,
+ DEFAULT_FIRST_TAB_NAME,
+ DEFAULT_FIRST_TAB_PLACE_ID,
+ DEFAULT_FORM_ACTION,
+ DEFAULT_FORM_ACTION_ID,
 } from './constants'
 
 export { useEditableTrackerSchema } from './useEditableTrackerSchema'

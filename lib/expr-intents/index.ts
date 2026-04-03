@@ -10,14 +10,14 @@
 export type { ExprIntent, ExprIntentPurpose, ExprIntentResolution } from './types'
 export { parseFieldPath } from './field-path'
 export {
-  collectExprIntents,
-  isIntentCalculation,
-  isIntentValidationRule,
+ collectExprIntents,
+ isIntentCalculation,
+ isIntentValidationRule,
 } from './collect'
 export { applyExprIntentResults } from './apply'
 export {
-  exprIntentToolInputSchema,
-  generateCalculationExpressionTool,
-  generateValidationExpressionTool,
-  type ExprIntentToolInput,
+ exprIntentToolInputSchema,
+ generateCalculationExpressionTool,
+ generateValidationExpressionTool,
+ type ExprIntentToolInput,
 } from './tools'

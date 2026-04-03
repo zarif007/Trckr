@@ -8,30 +8,30 @@ import { cn } from "@/lib/utils"
 import { theme } from "@/lib/theme"
 
 function Checkbox({
-  className,
-  ...props
+ className,
+ ...props
 }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
-  return (
-    <CheckboxPrimitive.Root
-      data-slot="checkbox"
-      className={cn(
-        'peer size-4 shrink-0 border transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
-        theme.radius.compact,
-        theme.border.input,
-        theme.surface.input,
-        "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-        className
-      )}
-      {...props}
-    >
-      <CheckboxPrimitive.Indicator
-        data-slot="checkbox-indicator"
-        className="grid place-content-center text-current transition-none"
-      >
-        <CheckIcon className="size-3.5" />
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
-  )
+ return (
+ <CheckboxPrimitive.Root
+ data-slot="checkbox"
+ className={cn(
+ 'peer size-4 shrink-0 border transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50',
+ theme.radius.compact,
+ theme.border.input,
+ theme.surface.input,
+ "data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+ className
+ )}
+ {...props}
+ >
+ <CheckboxPrimitive.Indicator
+ data-slot="checkbox-indicator"
+ className="grid place-content-center text-current transition-none"
+ >
+ <CheckIcon className="size-3.5" />
+ </CheckboxPrimitive.Indicator>
+ </CheckboxPrimitive.Root>
+ )
 }
 
 export { Checkbox }

@@ -11,11 +11,11 @@ export type GridDataSnapshot = Record<string, Array<Record<string, unknown>>>
  * - `patch`: multi-instance or version control → PATCH existing row, or POST first row then PATCH.
  */
 export type ForeignDataPersistMeta = {
-  writeMode: 'upsert_post' | 'patch'
-  dataSnapshotId: string | null
-  formStatus: string | null | undefined
-  /** GET /data succeeded; combined with schema GET so we never PATCH a guessed snapshot. */
-  hydrated: boolean
+ writeMode: 'upsert_post' | 'patch'
+ dataSnapshotId: string | null
+ formStatus: string | null | undefined
+ /** GET /data succeeded; combined with schema GET so we never PATCH a guessed snapshot. */
+ hydrated: boolean
 }
 
 /**
@@ -23,7 +23,7 @@ export type ForeignDataPersistMeta = {
  * live grid rows, schema slice for “add option” form, and persist metadata.
  */
 export type ForeignSourceBundle = {
-  gridData: GridDataSnapshot
-  schemaSlice: ForeignBindingSourceSchema | null
-  persist: ForeignDataPersistMeta
+ gridData: GridDataSnapshot
+ schemaSlice: ForeignBindingSourceSchema | null
+ persist: ForeignDataPersistMeta
 }

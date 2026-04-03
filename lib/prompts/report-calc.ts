@@ -5,7 +5,7 @@ import { formatGenerationPlanForPrompt, type ReportGenerationPlan } from '@/lib/
  */
 
 export function getReportCalcSystemPrompt(): string {
-  return `You are the calculation planner for a tracker report pipeline.
+ return `You are the calculation planner for a tracker report pipeline.
 
 The query step has already produced a row table with concrete columns. Your job is to list **additional per-row columns** that should be computed with the same expression system as tracker field formulas (references to flattened field paths, arithmetic, conditionals).
 
@@ -20,15 +20,15 @@ Rules:
 }
 
 export function buildReportCalcUserPrompt(params: {
-  intentSummary: string
-  userQuery: string
-  columnKeys: string[]
-  sampleRowsJson: string
-  generationPlan?: ReportGenerationPlan
+ intentSummary: string
+ userQuery: string
+ columnKeys: string[]
+ sampleRowsJson: string
+ generationPlan?: ReportGenerationPlan
 }): string {
-  const cols =
-    params.columnKeys.length > 0 ? params.columnKeys.map((k) => `- ${k}`).join('\n') : '(no columns)'
-  return `User request (verbatim): ${params.userQuery}
+ const cols =
+ params.columnKeys.length > 0 ? params.columnKeys.map((k) => `- ${k}`).join('\n') : '(no columns)'
+ return `User request (verbatim): ${params.userQuery}
 
 Intent summary: ${params.intentSummary}
 

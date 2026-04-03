@@ -8,24 +8,24 @@ import { cn } from '@/lib/utils'
  * (no left gutter; edit controls are inline with labels).
  */
 export function ViewBlockWrapper({
-  variant,
-  children,
-  className,
+ variant,
+ children,
+ className,
 }: {
-  variant: 'section' | 'grid'
-  children: ReactNode
-  className?: string
+ variant: 'section' | 'grid'
+ children: ReactNode
+ className?: string
 }) {
-  return (
-    <div
-      className={cn(
-        'relative flex flex-col w-full min-w-0',
-        variant === 'section' && 'mt-0',
-        variant === 'grid' && 'rounded-md',
-        className
-      )}
-    >
-      {children}
-    </div>
-  )
+ return (
+ <div
+ className={cn(
+ 'relative flex flex-col w-full min-w-0',
+ variant === 'section' && 'mt-0',
+ variant === 'grid' && 'rounded-sm',
+ className
+ )}
+ >
+ {children}
+ </div>
+ )
 }

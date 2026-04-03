@@ -6,14 +6,14 @@
 import type { ReactNode, RefObject } from 'react'
 import type { GridDataRecord } from '../types'
 import type {
-  TrackerField,
-  TrackerLayoutNode,
-  TrackerFieldType,
-  TrackerTab,
-  TrackerSection,
-  TrackerGrid,
-  TrackerBindings,
-  StyleOverrides,
+ TrackerField,
+ TrackerLayoutNode,
+ TrackerFieldType,
+ TrackerTab,
+ TrackerSection,
+ TrackerGrid,
+ TrackerBindings,
+ StyleOverrides,
 } from '../types'
 import type { FieldRulesMap } from '@/lib/field-rules'
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
@@ -24,27 +24,27 @@ import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/
 
 /** A single item in the flat block list (section or grid). */
 export type FlatBlock =
-  | { type: 'section'; id: string }
-  | { type: 'grid'; id: string; sectionId: string }
+ | { type: 'section'; id: string }
+ | { type: 'grid'; id: string; sectionId: string }
 
 /** Props for the top-level BlockEditor component. */
 export interface BlockEditorProps {
-  tab: TrackerTab
-  sections: TrackerSection[]
-  grids: TrackerGrid[]
-  fields: TrackerField[]
-  layoutNodes: TrackerLayoutNode[]
-  bindings: TrackerBindings
-  validations?: Record<string, FieldValidationRule[]>
-  calculations?: Record<string, FieldCalculationRule>
-  styles?: Record<string, StyleOverrides>
-  fieldRulesV2?: FieldRulesMap
-  gridData: Record<string, Array<Record<string, unknown>>>
-  gridDataRef?: RefObject<GridDataRecord> | null
-  onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
-  /** When omitted (e.g. in edit/add layout mode), Add Entry and add-data buttons are hidden. */
-  onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
-  onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
+ tab: TrackerTab
+ sections: TrackerSection[]
+ grids: TrackerGrid[]
+ fields: TrackerField[]
+ layoutNodes: TrackerLayoutNode[]
+ bindings: TrackerBindings
+ validations?: Record<string, FieldValidationRule[]>
+ calculations?: Record<string, FieldCalculationRule>
+ styles?: Record<string, StyleOverrides>
+ fieldRulesV2?: FieldRulesMap
+ gridData: Record<string, Array<Record<string, unknown>>>
+ gridDataRef?: RefObject<GridDataRecord> | null
+ onUpdate: (gridId: string, rowIndex: number, columnId: string, value: unknown) => void
+ /** When omitted (e.g. in edit/add layout mode), Add Entry and add-data buttons are hidden. */
+ onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void
+ onDeleteEntries?: (gridId: string, rowIndices: number[]) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -53,75 +53,75 @@ export interface BlockEditorProps {
 
 /** Schema shape required for edit mode (subset of TrackerDisplayProps). */
 export interface EditModeSchema {
-  tabs: TrackerTab[]
-  sections: TrackerSection[]
-  grids: TrackerGrid[]
-  fields: TrackerField[]
-  layoutNodes: TrackerLayoutNode[]
-  bindings?: TrackerBindings
-  validations?: Record<string, FieldValidationRule[]>
-  calculations?: Record<string, FieldCalculationRule>
-  styles?: Record<string, unknown>
-  fieldRulesV2?: FieldRulesMap
+ tabs: TrackerTab[]
+ sections: TrackerSection[]
+ grids: TrackerGrid[]
+ fields: TrackerField[]
+ layoutNodes: TrackerLayoutNode[]
+ bindings?: TrackerBindings
+ validations?: Record<string, FieldValidationRule[]>
+ calculations?: Record<string, FieldCalculationRule>
+ styles?: Record<string, unknown>
+ fieldRulesV2?: FieldRulesMap
 }
 
 /** Result of "Add column" or "Add field" dialog. */
 export type AddColumnOrFieldResult =
-  | { mode: 'new'; label: string; dataType: TrackerFieldType }
-  | { mode: 'existing'; fieldId: string }
+ | { mode: 'new'; label: string; dataType: TrackerFieldType }
+ | { mode: 'existing'; fieldId: string }
 
 /** Variant for the add dialog: table column vs div field. */
 export type AddTargetVariant = 'column' | 'field'
 
 /** Props for the add column/field dialog. */
 export interface AddColumnOrFieldDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  variant: AddTargetVariant
-  existingFieldIds: string[]
-  allFields: TrackerField[]
-  onConfirm: (result: AddColumnOrFieldResult) => void
+ open: boolean
+ onOpenChange: (open: boolean) => void
+ variant: AddTargetVariant
+ existingFieldIds: string[]
+ allFields: TrackerField[]
+ onConfirm: (result: AddColumnOrFieldResult) => void
 }
 
 /** Props for the table column header edit controls. */
 export interface ColumnHeaderEditProps {
-  fieldId: string
-  label: string
-  index: number
-  totalColumns: number
-  onRemove: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  onSettings?: () => void
-  /** When true, render inline (no left gutter) so header aligns with table body. */
-  inline?: boolean
-  sortable?: {
-    wrapperRef: (node: HTMLElement | null) => void
-    wrapperStyle: React.CSSProperties
-    dragHandleProps: React.HTMLAttributes<HTMLButtonElement>
-    isDragging?: boolean
-  }
+ fieldId: string
+ label: string
+ index: number
+ totalColumns: number
+ onRemove: () => void
+ onMoveUp: () => void
+ onMoveDown: () => void
+ onSettings?: () => void
+ /** When true, render inline (no left gutter) so header aligns with table body. */
+ inline?: boolean
+ sortable?: {
+ wrapperRef: (node: HTMLElement | null) => void
+ wrapperStyle: React.CSSProperties
+ dragHandleProps: React.HTMLAttributes<HTMLButtonElement>
+ isDragging?: boolean
+ }
 }
 
 /** Props for the div field row edit wrapper. */
 export interface FieldRowEditProps {
-  fieldId: string
-  label: string
-  /** The label element to show inline with controls (e.g. <label>...</label>) */
-  labelContent?: ReactNode
-  index: number
-  totalFields: number
-  onRemove: () => void
-  onMoveUp: () => void
-  onMoveDown: () => void
-  onSettings?: () => void
-  children: ReactNode
-  sortable?: {
-    wrapperRef: (node: HTMLElement | null) => void
-    wrapperStyle: React.CSSProperties
-    dragHandleProps: React.HTMLAttributes<HTMLButtonElement>
-    isDragging?: boolean
-  }
+ fieldId: string
+ label: string
+ /** The label element to show inline with controls (e.g. <label>...</label>) */
+ labelContent?: ReactNode
+ index: number
+ totalFields: number
+ onRemove: () => void
+ onMoveUp: () => void
+ onMoveDown: () => void
+ onSettings?: () => void
+ children: ReactNode
+ sortable?: {
+ wrapperRef: (node: HTMLElement | null) => void
+ wrapperStyle: React.CSSProperties
+ dragHandleProps: React.HTMLAttributes<HTMLButtonElement>
+ isDragging?: boolean
+ }
 }
 
 /** Block variant for Notion-like edit UI. */
@@ -129,22 +129,22 @@ export type BlockVariant = 'section' | 'grid' | 'field'
 
 /** Props for the block wrapper (hover handle + delete, optional sortable). */
 export interface BlockWrapperProps {
-  blockId: string
-  variant: BlockVariant
-  children: ReactNode
-  onRemove: () => void
-  /** Aria label for the block (e.g. section name). */
-  label: string
-  /** When true, block is being dragged (e.g. hide or dim content). */
-  isDragging?: boolean
-  /** Ref for the sortable wrapper (setNodeRef from useSortable). */
-  wrapperRef?: (node: HTMLElement | null) => void
-  /** Style for transform/transition when sortable (from useSortable). */
-  wrapperStyle?: React.CSSProperties
-  /** Props to attach to the drag handle (listeners + attributes from useSortable). */
-  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
-  /** Ref for the drag handle if needed. */
-  dragHandleRef?: React.RefObject<HTMLButtonElement | null>
-  /** When provided, shows a plus button that opens the add-block inserter below this block. */
-  onAddBlockClick?: () => void
+ blockId: string
+ variant: BlockVariant
+ children: ReactNode
+ onRemove: () => void
+ /** Aria label for the block (e.g. section name). */
+ label: string
+ /** When true, block is being dragged (e.g. hide or dim content). */
+ isDragging?: boolean
+ /** Ref for the sortable wrapper (setNodeRef from useSortable). */
+ wrapperRef?: (node: HTMLElement | null) => void
+ /** Style for transform/transition when sortable (from useSortable). */
+ wrapperStyle?: React.CSSProperties
+ /** Props to attach to the drag handle (listeners + attributes from useSortable). */
+ dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>
+ /** Ref for the drag handle if needed. */
+ dragHandleRef?: React.RefObject<HTMLButtonElement | null>
+ /** When provided, shows a plus button that opens the add-block inserter below this block. */
+ onAddBlockClick?: () => void
 }

@@ -9,10 +9,10 @@ import type { TrackerDisplayProps } from '../types'
 export const DEFAULT_FIRST_TAB_NAME = 'Overview'
 export const DEFAULT_FORM_ACTION_ID = 'default_save_action'
 export const DEFAULT_FORM_ACTION = {
-  id: DEFAULT_FORM_ACTION_ID,
-  label: 'Save',
-  statusTag: 'Saved',
-  isEditable: true,
+ id: DEFAULT_FORM_ACTION_ID,
+ label: 'Save',
+ statusTag: 'Saved',
+ isEditable: true,
 } as const
 
 /** Default placeId for the first tab. */
@@ -23,25 +23,25 @@ export const DEFAULT_FIRST_TAB_PLACE_ID = 0
  * Use this for "create from scratch" flows so the user has a canvas to add blocks.
  */
 export function createEmptyTrackerSchema(options?: {
-  firstTabName?: string
-  firstTabPlaceId?: number
+ firstTabName?: string
+ firstTabPlaceId?: number
 }): TrackerDisplayProps {
-  const name = options?.firstTabName ?? DEFAULT_FIRST_TAB_NAME
-  const placeId = options?.firstTabPlaceId ?? DEFAULT_FIRST_TAB_PLACE_ID
-  return {
-    name: undefined,
-    tabs: [{ id: 'overview_tab', name, placeId }],
-    sections: [],
-    grids: [],
-    fields: [],
-    formActions: [DEFAULT_FORM_ACTION],
-    layoutNodes: [],
-    bindings: {},
-    validations: {},
-    calculations: {},
-    dynamicOptions: {},
-    styles: undefined,
-  }
+ const name = options?.firstTabName ?? DEFAULT_FIRST_TAB_NAME
+ const placeId = options?.firstTabPlaceId ?? DEFAULT_FIRST_TAB_PLACE_ID
+ return {
+ name: undefined,
+ tabs: [{ id: 'overview_tab', name, placeId }],
+ sections: [],
+ grids: [],
+ fields: [],
+ formActions: [DEFAULT_FORM_ACTION],
+ layoutNodes: [],
+ bindings: {},
+ validations: {},
+ calculations: {},
+ dynamicOptions: {},
+ styles: undefined,
+ }
 }
 
 /**
@@ -49,4 +49,4 @@ export function createEmptyTrackerSchema(options?: {
  * when you need custom tab name or placeId.
  */
 export const INITIAL_TRACKER_SCHEMA: TrackerDisplayProps =
-  createEmptyTrackerSchema()
+ createEmptyTrackerSchema()

@@ -9,17 +9,17 @@
 import type { FieldRuleOverride } from './types'
 
 export function applyFieldOverrides<T extends Record<string, unknown>>(
-  base: T | null | undefined,
-  override?: FieldRuleOverride
+ base: T | null | undefined,
+ override?: FieldRuleOverride
 ): T {
-  const next: Record<string, unknown> = { ...(base ?? {}) }
-  if (!override) return next as T
+ const next: Record<string, unknown> = { ...(base ?? {}) }
+ if (!override) return next as T
 
-  // visibility (true = shown) maps to isHidden (true = hidden) — inverted
-  if (override.visibility !== undefined) next['isHidden'] = !override.visibility
-  if (override.required !== undefined) next['isRequired'] = override.required
-  if (override.disabled !== undefined) next['isDisabled'] = override.disabled
-  if (override.value !== undefined) next['value'] = override.value
-  if (override.label !== undefined) next['label'] = override.label
-  return next as T
+ // visibility (true = shown) maps to isHidden (true = hidden) — inverted
+ if (override.visibility !== undefined) next['isHidden'] = !override.visibility
+ if (override.required !== undefined) next['isRequired'] = override.required
+ if (override.disabled !== undefined) next['isDisabled'] = override.disabled
+ if (override.value !== undefined) next['value'] = override.value
+ if (override.label !== undefined) next['label'] = override.label
+ return next as T
 }

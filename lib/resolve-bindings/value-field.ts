@@ -14,18 +14,18 @@ export type BindingWithOptionalValueField = TrackerBindingEntry & { valueField?:
  * Prefers fieldMapping where "to" === selectFieldPath; falls back to valueField then labelField.
  */
 export function getValueFieldIdFromBinding(
-  binding: BindingWithOptionalValueField,
-  selectFieldPath: FieldPath
+ binding: BindingWithOptionalValueField,
+ selectFieldPath: FieldPath
 ): string | null {
-  const valueMapping = binding.fieldMappings?.find((m) => m.to === selectFieldPath)
-  if (valueMapping) {
-    const { fieldId } = parsePath(valueMapping.from)
-    return fieldId
-  }
-  if (binding.valueField) {
-    const { fieldId } = parsePath(binding.valueField)
-    return fieldId
-  }
-  const { fieldId: labelFieldId } = parsePath(binding.labelField)
-  return labelFieldId ?? null
+ const valueMapping = binding.fieldMappings?.find((m) => m.to === selectFieldPath)
+ if (valueMapping) {
+ const { fieldId } = parsePath(valueMapping.from)
+ return fieldId
+ }
+ if (binding.valueField) {
+ const { fieldId } = parsePath(binding.valueField)
+ return fieldId
+ }
+ const { fieldId: labelFieldId } = parsePath(binding.labelField)
+ return labelFieldId ?? null
 }

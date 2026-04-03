@@ -8,8 +8,8 @@ import { parsePath, normalizeOptionsGridId } from './path'
 import { getValueFieldIdFromBinding } from './value-field'
 
 export interface NewOptionRowResult {
-  optionsGridId: string
-  newRow: Record<string, unknown>
+ optionsGridId: string
+ newRow: Record<string, unknown>
 }
 
 /**
@@ -17,23 +17,23 @@ export interface NewOptionRowResult {
  * @returns Object with optionsGridId and newRow to pass to onAddEntry(gridId, newRow).
  */
 export function buildNewOptionRow(
-  binding: TrackerBindingEntry,
-  selectFieldPath: FieldPath,
-  label: string,
-  value?: string
+ binding: TrackerBindingEntry,
+ selectFieldPath: FieldPath,
+ label: string,
+ value?: string
 ): NewOptionRowResult {
-  const optionsGridId = normalizeOptionsGridId(binding.optionsGrid)
-  const { fieldId: labelFieldId } = parsePath(binding.labelField)
-  const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
-  const storedValue = value ?? label
+ const optionsGridId = normalizeOptionsGridId(binding.optionsGrid)
+ const { fieldId: labelFieldId } = parsePath(binding.labelField)
+ const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath)
+ const storedValue = value ?? label
 
-  if (!optionsGridId || !labelFieldId || !valueFieldId) {
-    return { optionsGridId: optionsGridId ?? '', newRow: {} }
-  }
+ if (!optionsGridId || !labelFieldId || !valueFieldId) {
+ return { optionsGridId: optionsGridId ?? '', newRow: {} }
+ }
 
-  const newRow: Record<string, unknown> = {
-    [labelFieldId]: label,
-    [valueFieldId]: storedValue,
-  }
-  return { optionsGridId, newRow }
+ const newRow: Record<string, unknown> = {
+ [labelFieldId]: label,
+ [valueFieldId]: storedValue,
+ }
+ return { optionsGridId, newRow }
 }

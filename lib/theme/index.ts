@@ -1,8 +1,8 @@
 /**
  * Central theme schema — Tailwind class names backed by CSS variables in app/globals.css.
  *
- *   import { theme } from '@/lib/theme'
- *   className={cn(theme.surface.card, theme.border.subtle, theme.radius.md)}
+ * import { theme } from '@/lib/theme'
+ * className={cn(theme.surface.card, theme.border.subtle, theme.radius.md)}
  */
 
 export { surface } from './surfaces'
@@ -24,14 +24,14 @@ import { text } from './text'
 import { typography } from './typography'
 
 export const theme = {
-  surface,
-  text,
-  border,
-  shadow,
-  radius,
-  status,
-  patterns,
-  typography,
+ surface,
+ text,
+ border,
+ shadow,
+ radius,
+ status,
+ patterns,
+ typography,
 } as const
 
 export type Theme = typeof theme

@@ -11,27 +11,27 @@ import { buildFieldPath } from './path'
  * Key is "grid_id.field_id"; also tries legacy "tab.grid.field" if tabId is provided.
  */
 export function getBindingForField(
-  gridId: string,
-  fieldId: string,
-  bindings?: TrackerBindings,
-  tabId?: string
+ gridId: string,
+ fieldId: string,
+ bindings?: TrackerBindings,
+ tabId?: string
 ): TrackerBindingEntry | undefined {
-  if (!bindings) return undefined
+ if (!bindings) return undefined
 
-  const fieldPath = buildFieldPath(gridId, fieldId)
-  let entry = bindings[fieldPath]
-  if (!entry && tabId) {
-    const legacyPath = `${tabId}.${gridId}.${fieldId}` as FieldPath
-    entry = bindings[legacyPath]
-  }
-  return entry
+ const fieldPath = buildFieldPath(gridId, fieldId)
+ let entry = bindings[fieldPath]
+ if (!entry && tabId) {
+ const legacyPath = `${tabId}.${gridId}.${fieldId}` as FieldPath
+ entry = bindings[legacyPath]
+ }
+ return entry
 }
 
 /** Check if a field has a binding entry. */
 export function hasBinding(
-  gridId: string,
-  fieldId: string,
-  bindings?: TrackerBindings
+ gridId: string,
+ fieldId: string,
+ bindings?: TrackerBindings
 ): boolean {
-  return getBindingForField(gridId, fieldId, bindings) !== undefined
+ return getBindingForField(gridId, fieldId, bindings) !== undefined
 }

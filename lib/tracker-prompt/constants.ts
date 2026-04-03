@@ -9,7 +9,7 @@ export const DEFAULT_MAX_OUTPUT_TOKENS = DEEPSEEK_CHAT_MAX_OUTPUT
 
 /** Resolved max output tokens (env override clamped to model limit) */
 export function getMaxOutputTokens(): number {
-  return getConfiguredMaxOutputTokens()
+ return getConfiguredMaxOutputTokens()
 }
 
 export const MAX_FALLBACK_ATTEMPTS = 3

@@ -6,13 +6,13 @@
  */
 
 export type {
-  RuleProperty,
-  NodeTriggerType,
-  EngineType,
-  FieldRule,
-  FieldRulesMap,
-  FieldRuleOverride,
-  FieldRulesResult,
+ RuleProperty,
+ NodeTriggerType,
+ EngineType,
+ FieldRule,
+ FieldRulesMap,
+ FieldRuleOverride,
+ FieldRulesResult,
 } from './types'
 export { deriveEngineType } from './types'
 export { resolveFieldRulesForRow } from './resolve'

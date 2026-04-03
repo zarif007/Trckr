@@ -13,33 +13,33 @@ export { TrackerDisplayErrorBoundary } from './TrackerDisplayErrorBoundary'
 
 /** Reusable layout primitives (tokens, SectionBar, ViewBlockWrapper, InlineEditableName). */
 export {
-  SectionBar,
-  ViewBlockWrapper,
-  InlineEditableName,
-  SECTION_BAR_CLASS,
-  SECTION_STACK_GAP,
-  GRIDS_CONTAINER,
-  SECTION_GROUP_ROOT,
-  TAB_CONTENT_ROOT,
-  TAB_CONTENT_INNER,
+ SectionBar,
+ ViewBlockWrapper,
+ InlineEditableName,
+ SECTION_BAR_CLASS,
+ SECTION_STACK_GAP,
+ GRIDS_CONTAINER,
+ SECTION_GROUP_ROOT,
+ TAB_CONTENT_ROOT,
+ TAB_CONTENT_INNER,
 } from './layout'
 
 /** Reusable block-level UI (GridBlockHeader, GridBlockContent, GridTypeBadge). */
 export { GridBlockHeader, GridBlockContent, GridTypeBadge } from './blocks'
 
 export type {
-  ForeignBindingNavUiState,
-  TrackerDisplayProps,
-  TrackerTab,
-  TrackerSection,
-  TrackerGrid,
-  TrackerField,
-  TrackerFormAction,
-  TrackerLayoutNode,
-  TrackerBindings,
-  FieldCalculationRule,
-  FieldValidationRule,
-  StyleOverrides,
+ ForeignBindingNavUiState,
+ TrackerDisplayProps,
+ TrackerTab,
+ TrackerSection,
+ TrackerGrid,
+ TrackerField,
+ TrackerFormAction,
+ TrackerLayoutNode,
+ TrackerBindings,
+ FieldCalculationRule,
+ FieldValidationRule,
+ StyleOverrides,
 } from './types'
 export type { SectionBarProps, InlineEditableNameProps } from './layout'
 export type { GridBlockHeaderProps, GridBlockContentProps } from './blocks'

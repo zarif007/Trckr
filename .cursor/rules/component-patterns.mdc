@@ -11,14 +11,17 @@ alwaysApply: false
 
 ## Border radius
 
-- Use `theme.radius.md` (or the literal `rounded-md` where the file already uses raw Tailwind for layout). Never add `rounded-sm` / `rounded-lg` / `rounded-xl` / `rounded-2xl` for chrome.
+- Use `theme.radius.md` (or the literal `rounded-sm` where the file already uses raw Tailwind for layout). Never add `rounded-lg` / `rounded-xl` / `rounded-2xl` for chrome.
 - Prefer `theme.patterns.inputBase`, `theme.patterns.card`, `theme.patterns.menuPanel`, and `theme.patterns.menuItem` over hand-rolled class strings.
+
+## Shadows
+
+- **Do not use shadows.** Remove any `shadow-*` classes. Shadows are disabled app-wide. Do not reference `theme.shadow.*`.
 
 ## Form Fields
 
 - Border: `border-input`, `hover:border-ring`, `focus-visible:border-ring`
-- Shadow: `shadow-xs`
-- Radius: `theme.radius.md` / `rounded-md`
+- Radius: `theme.radius.md` / `rounded-sm`
 - Height: use `input-field-height` class for consistency
 
 ## Status Colors

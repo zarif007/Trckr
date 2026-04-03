@@ -12,275 +12,275 @@ import { ownerScopeSettingsBannerFromTracker } from '../../utils/ownerScopeSetti
 const STORAGE_KEY_PREFIX = 'trckr:tracker:'
 
 type TrackerRecord = {
-  id: string
-  name: string | null
-  schema: unknown
-  projectId?: string
-  moduleId?: string | null
-  type?: string
-  systemType?: string | null
-  instance?: string
-  versionControl?: boolean
-  autoSave?: boolean
-  listForSchemaId?: string | null
-  ownerScopeSettings?: unknown
+ id: string
+ name: string | null
+ schema: unknown
+ projectId?: string
+ moduleId?: string | null
+ type?: string
+ systemType?: string | null
+ instance?: string
+ versionControl?: boolean
+ autoSave?: boolean
+ listForSchemaId?: string | null
+ ownerScopeSettings?: unknown
 }
 
 type ConversationState = {
-  conversationId: string | null
-  messages: Message[]
+ conversationId: string | null
+ messages: Message[]
 }
 
 type TrackerResource = {
-  tracker: TrackerRecord
-  schema: TrackerResponse
+ tracker: TrackerRecord
+ schema: TrackerResponse
 }
 
 function schemaWithTrackerName(data: TrackerRecord): TrackerResponse {
-  const base = (data.schema ?? {}) as TrackerResponse
-  const name = data.name ?? base?.name ?? null
-  if (name != null) return { ...base, name }
-  return base
+ const base = (data.schema ?? {}) as TrackerResponse
+ const name = data.name ?? base?.name ?? null
+ if (name != null) return { ...base, name }
+ return base
 }
 
 function getListDisplayName(name: string | null): string {
-  if (!name) return 'Instances'
-  return name.endsWith('.list') ? name.slice(0, -5) : name
+ if (!name) return 'Instances'
+ return name.endsWith('.list') ? name.slice(0, -5) : name
 }
 
 const trackerCache = new Map<string, Promise<TrackerResource>>()
 
 function getTrackerResource(id: string, instanceId: string | null): Promise<TrackerResource> {
-  const key = `${id}::${instanceId ?? ''}`
-  let p = trackerCache.get(key)
-  if (p) return p
+ const key = `${id}::${instanceId ?? ''}`
+ let p = trackerCache.get(key)
+ if (p) return p
 
-  p = (async () => {
-    let tracker: TrackerRecord
-    let schema: TrackerResponse
+ p = (async () => {
+ let tracker: TrackerRecord
+ let schema: TrackerResponse
 
-    let fromStorage: TrackerRecord | null = null
-    if (typeof sessionStorage !== 'undefined') {
-      const raw = sessionStorage.getItem(STORAGE_KEY_PREFIX + id)
-      if (raw) {
-        try {
-          fromStorage = JSON.parse(raw) as TrackerRecord
-          sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
-        } catch {
-          fromStorage = null
-        }
-      }
-    }
+ let fromStorage: TrackerRecord | null = null
+ if (typeof sessionStorage !== 'undefined') {
+ const raw = sessionStorage.getItem(STORAGE_KEY_PREFIX + id)
+ if (raw) {
+ try {
+ fromStorage = JSON.parse(raw) as TrackerRecord
+ sessionStorage.removeItem(STORAGE_KEY_PREFIX + id)
+ } catch {
+ fromStorage = null
+ }
+ }
+ }
 
-    if (fromStorage) {
-      tracker = fromStorage
-      schema = schemaWithTrackerName(tracker)
-    } else {
-      const res = await fetch(`/api/trackers/${id}`)
-      if (!res.ok) {
-        if (res.status === 404) throw new Error('NOT_FOUND')
-        throw new Error('FAILED')
-      }
-      const data = (await res.json()) as TrackerRecord
-      tracker = data
-      schema = schemaWithTrackerName(tracker)
-    }
+ if (fromStorage) {
+ tracker = fromStorage
+ schema = schemaWithTrackerName(tracker)
+ } else {
+ const res = await fetch(`/api/trackers/${id}`)
+ if (!res.ok) {
+ if (res.status === 404) throw new Error('NOT_FOUND')
+ throw new Error('FAILED')
+ }
+ const data = (await res.json()) as TrackerRecord
+ tracker = data
+ schema = schemaWithTrackerName(tracker)
+ }
 
-    return { tracker, schema }
-  })()
+ return { tracker, schema }
+ })()
 
-  trackerCache.set(key, p)
-  return p
+ trackerCache.set(key, p)
+ return p
 }
 
 function TrackerByIdEditContent({
-  id,
-  isNew,
-  instanceId,
-  onBack,
-  conversationIdParam,
+ id,
+ isNew,
+ instanceId,
+ onBack,
+ conversationIdParam,
 }: {
-  id: string
-  isNew: boolean
-  instanceId: string | null
-  onBack: () => void
-  conversationIdParam: string | null
+ id: string
+ isNew: boolean
+ instanceId: string | null
+ onBack: () => void
+ conversationIdParam: string | null
 }) {
-  const initial = use(getTrackerResource(id, instanceId))
-  const [state] = useState<TrackerResource>(initial)
-  const [conversation, setConversation] = useState<ConversationState>({
-    conversationId: null,
-    messages: [],
-  })
+ const initial = use(getTrackerResource(id, instanceId))
+ const [state] = useState<TrackerResource>(initial)
+ const [conversation, setConversation] = useState<ConversationState>({
+ conversationId: null,
+ messages: [],
+ })
 
-  useEffect(() => {
-    if (!id) return
-    let cancelled = false
-    async function fetchConversation() {
-      try {
-        const url = conversationIdParam
-          ? `/api/trackers/${id}/conversation?mode=BUILDER&conversationId=${conversationIdParam}`
-          : `/api/trackers/${id}/conversation?mode=BUILDER`
-        const res = await fetch(url)
-        if (res.status === 404) {
-          if (!cancelled) setConversation({ conversationId: null, messages: [] })
-          return
-        }
-        if (!res.ok) {
-          if (!cancelled) setConversation({ conversationId: null, messages: [] })
-          return
-        }
-        const data = await res.json()
-        if (!cancelled) {
-          setConversation({
-            conversationId: data.conversation?.id ?? null,
-            messages: Array.isArray(data.messages) ? data.messages : [],
-          })
-        }
-      } catch {
-        if (!cancelled) setConversation({ conversationId: null, messages: [] })
-      }
-    }
-    fetchConversation()
-    return () => {
-      cancelled = true
-    }
-  }, [id, conversationIdParam])
+ useEffect(() => {
+ if (!id) return
+ let cancelled = false
+ async function fetchConversation() {
+ try {
+ const url = conversationIdParam
+ ? `/api/trackers/${id}/conversation?mode=BUILDER&conversationId=${conversationIdParam}`
+ : `/api/trackers/${id}/conversation?mode=BUILDER`
+ const res = await fetch(url)
+ if (res.status === 404) {
+ if (!cancelled) setConversation({ conversationId: null, messages: [] })
+ return
+ }
+ if (!res.ok) {
+ if (!cancelled) setConversation({ conversationId: null, messages: [] })
+ return
+ }
+ const data = await res.json()
+ if (!cancelled) {
+ setConversation({
+ conversationId: data.conversation?.id ?? null,
+ messages: Array.isArray(data.messages) ? data.messages : [],
+ })
+ }
+ } catch {
+ if (!cancelled) setConversation({ conversationId: null, messages: [] })
+ }
+ }
+ fetchConversation()
+ return () => {
+ cancelled = true
+ }
+ }, [id, conversationIdParam])
 
-  const handleSaveTracker = useCallback(
-    async (schema: TrackerResponse) => {
-      if (!id) return
-      const res = await fetch(`/api/trackers/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: schema.name ?? state.tracker?.name ?? 'Untitled tracker',
-          schema,
-        }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.error ?? 'Failed to save tracker')
-      }
-      const data = await res.json()
-      const key = `${id}::${instanceId ?? ''}`
-      // Keep save behavior silent in edit mode: persist to server/cache
-      // without updating parent page state, which can feel like a refresh.
-      trackerCache.set(
-        key,
-        Promise.resolve({
-          tracker: data,
-          schema: schemaWithTrackerName(data),
-        })
-      )
-    },
-    [id, instanceId, state.tracker?.name]
-  )
+ const handleSaveTracker = useCallback(
+ async (schema: TrackerResponse) => {
+ if (!id) return
+ const res = await fetch(`/api/trackers/${id}`, {
+ method: 'PATCH',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({
+ name: schema.name ?? state.tracker?.name ?? 'Untitled tracker',
+ schema,
+ }),
+ })
+ if (!res.ok) {
+ const data = await res.json().catch(() => ({}))
+ throw new Error(data.error ?? 'Failed to save tracker')
+ }
+ const data = await res.json()
+ const key = `${id}::${instanceId ?? ''}`
+ // Keep save behavior silent in edit mode: persist to server/cache
+ // without updating parent page state, which can feel like a refresh.
+ trackerCache.set(
+ key,
+ Promise.resolve({
+ tracker: data,
+ schema: schemaWithTrackerName(data),
+ })
+ )
+ },
+ [id, instanceId, state.tracker?.name]
+ )
 
-  const primaryNavAction = useMemo(
-    () => ({ label: 'Open Tracker', href: `/tracker/${id}` }),
-    [id]
-  )
+ const primaryNavAction = useMemo(
+ () => ({ label: 'Open Tracker', href: `/tracker/${id}` }),
+ [id]
+ )
 
-  const schema = state.schema
-  const hasValidSchema =
-    schema &&
-    Array.isArray(schema.tabs) &&
-    schema.tabs.length > 0 &&
-    Array.isArray(schema.sections) &&
-    Array.isArray(schema.grids) &&
-    Array.isArray(schema.fields)
+ const schema = state.schema
+ const hasValidSchema =
+ schema &&
+ Array.isArray(schema.tabs) &&
+ schema.tabs.length > 0 &&
+ Array.isArray(schema.sections) &&
+ Array.isArray(schema.grids) &&
+ Array.isArray(schema.fields)
 
-  if (!hasValidSchema) {
-    return <TrackerPageMessage message="Invalid tracker schema" onBack={onBack} />
-  }
+ if (!hasValidSchema) {
+ return <TrackerPageMessage message="Invalid tracker schema" onBack={onBack} />
+ }
 
-  if (state.tracker?.listForSchemaId) {
-    return (
-      <TrackerInstanceListView
-        listSchemaId={id}
-        parentTrackerId={state.tracker.listForSchemaId}
-        listName={getListDisplayName(state.tracker.name)}
-      />
-    )
-  }
+ if (state.tracker?.listForSchemaId) {
+ return (
+ <TrackerInstanceListView
+ listSchemaId={id}
+ parentTrackerId={state.tracker.listForSchemaId}
+ listName={getListDisplayName(state.tracker.name)}
+ />
+ )
+ }
 
-  return (
-    <TrackerAIView
-      initialSchema={schema}
-      onSaveTracker={handleSaveTracker}
-      initialEditMode
-      initialChatOpen={isNew}
-      trackerId={id}
-      projectId={state.tracker?.projectId ?? null}
-      moduleId={state.tracker?.moduleId ?? null}
-      initialConversationId={conversation.conversationId}
-      initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
-      pageMode="schema"
-      showPanelUtilities={false}
-      schemaAutoSave
-      primaryNavAction={primaryNavAction}
-      autoSave={state.tracker?.autoSave ?? true}
-      ownerScopeSettingsBanner={ownerScopeSettingsBannerFromTracker(state.tracker)}
-    />
-  )
+ return (
+ <TrackerAIView
+ initialSchema={schema}
+ onSaveTracker={handleSaveTracker}
+ initialEditMode
+ initialChatOpen={isNew}
+ trackerId={id}
+ projectId={state.tracker?.projectId ?? null}
+ moduleId={state.tracker?.moduleId ?? null}
+ initialConversationId={conversation.conversationId}
+ initialMessages={conversation.messages.length > 0 ? conversation.messages : undefined}
+ pageMode="schema"
+ showPanelUtilities={false}
+ schemaAutoSave
+ primaryNavAction={primaryNavAction}
+ autoSave={state.tracker?.autoSave ?? true}
+ ownerScopeSettingsBanner={ownerScopeSettingsBannerFromTracker(state.tracker)}
+ />
+ )
 }
 
 function TrackerLoadError({ error, onBack }: { error: Error; onBack: () => void }) {
-  const message = error.message === 'NOT_FOUND' ? 'Tracker not found' : 'Failed to load tracker'
-  return <TrackerPageMessage message={message} onBack={onBack} />
+ const message = error.message === 'NOT_FOUND' ? 'Tracker not found' : 'Failed to load tracker'
+ return <TrackerPageMessage message={message} onBack={onBack} />
 }
 
 class TrackerErrorBoundary extends React.Component<
-  { onBack: () => void; children: React.ReactNode },
-  { error: Error | null }
+ { onBack: () => void; children: React.ReactNode },
+ { error: Error | null }
 > {
-  state = { error: null as Error | null }
+ state = { error: null as Error | null }
 
-  static getDerivedStateFromError(error: unknown) {
-    return { error: error instanceof Error ? error : new Error(String(error)) }
-  }
+ static getDerivedStateFromError(error: unknown) {
+ return { error: error instanceof Error ? error : new Error(String(error)) }
+ }
 
-  render() {
-    if (this.state.error) {
-      return <TrackerLoadError error={this.state.error} onBack={this.props.onBack} />
-    }
-    return this.props.children
-  }
+ render() {
+ if (this.state.error) {
+ return <TrackerLoadError error={this.state.error} onBack={this.props.onBack} />
+ }
+ return this.props.children
+ }
 }
 
 export default function TrackerEditByIdPage() {
-  const params = useParams()
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const id = typeof params.id === 'string' ? params.id : null
-  const isNew = searchParams.get('new') === 'true'
-  const instanceId = searchParams.get('instanceId')
-  const conversationIdParam = searchParams.get('conversationId')
+ const params = useParams()
+ const searchParams = useSearchParams()
+ const router = useRouter()
+ const id = typeof params.id === 'string' ? params.id : null
+ const isNew = searchParams.get('new') === 'true'
+ const instanceId = searchParams.get('instanceId')
+ const conversationIdParam = searchParams.get('conversationId')
 
-  const handleBack = useCallback(() => {
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back()
-    } else {
-      router.push('/dashboard')
-    }
-  }, [router])
+ const handleBack = useCallback(() => {
+ if (typeof window !== 'undefined' && window.history.length > 1) {
+ router.back()
+ } else {
+ router.push('/dashboard')
+ }
+ }, [router])
 
-  if (!id) {
-    return <TrackerPageMessage message="Invalid tracker" onBack={handleBack} />
-  }
+ if (!id) {
+ return <TrackerPageMessage message="Invalid tracker" onBack={handleBack} />
+ }
 
-  return (
-    <Suspense fallback={<TrackerPageSkeleton />}>
-      <TrackerErrorBoundary onBack={handleBack}>
-        <TrackerByIdEditContent
-          id={id}
-          isNew={isNew}
-          instanceId={instanceId}
-          onBack={handleBack}
-          conversationIdParam={conversationIdParam}
-        />
-      </TrackerErrorBoundary>
-    </Suspense>
-  )
+ return (
+ <Suspense fallback={<TrackerPageSkeleton />}>
+ <TrackerErrorBoundary onBack={handleBack}>
+ <TrackerByIdEditContent
+ id={id}
+ isNew={isNew}
+ instanceId={instanceId}
+ onBack={handleBack}
+ conversationIdParam={conversationIdParam}
+ />
+ </TrackerErrorBoundary>
+ </Suspense>
+ )
 }

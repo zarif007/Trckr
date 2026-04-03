@@ -2,23 +2,23 @@
 
 import { useState } from 'react'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+ Dialog,
+ DialogContent,
+ DialogHeader,
+ DialogTitle,
+ DialogDescription,
+ DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
+ Select,
+ SelectContent,
+ SelectGroup,
+ SelectItem,
+ SelectLabel,
+ SelectTrigger,
+ SelectValue,
 } from '@/components/ui/select'
 import { Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -33,227 +33,227 @@ import { getCreatableFieldTypesWithLabels } from '../utils'
  * Used by both TrackerTableGrid and TrackerDivGrid via the edit-mode module.
  */
 export function AddColumnOrFieldDialog({
-  open,
-  onOpenChange,
-  variant,
-  existingFieldIds,
-  allFields,
-  onConfirm,
+ open,
+ onOpenChange,
+ variant,
+ existingFieldIds,
+ allFields,
+ onConfirm,
 }: AddColumnOrFieldDialogProps) {
-  const [newLabel, setNewLabel] = useState('')
-  const [newDataType, setNewDataType] = useState<TrackerFieldType>('string')
-  const [existingFieldId, setExistingFieldId] = useState<string>('')
-  const [labelTouched, setLabelTouched] = useState(false)
+ const [newLabel, setNewLabel] = useState('')
+ const [newDataType, setNewDataType] = useState<TrackerFieldType>('string')
+ const [existingFieldId, setExistingFieldId] = useState<string>('')
+ const [labelTouched, setLabelTouched] = useState(false)
 
-  const existingSet = new Set(existingFieldIds)
-  const availableFields = allFields.filter((f) => !existingSet.has(f.id))
-  const typeOptions = getCreatableFieldTypesWithLabels()
-  const labelName = variant === 'column' ? 'Column' : 'Field'
+ const existingSet = new Set(existingFieldIds)
+ const availableFields = allFields.filter((f) => !existingSet.has(f.id))
+ const typeOptions = getCreatableFieldTypesWithLabels()
+ const labelName = variant === 'column' ? 'Column' : 'Field'
 
-  const canSubmit = existingFieldId.length > 0 || newLabel.trim().length > 0
-  const labelInvalid = labelTouched && !existingFieldId && !newLabel.trim()
-  const labelError = labelInvalid
-    ? `${labelName} name is required unless you select an existing one`
-    : null
+ const canSubmit = existingFieldId.length > 0 || newLabel.trim().length > 0
+ const labelInvalid = labelTouched && !existingFieldId && !newLabel.trim()
+ const labelError = labelInvalid
+ ? `${labelName} name is required unless you select an existing one`
+ : null
 
-  const handleSubmit = () => {
-    if (!canSubmit) return
-    if (existingFieldId) {
-      onConfirm({ mode: 'existing', fieldId: existingFieldId })
-    } else {
-      onConfirm({ mode: 'new', label: newLabel.trim(), dataType: newDataType })
-    }
-    setNewLabel('')
-    setNewDataType('string')
-    setExistingFieldId('')
-    setLabelTouched(false)
-    onOpenChange(false)
-  }
+ const handleSubmit = () => {
+ if (!canSubmit) return
+ if (existingFieldId) {
+ onConfirm({ mode: 'existing', fieldId: existingFieldId })
+ } else {
+ onConfirm({ mode: 'new', label: newLabel.trim(), dataType: newDataType })
+ }
+ setNewLabel('')
+ setNewDataType('string')
+ setExistingFieldId('')
+ setLabelTouched(false)
+ onOpenChange(false)
+ }
 
-  const handleCancel = () => {
-    setNewLabel('')
-    setNewDataType('string')
-    setExistingFieldId('')
-    setLabelTouched(false)
-    onOpenChange(false)
-  }
+ const handleCancel = () => {
+ setNewLabel('')
+ setNewDataType('string')
+ setExistingFieldId('')
+ setLabelTouched(false)
+ onOpenChange(false)
+ }
 
-  const handleOpenChange = (next: boolean) => {
-    if (!next) setLabelTouched(false)
-    onOpenChange(next)
-  }
+ const handleOpenChange = (next: boolean) => {
+ if (!next) setLabelTouched(false)
+ onOpenChange(next)
+ }
 
-  // Group type options by group for the select
-  const groupedTypes = typeOptions.reduce<Record<string, typeof typeOptions>>(
-    (acc, opt) => {
-      const g = opt.group ?? 'Other'
-      if (!acc[g]) acc[g] = []
-      acc[g].push(opt)
-      return acc
-    },
-    {}
-  )
-  const groupOrder = ['Text', 'Numbers', 'Date & time', 'Choice', 'Other']
+ // Group type options by group for the select
+ const groupedTypes = typeOptions.reduce<Record<string, typeof typeOptions>>(
+ (acc, opt) => {
+ const g = opt.group ?? 'Other'
+ if (!acc[g]) acc[g] = []
+ acc[g].push(opt)
+ return acc
+ },
+ {}
+ )
+ const groupOrder = ['Text', 'Numbers', 'Date & time', 'Choice', 'Other']
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className="sm:max-w-[500px] p-0 gap-0 overflow-hidden border-border/60 bg-white dark:bg-background dark:backdrop-blur"
-        onOpenAutoFocus={(e) => {
-          const input = document.getElementById('new-label') as HTMLInputElement | null
-          if (input) {
-            e.preventDefault()
-            input.focus()
-          }
-        }}
-      >
-        <div className="relative border-b border-border/50 px-6 pt-6 pb-5 bg-background">
-          <DialogHeader className="space-y-1.5">
-            <DialogTitle className="text-lg font-semibold tracking-tight">
-              Add {labelName}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
-              Choose an existing {labelName.toLowerCase()} or define a new one in a single flow.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
-        <div className="space-y-5 px-6 py-5">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label
-                htmlFor="existing-field"
-                className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-              >
-                Existing {labelName.toLowerCase()} (optional)
-              </label>
-              <FieldWrapper>
-                <Select
-                  value={existingFieldId}
-                  onValueChange={(value) => {
-                    setExistingFieldId(value)
-                    if (value) {
-                      setLabelTouched(false)
-                    }
-                  }}
-                >
-                  <SelectTrigger
-                    id="existing-field"
-                    className={FIELD_FORM_INPUT_CLASS}
-                  >
-                    <SelectValue placeholder={`Select a ${labelName.toLowerCase()}...`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableFields.length === 0 ? (
-                      <div className="mx-1 my-2 rounded-md border border-dashed border-border/60 bg-muted/30 py-6 text-center text-sm text-muted-foreground">
-                        No other {labelName.toLowerCase()}s to add
-                      </div>
-                    ) : (
-                      availableFields.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.ui.label} ({f.dataType})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </FieldWrapper>
-            </div>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-border/50" />
-              </div>
-              <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
-                <span className="bg-white dark:bg-background px-2 text-muted-foreground">or create new</span>
-              </div>
-            </div>
-            <div className={cn('space-y-5', existingFieldId && 'opacity-55')}>
-              <div className="space-y-2">
-                <label
-                  htmlFor="new-label"
-                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                >
-                  Label
-                </label>
-              <FieldWrapper error={labelInvalid} errorTitle={labelError ?? undefined}>
-                <Input
-                  id="new-label"
-                  value={newLabel}
-                  onChange={(e) => {
-                    setNewLabel(e.target.value)
-                    if (e.target.value.trim()) {
-                      setExistingFieldId('')
-                    }
-                  }}
-                  onBlur={() => setLabelTouched(true)}
-                  placeholder={variant === 'column' ? 'e.g. Status' : 'e.g. Description'}
-                  className={FIELD_FORM_INPUT_CLASS}
-                  aria-invalid={labelInvalid}
-                  aria-describedby={labelError ? 'new-label-error' : undefined}
-                />
-              </FieldWrapper>
-                {labelError && (
-                  <p id="new-label-error" className="text-xs text-destructive mt-1">
-                    {labelError}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="new-type"
-                  className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
-                >
-                  Type
-                </label>
-              <FieldWrapper>
-                <Select
-                  value={newDataType}
-                  onValueChange={(v) => setNewDataType(v as TrackerFieldType)}
-                  disabled={Boolean(existingFieldId)}
-                >
-                  <SelectTrigger
-                    id="new-type"
-                    className={FIELD_FORM_INPUT_CLASS}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groupOrder.map(
-                      (groupKey) =>
-                        groupedTypes[groupKey]?.length > 0 && (
-                          <SelectGroup key={groupKey}>
-                            <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
-                              {groupKey}
-                            </SelectLabel>
-                            {groupedTypes[groupKey].map((opt) => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        )
-                    )}
-                  </SelectContent>
-                </Select>
-              </FieldWrapper>
-              </div>
-            </div>
-          </div>
-        </div>
-        <DialogFooter className="flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-white dark:bg-muted/20">
-          <Button variant="outline" size="sm" onClick={handleCancel} className="min-w-[84px]">
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className="min-w-[104px] gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            Add {labelName}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
+ return (
+ <Dialog open={open} onOpenChange={handleOpenChange}>
+ <DialogContent
+ className="sm:max-w-[500px] p-0 gap-0 overflow-hidden border-border/60 bg-white dark:bg-background dark:backdrop-blur"
+ onOpenAutoFocus={(e) => {
+ const input = document.getElementById('new-label') as HTMLInputElement | null
+ if (input) {
+ e.preventDefault()
+ input.focus()
+ }
+ }}
+ >
+ <div className="relative border-b border-border/50 px-6 pt-6 pb-5 bg-background">
+ <DialogHeader className="space-y-1.5">
+ <DialogTitle className="text-lg font-semibold tracking-tight">
+ Add {labelName}
+ </DialogTitle>
+ <DialogDescription className="text-muted-foreground text-sm leading-relaxed">
+ Choose an existing {labelName.toLowerCase()} or define a new one in a single flow.
+ </DialogDescription>
+ </DialogHeader>
+ </div>
+ <div className="space-y-5 px-6 py-5">
+ <div className="space-y-4">
+ <div className="space-y-2">
+ <label
+ htmlFor="existing-field"
+ className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+ >
+ Existing {labelName.toLowerCase()} (optional)
+ </label>
+ <FieldWrapper>
+ <Select
+ value={existingFieldId}
+ onValueChange={(value) => {
+ setExistingFieldId(value)
+ if (value) {
+ setLabelTouched(false)
+ }
+ }}
+ >
+ <SelectTrigger
+ id="existing-field"
+ className={FIELD_FORM_INPUT_CLASS}
+ >
+ <SelectValue placeholder={`Select a ${labelName.toLowerCase()}...`} />
+ </SelectTrigger>
+ <SelectContent>
+ {availableFields.length === 0 ? (
+ <div className="mx-1 my-2 rounded-sm border border-dashed border-border/60 bg-muted/30 py-6 text-center text-sm text-muted-foreground">
+ No other {labelName.toLowerCase()}s to add
+ </div>
+ ) : (
+ availableFields.map((f) => (
+ <SelectItem key={f.id} value={f.id}>
+ {f.ui.label} ({f.dataType})
+ </SelectItem>
+ ))
+ )}
+ </SelectContent>
+ </Select>
+ </FieldWrapper>
+ </div>
+ <div className="relative">
+ <div className="absolute inset-0 flex items-center">
+ <span className="w-full border-t border-border/50" />
+ </div>
+ <div className="relative flex justify-center text-[11px] uppercase tracking-wide">
+ <span className="bg-white dark:bg-background px-2 text-muted-foreground">or create new</span>
+ </div>
+ </div>
+ <div className={cn('space-y-5', existingFieldId && 'opacity-55')}>
+ <div className="space-y-2">
+ <label
+ htmlFor="new-label"
+ className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+ >
+ Label
+ </label>
+ <FieldWrapper error={labelInvalid} errorTitle={labelError ?? undefined}>
+ <Input
+ id="new-label"
+ value={newLabel}
+ onChange={(e) => {
+ setNewLabel(e.target.value)
+ if (e.target.value.trim()) {
+ setExistingFieldId('')
+ }
+ }}
+ onBlur={() => setLabelTouched(true)}
+ placeholder={variant === 'column' ? 'e.g. Status' : 'e.g. Description'}
+ className={FIELD_FORM_INPUT_CLASS}
+ aria-invalid={labelInvalid}
+ aria-describedby={labelError ? 'new-label-error' : undefined}
+ />
+ </FieldWrapper>
+ {labelError && (
+ <p id="new-label-error" className="text-xs text-destructive mt-1">
+ {labelError}
+ </p>
+ )}
+ </div>
+ <div className="space-y-2">
+ <label
+ htmlFor="new-type"
+ className="text-xs font-semibold tracking-wide text-foreground/90 leading-none uppercase"
+ >
+ Type
+ </label>
+ <FieldWrapper>
+ <Select
+ value={newDataType}
+ onValueChange={(v) => setNewDataType(v as TrackerFieldType)}
+ disabled={Boolean(existingFieldId)}
+ >
+ <SelectTrigger
+ id="new-type"
+ className={FIELD_FORM_INPUT_CLASS}
+ >
+ <SelectValue />
+ </SelectTrigger>
+ <SelectContent>
+ {groupOrder.map(
+ (groupKey) =>
+ groupedTypes[groupKey]?.length > 0 && (
+ <SelectGroup key={groupKey}>
+ <SelectLabel className="text-muted-foreground font-medium text-xs uppercase tracking-wider">
+ {groupKey}
+ </SelectLabel>
+ {groupedTypes[groupKey].map((opt) => (
+ <SelectItem key={opt.value} value={opt.value}>
+ {opt.label}
+ </SelectItem>
+ ))}
+ </SelectGroup>
+ )
+ )}
+ </SelectContent>
+ </Select>
+ </FieldWrapper>
+ </div>
+ </div>
+ </div>
+ </div>
+ <DialogFooter className="flex-row justify-end gap-2 px-6 py-4 border-t border-border/50 bg-white dark:bg-muted/20">
+ <Button variant="outline" size="sm" onClick={handleCancel} className="min-w-[84px]">
+ Cancel
+ </Button>
+ <Button
+ size="sm"
+ onClick={handleSubmit}
+ disabled={!canSubmit}
+ className="min-w-[104px] gap-1.5"
+ >
+ <Plus className="h-4 w-4" />
+ Add {labelName}
+ </Button>
+ </DialogFooter>
+ </DialogContent>
+ </Dialog>
+ )
 }

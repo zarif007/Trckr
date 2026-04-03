@@ -5,9 +5,9 @@ import type { MasterDataBindingAction } from './schema'
  * (mirrors how tool rows show field path + intent).
  */
 export function formatBindingActionSummary(action: MasterDataBindingAction): string {
-  const keyPart = action.key ? `key: ${action.key}` : `name: ${action.name}`
-  if (action.type === 'reuse') {
-    return `${keyPart} → reused "${action.name}"`
-  }
-  return `${keyPart} → created new tracker`
+ const keyPart = action.key ? `key: ${action.key}` : `name: ${action.name}`
+ if (action.type === 'reuse') {
+ return `${keyPart} → reused "${action.name}"`
+ }
+ return `${keyPart} → created new tracker`
 }

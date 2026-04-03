@@ -3,24 +3,24 @@ import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { listTrackersForScope } from '@/lib/insights-query/tracker-list'
 
 export async function GET(request: Request) {
-  const auth = await requireAuthenticatedUser()
-  if (!auth.ok) return unauthorized()
+ const auth = await requireAuthenticatedUser()
+ if (!auth.ok) return unauthorized()
 
-  const { searchParams } = new URL(request.url)
-  const projectId = searchParams.get('projectId')?.trim()
-  const moduleId = searchParams.get('moduleId')?.trim()
-  if (!projectId) {
-    return badRequest('projectId query parameter is required.')
-  }
+ const { searchParams } = new URL(request.url)
+ const projectId = searchParams.get('projectId')?.trim()
+ const moduleId = searchParams.get('moduleId')?.trim()
+ if (!projectId) {
+ return badRequest('projectId query parameter is required.')
+ }
 
-  const trackers = await listTrackersForScope(
-    auth.user.id,
-    projectId,
-    moduleId || undefined,
-  )
-  if (!trackers) {
-    return badRequest('Project not found.')
-  }
+ const trackers = await listTrackersForScope(
+ auth.user.id,
+ projectId,
+ moduleId || undefined,
+ )
+ if (!trackers) {
+ return badRequest('Project not found.')
+ }
 
-  return jsonOk({ trackers })
+ return jsonOk({ trackers })
 }

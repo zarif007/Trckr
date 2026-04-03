@@ -3,15 +3,15 @@
 import { cn } from '@/lib/utils'
 
 export interface FieldWrapperProps {
-  children: React.ReactNode
-  className?: string
-  /** When true, shows error border and ring. */
-  error?: boolean
-  /** Accessible title/tooltip when error (e.g. validation message). */
-  errorTitle?: string
-  /** Forward click to focus the first input inside (e.g. for div grid). */
-  onPointerDown?: (e: React.PointerEvent) => void
-  onClick?: (e: React.MouseEvent) => void
+ children: React.ReactNode
+ className?: string
+ /** When true, shows error border and ring. */
+ error?: boolean
+ /** Accessible title/tooltip when error (e.g. validation message). */
+ errorTitle?: string
+ /** Forward click to focus the first input inside (e.g. for div grid). */
+ onPointerDown?: (e: React.PointerEvent) => void
+ onClick?: (e: React.MouseEvent) => void
 }
 
 /**
@@ -20,28 +20,28 @@ export interface FieldWrapperProps {
  * background so it looks consistent and light.
  */
 export function FieldWrapper({
-  children,
-  className,
-  error,
-  errorTitle,
-  onPointerDown,
-  onClick,
+ children,
+ className,
+ error,
+ errorTitle,
+ onPointerDown,
+ onClick,
 }: FieldWrapperProps) {
-  return (
-    <div
-      className={cn(
-        'relative min-w-0 rounded-md border bg-transparent transition-colors',
-        'hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30',
-        error
-          ? 'border-destructive/60 ring-1 ring-destructive/40'
-          : 'border-input',
-        className
-      )}
-      title={error ? errorTitle : undefined}
-      onPointerDown={onPointerDown}
-      onClick={onClick}
-    >
-      {children}
-    </div>
-  )
+ return (
+ <div
+ className={cn(
+ 'relative min-w-0 rounded-sm border bg-transparent transition-colors',
+ 'hover:border-ring focus-within:border-ring focus-within:ring-1 focus-within:ring-ring/30',
+ error
+ ? 'border-destructive/60 ring-1 ring-destructive/40'
+ : 'border-input',
+ className
+ )}
+ title={error ? errorTitle : undefined}
+ onPointerDown={onPointerDown}
+ onClick={onClick}
+ >
+ {children}
+ </div>
+ )
 }

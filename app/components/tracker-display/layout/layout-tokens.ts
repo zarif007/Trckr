@@ -20,7 +20,7 @@ export const SECTION_GROUP_ROOT = 'w-full min-w-0 pt-5'
 
 /** Grids container: gap from section bar + gap between grids. Flex wrap so multiple grids wrap. */
 export const GRIDS_CONTAINER =
-  'flex flex-wrap gap-3 mt-2 w-full min-w-0'
+ 'flex flex-wrap gap-3 mt-2 w-full min-w-0'
 
 /** Wrapper for each grid block (edit SortableBlockItem content, view ViewBlockWrapper content). */
 export const GRID_ITEM_WRAPPER = 'w-full min-w-0'
@@ -35,4 +35,4 @@ export const TAB_CONTENT_ROOT = 'mt-4 w-full'
 export const TAB_CONTENT_INNER = 'space-y-4 w-full min-w-0'
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
-export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-md border-l-[3px] border-l-info/60 bg-muted/25 border border-border/20 text-foreground text-sm font-semibold tracking-tight`
+export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-sm border-l-[3px] border-l-info/60 bg-muted/25 border border-border/20 text-foreground text-sm font-semibold tracking-tight`

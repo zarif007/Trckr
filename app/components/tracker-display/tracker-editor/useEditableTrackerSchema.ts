@@ -8,16 +8,16 @@ import type { TrackerDisplayProps } from '../types'
  * Returns current schema and a change handler suitable for TrackerDisplay's onSchemaChange.
  */
 export function useEditableTrackerSchema(
-  initialSchema: TrackerDisplayProps
+ initialSchema: TrackerDisplayProps
 ): {
-  schema: TrackerDisplayProps
-  onSchemaChange: (next: TrackerDisplayProps) => void
+ schema: TrackerDisplayProps
+ onSchemaChange: (next: TrackerDisplayProps) => void
 } {
-  const [schema, setSchema] = useState<TrackerDisplayProps>(initialSchema)
+ const [schema, setSchema] = useState<TrackerDisplayProps>(initialSchema)
 
-  const onSchemaChange = useCallback((next: TrackerDisplayProps) => {
-    setSchema(next)
-  }, [])
+ const onSchemaChange = useCallback((next: TrackerDisplayProps) => {
+ setSchema(next)
+ }, [])
 
-  return { schema, onSchemaChange }
+ return { schema, onSchemaChange }
 }

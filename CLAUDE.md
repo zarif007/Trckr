@@ -122,16 +122,17 @@ Import from `@/lib/theme` for all colors, surfaces, borders, shadows, and radius
 
 ```tsx
 import { theme } from '@/lib/theme'
-className={cn(theme.surface.card, theme.border.default, theme.shadow.sm)}
+className={cn(theme.surface.card, theme.border.default, theme.radius.md)}
 ```
 
-- Use `theme.radius.md` (or `rounded-md`) for all boxed UI
+- Use `theme.radius.md` (or `rounded-sm`) for all boxed UI
+- **Do not use shadows** — no `shadow-*` classes, no `theme.shadow.*`, no `shadow-[...]`
 - Use `theme.patterns.*` for common patterns (inputBase, card, menuPanel, menuItem)
 
 ### Component Patterns
 
 - Use `cn()` from `@/lib/utils` for className composition
-- Form fields: `border-input`, `hover:border-ring`, `shadow-xs`, `rounded-md`
+- Form fields: `border-input`, `hover:border-ring`, `rounded-sm`
 - Status colors: `text-success`, `text-warning`, `text-destructive`, `text-info`
 
 ### UI Consistency

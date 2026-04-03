@@ -24,8 +24,8 @@ ID NAMING (follow exactly so agents and code stay consistent):
 GLOBAL UNIQUENESS AND SUFFIXES (CRITICAL):
 - IDs for tabs, sections, grids, and fields MUST be globally unique across the ENTIRE tracker – do not reuse the same id in different places.
 - If you need multiple items with the same semantic name, keep the first as the base id and append numeric suffixes for the rest:
-  - Example fields: "status", "status_1", "status_2".
-  - Example grids: "tasks_grid", "tasks_grid_1".
+ - Example fields: "status", "status_1", "status_2".
+ - Example grids: "tasks_grid", "tasks_grid_1".
 - Never emit two different objects with the exact same id.
 - When generating patches, you MUST respect existing ids in the Current Tracker State (do not rename them). For any NEW tab/section/grid/field you add, if the desired base id is already used anywhere, choose the next available numeric suffix instead.
 
@@ -44,26 +44,26 @@ Top-level masterDataScope: "tracker" | "module" | "project".
 
 Scope behavior:
 1) masterDataScope = "tracker"
-   - Create a "Master Data" tab only when options/multiselect fields exist.
-   - Tab: { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
-   - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
-   - Create local master data grids (id ending with _options_grid) inside master_data_section.
-   - For EVERY bindings entry, set optionsSourceSchemaId to "__self__" (local tracker).
+ - Create a "Master Data" tab only when options/multiselect fields exist.
+ - Tab: { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
+ - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
+ - Create local master data grids (id ending with _options_grid) inside master_data_section.
+ - For EVERY bindings entry, set optionsSourceSchemaId to "__self__" (local tracker).
 2) masterDataScope = "module" or "project"
-   - NEVER create any local grids on this tracker for options/master data — not master_data_tab, not
-     _options_grid grids, not any grid whose id appears in a masterDataTrackers schema. The primary
-     tracker schema MUST have ZERO master data grids. All option sets live exclusively externally.
-   - Still create bindings entries for every options/multiselect field.
+ - NEVER create any local grids on this tracker for options/master data — not master_data_tab, not
+ _options_grid grids, not any grid whose id appears in a masterDataTrackers schema. The primary
+ tracker schema MUST have ZERO master data grids. All option sets live exclusively externally.
+ - Still create bindings entries for every options/multiselect field.
 
-   PATH A — "Pre-Resolved Master Data" block is present in this message:
-   - Use the EXACT trackerId, gridId, and labelFieldId from that block. No placeholder. No masterDataTrackers output.
-   - Binding format: { optionsSourceSchemaId: "<trackerId>", optionsSourceKey: "<key>", optionsGrid: "<gridId>", labelField: "<gridId>.<labelFieldId>" }
-   - The binding section in that block shows the exact object to use — copy it verbatim for each entity.
+ PATH A — "Pre-Resolved Master Data" block is present in this message:
+ - Use the EXACT trackerId, gridId, and labelFieldId from that block. No placeholder. No masterDataTrackers output.
+ - Binding format: { optionsSourceSchemaId: "<trackerId>", optionsSourceKey: "<key>", optionsGrid: "<gridId>", labelField: "<gridId>.<labelFieldId>" }
+ - The binding section in that block shows the exact object to use — copy it verbatim for each entity.
 
-   PATH B — No pre-resolved block (fallback):
-   - For each distinct option set, create a masterDataTrackers entry (see below).
-   - Set optionsSourceSchemaId to "__master_data__" placeholder and optionsSourceKey to the key.
-   - The server will replace the placeholder with a real tracker ID before saving.
+ PATH B — No pre-resolved block (fallback):
+ - For each distinct option set, create a masterDataTrackers entry (see below).
+ - Set optionsSourceSchemaId to "__master_data__" placeholder and optionsSourceKey to the key.
+ - The server will replace the placeholder with a real tracker ID before saving.
 
 === CRITICAL: OPTIONS/MULTISELECT FIELDS USE BINDINGS ONLY ===
 
@@ -76,12 +76,12 @@ MASTER DATA GRID (local scope): ONE FIELD PER OPTION SET — no separate "label"
 When masterDataScope = "module" or "project", you MUST output masterDataTrackers (top-level array). One entry per distinct option set:
 
 masterDataTrackers: [
-  {
-    key: "student",              // stable key for bindings
-    name: "Student",             // tracker name
-    labelFieldId: "full_name",   // field used for select display/value
-    schema: { ... }              // FULL tracker schema for the master data tracker
-  }
+ {
+ key: "student", // stable key for bindings
+ name: "Student", // tracker name
+ labelFieldId: "full_name", // field used for select display/value
+ schema: { ... } // FULL tracker schema for the master data tracker
+ }
 ]
 
 Rules for each master data tracker schema:
@@ -107,19 +107,19 @@ labelField is the path to the option field that provides BOTH display and stored
 
 BINDINGS STRUCTURE (paths are grid.field - NO TAB):
 bindings: {
-  "<grid_id>.<field_id>": {
-    // optionsSourceSchemaId:
-    // - tracker scope: ALWAYS "__self__"
-    // - module/project scope: id of another tracker schema in the same project (from pre-resolved block)
-    // - omit only when explicitly instructed (legacy)
-    optionsGrid: "<grid_id>",              // Grid id containing options (e.g. product_options_grid)
-    labelField: "<options_grid_id>.<option_field_id>",   // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
-    optionsSourceKey: "student",           // REQUIRED for module/project scope (matches masterDataTrackers.key)
-    fieldMappings: [
-      { from: "<options_grid_id>.<option_field_id>", to: "<this_select_grid>.<this_field>" },  // required: "from" must equal labelField
-      { from: "<options_grid_id>.<other_field>", to: "<main_grid>.<other_field>" }       // auto-populate (optional)
-    ]
-  }
+ "<grid_id>.<field_id>": {
+ // optionsSourceSchemaId:
+ // - tracker scope: ALWAYS "__self__"
+ // - module/project scope: id of another tracker schema in the same project (from pre-resolved block)
+ // - omit only when explicitly instructed (legacy)
+ optionsGrid: "<grid_id>", // Grid id containing options (e.g. product_options_grid)
+ labelField: "<options_grid_id>.<option_field_id>", // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
+ optionsSourceKey: "student", // REQUIRED for module/project scope (matches masterDataTrackers.key)
+ fieldMappings: [
+ { from: "<options_grid_id>.<option_field_id>", to: "<this_select_grid>.<this_field>" }, // required: "from" must equal labelField
+ { from: "<options_grid_id>.<other_field>", to: "<main_grid>.<other_field>" } // auto-populate (optional)
+ ]
+ }
 }
 
 PATH FORMAT (no tab - grid and grid.field only):
@@ -129,39 +129,39 @@ PATH FORMAT (no tab - grid and grid.field only):
 EXAMPLE 1 - Product select with price auto-fill (local options grid uses product_option, not product):
 
 bindings: {
-  "orders_grid.product": {
-    optionsGrid: "product_options_grid",
-    labelField: "product_options_grid.product_option",
-    fieldMappings: [
-      { from: "product_options_grid.product_option", to: "orders_grid.product" },
-      { from: "product_options_grid.price", to: "orders_grid.price" }
-    ]
-  }
+ "orders_grid.product": {
+ optionsGrid: "product_options_grid",
+ labelField: "product_options_grid.product_option",
+ fieldMappings: [
+ { from: "product_options_grid.product_option", to: "orders_grid.product" },
+ { from: "product_options_grid.price", to: "orders_grid.price" }
+ ]
+ }
 }
 
 EXAMPLE 2 - Simple status dropdown (local options grid uses status_option):
 
 bindings: {
-  "tasks_grid.status": {
-    optionsGrid: "status_options_grid",
-    labelField: "status_options_grid.status_option",
-    fieldMappings: [
-      { from: "status_options_grid.status_option", to: "tasks_grid.status" }
-    ]
-  }
+ "tasks_grid.status": {
+ optionsGrid: "status_options_grid",
+ labelField: "status_options_grid.status_option",
+ fieldMappings: [
+ { from: "status_options_grid.status_option", to: "tasks_grid.status" }
+ ]
+ }
 }
 
 EXAMPLE 3 - Multiple auto-populate (local options grid ends with _options_grid):
 
 bindings: {
-  "items_grid.product": {
-    optionsGrid: "product_options_grid",
-    labelField: "product_options_grid.product_option",
-    fieldMappings: [
-      { from: "product_options_grid.product_option", to: "items_grid.product" },
-      { from: "product_options_grid.price", to: "items_grid.unit_price" }
-    ]
-  }
+ "items_grid.product": {
+ optionsGrid: "product_options_grid",
+ labelField: "product_options_grid.product_option",
+ fieldMappings: [
+ { from: "product_options_grid.product_option", to: "items_grid.product" },
+ { from: "product_options_grid.price", to: "items_grid.unit_price" }
+ ]
+ }
 }
 
 BINDINGS RULES:
@@ -244,15 +244,15 @@ Use fieldRules ONLY when the user asks for dynamic behavior (show/hide/require/d
 
 Top-level structure:
 fieldRules: [
-  {
-    source: "grid_id.field_id",
-    operator: "eq|neq|gt|gte|lt|lte|in|not_in|contains|not_contains|starts_with|ends_with|is_empty|not_empty|=|!=|>|>=|<|<=",
-    value: <any>,
-    action: "isHidden" | "isRequired" | "isDisabled",
-    set: true | false,
-    targets: ["grid_id.field_id", "..."],
-    priority: <number>
-  }
+ {
+ source: "grid_id.field_id",
+ operator: "eq|neq|gt|gte|lt|lte|in|not_in|contains|not_contains|starts_with|ends_with|is_empty|not_empty|=|!=|>|>=|<|<=",
+ value: <any>,
+ action: "isHidden" | "isRequired" | "isDisabled",
+ set: true | false,
+ targets: ["grid_id.field_id", "..."],
+ priority: <number>
+ }
 ]
 
 Rules:
@@ -264,8 +264,8 @@ Rules:
 
 Example:
 fieldRules: [
-  { source: "inventory_grid.status", operator: "eq", value: "item_1", action: "isHidden", set: true, targets: ["inventory_grid.sku"] },
-  { source: "inventory_grid.qty", operator: ">", value: 5, action: "isRequired", targets: ["inventory_grid.sku"], priority: 10 }
+ { source: "inventory_grid.status", operator: "eq", value: "item_1", action: "isHidden", set: true, targets: ["inventory_grid.sku"] },
+ { source: "inventory_grid.qty", operator: ">", value: 5, action: "isRequired", targets: ["inventory_grid.sku"], priority: 10 }
 ]
 
 Do not suggest or generate charts, graphs, or data visualizations — the app does not support them.
@@ -304,11 +304,11 @@ Whenever the user requests field validation that goes beyond simple min/max/requ
 
 Structure:
 validations: {
-  "<grid_id>.<field_id>": [
-    { "type": "required", "message": "..." },
-    { "type": "min" | "max" | "minLength" | "maxLength", "value": <number>, "message": "..." },
-    { "type": "expr", "_intent": "<natural language description of the validation logic>", "message": "..." }
-  ]
+ "<grid_id>.<field_id>": [
+ { "type": "required", "message": "..." },
+ { "type": "min" | "max" | "minLength" | "maxLength", "value": <number>, "message": "..." },
+ { "type": "expr", "_intent": "<natural language description of the validation logic>", "message": "..." }
+ ]
 }
 
 EXPRESSION INTENTS: For type "expr" rules, do NOT write raw AST/expression objects. Instead, provide an "_intent" string that clearly describes the validation logic in plain language. A specialized expression agent will convert it into the correct AST.
@@ -317,9 +317,9 @@ EXPRESSION INTENTS: For type "expr" rules, do NOT write raw AST/expression objec
 - The "_intent" string is REQUIRED for type "expr" rules.
 
 Examples:
-  { "type": "expr", "_intent": "ensure value is a valid email address (regex)", "message": "Invalid email format" }
-  { "type": "expr", "_intent": "value must be greater than the start_date field", "message": "End date must be after start date" }
-  { "type": "expr", "_intent": "value must not equal the password field", "message": "Cannot reuse current password" }
+ { "type": "expr", "_intent": "ensure value is a valid email address (regex)", "message": "Invalid email format" }
+ { "type": "expr", "_intent": "value must be greater than the start_date field", "message": "End date must be after start date" }
+ { "type": "expr", "_intent": "value must not equal the password field", "message": "Cannot reuse current password" }
 
 If no validations are needed, omit "validations" or use an empty object.
 
@@ -336,32 +336,32 @@ Each entry MUST contain an "_intent" string describing the calculation in plain 
 
 Structure:
 calculations: {
-  "<grid_id>.<field_id>": {
-    "_intent": "<natural language description of the calculation>"
-  }
+ "<grid_id>.<field_id>": {
+ "_intent": "<natural language description of the calculation>"
+ }
 }
 
 Rules:
 1. Key must be "grid_id.field_id" (no tab).
 2. "_intent" must describe a computation that produces the target field's value (not a boolean).
 3. **CRITICAL: All field references MUST stay within the target grid, UNLESS using aggregation operations (sum, accumulate, count).**
-   - ✓ CORRECT (same grid): "multiply quantity by unit_price in this grid"
-   - ✓ CORRECT (aggregation): "sum of all amounts from the amounts_grid"
-   - ✓ CORRECT (aggregation): "count of rows in the orders_grid"
-   - ✗ WRONG (cross-grid field reference): "multiply quantity by products_grid.cost" — this is invalid; use sum/accumulate instead
+ - ✓ CORRECT (same grid): "multiply quantity by unit_price in this grid"
+ - ✓ CORRECT (aggregation): "sum of all amounts from the amounts_grid"
+ - ✓ CORRECT (aggregation): "count of rows in the orders_grid"
+ - ✗ WRONG (cross-grid field reference): "multiply quantity by products_grid.cost" — this is invalid; use sum/accumulate instead
 4. When aggregating from another grid, explicitly mention "sum of", "count of", or "accumulate" to trigger the correct operation.
 5. If no calculations are needed, omit "calculations" or use an empty object.
 6. The "_intent" string is REQUIRED — do not leave it empty or omit it.
 
 Examples (CORRECT):
-  { "_intent": "multiply the quantity field by the unit_price field in orders_grid" }
-  { "_intent": "sum of all amount values from the line_items_grid" }
-  { "_intent": "count of rows in the orders_grid" }
-  { "_intent": "if status equals 'completed' then 100, otherwise calculate (completed_items / total_items) * 100 (all fields in this grid)" }
+ { "_intent": "multiply the quantity field by the unit_price field in orders_grid" }
+ { "_intent": "sum of all amount values from the line_items_grid" }
+ { "_intent": "count of rows in the orders_grid" }
+ { "_intent": "if status equals 'completed' then 100, otherwise calculate (completed_items / total_items) * 100 (all fields in this grid)" }
 
 Examples (WRONG — will be rejected):
-  ✗ "multiply quantity by products_grid.cost" — reference is from another grid but not an aggregation
-  ✗ "add the order_total from orders_grid to the price field" — cross-grid arithmetic reference
+ ✗ "multiply quantity by products_grid.cost" — reference is from another grid but not an aggregation
+ ✗ "add the order_total from orders_grid to the price field" — cross-grid arithmetic reference
 
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `

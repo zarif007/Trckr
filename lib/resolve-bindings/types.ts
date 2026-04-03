@@ -5,7 +5,7 @@
 
 /** Parsed path components. Path format is grid.field (no tab). */
 export interface ParsedPath {
-  tabId: null
-  gridId: string | null
-  fieldId: string | null
+ tabId: null
+ gridId: string | null
+ fieldId: string | null
 }
