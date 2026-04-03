@@ -84,7 +84,7 @@ export function TrackerChatPanel({
   }
 
   return (
-    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-border/50 bg-muted/20 dark:bg-muted/10">
+    <section className="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden border-l border-border/30 bg-muted/10 dark:bg-transparent">
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-5">
         <div className="mx-auto max-w-2xl space-y-5">
           {conversationWindows && conversationWindows.length > 0 && (
@@ -109,8 +109,8 @@ export function TrackerChatPanel({
                       className={cn(
                         'px-3 py-1.5 text-xs transition-colors duration-150 whitespace-nowrap border border-b-0 border-transparent rounded-t-md -mb-px shrink-0',
                         isActive
-                          ? 'bg-muted/20 text-foreground border-border/40 border-b-muted/20 dark:border-b-muted/10 dark:bg-muted/10'
-                          : 'bg-muted/40 text-muted-foreground hover:bg-muted/60 border-transparent dark:bg-muted/20',
+                          ? 'bg-background/60 text-foreground border-border/60 border-b-muted/20 dark:bg-muted/10'
+                          : 'bg-muted/30 text-muted-foreground hover:bg-muted/50 border-transparent dark:bg-muted/20',
                       )}
                       title={window.title}
                     >

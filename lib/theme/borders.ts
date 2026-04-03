@@ -17,4 +17,8 @@ export const border = {
   ring: 'border-ring',
   hover: 'hover:border-ring',
   divideSubtle: 'divide-border/60',
+  /** Barely-visible separator — for dense lists, dividers */
+  hairline: 'border-border/15',
+  /** Subtle ring for active/focus states */
+  activeRing: 'ring-1 ring-foreground/8',
 } as const

@@ -11,7 +11,7 @@ export function DroppableEmptyColumn({ id }: DroppableEmptyColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`h-24 rounded-md border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20'
+      className={`h-24 rounded-md border-2 border-dashed transition-colors flex items-center justify-center ${isOver ? 'border-primary/40 bg-primary/5' : 'border-border/30 bg-muted/10'
         }`}
     >
       <p className="text-xs text-muted-foreground text-center px-4">Drop here</p>

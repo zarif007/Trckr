@@ -30,4 +30,12 @@ export const surface = {
   input: 'bg-transparent dark:bg-input/30',
   /** Overlay backdrop */
   overlay: 'bg-black/50',
+  /** Lighter muted fill — for cards, section bars */
+  subtle: 'bg-muted/20',
+  /** Card with visible frame — subtle depth without shadow */
+  elevated: 'bg-card border border-border/40',
+  /** Floating glass panel — for toolbars, popovers */
+  glass: 'bg-background/80 backdrop-blur-md border border-border/30',
+  /** Active / selected state — high contrast inverted */
+  active: 'bg-foreground text-background',
 } as const

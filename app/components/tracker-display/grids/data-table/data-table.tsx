@@ -538,13 +538,13 @@ export function DataTable<TData, TValue>({
         gridData={gridDataProp}
         mode="edit"
       />
-      <div className={cn('rounded-md overflow-x-auto border border-border/30', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/50')}>
+      <div className={cn('rounded-md overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/40')}>
         <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
           <TableHeader className={ts.headerBg}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="bg-muted/40 hover:bg-muted/40 border-b border-border/40"
+                className="bg-muted/20 hover:bg-muted/20 border-b border-border/30"
               >
                 {headerGroup.headers.map((header) => {
                   const isSelect = header.id === 'select'
@@ -561,7 +561,7 @@ export function DataTable<TData, TValue>({
                       }}
                       className={cn(
                         ts.headerHeight,
-                        'text-muted-foreground font-medium border-r border-border/50 last:border-r-0 text-xs',
+                        'text-muted-foreground/90 font-medium border-r border-border/30 last:border-r-0 text-xs',
                         ts.headerFontSize,
                         isSelect || isActions
                           ? 'p-0 text-center min-w-[44px] w-[44px]'
@@ -578,7 +578,7 @@ export function DataTable<TData, TValue>({
                       ) : (
                         <div className="flex items-center gap-2 overflow-hidden">
                           {Icon && (
-                            <Icon className="h-3.5 w-3.5 text-muted-foreground/70 shrink-0" />
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
                           )}
                           <span className="truncate">
                             {flexRender(
@@ -611,9 +611,9 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     data-state={row.getIsSelected() && 'selected'}
                     className={cn(
-                      'group border-b border-border/50 last:border-0 transition-colors duration-200 ease-in-out hover:bg-transparent dark:hover:bg-transparent',
+                      'group border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8',
                       ts.tableBg && '!bg-transparent',
-                      ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/30',
+                      ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/15',
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
@@ -651,7 +651,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columnsWithSelectionAndActions.length}
-                  className="h-24 text-center text-muted-foreground text-sm"
+                  className="h-24 text-center text-muted-foreground/60 text-sm"
                 >
                   No results.
                 </TableCell>

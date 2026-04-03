@@ -258,13 +258,7 @@ export function TrackerDisplayInline({
 
   const tabListContent =
     normalizedTabs.length > 0 || editMode ? (
-      <TabsList
-        className={cn(
-          'min-h-8',
-          '[&_[data-slot=tabs-trigger]]:min-h-7 [&_[data-slot=tabs-trigger]]:px-2 [&_[data-slot=tabs-trigger]]:py-0.5',
-          '[&_[data-slot=tabs-trigger]]:text-xs [&_[data-slot=tabs-trigger]]:font-semibold'
-        )}
-      >
+      <TabsList>
         {editMode && onSchemaChange ? (
           <DndContext
             sensors={sensors}
@@ -289,21 +283,20 @@ export function TrackerDisplayInline({
           </DndContext>
         ) : (
           normalizedTabs.map((tab) => (
-            <div key={tab.id} className="flex items-center gap-0.5">
-              <TabsTrigger
-                value={tab.id}
-                className="min-w-0 max-w-[11rem] truncate sm:max-w-[15rem]"
-              >
-                {tab.name}
-              </TabsTrigger>
-            </div>
+            <TabsTrigger
+              key={tab.id}
+              value={tab.id}
+              className="min-w-0 max-w-[11rem] truncate text-xs font-semibold sm:max-w-[15rem]"
+            >
+              {tab.name}
+            </TabsTrigger>
           ))
         )}
       </TabsList>
     ) : null
 
   const content = (
-    <div className="w-full min-w-0 space-y-4 px-2 py-3 md:px-3 md:py-4 rounded-md bg-card">
+    <div className="w-full min-w-0 space-y-4 px-2 py-3 md:px-3 md:py-4 rounded-md bg-card border border-border/20">
       <Tabs value={activeTabId} onValueChange={handleTabChange} className="w-full min-w-0 gap-2">
         <div className="flex items-center gap-2 min-w-0 overflow-x-auto">
           {tabListContent}
@@ -314,7 +307,7 @@ export function TrackerDisplayInline({
               size="icon"
               onClick={handleAddTab}
               aria-label="Add tab"
-              className="shrink-0 h-8 w-8"
+              className="shrink-0 h-8 w-8 border border-dashed border-border/30 text-muted-foreground/50 hover:text-muted-foreground hover:border-border/50"
             >
               <Plus className="h-4 w-4" />
             </Button>

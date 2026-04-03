@@ -35,4 +35,12 @@ export const patterns = {
     'w-full flex items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted/80',
     radius.md,
   ].join(' '),
+  /** Floating panel shell — glass surface for standalone containers */
+  panelShell: [
+    'bg-background/60 backdrop-blur-sm border rounded-md',
+    border.subtle,
+    radius.md,
+  ].join(' '),
+  /** Horizontal divider — thin, subtle, intentional */
+  separatorLine: ['h-px bg-border/20 my-3'].join(' '),
 } as const

@@ -47,7 +47,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        'relative inline-flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap px-2.5 py-1 text-sm font-semibold transition-[color,background,border,transform]',
+        'relative inline-flex min-w-0 items-center justify-center gap-2 whitespace-nowrap px-2.5 py-1 text-sm font-semibold transition-[color,background,border,transform]',
         theme.radius.md,
         theme.text.muted,
         'border border-transparent',

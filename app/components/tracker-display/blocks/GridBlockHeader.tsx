@@ -4,6 +4,7 @@ import { Table2, LayoutGrid, FormInput } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { TrackerGrid } from '../types'
 import { InlineEditableName, useBlockControls, LabelWithBlockControls } from '../layout'
+import { theme } from '@/lib/theme'
 
 /** Grid type badge: small pill showing Table/Kanban/Form. Exported for use in BlockEditor or elsewhere. */
 export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
@@ -24,7 +25,7 @@ export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
   const badgeClass = colorClasses[type as keyof typeof colorClasses] || 'bg-muted/50 text-muted-foreground border border-muted/50'
 
   return (
-    <span className={cn('inline-flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5', badgeClass)}>
+    <span className={cn('inline-flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5 font-medium', badgeClass)}>
       <Icon className="h-3 w-3" />
       {info.label}
     </span>

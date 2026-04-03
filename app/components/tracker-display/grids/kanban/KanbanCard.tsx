@@ -79,11 +79,12 @@ export function KanbanCard({
   return (
     <Card
       className={cn(
-        'group relative cursor-grab overflow-hidden border bg-card transition-all active:cursor-grabbing',
+        'group relative cursor-grab overflow-hidden border bg-card transition-[border-color,box-shadow] duration-200 active:cursor-grabbing',
+        isOverlay && 'shadow-lg border-border/40',
         cardPadding,
         fontWeight,
         theme.radius.md,
-        'border-border/60'
+        'border-border/30 hover:border-border/50 hover:shadow-sm'
       )}
     >
       <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">

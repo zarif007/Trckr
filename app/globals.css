@@ -48,6 +48,20 @@ body {
   white-space: nowrap;
 }
 
+/* Subtle noise texture — ambient depth on dark backgrounds */
+[data-theme='dark'] .bg-noise {
+  position: relative;
+}
+[data-theme='dark'] .bg-noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.03;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
 @layer base {
   /* Dark theme (default) */
   :root,
@@ -299,4 +313,10 @@ body {
   height: var(--height-field);
   min-height: var(--height-field);
   box-sizing: border-box;
+}
+
+/* Subtle dot grid pattern — use on containers for ambient depth */
+.bg-dots {
+  background-image: radial-gradient(circle, hsl(var(--border) / 0.12) 1px, transparent 1px);
+  background-size: 16px 16px;
 }

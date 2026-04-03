@@ -515,9 +515,9 @@ function TrackerKanbanGridInner({
                   theme.border.verySubtle
                 )}
               >
-                <h3 className="font-medium text-foreground text-sm flex items-center justify-between gap-2">
+                <h3 className={`${theme.typography.headingXsMono} font-semibold text-foreground text-sm flex items-center justify-between gap-2`}>
                   <span className="truncate">{group.label || 'Uncategorized'}</span>
-                  <span className="text-xs text-muted-foreground bg-background/80 px-2 py-0.5 rounded-md shrink-0 tabular-nums">
+                  <span className={cn('shrink-0 tabular-nums', theme.typography.badge, 'bg-background/50')}>
                     {cardsInGroup.length}
                   </span>
                 </h3>
