@@ -20,16 +20,16 @@ Flat Notion-like block editor for a single tracker tab. Renders sections and gri
 
 ## Files
 
-| File | Role |
-|------|------|
-| BlockEditor.tsx | Main component: flat block list, DnD, command input, add-field dialog |
-| BlockWrapper.tsx | Block shell + BlockControlsContext for inline controls |
-| BlockCommandInput.tsx | "Add block" popover with Section/Table/Kanban/Form/Field |
-| SortableBlock.tsx | SortableColumnHeaderEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId |
-| ColumnHeaderEdit.tsx | Table column header edit UI (drag, settings, remove) |
-| FieldRowEdit.tsx | Div grid field row edit UI (drag, settings, remove) |
-| AddColumnOrFieldDialog.tsx | Dialog to add column/field (new or existing) |
-| index.ts | Barrel exports |
+| File                       | Role                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| BlockEditor.tsx            | Main component: flat block list, DnD, command input, add-field dialog         |
+| BlockWrapper.tsx           | Block shell + BlockControlsContext for inline controls                        |
+| BlockCommandInput.tsx      | "Add block" popover with Section/Table/Kanban/Form/Field                      |
+| SortableBlock.tsx          | SortableColumnHeaderEdit, SortableFieldRowEdit, fieldSortableId, parseFieldId |
+| ColumnHeaderEdit.tsx       | Table column header edit UI (drag, settings, remove)                          |
+| FieldRowEdit.tsx           | Div grid field row edit UI (drag, settings, remove)                           |
+| AddColumnOrFieldDialog.tsx | Dialog to add column/field (new or existing)                                  |
+| index.ts                   | Barrel exports                                                                |
 
 ## Usage
 

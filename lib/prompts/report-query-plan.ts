@@ -1,7 +1,10 @@
-import { formatGenerationPlanForPrompt, type ReportIntent } from '@/lib/reports/report-schemas'
+import {
+  formatGenerationPlanForPrompt,
+  type ReportIntent,
+} from "@/lib/reports/report-schemas";
 
 export function getReportQueryPlanSystemPrompt(): string {
- return `You build a versioned JSON query plan (version must be 1). This is the executable **data access spec** (same role as SQL over our store): load rows, filter, flatten grids, aggregate, sort, limit.
+  return `You build a versioned JSON query plan (version must be 1). This is the executable **data access spec** (same role as SQL over our store): load rows, filter, flatten grids, aggregate, sort, limit.
 
 The executor:
 1. Loads TrackerData rows for the tracker (JSON "data": grid id -> array of row objects with field ids as keys).
@@ -24,26 +27,26 @@ Rules:
 - **Critical — monetary "total value":** sum of (quantity × unit price) per line via metric **expression**, not sum(unit_price).
 - Each sum/avg/min/max metric has exactly one of path or expression; count has neither.
 - Never output SQL or JavaScript strings—only this JSON AST.
-- Follow the **generation plan** for instance pooling vs per-instance columns and for which grids/dimensions matter.`
+- Follow the **generation plan** for instance pooling vs per-instance columns and for which grids/dimensions matter.`;
 }
 
 export function buildReportQueryPlanUserPrompt(params: {
- intent: ReportIntent
- catalogText: string
- userQuery: string
- trackerInstance: 'SINGLE' | 'MULTI'
- versionControl: boolean
+  intent: ReportIntent;
+  catalogText: string;
+  userQuery: string;
+  trackerInstance: "SINGLE" | "MULTI";
+  versionControl: boolean;
 }): string {
- const branchRule =
- params.versionControl && params.trackerInstance === 'SINGLE'
- ? 'Branch rule: default **main** only (omit load.branchName). Use null only if the user asked for all branches.'
- : params.trackerInstance === 'MULTI'
- ? 'Instance rule: load across instances; branch default remains main per row unless user asked otherwise. For **grand totals** (empty groupBy + sum/avg), raise **load.maxTrackerDataRows** if needed so pooled MULTI data is not truncated too aggressively.'
- : 'Single tracker, no version control: main branch rows.'
+  const branchRule =
+    params.versionControl && params.trackerInstance === "SINGLE"
+      ? "Branch rule: default **main** only (omit load.branchName). Use null only if the user asked for all branches."
+      : params.trackerInstance === "MULTI"
+        ? "Instance rule: load across instances; branch default remains main per row unless user asked otherwise. For **grand totals** (empty groupBy + sum/avg), raise **load.maxTrackerDataRows** if needed so pooled MULTI data is not truncated too aggressively."
+        : "Single tracker, no version control: main branch rows.";
 
- const instanceRule = `**generationPlan.instancePolicy** (must follow for __label / __dataId): \`${params.intent.generationPlan.instancePolicy}\``
+  const instanceRule = `**generationPlan.instancePolicy** (must follow for __label / __dataId): \`${params.intent.generationPlan.instancePolicy}\``;
 
- return `## Field catalog
+  return `## Field catalog
 ${params.catalogText}
 
 ## Original user request
@@ -57,5 +60,5 @@ ${params.userQuery}
 ${formatGenerationPlanForPrompt(params.intent.generationPlan)}
 
 ## Parsed intent (JSON)
-${JSON.stringify(params.intent, null, 2)}`
+${JSON.stringify(params.intent, null, 2)}`;
 }

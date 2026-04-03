@@ -4,13 +4,13 @@ When a select field’s binding sets `optionsSourceSchemaId`, options (and “ad
 
 ## Files
 
-| File | Role |
-|------|------|
-| `types.ts` | `GridDataSnapshot`, `ForeignDataPersistMeta`, `ForeignSourceBundle` |
-| `tracker-api.ts` | `fetch`, URL builders, `loadForeignBindingSource`, `persistForeignBindingSnapshot`, JSON parsing |
-| `constants.ts` | Debounce interval for coalescing saves |
-| `useForeignBindingSources.ts` | Hook: load effect, debounced + follow-up persist, dirty tracking, loading/saving/error flags |
-| `index.ts` | Public exports |
+| File                          | Role                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `types.ts`                    | `GridDataSnapshot`, `ForeignDataPersistMeta`, `ForeignSourceBundle`                              |
+| `tracker-api.ts`              | `fetch`, URL builders, `loadForeignBindingSource`, `persistForeignBindingSnapshot`, JSON parsing |
+| `constants.ts`                | Debounce interval for coalescing saves                                                           |
+| `useForeignBindingSources.ts` | Hook: load effect, debounced + follow-up persist, dirty tracking, loading/saving/error flags     |
+| `index.ts`                    | Public exports                                                                                   |
 
 ## Data flow
 

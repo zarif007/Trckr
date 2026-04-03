@@ -118,6 +118,6 @@ The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 [ ] For module/project scope: did I output requiredMasterData for every external reference entity?
 
 KEY RULE: Decipher where tabs are NEEDED based on workflows. Don't stack unrelated grids. Don't over-separate. Get the boundaries right.
-`
+`;
 
-export default managerPrompt
+export default managerPrompt;

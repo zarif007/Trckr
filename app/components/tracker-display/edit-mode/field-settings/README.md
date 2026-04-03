@@ -28,7 +28,7 @@ All changes are applied when the user clicks **Save Changes**; the dialog calls 
    - A **Dialog** with header (field label + id), a **Tabs** list (General, Validations, Calculations, Field rules, Bindings, Dynamic), and a footer (Cancel / Save).
    - Each tab’s content is a separate component that receives only the state and callbacks it needs from the hook.
 
-4. **Tab components**  
+4. **Tab components**
    - **GeneralTab**: Display inputs, “Getting data from” badges, required checkbox, data type select, and min/max or minLength/maxLength for numeric/text types.
    - **ValidationsTab**: List of validation rules (type, value, custom expr via **ExprRuleEditor**, message), add/remove, and a collapsible “rule summary” with optional raw JSON.
    - **CalculationsTab**: Single calculation expression via **ExprRuleEditor**, or empty state to add one (only when field is in a grid).
@@ -42,18 +42,18 @@ All changes are applied when the user clicks **Save Changes**; the dialog calls 
 
 ## Files
 
-| File | Role |
-|------|------|
-| **FieldSettingsDialog.tsx** | Dialog shell: header, tabs, footer; composes hook and tab components; inlines Dynamic options tab. |
+| File                         | Role                                                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **FieldSettingsDialog.tsx**  | Dialog shell: header, tabs, footer; composes hook and tab components; inlines Dynamic options tab.         |
 | **useFieldSettingsState.ts** | Hook: state, effects (sync from schema), derived data (pathLabelMap, bindingValidation, etc.), handleSave. |
-| **GeneralTab.tsx** | General tab: display, data sources, required, data type, min/max or min/max length. |
-| **ValidationsTab.tsx** | Validations tab: rule list, ExprRuleEditor for expr rules, rule summary + JSON. |
-| **CalculationsTab.tsx** | Calculations tab: single ExprRuleEditor or empty state. |
-| **FieldRulesTab.tsx** | Field rules tab: condition list (source, operator, value, action, set). |
-| **BindingsTab.tsx** | Bindings tab: options grid, label field, FieldMappingsEditor, auto-map, preview. |
-| **constants.ts** | Labels, rule types, default exprs, type groups, pure helpers. |
-| **types.ts** | FieldSettingsDialogProps. |
-| **index.ts** | Barrel: exports FieldSettingsDialog. |
+| **GeneralTab.tsx**           | General tab: display, data sources, required, data type, min/max or min/max length.                        |
+| **ValidationsTab.tsx**       | Validations tab: rule list, ExprRuleEditor for expr rules, rule summary + JSON.                            |
+| **CalculationsTab.tsx**      | Calculations tab: single ExprRuleEditor or empty state.                                                    |
+| **FieldRulesTab.tsx**        | Field rules tab: condition list (source, operator, value, action, set).                                    |
+| **BindingsTab.tsx**          | Bindings tab: options grid, label field, FieldMappingsEditor, auto-map, preview.                           |
+| **constants.ts**             | Labels, rule types, default exprs, type groups, pure helpers.                                              |
+| **types.ts**                 | FieldSettingsDialogProps.                                                                                  |
+| **index.ts**                 | Barrel: exports FieldSettingsDialog.                                                                       |
 
 ## Usage
 

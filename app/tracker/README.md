@@ -4,18 +4,18 @@ The main tracker-builder page: chat UI + streaming tracker generation. **Page lo
 
 ## Structure
 
-| Path | Responsibility |
-|------|-----------------|
-| **page.tsx** | Thin route wrapper (redirect + re-export). |
-| **views/TrackerAIView.tsx** | Main orchestration view for tracker editing/chat experience. |
-| **views/TrackerPanel.tsx** | Preview/edit panel shell and top-right action controls. |
-| **views/TrackerChatPanel.tsx** | Chat panel composition (empty state, message list, input). |
-| **views/TrackerStatusPanel.tsx** | Validation/error/no-tracker state banner area. |
-| **hooks/useTrackerChat.ts** | Chat generation state + streaming + persistence orchestration. |
-| **hooks/conversation.ts** | Conversation and message persistence service calls. |
-| **hooks/normalization.ts** | Schema normalization helpers for scaffolds and validation/calculation keys. |
-| **hooks/constants.ts** | Suggestions and generation retry constants. |
-| **utils/** | Tracker merge/transform utilities. |
+| Path                             | Responsibility                                                              |
+| -------------------------------- | --------------------------------------------------------------------------- |
+| **page.tsx**                     | Thin route wrapper (redirect + re-export).                                  |
+| **views/TrackerAIView.tsx**      | Main orchestration view for tracker editing/chat experience.                |
+| **views/TrackerPanel.tsx**       | Preview/edit panel shell and top-right action controls.                     |
+| **views/TrackerChatPanel.tsx**   | Chat panel composition (empty state, message list, input).                  |
+| **views/TrackerStatusPanel.tsx** | Validation/error/no-tracker state banner area.                              |
+| **hooks/useTrackerChat.ts**      | Chat generation state + streaming + persistence orchestration.              |
+| **hooks/conversation.ts**        | Conversation and message persistence service calls.                         |
+| **hooks/normalization.ts**       | Schema normalization helpers for scaffolds and validation/calculation keys. |
+| **hooks/constants.ts**           | Suggestions and generation retry constants.                                 |
+| **utils/**                       | Tracker merge/transform utilities.                                          |
 
 ## Where the UI lives
 

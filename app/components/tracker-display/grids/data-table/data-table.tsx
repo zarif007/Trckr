@@ -1,665 +1,719 @@
-'use client'
+"use client";
 
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
- ColumnDef,
- flexRender,
- getCoreRowModel,
- useReactTable,
- getPaginationRowModel,
- SortingState,
- getSortedRowModel,
- RowSelectionState,
- VisibilityState,
-} from '@tanstack/react-table'
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  useReactTable,
+  getPaginationRowModel,
+  SortingState,
+  getSortedRowModel,
+  RowSelectionState,
+  VisibilityState,
+} from "@tanstack/react-table";
 
 import {
- Table,
- TableBody,
- TableCell,
- TableHead,
- TableHeader,
- TableRow,
-} from '@/components/ui/table'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
- Dialog,
- DialogContent,
- DialogHeader,
- DialogTitle,
- DialogTrigger,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
- Popover,
- PopoverContent,
- PopoverTrigger,
-} from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
-import { Settings2, ChevronDown, Plus, Trash2 } from 'lucide-react'
-import { FieldMetadata, getFieldIcon } from './utils'
-import { DataTableCell } from './data-table-cell'
-import { EntryFormDialog } from './entry-form-dialog'
-import { EntryWayButton } from '../../entry-way/EntryWayButton'
-import type { EntryWayDefinition } from '../../entry-way/entry-way-types'
-import type { StyleOverrides } from '../../types'
-import { resolveTableStyles } from '@/lib/style-utils'
-import type { FieldCalculationRule } from '@/lib/functions/types'
-import type { FieldRuleOverride } from '@/lib/field-rules'
-import type { ReactNode } from 'react'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { Settings2, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { FieldMetadata, getFieldIcon } from "./utils";
+import { DataTableCell } from "./data-table-cell";
+import { EntryFormDialog } from "./entry-form-dialog";
+import { EntryWayButton } from "../../entry-way/EntryWayButton";
+import type { EntryWayDefinition } from "../../entry-way/entry-way-types";
+import type { StyleOverrides } from "../../types";
+import { resolveTableStyles } from "@/lib/style-utils";
+import type { FieldCalculationRule } from "@/lib/functions/types";
+import type { FieldRuleOverride } from "@/lib/field-rules";
+import type { ReactNode } from "react";
 
 /** Map a table row back to its index in grid data (selection uses getRowId, not indices). */
-function resolveGridDataRowIndex<TData>(original: TData, data: readonly TData[]): number {
- const rec = original as Record<string, unknown>
- const idKey = rec.row_id ?? rec.id
- if (idKey != null && (typeof idKey === 'number' || typeof idKey === 'string')) {
- const idx = data.findIndex((r) => {
- const o = r as Record<string, unknown>
- return o.row_id === idKey || o.id === idKey
- })
- if (idx >= 0) return idx
- }
- const byRef = data.indexOf(original)
- return byRef >= 0 ? byRef : -1
+function resolveGridDataRowIndex<TData>(
+  original: TData,
+  data: readonly TData[],
+): number {
+  const rec = original as Record<string, unknown>;
+  const idKey = rec.row_id ?? rec.id;
+  if (
+    idKey != null &&
+    (typeof idKey === "number" || typeof idKey === "string")
+  ) {
+    const idx = data.findIndex((r) => {
+      const o = r as Record<string, unknown>;
+      return o.row_id === idKey || o.id === idKey;
+    });
+    if (idx >= 0) return idx;
+  }
+  const byRef = data.indexOf(original);
+  return byRef >= 0 ? byRef : -1;
 }
 
 interface DataTableProps<TData, TValue> {
- columns: ColumnDef<TData, TValue>[]
- data: TData[]
- fieldMetadata?: FieldMetadata
- onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void
- onAddEntry?: (newRow: Record<string, any>) => void
- onDeleteEntries?: (rowIndices: number[]) => void
- config?: any
- /** Optional style overrides for this table. */
- styleOverrides?: StyleOverrides
- /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
- getBindingUpdates?: (fieldId: string, value: unknown) => Record<string, unknown>
- /** For table cells/row details: resolve per-row field overrides (hidden/required/disabled). */
- getFieldOverrides?: (rowIndex: number, fieldId: string) => FieldRuleOverride | undefined
- /** For table cells: resolve all field overrides for a row in one call. */
- getRowOverrides?: (
- rowIndex: number,
- rowData: Record<string, unknown>
- ) => Record<string, FieldRuleOverride> | undefined
- /** For table cells/row details: resolve overrides using the current row values. */
- getFieldOverridesForRow?: (
- rowIndex: number,
- rowData: Record<string, unknown>,
- fieldId: string
- ) => FieldRuleOverride | undefined
- /** For Add Entry dialog: resolve field overrides based on current form values. */
- getFieldOverridesForAdd?: (values: Record<string, unknown>, fieldId: string) => FieldRuleOverride | undefined
- /** Force-hide specific columns (e.g., conditional visibility). */
- hiddenColumns?: string[]
- /** When false, hide Add Entry button and add-dialog. Default true. */
- addable?: boolean
- /** When false, cells and row details are read-only. Default true. */
- editable?: boolean
- /** When false, hide Delete button and row selection. Default true. */
- deletable?: boolean
- /** When false, hide column visibility / grid layout settings. Default true. */
- editLayoutAble?: boolean
- /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
- gridId?: string
- /** Calculations keyed by "gridId.fieldId" (target paths). */
- calculations?: Record<string, FieldCalculationRule>
- /** Full grid data for accumulate (sum/reduce) rules in Add/Edit entry forms. */
- gridData?: Record<string, Array<Record<string, unknown>>>
- /** Default page size. Default 10. */
- pageSize?: number
- /** Optional page size options for selector (e.g. [10, 25, 50]). */
- pageSizeOptions?: number[]
- /** Initial sort (column id and direction). */
- defaultSort?: { id: string; desc?: boolean }
- /** Optional custom renderer for the action column cell. */
- renderRowAction?: (args: { row: TData; rowIndex: number }) => ReactNode
- /** When false and no custom action is provided, hide the actions column. */
- showRowDetails?: boolean
- /** Optional Entry Way shortcuts for quick-create. */
- entryWays?: EntryWayDefinition[]
+  columns: ColumnDef<TData, TValue>[];
+  data: TData[];
+  fieldMetadata?: FieldMetadata;
+  onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void;
+  onAddEntry?: (newRow: Record<string, any>) => void;
+  onDeleteEntries?: (rowIndices: number[]) => void;
+  config?: any;
+  /** Optional style overrides for this table. */
+  styleOverrides?: StyleOverrides;
+  /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
+  getBindingUpdates?: (
+    fieldId: string,
+    value: unknown,
+  ) => Record<string, unknown>;
+  /** For table cells/row details: resolve per-row field overrides (hidden/required/disabled). */
+  getFieldOverrides?: (
+    rowIndex: number,
+    fieldId: string,
+  ) => FieldRuleOverride | undefined;
+  /** For table cells: resolve all field overrides for a row in one call. */
+  getRowOverrides?: (
+    rowIndex: number,
+    rowData: Record<string, unknown>,
+  ) => Record<string, FieldRuleOverride> | undefined;
+  /** For table cells/row details: resolve overrides using the current row values. */
+  getFieldOverridesForRow?: (
+    rowIndex: number,
+    rowData: Record<string, unknown>,
+    fieldId: string,
+  ) => FieldRuleOverride | undefined;
+  /** For Add Entry dialog: resolve field overrides based on current form values. */
+  getFieldOverridesForAdd?: (
+    values: Record<string, unknown>,
+    fieldId: string,
+  ) => FieldRuleOverride | undefined;
+  /** Force-hide specific columns (e.g., conditional visibility). */
+  hiddenColumns?: string[];
+  /** When false, hide Add Entry button and add-dialog. Default true. */
+  addable?: boolean;
+  /** When false, cells and row details are read-only. Default true. */
+  editable?: boolean;
+  /** When false, hide Delete button and row selection. Default true. */
+  deletable?: boolean;
+  /** When false, hide column visibility / grid layout settings. Default true. */
+  editLayoutAble?: boolean;
+  /** Grid id for validation rowValues (expr rules may use gridId.fieldId). */
+  gridId?: string;
+  /** Calculations keyed by "gridId.fieldId" (target paths). */
+  calculations?: Record<string, FieldCalculationRule>;
+  /** Full grid data for accumulate (sum/reduce) rules in Add/Edit entry forms. */
+  gridData?: Record<string, Array<Record<string, unknown>>>;
+  /** Default page size. Default 10. */
+  pageSize?: number;
+  /** Optional page size options for selector (e.g. [10, 25, 50]). */
+  pageSizeOptions?: number[];
+  /** Initial sort (column id and direction). */
+  defaultSort?: { id: string; desc?: boolean };
+  /** Optional custom renderer for the action column cell. */
+  renderRowAction?: (args: { row: TData; rowIndex: number }) => ReactNode;
+  /** When false and no custom action is provided, hide the actions column. */
+  showRowDetails?: boolean;
+  /** Optional Entry Way shortcuts for quick-create. */
+  entryWays?: EntryWayDefinition[];
 }
 
 export function DataTable<TData, TValue>({
- columns,
- data,
- fieldMetadata,
- onCellUpdate,
- onAddEntry,
- onDeleteEntries,
- getBindingUpdates,
- styleOverrides,
- getFieldOverrides,
- getRowOverrides,
- getFieldOverridesForRow,
- getFieldOverridesForAdd,
- hiddenColumns,
- addable = true,
- editable = true,
- deletable = true,
- editLayoutAble = true,
- gridId,
- calculations,
- gridData: gridDataProp,
- pageSize: pageSizeProp,
- pageSizeOptions,
- defaultSort: defaultSortProp,
- renderRowAction,
- showRowDetails = true,
- entryWays = [],
+  columns,
+  data,
+  fieldMetadata,
+  onCellUpdate,
+  onAddEntry,
+  onDeleteEntries,
+  getBindingUpdates,
+  styleOverrides,
+  getFieldOverrides,
+  getRowOverrides,
+  getFieldOverridesForRow,
+  getFieldOverridesForAdd,
+  hiddenColumns,
+  addable = true,
+  editable = true,
+  deletable = true,
+  editLayoutAble = true,
+  gridId,
+  calculations,
+  gridData: gridDataProp,
+  pageSize: pageSizeProp,
+  pageSizeOptions,
+  defaultSort: defaultSortProp,
+  renderRowAction,
+  showRowDetails = true,
+  entryWays = [],
 }: DataTableProps<TData, TValue>) {
- void pageSizeOptions
- const pageSize = pageSizeProp ?? 10
- const [tableData, setTableData] = useState<TData[]>(data)
- const [sorting, setSorting] = useState<SortingState>(() =>
- defaultSortProp
- ? [{ id: defaultSortProp.id, desc: defaultSortProp.desc ?? false }]
- : []
- )
- const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
- const [showAddDialog, setShowAddDialog] = useState(false)
- const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
- const [bulkOpen, setBulkOpen] = useState(false)
- const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<number | null>(null)
+  void pageSizeOptions;
+  const pageSize = pageSizeProp ?? 10;
+  const [tableData, setTableData] = useState<TData[]>(data);
+  const [sorting, setSorting] = useState<SortingState>(() =>
+    defaultSortProp
+      ? [{ id: defaultSortProp.id, desc: defaultSortProp.desc ?? false }]
+      : [],
+  );
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [rowDetailsOpenForIndex, setRowDetailsOpenForIndex] = useState<
+    number | null
+  >(null);
 
- useEffect(() => {
- setTableData((prev) => (prev === data ? prev : data))
- }, [data])
+  useEffect(() => {
+    setTableData((prev) => (prev === data ? prev : data));
+  }, [data]);
 
- const selectedRowCount = Object.values(rowSelection).filter(Boolean).length
- const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
- () => {
- const initialVisibility: VisibilityState = {}
- columns.forEach((col, index) => {
- const key =
- col.id ??
- (col as { accessorKey?: string }).accessorKey ??
- index.toString()
- if (key) {
- initialVisibility[key] = index < 5
- }
- })
- return initialVisibility
- },
- )
+  const selectedRowCount = Object.values(rowSelection).filter(Boolean).length;
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
+    () => {
+      const initialVisibility: VisibilityState = {};
+      columns.forEach((col, index) => {
+        const key =
+          col.id ??
+          (col as { accessorKey?: string }).accessorKey ??
+          index.toString();
+        if (key) {
+          initialVisibility[key] = index < 5;
+        }
+      });
+      return initialVisibility;
+    },
+  );
 
- const forcedHidden = useMemo(() => new Set(hiddenColumns ?? []), [hiddenColumns])
- const effectiveVisibility = useMemo(() => {
- const next: VisibilityState = { ...columnVisibility }
- forcedHidden.forEach((colId) => {
- next[colId] = false
- })
- return next
- }, [columnVisibility, forcedHidden])
+  const forcedHidden = useMemo(
+    () => new Set(hiddenColumns ?? []),
+    [hiddenColumns],
+  );
+  const effectiveVisibility = useMemo(() => {
+    const next: VisibilityState = { ...columnVisibility };
+    forcedHidden.forEach((colId) => {
+      next[colId] = false;
+    });
+    return next;
+  }, [columnVisibility, forcedHidden]);
 
- const columnsWithSelectionAndActions = useMemo<ColumnDef<TData, TValue>[]>(
- () => {
- const actionColumnEnabled = Boolean(renderRowAction) || showRowDetails
- return [
- ...(deletable
- ? [
- {
- id: 'select',
- size: 44,
- minSize: 44,
- maxSize: 44,
- header: ({ table }) => (
- <div className="flex items-center justify-center">
- <Checkbox
- checked={
- table.getIsAllPageRowsSelected() ||
- (table.getIsSomePageRowsSelected() && 'indeterminate')
- }
- onCheckedChange={(value) =>
- table.toggleAllPageRowsSelected(!!value)
- }
- aria-label="Select all rows on this page"
- />
- </div>
- ),
- cell: ({ row }) => (
- <div className="flex items-center justify-center">
- <Checkbox
- checked={row.getIsSelected()}
- onCheckedChange={(value) => row.toggleSelected(!!value)}
- aria-label={`Select row ${row.index + 1}`}
- />
- </div>
- ),
- } as ColumnDef<TData, TValue>,
- ]
- : []),
- ...columns,
- ...(actionColumnEnabled
- ? [{
- id: 'actions',
- size: 44,
- minSize: 44,
- maxSize: 44,
- header: ({ table }) =>
- editLayoutAble ? (
- <Dialog>
- <DialogTrigger asChild>
- <Button
- variant="ghost"
- size="icon"
- className="h-6 w-6 p-0 hover:bg-muted"
- >
- <Settings2 className="h-4 w-4" />
- <span className="sr-only">View settings</span>
- </Button>
- </DialogTrigger>
- <DialogContent
- className="sm:max-w-[300px]"
- onInteractOutside={(e) => e.preventDefault()}
- >
- <DialogHeader>
- <DialogTitle>Toggle Columns</DialogTitle>
- </DialogHeader>
- <div className="py-2">
- <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
- {table
- .getAllColumns()
- .filter(
- (column) =>
- typeof column.accessorFn !== 'undefined' &&
- column.getCanHide(),
- )
- .map((column) => {
- return (
- <div
- key={column.id}
- className="flex items-center space-x-2"
- >
- <Checkbox
- checked={column.getIsVisible()}
- onCheckedChange={(value) =>
- column.toggleVisibility(!!value)
- }
- id={`col-${column.id}`}
- />
- <label
- htmlFor={`col-${column.id}`}
- className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
- >
- {typeof column.columnDef.header === 'string'
- ? column.columnDef.header
- : column.id}
- </label>
- </div>
- )
- })}
- </div>
- </div>
- </DialogContent>
- </Dialog>
- ) : null,
- cell: ({ row }) => {
- if (renderRowAction) {
- return (
- <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
- {renderRowAction({ row: row.original as TData, rowIndex: row.index })}
- </div>
- )
- }
- if (!showRowDetails) return null
- return (
- <Button
- variant="ghost"
- size="icon"
- className="h-6 w-6 p-0"
- onClick={() => setRowDetailsOpenForIndex(row.index)}
- aria-label={`View full details for row ${row.index + 1}`}
- >
- <ChevronDown className="h-4 w-4" />
- </Button>
- )
- },
- } as ColumnDef<TData, TValue>] : []),
- ]
- },
- [columns, deletable, editLayoutAble, renderRowAction, showRowDetails],
- )
+  const columnsWithSelectionAndActions = useMemo<
+    ColumnDef<TData, TValue>[]
+  >(() => {
+    const actionColumnEnabled = Boolean(renderRowAction) || showRowDetails;
+    return [
+      ...(deletable
+        ? [
+            {
+              id: "select",
+              size: 44,
+              minSize: 44,
+              maxSize: 44,
+              header: ({ table }) => (
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={
+                      table.getIsAllPageRowsSelected() ||
+                      (table.getIsSomePageRowsSelected() && "indeterminate")
+                    }
+                    onCheckedChange={(value) =>
+                      table.toggleAllPageRowsSelected(!!value)
+                    }
+                    aria-label="Select all rows on this page"
+                  />
+                </div>
+              ),
+              cell: ({ row }) => (
+                <div className="flex items-center justify-center">
+                  <Checkbox
+                    checked={row.getIsSelected()}
+                    onCheckedChange={(value) => row.toggleSelected(!!value)}
+                    aria-label={`Select row ${row.index + 1}`}
+                  />
+                </div>
+              ),
+            } as ColumnDef<TData, TValue>,
+          ]
+        : []),
+      ...columns,
+      ...(actionColumnEnabled
+        ? [
+            {
+              id: "actions",
+              size: 44,
+              minSize: 44,
+              maxSize: 44,
+              header: ({ table }) =>
+                editLayoutAble ? (
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 p-0 hover:bg-muted"
+                      >
+                        <Settings2 className="h-4 w-4" />
+                        <span className="sr-only">View settings</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent
+                      className="sm:max-w-[300px]"
+                      onInteractOutside={(e) => e.preventDefault()}
+                    >
+                      <DialogHeader>
+                        <DialogTitle>Toggle Columns</DialogTitle>
+                      </DialogHeader>
+                      <div className="py-2">
+                        <div className="grid gap-2 max-h-[60vh] overflow-y-auto pr-2">
+                          {table
+                            .getAllColumns()
+                            .filter(
+                              (column) =>
+                                typeof column.accessorFn !== "undefined" &&
+                                column.getCanHide(),
+                            )
+                            .map((column) => {
+                              return (
+                                <div
+                                  key={column.id}
+                                  className="flex items-center space-x-2"
+                                >
+                                  <Checkbox
+                                    checked={column.getIsVisible()}
+                                    onCheckedChange={(value) =>
+                                      column.toggleVisibility(!!value)
+                                    }
+                                    id={`col-${column.id}`}
+                                  />
+                                  <label
+                                    htmlFor={`col-${column.id}`}
+                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer w-full py-1"
+                                  >
+                                    {typeof column.columnDef.header === "string"
+                                      ? column.columnDef.header
+                                      : column.id}
+                                  </label>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                ) : null,
+              cell: ({ row }) => {
+                if (renderRowAction) {
+                  return (
+                    <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                      {renderRowAction({
+                        row: row.original as TData,
+                        rowIndex: row.index,
+                      })}
+                    </div>
+                  );
+                }
+                if (!showRowDetails) return null;
+                return (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 p-0"
+                    onClick={() => setRowDetailsOpenForIndex(row.index)}
+                    aria-label={`View full details for row ${row.index + 1}`}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                );
+              },
+            } as ColumnDef<TData, TValue>,
+          ]
+        : []),
+    ];
+  }, [columns, deletable, editLayoutAble, renderRowAction, showRowDetails]);
 
- const ts = useMemo(() => resolveTableStyles(styleOverrides), [styleOverrides])
+  const ts = useMemo(
+    () => resolveTableStyles(styleOverrides),
+    [styleOverrides],
+  );
 
- const updateDraftCell = useCallback(
- (rowIndex: number, columnId: string, value: any) => {
- setTableData((prev) =>
- prev.map((row, idx) =>
- idx === rowIndex
- ? ({ ...(row as any), [columnId]: value } as TData)
- : row
- )
- )
- onCellUpdate?.(rowIndex, columnId, value)
- },
- [onCellUpdate],
- )
+  const updateDraftCell = useCallback(
+    (rowIndex: number, columnId: string, value: any) => {
+      setTableData((prev) =>
+        prev.map((row, idx) =>
+          idx === rowIndex
+            ? ({ ...(row as any), [columnId]: value } as TData)
+            : row,
+        ),
+      );
+      onCellUpdate?.(rowIndex, columnId, value);
+    },
+    [onCellUpdate],
+  );
 
- const table = useReactTable({
- data: tableData,
- columns: columnsWithSelectionAndActions,
- getRowId: (row, index) =>
- String(
- (row as Record<string, unknown>).row_id ??
- (row as Record<string, unknown>).id ??
- index
- ),
- getCoreRowModel: getCoreRowModel(),
- getPaginationRowModel: getPaginationRowModel(),
- onSortingChange: setSorting,
- getSortedRowModel: getSortedRowModel(),
- onRowSelectionChange: setRowSelection,
- onColumnVisibilityChange: setColumnVisibility,
- initialState: {
- pagination: { pageSize },
- },
- state: {
- sorting,
- rowSelection,
- columnVisibility: effectiveVisibility,
- },
- meta: {
- updateData: editable ? updateDraftCell : undefined,
- fieldMetadata: fieldMetadata,
- tableStyles: ts,
- getFieldOverrides,
- getFieldOverridesForRow,
- editable,
- gridId,
- },
- })
+  const table = useReactTable({
+    data: tableData,
+    columns: columnsWithSelectionAndActions,
+    getRowId: (row, index) =>
+      String(
+        (row as Record<string, unknown>).row_id ??
+          (row as Record<string, unknown>).id ??
+          index,
+      ),
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onSortingChange: setSorting,
+    getSortedRowModel: getSortedRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onColumnVisibilityChange: setColumnVisibility,
+    initialState: {
+      pagination: { pageSize },
+    },
+    state: {
+      sorting,
+      rowSelection,
+      columnVisibility: effectiveVisibility,
+    },
+    meta: {
+      updateData: editable ? updateDraftCell : undefined,
+      fieldMetadata: fieldMetadata,
+      tableStyles: ts,
+      getFieldOverrides,
+      getFieldOverridesForRow,
+      editable,
+      gridId,
+    },
+  });
 
- const fixedWidth = '44px'
+  const fixedWidth = "44px";
 
- const handleAddEntry = (values: Record<string, any>) => {
- onAddEntry?.(values)
- setShowAddDialog(false)
- }
+  const handleAddEntry = (values: Record<string, any>) => {
+    onAddEntry?.(values);
+    setShowAddDialog(false);
+  };
 
- const handleAddEntryAndStayOpen = (values: Record<string, any>) => {
- onAddEntry?.(values)
- // Keep the dialog open for the next entry; EntryFormDialog will reset its form state.
- }
+  const handleAddEntryAndStayOpen = (values: Record<string, any>) => {
+    onAddEntry?.(values);
+    // Keep the dialog open for the next entry; EntryFormDialog will reset its form state.
+  };
 
- const handleDeleteSelected = () => {
- const indices = table
- .getFilteredSelectedRowModel()
- .rows.map((row) => resolveGridDataRowIndex(row.original, tableData))
- .filter((i) => i >= 0)
- onDeleteEntries?.(indices)
- setRowSelection({})
- setDeleteConfirmOpen(false)
- }
+  const handleDeleteSelected = () => {
+    const indices = table
+      .getFilteredSelectedRowModel()
+      .rows.map((row) => resolveGridDataRowIndex(row.original, tableData))
+      .filter((i) => i >= 0);
+    onDeleteEntries?.(indices);
+    setRowSelection({});
+    setDeleteConfirmOpen(false);
+  };
 
- const rowDetailsRow =
- rowDetailsOpenForIndex != null
- ? table.getRowModel().rows[rowDetailsOpenForIndex]
- : null
+  const rowDetailsRow =
+    rowDetailsOpenForIndex != null
+      ? table.getRowModel().rows[rowDetailsOpenForIndex]
+      : null;
 
- const handleEditSave = useCallback(
- (values: Record<string, unknown>) => {
- if (rowDetailsOpenForIndex == null) return
- const updateData = (table.options.meta as any)?.updateData
- Object.entries(values).forEach(([fieldId, val]) =>
- updateData?.(rowDetailsOpenForIndex, fieldId, val)
- )
- setRowDetailsOpenForIndex(null)
- },
- [rowDetailsOpenForIndex, table.options.meta]
- )
+  const handleEditSave = useCallback(
+    (values: Record<string, unknown>) => {
+      if (rowDetailsOpenForIndex == null) return;
+      const updateData = (table.options.meta as any)?.updateData;
+      Object.entries(values).forEach(([fieldId, val]) =>
+        updateData?.(rowDetailsOpenForIndex, fieldId, val),
+      );
+      setRowDetailsOpenForIndex(null);
+    },
+    [rowDetailsOpenForIndex, table.options.meta],
+  );
 
- const addFieldOrder = useMemo(
- () =>
- columns.map(
- (col) =>
- (col as { id?: string; accessorKey?: string }).id ||
- (col as { id?: string; accessorKey?: string }).accessorKey ||
- ''
- ),
- [columns]
- )
+  const addFieldOrder = useMemo(
+    () =>
+      columns.map(
+        (col) =>
+          (col as { id?: string; accessorKey?: string }).id ||
+          (col as { id?: string; accessorKey?: string }).accessorKey ||
+          "",
+      ),
+    [columns],
+  );
 
- const hasActions = addable || deletable
+  const hasActions = addable || deletable;
 
- return (
- <div className="w-full">
- {hasActions && (
- <div className="flex h-8 items-center justify-end gap-0.5 pb-2">
- {deletable && (
- <>
- <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
- <PopoverTrigger asChild>
- <Button
- size="sm"
- variant="ghost"
- disabled={selectedRowCount === 0}
- className="h-7 min-w-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
- aria-label="Bulk actions"
- >
- Bulk
- <ChevronDown className="h-3.5 w-3.5 opacity-70" />
- </Button>
- </PopoverTrigger>
- <PopoverContent align="end" className="w-52 rounded-sm border-border/50 p-1.5 ">
- <div className="flex flex-col gap-0.5">
- <Button
- variant="ghost"
- size="sm"
- className="h-8 justify-start gap-2 rounded-sm px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
- onClick={() => {
- setBulkOpen(false)
- setDeleteConfirmOpen(true)
- }}
- aria-label={`Delete ${selectedRowCount} selected`}
- >
- <Trash2 className="h-3.5 w-3.5 shrink-0" />
- Delete {selectedRowCount} selected
- </Button>
- {/* Add more bulk actions here later, e.g. Duplicate, Export selected */}
- </div>
- </PopoverContent>
- </Popover>
- <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
- <DialogContent className="sm:max-w-[400px]">
- <DialogHeader>
- <DialogTitle>Delete Entries</DialogTitle>
- </DialogHeader>
- <div className="py-4">
- <p className="text-sm text-muted-foreground">
- Are you sure you want to delete {selectedRowCount} row
- {selectedRowCount !== 1 ? 's' : ''}? This action cannot be
- undone.
- </p>
- </div>
- <div className="flex justify-end gap-2">
- <Button
- variant="outline"
- size="sm"
- onClick={() => setDeleteConfirmOpen(false)}
- >
- Cancel
- </Button>
- <Button variant="destructive" size="sm" onClick={handleDeleteSelected}>
- Delete
- </Button>
- </div>
- </DialogContent>
- </Dialog>
- </>
- )}
- {addable && (
- <>
- <EntryWayButton
- onNewEntryClick={() => setShowAddDialog(true)}
- entryWays={entryWays}
- // For now, Entry Ways are just visible options; clicking does not create rows yet.
- onSelectEntryWay={() => { }}
- disabled={!onAddEntry}
- />
- <EntryFormDialog
- open={showAddDialog}
- onOpenChange={setShowAddDialog}
- title="Add New Entry"
- submitLabel="Add Entry"
- fieldMetadata={fieldMetadata ?? {}}
- fieldOrder={addFieldOrder}
- initialValues={{}}
- onSave={handleAddEntry}
- onSaveAnother={handleAddEntryAndStayOpen}
- getBindingUpdates={getBindingUpdates}
- getFieldOverrides={getFieldOverridesForAdd}
- gridId={gridId}
- calculations={calculations}
- gridData={gridDataProp}
- />
- </>
- )}
- </div>
- )}
- <EntryFormDialog
- open={rowDetailsOpenForIndex !== null}
- onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
- title="Row Details"
- submitLabel="Done"
- fieldMetadata={fieldMetadata ?? {}}
- fieldOrder={addFieldOrder}
- initialValues={
- rowDetailsRow
- ? { ...(rowDetailsRow.original as Record<string, unknown>) }
- : {}
- }
- onSave={handleEditSave}
- getBindingUpdates={getBindingUpdates}
- getFieldOverrides={getFieldOverridesForAdd}
- gridId={gridId}
- calculations={calculations}
- gridData={gridDataProp}
- mode="edit"
- />
- <div className={cn('rounded-sm overflow-x-auto border border-border/20', ts.borderStyle, ts.accentBorder, ts.tableBg || 'bg-card/40')}>
- <Table className={cn('w-full min-w-max border-collapse', ts.fontSize, ts.fontWeight, ts.textColor, ts.tableBg && 'bg-transparent')}>
- <TableHeader className={ts.headerBg}>
- {table.getHeaderGroups().map((headerGroup) => (
- <TableRow
- key={headerGroup.id}
- className="bg-muted/20 hover:bg-muted/20 border-b border-border/30"
- >
- {headerGroup.headers.map((header) => {
- const isSelect = header.id === 'select'
- const isActions = header.id === 'actions'
- const fieldType = fieldMetadata?.[header.id]?.type
- const Icon = fieldType ? getFieldIcon(fieldType) : null
+  return (
+    <div className="w-full">
+      {hasActions && (
+        <div className="flex h-8 items-center justify-end gap-0.5 pb-2">
+          {deletable && (
+            <>
+              <Popover open={bulkOpen} onOpenChange={setBulkOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={selectedRowCount === 0}
+                    className="h-7 min-w-0 gap-1 px-2 text-xs font-normal text-muted-foreground hover:bg-muted/50 hover:text-foreground disabled:opacity-40"
+                    aria-label="Bulk actions"
+                  >
+                    Bulk
+                    <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  className="w-52 rounded-sm border-border/50 p-1.5 "
+                >
+                  <div className="flex flex-col gap-0.5">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 justify-start gap-2 rounded-sm px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setBulkOpen(false);
+                        setDeleteConfirmOpen(true);
+                      }}
+                      aria-label={`Delete ${selectedRowCount} selected`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                      Delete {selectedRowCount} selected
+                    </Button>
+                    {/* Add more bulk actions here later, e.g. Duplicate, Export selected */}
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <Dialog
+                open={deleteConfirmOpen}
+                onOpenChange={setDeleteConfirmOpen}
+              >
+                <DialogContent className="sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle>Delete Entries</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <p className="text-sm text-muted-foreground">
+                      Are you sure you want to delete {selectedRowCount} row
+                      {selectedRowCount !== 1 ? "s" : ""}? This action cannot be
+                      undone.
+                    </p>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteConfirmOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleDeleteSelected}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </>
+          )}
+          {addable && (
+            <>
+              <EntryWayButton
+                onNewEntryClick={() => setShowAddDialog(true)}
+                entryWays={entryWays}
+                // For now, Entry Ways are just visible options; clicking does not create rows yet.
+                onSelectEntryWay={() => {}}
+                disabled={!onAddEntry}
+              />
+              <EntryFormDialog
+                open={showAddDialog}
+                onOpenChange={setShowAddDialog}
+                title="Add New Entry"
+                submitLabel="Add Entry"
+                fieldMetadata={fieldMetadata ?? {}}
+                fieldOrder={addFieldOrder}
+                initialValues={{}}
+                onSave={handleAddEntry}
+                onSaveAnother={handleAddEntryAndStayOpen}
+                getBindingUpdates={getBindingUpdates}
+                getFieldOverrides={getFieldOverridesForAdd}
+                gridId={gridId}
+                calculations={calculations}
+                gridData={gridDataProp}
+              />
+            </>
+          )}
+        </div>
+      )}
+      <EntryFormDialog
+        open={rowDetailsOpenForIndex !== null}
+        onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
+        title="Row Details"
+        submitLabel="Done"
+        fieldMetadata={fieldMetadata ?? {}}
+        fieldOrder={addFieldOrder}
+        initialValues={
+          rowDetailsRow
+            ? { ...(rowDetailsRow.original as Record<string, unknown>) }
+            : {}
+        }
+        onSave={handleEditSave}
+        getBindingUpdates={getBindingUpdates}
+        getFieldOverrides={getFieldOverridesForAdd}
+        gridId={gridId}
+        calculations={calculations}
+        gridData={gridDataProp}
+        mode="edit"
+      />
+      <div
+        className={cn(
+          "rounded-sm overflow-x-auto border border-border/20",
+          ts.borderStyle,
+          ts.accentBorder,
+          ts.tableBg || "bg-card/40",
+        )}
+      >
+        <Table
+          className={cn(
+            "w-full min-w-max border-collapse",
+            ts.fontSize,
+            ts.fontWeight,
+            ts.textColor,
+            ts.tableBg && "bg-transparent",
+          )}
+        >
+          <TableHeader className={ts.headerBg}>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow
+                key={headerGroup.id}
+                className="bg-muted/20 hover:bg-muted/20 border-b border-border/30"
+              >
+                {headerGroup.headers.map((header) => {
+                  const isSelect = header.id === "select";
+                  const isActions = header.id === "actions";
+                  const fieldType = fieldMetadata?.[header.id]?.type;
+                  const Icon = fieldType ? getFieldIcon(fieldType) : null;
 
- return (
- <TableHead
- key={header.id}
- style={{
- width: isSelect || isActions ? fixedWidth : undefined,
- minWidth: isSelect || isActions ? fixedWidth : undefined,
- }}
- className={cn(
- ts.headerHeight,
- 'text-muted-foreground/90 font-medium border-r border-border/30 last:border-r-0 text-xs',
- ts.headerFontSize,
- isSelect || isActions
- ? 'p-0 text-center min-w-[44px] w-[44px]'
- : ts.cellPadding,
- )}
- >
- {header.isPlaceholder ? null : isSelect || isActions ? (
- <div className="flex items-center justify-center w-full h-full">
- {flexRender(
- header.column.columnDef.header,
- header.getContext(),
- )}
- </div>
- ) : (
- <div className="flex items-center gap-2 overflow-hidden">
- {Icon && (
- <Icon className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
- )}
- <span className="truncate">
- {flexRender(
- header.column.columnDef.header,
- header.getContext(),
- )}
- </span>
- </div>
- )}
- </TableHead>
- )
- })}
- </TableRow>
- ))}
- </TableHeader>
- <TableBody className={ts.tableBg ? 'bg-transparent' : undefined}>
- {table.getRowModel().rows?.length ? (
- table.getRowModel().rows.map((row, rowIdx) => {
- const rowOriginal = row.original as Record<string, unknown>
- const rowValues: Record<string, unknown> = { ...rowOriginal }
- if (gridId && fieldMetadata) {
- for (const columnId of Object.keys(fieldMetadata)) {
- rowValues[`${gridId}.${columnId}`] = rowOriginal[columnId]
- }
- }
- const rowOverrides = getRowOverrides?.(row.index, rowOriginal)
+                  return (
+                    <TableHead
+                      key={header.id}
+                      style={{
+                        width: isSelect || isActions ? fixedWidth : undefined,
+                        minWidth:
+                          isSelect || isActions ? fixedWidth : undefined,
+                      }}
+                      className={cn(
+                        ts.headerHeight,
+                        "text-muted-foreground/90 font-medium border-r border-border/30 last:border-r-0 text-xs",
+                        ts.headerFontSize,
+                        isSelect || isActions
+                          ? "p-0 text-center min-w-[44px] w-[44px]"
+                          : ts.cellPadding,
+                      )}
+                    >
+                      {header.isPlaceholder ? null : isSelect || isActions ? (
+                        <div className="flex items-center justify-center w-full h-full">
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          {Icon && (
+                            <Icon className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                          )}
+                          <span className="truncate">
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody className={ts.tableBg ? "bg-transparent" : undefined}>
+            {table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row, rowIdx) => {
+                const rowOriginal = row.original as Record<string, unknown>;
+                const rowValues: Record<string, unknown> = { ...rowOriginal };
+                if (gridId && fieldMetadata) {
+                  for (const columnId of Object.keys(fieldMetadata)) {
+                    rowValues[`${gridId}.${columnId}`] = rowOriginal[columnId];
+                  }
+                }
+                const rowOverrides = getRowOverrides?.(row.index, rowOriginal);
 
- return (
- <TableRow
- key={row.id}
- data-state={row.getIsSelected() && 'selected'}
- className={cn(
- 'group border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8',
- ts.tableBg && '!bg-transparent',
- ts.stripedRows && rowIdx % 2 === 1 && 'bg-muted/15',
- )}
- >
- {row.getVisibleCells().map((cell) => {
- if (cell.column.id === 'actions') {
- return (
- <TableCell
- key={cell.id}
- style={{ width: fixedWidth, minWidth: fixedWidth }}
- className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
- >
- <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
- {flexRender(
- cell.column.columnDef.cell,
- cell.getContext(),
- )}
- </div>
- </TableCell>
- )
- }
- return (
- <DataTableCell
- key={cell.id}
- cell={cell}
- row={row}
- fieldMetadata={fieldMetadata}
- rowValues={rowValues}
- rowOverrides={rowOverrides}
- />
- )
- })}
- </TableRow>
- )
- })
- ) : (
- <TableRow>
- <TableCell
- colSpan={columnsWithSelectionAndActions.length}
- className="h-24 text-center text-muted-foreground/60 text-sm"
- >
- No results.
- </TableCell>
- </TableRow>
- )}
- </TableBody>
- </Table>
- </div>
- </div>
- )
+                return (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={cn(
+                      "group border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
+                      ts.tableBg && "!bg-transparent",
+                      ts.stripedRows && rowIdx % 2 === 1 && "bg-muted/15",
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => {
+                      if (cell.column.id === "actions") {
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            style={{ width: fixedWidth, minWidth: fixedWidth }}
+                            className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
+                          >
+                            <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext(),
+                              )}
+                            </div>
+                          </TableCell>
+                        );
+                      }
+                      return (
+                        <DataTableCell
+                          key={cell.id}
+                          cell={cell}
+                          row={row}
+                          fieldMetadata={fieldMetadata}
+                          rowValues={rowValues}
+                          rowOverrides={rowOverrides}
+                        />
+                      );
+                    })}
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columnsWithSelectionAndActions.length}
+                  className="h-24 text-center text-muted-foreground/60 text-sm"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
 }

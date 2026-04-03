@@ -11,10 +11,10 @@ Single-row form layout for tracker data. Displays one field per row by default, 
 
 ## Files
 
-| File | Role |
-|------|------|
+| File                 | Role                                                  |
+| -------------------- | ----------------------------------------------------- |
 | `TrackerDivGrid.tsx` | Main form grid UI, field rendering, edit-mode reorder |
-| `index.ts` | Re-exports |
+| `index.ts`           | Re-exports                                            |
 
 ## Dependencies
 

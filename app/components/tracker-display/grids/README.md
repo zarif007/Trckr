@@ -4,11 +4,11 @@ All **grid implementations** for the tracker display live here: **table**, **kan
 
 ## Layout
 
-| Folder | Role |
-|--------|------|
-| **data-table/** | Table grid: columns, rows, sorting, pagination, inline edit, add/delete. Used by `TrackerTableGrid`. Exposes `DataTable`, `EntryFormDialog`, and shared types/utils (`FieldMetadata`, `OptionsGridFieldDef`) used by table, kanban, and div grids. |
-| **kanban/** | Kanban grid: group-by columns, drag-and-drop cards. Used by `TrackerKanbanGrid`. Uses `useKanbanGroups` and shared field metadata from data-table. |
-| **div/** | Form (div) grid: single-row form layout, one field per row. Used by `TrackerDivGrid`. See `div/README.md` for details. Uses `@/components/ui` (Input, Textarea, Checkbox, Calendar, Popover, SearchableSelect, MultiSelect) and `./data-table/entry-form-dialog` for Add option. |
+| Folder          | Role                                                                                                                                                                                                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **data-table/** | Table grid: columns, rows, sorting, pagination, inline edit, add/delete. Used by `TrackerTableGrid`. Exposes `DataTable`, `EntryFormDialog`, and shared types/utils (`FieldMetadata`, `OptionsGridFieldDef`) used by table, kanban, and div grids.                               |
+| **kanban/**     | Kanban grid: group-by columns, drag-and-drop cards. Used by `TrackerKanbanGrid`. Uses `useKanbanGroups` and shared field metadata from data-table.                                                                                                                               |
+| **div/**        | Form (div) grid: single-row form layout, one field per row. Used by `TrackerDivGrid`. See `div/README.md` for details. Uses `@/components/ui` (Input, Textarea, Checkbox, Calendar, Popover, SearchableSelect, MultiSelect) and `./data-table/entry-form-dialog` for Add option. |
 
 ## Why they're together
 

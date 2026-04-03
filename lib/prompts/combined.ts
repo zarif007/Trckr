@@ -1,12 +1,12 @@
-import managerPrompt from '@/lib/prompts/manager'
-import trackerBuilderPrompt from '@/lib/prompts/trackerBuilder'
+import managerPrompt from "@/lib/prompts/manager";
+import trackerBuilderPrompt from "@/lib/prompts/trackerBuilder";
 
 /**
  * Combined system prompt: Manager + Builder instructions and output rules.
  * Used by the single-shot ai-project/build-tracker endpoint.
  */
 export function getCombinedSystemPrompt(): string {
- return `
+  return `
  ${managerPrompt}
 
  ---
@@ -39,5 +39,5 @@ export function getCombinedSystemPrompt(): string {
  OUTPUT LIMIT: You have a strict token limit (~8K). Keep manager "thinking" brief (2-4 sentences). Do not output a summary in the manager.
  Always output valid, complete JSON: close every brace and bracket. If the tracker would be very large,
  output a complete but minimal tracker (fewer optional fields); the user can ask to add more.
-`
+`;
 }

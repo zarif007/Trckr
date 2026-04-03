@@ -106,4 +106,3 @@ If you want more advanced behavior later, extend `EntryWayConfig` and `buildEntr
 - Integrate with bindings/field-rules to compute additional fields when the Entry Way is used.
 - Attach icons to Entry Ways (add an optional `icon` field and render it in the menu).
 - Add an editor UI that lets users manage `entryWays` instead of editing schema by hand.
-

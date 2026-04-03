@@ -4,11 +4,11 @@ Reusable pieces for **creating and updating** trackers: empty schema, editable s
 
 ## What lives here
 
-| Export | Purpose |
-|--------|--------|
+| Export                                                          | Purpose                                                                                                                                   |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **`createEmptyTrackerSchema()`** / **`INITIAL_TRACKER_SCHEMA`** | Canonical “empty tracker” (one tab, no sections/grids/fields). Use for “create from scratch” or any flow that starts with a blank canvas. |
-| **`useEditableTrackerSchema(initial)`** | Hook that holds `schema` and `onSchemaChange` for use with `TrackerDisplay` when `editMode` is on. |
-| **`TrackerEditorPageLayout`** | Full-page shell: sticky header (title + optional slot) + constrained main. Use for from-scratch and any full-page editor route. |
+| **`useEditableTrackerSchema(initial)`**                         | Hook that holds `schema` and `onSchemaChange` for use with `TrackerDisplay` when `editMode` is on.                                        |
+| **`TrackerEditorPageLayout`**                                   | Full-page shell: sticky header (title + optional slot) + constrained main. Use for from-scratch and any full-page editor route.           |
 
 ## How it fits with edit-mode and pages
 
@@ -43,8 +43,8 @@ Reusable pieces for **creating and updating** trackers: empty schema, editable s
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-- **edit-mode**: *how* layout is edited (blocks, commands, dialogs). Used by `TrackerDisplay` when `editMode` is true; shared by from-scratch and TrackerDialog.
-- **tracker-editor**: *entry-point* helpers for create/update flows — empty schema, state hook, page shell. Used by from-scratch (and any new editor page) so they don’t duplicate layout or initial state.
+- **edit-mode**: _how_ layout is edited (blocks, commands, dialogs). Used by `TrackerDisplay` when `editMode` is true; shared by from-scratch and TrackerDialog.
+- **tracker-editor**: _entry-point_ helpers for create/update flows — empty schema, state hook, page shell. Used by from-scratch (and any new editor page) so they don’t duplicate layout or initial state.
 
 ## How it works
 

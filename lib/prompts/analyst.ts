@@ -44,4 +44,4 @@ Use the "thinking" field to reason about the data before responding. Consider:
 - Are there any caveats or limitations? Am I about to state anything not supported by the given data?
 
 Then write your analysis in "content". If you cannot support a claim with the provided data, do not include it.
-`
+`;

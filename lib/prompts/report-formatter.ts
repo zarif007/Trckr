@@ -1,7 +1,10 @@
-import { formatGenerationPlanForPrompt, type ReportGenerationPlan } from '@/lib/reports/ast-schemas'
+import {
+  formatGenerationPlanForPrompt,
+  type ReportGenerationPlan,
+} from "@/lib/reports/ast-schemas";
 
 export function getReportFormatterSystemPrompt(): string {
- return `You output a formatter plan (version 1): **data presentation only**—transform ops, no commentary, no assumptions spelled out for the reader.
+  return `You output a formatter plan (version 1): **data presentation only**—transform ops, no commentary, no assumptions spelled out for the reader.
 
 The final markdown is **tables and/or compact KPI lines**, not objectives, notes, or narrative analysis.
 
@@ -15,18 +18,20 @@ Ops:
 - filter, sort, rename, limit, group_by, compute_column: as before.
 - Use **rename** for clear column headers.
 
-Do **not** add prose that explains caveats, objectives, or methodology.`
+Do **not** add prose that explains caveats, objectives, or methodology.`;
 }
 
 export function buildReportFormatterUserPrompt(params: {
- intentSummary: string
- userQuery: string
- columns: { key: string; sampleTypes: string }[]
- sampleRowsJson: string
- generationPlan?: ReportGenerationPlan
+  intentSummary: string;
+  userQuery: string;
+  columns: { key: string; sampleTypes: string }[];
+  sampleRowsJson: string;
+  generationPlan?: ReportGenerationPlan;
 }): string {
- const cols = params.columns.map((c) => `- ${c.key} (${c.sampleTypes})`).join('\n')
- return `## User request
+  const cols = params.columns
+    .map((c) => `- ${c.key} (${c.sampleTypes})`)
+    .join("\n");
+  return `## User request
 ${params.userQuery}
 
 ## Technical summary (internal)
@@ -36,8 +41,8 @@ ${params.intentSummary}
 ${formatGenerationPlanForPrompt(params.generationPlan)}
 
 ## Result columns
-${cols || '(none)'}
+${cols || "(none)"}
 
 ## Sample rows (JSON, truncated)
-${params.sampleRowsJson}`
+${params.sampleRowsJson}`;
 }

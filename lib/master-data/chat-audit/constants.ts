@@ -4,9 +4,9 @@
  * that should surface under **Functions** (parallel to expression-agent tool names).
  */
 export const MASTER_DATA_AUDIT_FUNCTIONS = {
- /** Compatibility lookup against existing trackers in the scoped Master Data module. */
- LOOKUP_REUSABLE: 'lookupReusableMasterData',
-} as const
+  /** Compatibility lookup against existing trackers in the scoped Master Data module. */
+  LOOKUP_REUSABLE: "lookupReusableMasterData",
+} as const;
 
 export type MasterDataAuditFunctionId =
- (typeof MASTER_DATA_AUDIT_FUNCTIONS)[keyof typeof MASTER_DATA_AUDIT_FUNCTIONS]
+  (typeof MASTER_DATA_AUDIT_FUNCTIONS)[keyof typeof MASTER_DATA_AUDIT_FUNCTIONS];

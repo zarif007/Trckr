@@ -5,22 +5,26 @@
  * Shared between BlockEditor (edit existing tracker) and from-scratch page.
  */
 
-import type { TrackerDisplayProps, TrackerSection, TrackerGrid } from '../types'
-import type { FlatBlock } from './types'
+import type {
+  TrackerDisplayProps,
+  TrackerSection,
+  TrackerGrid,
+} from "../types";
+import type { FlatBlock } from "./types";
 import {
- createNewSectionId,
- createNewGridId,
- getNextSectionPlaceId,
- getNextGridPlaceId,
-} from './utils'
+  createNewSectionId,
+  createNewGridId,
+  getNextSectionPlaceId,
+  getNextGridPlaceId,
+} from "./utils";
 
 export interface EnsureContainerResult {
- /** The section id (may have been freshly created). */
- sectionId: string
- /** The grid id where the field should be added (may have been freshly created). */
- gridId: string
- /** The updated schema after any section/grid creation (always returned, even if unchanged). */
- nextSchema: TrackerDisplayProps
+  /** The section id (may have been freshly created). */
+  sectionId: string;
+  /** The grid id where the field should be added (may have been freshly created). */
+  gridId: string;
+  /** The updated schema after any section/grid creation (always returned, even if unchanged). */
+  nextSchema: TrackerDisplayProps;
 }
 
 /**
@@ -37,94 +41,98 @@ export interface EnsureContainerResult {
  * Returns the updated schema so the caller can apply it in one shot.
  */
 export function getOrCreateSectionAndGridForField(
- tabId: string,
- afterBlockIndex: number,
- flatBlocks: FlatBlock[],
- schema: TrackerDisplayProps
+  tabId: string,
+  afterBlockIndex: number,
+  flatBlocks: FlatBlock[],
+  schema: TrackerDisplayProps,
 ): EnsureContainerResult {
- const sections = schema.sections ?? []
- const grids = schema.grids ?? []
+  const sections = schema.sections ?? [];
+  const grids = schema.grids ?? [];
 
- // Walk backwards from insertion point to find nearest section and (div-only) grid
- let lastSectionId: string | null = null
- let lastGridId: string | null = null
+  // Walk backwards from insertion point to find nearest section and (div-only) grid
+  let lastSectionId: string | null = null;
+  let lastGridId: string | null = null;
 
- for (let i = afterBlockIndex - 1; i >= 0; i--) {
- const block = flatBlocks[i]
- if (!block) continue
+  for (let i = afterBlockIndex - 1; i >= 0; i--) {
+    const block = flatBlocks[i];
+    if (!block) continue;
 
- if (block.type === 'grid' && !lastGridId) {
- const grid = grids.find((g) => g.id === block.id)
- if (grid) {
- const section = sections.find((s) => s.id === grid.sectionId && s.tabId === tabId)
- if (section) {
- lastSectionId = grid.sectionId
- // Only use this grid for fields if it's a form (div). Table/kanban get a new form.
- if (grid.type === 'div') {
- lastGridId = block.id
- }
- break
- }
- }
- }
+    if (block.type === "grid" && !lastGridId) {
+      const grid = grids.find((g) => g.id === block.id);
+      if (grid) {
+        const section = sections.find(
+          (s) => s.id === grid.sectionId && s.tabId === tabId,
+        );
+        if (section) {
+          lastSectionId = grid.sectionId;
+          // Only use this grid for fields if it's a form (div). Table/kanban get a new form.
+          if (grid.type === "div") {
+            lastGridId = block.id;
+          }
+          break;
+        }
+      }
+    }
 
- if (block.type === 'section' && !lastSectionId) {
- const section = sections.find((s) => s.id === block.id && s.tabId === tabId)
- if (section) {
- lastSectionId = block.id
- break // found a section but no grid after it → will create grid below
- }
- }
- }
+    if (block.type === "section" && !lastSectionId) {
+      const section = sections.find(
+        (s) => s.id === block.id && s.tabId === tabId,
+      );
+      if (section) {
+        lastSectionId = block.id;
+        break; // found a section but no grid after it → will create grid below
+      }
+    }
+  }
 
- let nextSections = sections
- let nextGrids = grids
+  let nextSections = sections;
+  let nextGrids = grids;
 
- // Ensure we have a section
- let sectionId = lastSectionId
- if (!sectionId) {
- const existingIds = new Set(sections.map((s) => s.id))
- const newId = createNewSectionId(existingIds)
- const placeId = getNextSectionPlaceId(sections, tabId)
- const newSection: TrackerSection = {
- id: newId,
- name: 'New section',
- tabId,
- placeId,
- }
- nextSections = [...sections, newSection]
- sectionId = newId
- }
+  // Ensure we have a section
+  let sectionId = lastSectionId;
+  if (!sectionId) {
+    const existingIds = new Set(sections.map((s) => s.id));
+    const newId = createNewSectionId(existingIds);
+    const placeId = getNextSectionPlaceId(sections, tabId);
+    const newSection: TrackerSection = {
+      id: newId,
+      name: "New section",
+      tabId,
+      placeId,
+    };
+    nextSections = [...sections, newSection];
+    sectionId = newId;
+  }
 
- // Ensure we have a grid in that section
- let gridId = lastGridId
- if (!gridId) {
- const existingIds = new Set(grids.map((g) => g.id))
- const newGridId = createNewGridId(existingIds)
- const placeId = getNextGridPlaceId(nextGrids, sectionId)
- const newGrid: TrackerGrid = {
- id: newGridId,
- name: 'New form',
- sectionId,
- placeId,
- type: 'div',
- }
- nextGrids = [...grids, newGrid]
- gridId = newGridId
- }
+  // Ensure we have a grid in that section
+  let gridId = lastGridId;
+  if (!gridId) {
+    const existingIds = new Set(grids.map((g) => g.id));
+    const newGridId = createNewGridId(existingIds);
+    const placeId = getNextGridPlaceId(nextGrids, sectionId);
+    const newGrid: TrackerGrid = {
+      id: newGridId,
+      name: "New form",
+      sectionId,
+      placeId,
+      type: "div",
+    };
+    nextGrids = [...grids, newGrid];
+    gridId = newGridId;
+  }
 
- const nextSchema: TrackerDisplayProps = {
- ...schema,
- ...(nextSections !== sections ? { sections: nextSections } : {}),
- ...(nextGrids !== grids ? { grids: nextGrids } : {}),
- }
+  const nextSchema: TrackerDisplayProps = {
+    ...schema,
+    ...(nextSections !== sections ? { sections: nextSections } : {}),
+    ...(nextGrids !== grids ? { grids: nextGrids } : {}),
+  };
 
- return { sectionId, gridId, nextSchema }
+  return { sectionId, gridId, nextSchema };
 }
 
 export interface EnsureSectionResult {
- sectionId: string
- nextSchema: TrackerDisplayProps
+  sectionId: string;
+  nextSchema: TrackerDisplayProps;
 }
 
 /**
@@ -132,56 +140,60 @@ export interface EnsureSectionResult {
  * Use when adding a grid (table, kanban, form) and we need a section to add it to.
  */
 export function getOrCreateSectionForGrid(
- tabId: string,
- afterBlockIndex: number,
- flatBlocks: FlatBlock[],
- schema: TrackerDisplayProps
+  tabId: string,
+  afterBlockIndex: number,
+  flatBlocks: FlatBlock[],
+  schema: TrackerDisplayProps,
 ): EnsureSectionResult {
- const sections = schema.sections ?? []
+  const sections = schema.sections ?? [];
 
- let lastSectionId: string | null = null
- for (let i = afterBlockIndex - 1; i >= 0; i--) {
- const block = flatBlocks[i]
- if (!block) continue
- if (block.type === 'section') {
- const section = sections.find((s) => s.id === block.id && s.tabId === tabId)
- if (section) {
- lastSectionId = block.id
- break
- }
- }
- if (block.type === 'grid') {
- const grids = schema.grids ?? []
- const grid = grids.find((g) => g.id === block.id)
- if (grid) {
- const section = sections.find((s) => s.id === grid.sectionId && s.tabId === tabId)
- if (section) {
- lastSectionId = grid.sectionId
- break
- }
- }
- }
- }
+  let lastSectionId: string | null = null;
+  for (let i = afterBlockIndex - 1; i >= 0; i--) {
+    const block = flatBlocks[i];
+    if (!block) continue;
+    if (block.type === "section") {
+      const section = sections.find(
+        (s) => s.id === block.id && s.tabId === tabId,
+      );
+      if (section) {
+        lastSectionId = block.id;
+        break;
+      }
+    }
+    if (block.type === "grid") {
+      const grids = schema.grids ?? [];
+      const grid = grids.find((g) => g.id === block.id);
+      if (grid) {
+        const section = sections.find(
+          (s) => s.id === grid.sectionId && s.tabId === tabId,
+        );
+        if (section) {
+          lastSectionId = grid.sectionId;
+          break;
+        }
+      }
+    }
+  }
 
- let sectionId = lastSectionId
- let nextSections = sections
- if (!sectionId) {
- const existingIds = new Set(sections.map((s) => s.id))
- const newId = createNewSectionId(existingIds)
- const placeId = getNextSectionPlaceId(sections, tabId)
- const newSection: TrackerSection = {
- id: newId,
- name: 'New section',
- tabId,
- placeId,
- }
- nextSections = [...sections, newSection]
- sectionId = newId
- }
+  let sectionId = lastSectionId;
+  let nextSections = sections;
+  if (!sectionId) {
+    const existingIds = new Set(sections.map((s) => s.id));
+    const newId = createNewSectionId(existingIds);
+    const placeId = getNextSectionPlaceId(sections, tabId);
+    const newSection: TrackerSection = {
+      id: newId,
+      name: "New section",
+      tabId,
+      placeId,
+    };
+    nextSections = [...sections, newSection];
+    sectionId = newId;
+  }
 
- const nextSchema: TrackerDisplayProps = {
- ...schema,
- ...(nextSections !== sections ? { sections: nextSections } : {}),
- }
- return { sectionId, nextSchema }
+  const nextSchema: TrackerDisplayProps = {
+    ...schema,
+    ...(nextSections !== sections ? { sections: nextSections } : {}),
+  };
+  return { sectionId, nextSchema };
 }

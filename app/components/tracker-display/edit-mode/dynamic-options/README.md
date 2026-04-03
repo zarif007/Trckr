@@ -16,12 +16,12 @@ UI for configuring dynamic option sources: graph-based pipeline (sources, transf
 
 ## Files
 
-| File | Role |
-|------|------|
-| DynamicOptionsBuilder.tsx | Tabbed builder: function list, templates, flow, JSON, AI, connectors, preview |
-| DynamicFunctionFlowBuilder.tsx | React Flow editor for one graph function; palette, nodes, validation |
-| dynamic-function-graph.ts | Palette, labels, buildDefaultGraph, ensureGraphFunction, createTemplateGraphFunction, summarizeGraph |
-| index.ts | Barrel exports |
+| File                           | Role                                                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| DynamicOptionsBuilder.tsx      | Tabbed builder: function list, templates, flow, JSON, AI, connectors, preview                        |
+| DynamicFunctionFlowBuilder.tsx | React Flow editor for one graph function; palette, nodes, validation                                 |
+| dynamic-function-graph.ts      | Palette, labels, buildDefaultGraph, ensureGraphFunction, createTemplateGraphFunction, summarizeGraph |
+| index.ts                       | Barrel exports                                                                                       |
 
 ## Usage
 

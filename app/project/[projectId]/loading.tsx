@@ -1,6 +1,5 @@
-import { DashboardPageSkeleton } from '../../dashboard/components/skeleton/DashboardPageSkeleton'
+import { DashboardPageSkeleton } from "../../dashboard/components/skeleton/DashboardPageSkeleton";
 
 export default function ProjectLoading() {
- return <DashboardPageSkeleton breadcrumbCount={2} />
+  return <DashboardPageSkeleton breadcrumbCount={2} />;
 }
-

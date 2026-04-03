@@ -14,14 +14,14 @@ When the tracker is in **edit mode**, the UI allows adding/removing/reordering t
 
 ## Folder map
 
-| Folder | Purpose |
-|--------|---------|
-| **context.tsx**, **types.ts**, **utils.ts**, **ensureContainer.ts**, **useLayoutActions.ts**, **useSectionGridActions.ts** | Core: edit mode state, shared types, layout helpers, section/grid creation. |
-| **undo/** | Undo stack (**useUndoableSchemaChange**), Undo button, Ctrl+Z shortcut. See [undo/README.md](undo/README.md). |
-| **block-editor/** | Flat block list: BlockEditor, BlockWrapper, BlockCommandInput, SortableBlock, AddColumnOrFieldDialog, ColumnHeaderEdit, FieldRowEdit. See [block-editor/README.md](block-editor/README.md). |
-| **expr/** | Expression rules UI: ExprRuleEditor, ExprFlowBuilder, expr-graph, expr-types (validation/calculation). See [expr/README.md](expr/README.md). |
-| **dynamic-options/** | Dynamic options pipeline UI: DynamicOptionsBuilder, DynamicFunctionFlowBuilder, dynamic-function-graph. See [dynamic-options/README.md](dynamic-options/README.md). |
-| **field-settings/** | Field settings dialog (Basic, Validations, Calculations, Bindings, Dynamic options). See [field-settings/README.md](field-settings/README.md). |
+| Folder                                                                                                                     | Purpose                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **context.tsx**, **types.ts**, **utils.ts**, **ensureContainer.ts**, **useLayoutActions.ts**, **useSectionGridActions.ts** | Core: edit mode state, shared types, layout helpers, section/grid creation.                                                                                                                 |
+| **undo/**                                                                                                                  | Undo stack (**useUndoableSchemaChange**), Undo button, Ctrl+Z shortcut. See [undo/README.md](undo/README.md).                                                                               |
+| **block-editor/**                                                                                                          | Flat block list: BlockEditor, BlockWrapper, BlockCommandInput, SortableBlock, AddColumnOrFieldDialog, ColumnHeaderEdit, FieldRowEdit. See [block-editor/README.md](block-editor/README.md). |
+| **expr/**                                                                                                                  | Expression rules UI: ExprRuleEditor, ExprFlowBuilder, expr-graph, expr-types (validation/calculation). See [expr/README.md](expr/README.md).                                                |
+| **dynamic-options/**                                                                                                       | Dynamic options pipeline UI: DynamicOptionsBuilder, DynamicFunctionFlowBuilder, dynamic-function-graph. See [dynamic-options/README.md](dynamic-options/README.md).                         |
+| **field-settings/**                                                                                                        | Field settings dialog (Basic, Validations, Calculations, Bindings, Dynamic options). See [field-settings/README.md](field-settings/README.md).                                              |
 
 ## Public API (index.ts)
 

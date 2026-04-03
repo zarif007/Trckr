@@ -3,13 +3,20 @@
  * Import from @/lib/binding.
  */
 
-export type { TrackerLike, TrackerContextForOptions, ResolvedOption } from './types'
-export { getOptionGridLabelAndValueFieldIds, buildBindingsFromSchema } from './schema-build'
-export { enrichBindingsFromSchema } from './enrich'
+export type {
+  TrackerLike,
+  TrackerContextForOptions,
+  ResolvedOption,
+} from "./types";
 export {
- resolveFieldOptionsLegacy,
- resolveFieldOptionsV2,
- resolveFieldOptionsV2Async,
- getFieldBinding,
-} from './options'
-export { resolveSelfBindings } from './self-bindings'
+  getOptionGridLabelAndValueFieldIds,
+  buildBindingsFromSchema,
+} from "./schema-build";
+export { enrichBindingsFromSchema } from "./enrich";
+export {
+  resolveFieldOptionsLegacy,
+  resolveFieldOptionsV2,
+  resolveFieldOptionsV2Async,
+  getFieldBinding,
+} from "./options";
+export { resolveSelfBindings } from "./self-bindings";

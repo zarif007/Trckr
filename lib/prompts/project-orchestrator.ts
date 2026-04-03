@@ -14,6 +14,6 @@ Questionnaire requirements (when questions are needed):
 - Use \`id\` in snake_case.
 
 Output JSON only. Do not include explanations or extra text.
-`
+`;
 
-export default projectOrchestratorPrompt
+export default projectOrchestratorPrompt;

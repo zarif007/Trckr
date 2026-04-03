@@ -4,36 +4,39 @@
  * Excludes fields on the Shared/Master Data tab when sections context is provided.
  */
 
-import type { DynamicOptionsContext, DynamicOption } from '../types'
+import type { DynamicOptionsContext, DynamicOption } from "../types";
 
-const EXCLUDED_TAB_IDS = new Set(['shared_tab', 'master_data_tab'])
+const EXCLUDED_TAB_IDS = new Set(["shared_tab", "master_data_tab"]);
 
-export const ID = 'all_field_paths'
+export const ID = "all_field_paths";
 
 export function allFieldPaths(context: DynamicOptionsContext): DynamicOption[] {
- const { grids, fields, layoutNodes, sections } = context
- const gridMap = new Map(grids.map((g) => [g.id, g]))
- const fieldMap = new Map(fields.map((f) => [f.id, f]))
+  const { grids, fields, layoutNodes, sections } = context;
+  const gridMap = new Map(grids.map((g) => [g.id, g]));
+  const fieldMap = new Map(fields.map((f) => [f.id, f]));
 
- const sharedSectionIds = sections?.length
- ? new Set(sections.filter((s) => EXCLUDED_TAB_IDS.has(s.tabId)).map((s) => s.id))
- : undefined
+  const sharedSectionIds = sections?.length
+    ? new Set(
+        sections.filter((s) => EXCLUDED_TAB_IDS.has(s.tabId)).map((s) => s.id),
+      )
+    : undefined;
 
- const nodes = layoutNodes?.length ? layoutNodes : []
- const options: DynamicOption[] = []
- for (const node of nodes) {
- const grid = gridMap.get(node.gridId)
- const field = fieldMap.get(node.fieldId)
- if (!grid || !field) continue
- if ((field.config as { isHidden?: boolean } | undefined)?.isHidden) continue
- if (sharedSectionIds?.has(grid.sectionId)) continue
+  const nodes = layoutNodes?.length ? layoutNodes : [];
+  const options: DynamicOption[] = [];
+  for (const node of nodes) {
+    const grid = gridMap.get(node.gridId);
+    const field = fieldMap.get(node.fieldId);
+    if (!grid || !field) continue;
+    if ((field.config as { isHidden?: boolean } | undefined)?.isHidden)
+      continue;
+    if (sharedSectionIds?.has(grid.sectionId)) continue;
 
- const path = `${node.gridId}.${node.fieldId}`
- options.push({
- value: path,
- label: `${grid.name ?? grid.id} → ${field.ui?.label ?? field.id}`,
- id: path,
- })
- }
- return options
+    const path = `${node.gridId}.${node.fieldId}`;
+    options.push({
+      value: path,
+      label: `${grid.name ?? grid.id} → ${field.ui?.label ?? field.id}`,
+      id: path,
+    });
+  }
+  return options;
 }

@@ -5,15 +5,15 @@
  */
 
 export {
- createEmptyTrackerSchema,
- INITIAL_TRACKER_SCHEMA,
- DEFAULT_FIRST_TAB_NAME,
- DEFAULT_FIRST_TAB_PLACE_ID,
- DEFAULT_FORM_ACTION,
- DEFAULT_FORM_ACTION_ID,
-} from './constants'
+  createEmptyTrackerSchema,
+  INITIAL_TRACKER_SCHEMA,
+  DEFAULT_FIRST_TAB_NAME,
+  DEFAULT_FIRST_TAB_PLACE_ID,
+  DEFAULT_FORM_ACTION,
+  DEFAULT_FORM_ACTION_ID,
+} from "./constants";
 
-export { useEditableTrackerSchema } from './useEditableTrackerSchema'
+export { useEditableTrackerSchema } from "./useEditableTrackerSchema";
 
-export { TrackerEditorPageLayout } from './TrackerEditorPageLayout'
-export type { TrackerEditorPageLayoutProps } from './TrackerEditorPageLayout'
+export { TrackerEditorPageLayout } from "./TrackerEditorPageLayout";
+export type { TrackerEditorPageLayoutProps } from "./TrackerEditorPageLayout";

@@ -9,14 +9,14 @@ Sections used on the **marketing/landing** page. Each file is a self-contained s
 
 ## Files
 
-| File | Purpose |
-|------|--------|
-| Hero.tsx | Hero section (headline, CTA) |
-| Demo.tsx | Demo / TrackerDisplay preview |
-| Protocol.tsx | Protocol section |
-| Features.tsx | Feature list / badges |
-| Examples.tsx | Examples section |
-| CTA.tsx | Call-to-action block |
+| File         | Purpose                       |
+| ------------ | ----------------------------- |
+| Hero.tsx     | Hero section (headline, CTA)  |
+| Demo.tsx     | Demo / TrackerDisplay preview |
+| Protocol.tsx | Protocol section              |
+| Features.tsx | Feature list / badges         |
+| Examples.tsx | Examples section              |
+| CTA.tsx      | Call-to-action block          |
 
 ## Usage
 

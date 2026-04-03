@@ -1,5 +1,5 @@
 export function getAnalysisSynthesisSystemPrompt(): string {
- return `You are the synthesis agent for an **analysis** document.
+  return `You are the synthesis agent for an **analysis** document.
 
 You receive:
 - The user's goal
@@ -17,17 +17,17 @@ Rules:
 - If the sample shows no suitable columns for the hinted chart type, omit chartSpec for that block.
 - Do not include chartData; the app fills chart points from the database.
 - Emit one block per outline section; use the same section id as in the outline.
-- Do not output fabricated numbers; prefer qualitative insight plus counts from provenance when the sample is small.`
+- Do not output fabricated numbers; prefer qualitative insight plus counts from provenance when the sample is small.`;
 }
 
 export function buildAnalysisSynthesisUserPrompt(params: {
- userQuery: string
- outlineJson: string
- provenanceJson: string
- columnsJson: string
- sampleRowsJson: string
+  userQuery: string;
+  outlineJson: string;
+  provenanceJson: string;
+  columnsJson: string;
+  sampleRowsJson: string;
 }): string {
- return `## User goal
+  return `## User goal
 ${params.userQuery}
 
 ## Planned outline (JSON)
@@ -40,5 +40,5 @@ ${params.provenanceJson}
 ${params.columnsJson}
 
 ## Sample rows from query result (JSON — may be truncated)
-${params.sampleRowsJson}`
+${params.sampleRowsJson}`;
 }

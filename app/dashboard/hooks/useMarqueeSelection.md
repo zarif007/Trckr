@@ -14,10 +14,10 @@ Rubber-band (marquee) multi-select for a single scrollable region on the dashboa
 
 ## Modifier keys (evaluated on pointer up)
 
-| Key    | Behavior                                      |
-|--------|-----------------------------------------------|
-| Shift  | Union marquee hits with the current selection |
-| Other  | Replace selection with marquee hits           |
+| Key   | Behavior                                      |
+| ----- | --------------------------------------------- |
+| Shift | Union marquee hits with the current selection |
+| Other | Replace selection with marquee hits           |
 
 ## Empty click
 

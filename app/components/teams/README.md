@@ -6,10 +6,10 @@ React components for **team switcher**, **members/invite**, and **share tracker*
 
 ## What’s in this folder
 
-| Component | What it does | Where it’s used |
-|-----------|--------------|-----------------|
-| **TeamSwitcher** | Dropdown: “Personal” + list of teams. Fetches teams from `GET /api/teams` and updates context. Selecting an option sets `currentTeam` in team context. | `TrackerNavBar` (tracker layout) |
-| **TeamMembersDialog** | Modal: list members of `currentTeam` with role labels; “Invite by email” + role select. Invite button is a no-op until you add an invite API. | Opened from the Users icon in `TrackerNavBar` |
+| Component              | What it does                                                                                                                                           | Where it’s used                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| **TeamSwitcher**       | Dropdown: “Personal” + list of teams. Fetches teams from `GET /api/teams` and updates context. Selecting an option sets `currentTeam` in team context. | `TrackerNavBar` (tracker layout)                 |
+| **TeamMembersDialog**  | Modal: list members of `currentTeam` with role labels; “Invite by email” + role select. Invite button is a no-op until you add an invite API.          | Opened from the Users icon in `TrackerNavBar`    |
 | **ShareTrackerDialog** | Modal: choose a team and default role, then call `onShare(teamId, defaultRole)`. Parent (tracker page) can persist via API. Currently logs to console. | Opened from “Share” in the tracker panel toolbar |
 
 ---
@@ -66,5 +66,9 @@ Components use:
 To use in another page:
 
 ```tsx
-import { TeamSwitcher, TeamMembersDialog, ShareTrackerDialog } from '@/app/components/teams'
+import {
+  TeamSwitcher,
+  TeamMembersDialog,
+  ShareTrackerDialog,
+} from "@/app/components/teams";
 ```

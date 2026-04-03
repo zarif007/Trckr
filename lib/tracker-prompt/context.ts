@@ -2,71 +2,112 @@
  * Builds conversation context and current tracker state blocks for the LLM prompt.
  */
 
-import { MAX_CONTEXT_MESSAGES_PER_ROLE } from './constants'
-import { normalizeMasterDataScope } from '@/lib/master-data-scope'
+import { MAX_CONTEXT_MESSAGES_PER_ROLE } from "./constants";
+import { normalizeMasterDataScope } from "@/lib/master-data-scope";
 import {
- SHARED_TAB_ID,
- FIELD_RULES_OPTIONS_SECTION_ID,
- FIELD_RULES_RULES_GRID,
-} from '@/lib/field-rules-options'
-import { RULES_GRID_FIELD_IDS } from '@/lib/field-rules-options/rules-grid-spec'
+  SHARED_TAB_ID,
+  FIELD_RULES_OPTIONS_SECTION_ID,
+  FIELD_RULES_RULES_GRID,
+} from "@/lib/field-rules-options";
+import { RULES_GRID_FIELD_IDS } from "@/lib/field-rules-options/rules-grid-spec";
 
-const DEFAULT_OVERVIEW_TAB_ID = 'overview_tab'
-const RULES_GRID_FIELD_ID_SET = new Set<string>(RULES_GRID_FIELD_IDS)
+const DEFAULT_OVERVIEW_TAB_ID = "overview_tab";
+const RULES_GRID_FIELD_ID_SET = new Set<string>(RULES_GRID_FIELD_IDS);
 
 /** Minimal shape for chat messages we read from */
 interface ChatMessage {
- role?: string
- content?: string
- managerData?: {
- thinking?: string
- prd?: unknown
- builderTodo?: unknown[]
- }
- trackerData?: Record<string, unknown>
+  role?: string;
+  content?: string;
+  managerData?: {
+    thinking?: string;
+    prd?: unknown;
+    builderTodo?: unknown[];
+  };
+  trackerData?: Record<string, unknown>;
 }
 
 /** Normalized tracker state we inject into the prompt */
 export interface NormalizedTrackerState {
- masterDataScope?: string
- tabs: Array<{ id: string; name?: string; placeId?: number; config?: Record<string, unknown> }>
- sections: Array<{ id: string; name?: string; tabId?: string; placeId?: number; config?: Record<string, unknown> }>
- grids: Array<{ id: string; name?: string; sectionId?: string; placeId?: number; config?: Record<string, unknown>; views?: unknown[] }>
- fields: Array<{ id: string; dataType?: string; ui?: unknown; config?: Record<string, unknown> }>
- layoutNodes?: unknown[]
- bindings?: Record<string, unknown>
- validations?: Record<string, unknown>
- calculations?: Record<string, unknown>
- fieldRules?: unknown[]
+  masterDataScope?: string;
+  tabs: Array<{
+    id: string;
+    name?: string;
+    placeId?: number;
+    config?: Record<string, unknown>;
+  }>;
+  sections: Array<{
+    id: string;
+    name?: string;
+    tabId?: string;
+    placeId?: number;
+    config?: Record<string, unknown>;
+  }>;
+  grids: Array<{
+    id: string;
+    name?: string;
+    sectionId?: string;
+    placeId?: number;
+    config?: Record<string, unknown>;
+    views?: unknown[];
+  }>;
+  fields: Array<{
+    id: string;
+    dataType?: string;
+    ui?: unknown;
+    config?: Record<string, unknown>;
+  }>;
+  layoutNodes?: unknown[];
+  bindings?: Record<string, unknown>;
+  validations?: Record<string, unknown>;
+  calculations?: Record<string, unknown>;
+  fieldRules?: unknown[];
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
- return value != null && typeof value === 'object' && !Array.isArray(value)
+  return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isDefaultTabConfig(value: unknown): boolean {
- if (!isPlainRecord(value)) return true
- for (const [key, v] of Object.entries(value)) {
- if (key !== 'isHidden') return false
- if (v !== false && v !== undefined) return false
- }
- return true
+  if (!isPlainRecord(value)) return true;
+  for (const [key, v] of Object.entries(value)) {
+    if (key !== "isHidden") return false;
+    if (v !== false && v !== undefined) return false;
+  }
+  return true;
 }
 
-function isFieldRulesScaffoldSection(section: { id: string; tabId?: string }): boolean {
- return section.id === FIELD_RULES_OPTIONS_SECTION_ID && section.tabId === SHARED_TAB_ID
+function isFieldRulesScaffoldSection(section: {
+  id: string;
+  tabId?: string;
+}): boolean {
+  return (
+    section.id === FIELD_RULES_OPTIONS_SECTION_ID &&
+    section.tabId === SHARED_TAB_ID
+  );
 }
 
-function isFieldRulesScaffoldGrid(grid: { id: string; sectionId?: string }): boolean {
- return grid.id === FIELD_RULES_RULES_GRID && grid.sectionId === FIELD_RULES_OPTIONS_SECTION_ID
+function isFieldRulesScaffoldGrid(grid: {
+  id: string;
+  sectionId?: string;
+}): boolean {
+  return (
+    grid.id === FIELD_RULES_RULES_GRID &&
+    grid.sectionId === FIELD_RULES_OPTIONS_SECTION_ID
+  );
 }
 
 function isFieldRulesScaffoldField(field: { id: string }): boolean {
- return RULES_GRID_FIELD_ID_SET.has(field.id)
+  return RULES_GRID_FIELD_ID_SET.has(field.id);
 }
 
-function isFieldRulesScaffoldLayoutNode(node: { gridId: string; fieldId: string }): boolean {
- return node.gridId === FIELD_RULES_RULES_GRID && RULES_GRID_FIELD_ID_SET.has(node.fieldId)
+function isFieldRulesScaffoldLayoutNode(node: {
+  gridId: string;
+  fieldId: string;
+}): boolean {
+  return (
+    node.gridId === FIELD_RULES_RULES_GRID &&
+    RULES_GRID_FIELD_ID_SET.has(node.fieldId)
+  );
 }
 
 /**
@@ -76,161 +117,184 @@ function isFieldRulesScaffoldLayoutNode(node: { gridId: string; fieldId: string 
  * - ignore internal Field Rules scaffold rows/fields if present
  */
 function isUntouchedDefaultState(state: NormalizedTrackerState): boolean {
- if (normalizeMasterDataScope(state.masterDataScope) != null) return false
- const meaningfulSections = state.sections.filter((s) => !isFieldRulesScaffoldSection(s))
- const meaningfulGrids = state.grids.filter((g) => !isFieldRulesScaffoldGrid(g))
- const meaningfulFields = state.fields.filter((f) => !isFieldRulesScaffoldField(f))
- const meaningfulLayout = (state.layoutNodes ?? [])
- .filter((n): n is { gridId: string; fieldId: string } => {
- if (!n || typeof n !== 'object') return false
- const o = n as Record<string, unknown>
- return typeof o.gridId === 'string' && typeof o.fieldId === 'string'
- })
- .filter((n) => !isFieldRulesScaffoldLayoutNode(n))
+  if (normalizeMasterDataScope(state.masterDataScope) != null) return false;
+  const meaningfulSections = state.sections.filter(
+    (s) => !isFieldRulesScaffoldSection(s),
+  );
+  const meaningfulGrids = state.grids.filter(
+    (g) => !isFieldRulesScaffoldGrid(g),
+  );
+  const meaningfulFields = state.fields.filter(
+    (f) => !isFieldRulesScaffoldField(f),
+  );
+  const meaningfulLayout = (state.layoutNodes ?? [])
+    .filter((n): n is { gridId: string; fieldId: string } => {
+      if (!n || typeof n !== "object") return false;
+      const o = n as Record<string, unknown>;
+      return typeof o.gridId === "string" && typeof o.fieldId === "string";
+    })
+    .filter((n) => !isFieldRulesScaffoldLayoutNode(n));
 
- const bindings = state.bindings ?? {}
- const validations = state.validations ?? {}
- const calculations = state.calculations ?? {}
- const meaningfulBindingKeys = Object.keys(bindings).filter(
- (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
- )
- const meaningfulValidationKeys = Object.keys(validations).filter(
- (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
- )
- const meaningfulCalculationKeys = Object.keys(calculations).filter(
- (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
- )
+  const bindings = state.bindings ?? {};
+  const validations = state.validations ?? {};
+  const calculations = state.calculations ?? {};
+  const meaningfulBindingKeys = Object.keys(bindings).filter(
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
+  );
+  const meaningfulValidationKeys = Object.keys(validations).filter(
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
+  );
+  const meaningfulCalculationKeys = Object.keys(calculations).filter(
+    (key) => !key.startsWith(`${FIELD_RULES_RULES_GRID}.`),
+  );
 
- if (
- meaningfulSections.length > 0 ||
- meaningfulGrids.length > 0 ||
- meaningfulFields.length > 0 ||
- meaningfulLayout.length > 0 ||
- meaningfulBindingKeys.length > 0 ||
- meaningfulValidationKeys.length > 0 ||
- meaningfulCalculationKeys.length > 0
- ) {
- return false
- }
+  if (
+    meaningfulSections.length > 0 ||
+    meaningfulGrids.length > 0 ||
+    meaningfulFields.length > 0 ||
+    meaningfulLayout.length > 0 ||
+    meaningfulBindingKeys.length > 0 ||
+    meaningfulValidationKeys.length > 0 ||
+    meaningfulCalculationKeys.length > 0
+  ) {
+    return false;
+  }
 
- const fieldRules = Array.isArray(state.fieldRules) ? state.fieldRules : []
- if (fieldRules.length > 0) return false
+  const fieldRules = Array.isArray(state.fieldRules) ? state.fieldRules : [];
+  if (fieldRules.length > 0) return false;
 
- if (state.tabs.length === 0 || state.tabs.length > 2) return false
+  if (state.tabs.length === 0 || state.tabs.length > 2) return false;
 
- let sawOverview = false
- for (const tab of state.tabs) {
- if (!tab.id) return false
- if (!isDefaultTabConfig(tab.config)) return false
+  let sawOverview = false;
+  for (const tab of state.tabs) {
+    if (!tab.id) return false;
+    if (!isDefaultTabConfig(tab.config)) return false;
 
- if (tab.id === DEFAULT_OVERVIEW_TAB_ID) {
- sawOverview = true
- if ((tab.name ?? 'Overview') !== 'Overview') return false
- continue
- }
+    if (tab.id === DEFAULT_OVERVIEW_TAB_ID) {
+      sawOverview = true;
+      if ((tab.name ?? "Overview") !== "Overview") return false;
+      continue;
+    }
 
- if (tab.id === SHARED_TAB_ID) {
- if ((tab.name ?? 'Shared') !== 'Shared') return false
- continue
- }
+    if (tab.id === SHARED_TAB_ID) {
+      if ((tab.name ?? "Shared") !== "Shared") return false;
+      continue;
+    }
 
- return false
- }
+    return false;
+  }
 
- return sawOverview
+  return sawOverview;
 }
 
 function toRecordArray(value: unknown): Array<Record<string, unknown>> {
- if (!Array.isArray(value)) return []
- return value.filter((x): x is Record<string, unknown> => x != null && typeof x === 'object' && !Array.isArray(x))
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (x): x is Record<string, unknown> =>
+      x != null && typeof x === "object" && !Array.isArray(x),
+  );
 }
 
 /**
  * Normalize raw tracker payload (from request or assistant message) into a stable shape for the prompt.
  */
-export function normalizeTrackerState(source: unknown): NormalizedTrackerState | null {
- if (source == null || typeof source !== 'object' || Array.isArray(source)) return null
- const t = source as Record<string, unknown>
- const tabs = toRecordArray(t.tabs)
- const sections = toRecordArray(t.sections)
- const grids = toRecordArray(t.grids)
- const fields = toRecordArray(t.fields)
- return {
- masterDataScope: normalizeMasterDataScope(t.masterDataScope) ?? undefined,
- tabs: tabs.map((tab) => ({
- id: String(tab.id ?? ''),
- name: tab.name as string | undefined,
- placeId: typeof tab.placeId === 'number' ? tab.placeId : undefined,
- config: (tab.config as Record<string, unknown>) ?? {},
- })),
- sections: sections.map((s) => ({
- id: String(s.id ?? ''),
- name: s.name as string | undefined,
- tabId: s.tabId as string | undefined,
- placeId: typeof s.placeId === 'number' ? s.placeId : undefined,
- config: (s.config as Record<string, unknown>) ?? {},
- })),
- grids: grids.map((g) => ({
- id: String(g.id ?? ''),
- name: g.name as string | undefined,
- sectionId: g.sectionId as string | undefined,
- placeId: typeof g.placeId === 'number' ? g.placeId : undefined,
- config: (g.config as Record<string, unknown>) ?? {},
- views: (g.views as unknown[]) ?? [],
- })),
- fields: fields.map((f) => ({
- id: String(f.id ?? ''),
- dataType: f.dataType as string | undefined,
- ui: f.ui,
- config: (f.config as Record<string, unknown>) ?? {},
- })),
- layoutNodes: Array.isArray(t.layoutNodes) ? t.layoutNodes : [],
- bindings: t.bindings && typeof t.bindings === 'object' ? (t.bindings as Record<string, unknown>) : {},
- validations: t.validations && typeof t.validations === 'object' ? (t.validations as Record<string, unknown>) : {},
- calculations: t.calculations && typeof t.calculations === 'object' ? (t.calculations as Record<string, unknown>) : {},
- fieldRules: Array.isArray(t.fieldRules) ? t.fieldRules : [],
- }
+export function normalizeTrackerState(
+  source: unknown,
+): NormalizedTrackerState | null {
+  if (source == null || typeof source !== "object" || Array.isArray(source))
+    return null;
+  const t = source as Record<string, unknown>;
+  const tabs = toRecordArray(t.tabs);
+  const sections = toRecordArray(t.sections);
+  const grids = toRecordArray(t.grids);
+  const fields = toRecordArray(t.fields);
+  return {
+    masterDataScope: normalizeMasterDataScope(t.masterDataScope) ?? undefined,
+    tabs: tabs.map((tab) => ({
+      id: String(tab.id ?? ""),
+      name: tab.name as string | undefined,
+      placeId: typeof tab.placeId === "number" ? tab.placeId : undefined,
+      config: (tab.config as Record<string, unknown>) ?? {},
+    })),
+    sections: sections.map((s) => ({
+      id: String(s.id ?? ""),
+      name: s.name as string | undefined,
+      tabId: s.tabId as string | undefined,
+      placeId: typeof s.placeId === "number" ? s.placeId : undefined,
+      config: (s.config as Record<string, unknown>) ?? {},
+    })),
+    grids: grids.map((g) => ({
+      id: String(g.id ?? ""),
+      name: g.name as string | undefined,
+      sectionId: g.sectionId as string | undefined,
+      placeId: typeof g.placeId === "number" ? g.placeId : undefined,
+      config: (g.config as Record<string, unknown>) ?? {},
+      views: (g.views as unknown[]) ?? [],
+    })),
+    fields: fields.map((f) => ({
+      id: String(f.id ?? ""),
+      dataType: f.dataType as string | undefined,
+      ui: f.ui,
+      config: (f.config as Record<string, unknown>) ?? {},
+    })),
+    layoutNodes: Array.isArray(t.layoutNodes) ? t.layoutNodes : [],
+    bindings:
+      t.bindings && typeof t.bindings === "object"
+        ? (t.bindings as Record<string, unknown>)
+        : {},
+    validations:
+      t.validations && typeof t.validations === "object"
+        ? (t.validations as Record<string, unknown>)
+        : {},
+    calculations:
+      t.calculations && typeof t.calculations === "object"
+        ? (t.calculations as Record<string, unknown>)
+        : {},
+    fieldRules: Array.isArray(t.fieldRules) ? t.fieldRules : [],
+  };
 }
 
 function formatAssistantMessage(msg: ChatMessage): string {
- const parts: string[] = []
- if (msg.managerData) {
- const { thinking, prd, builderTodo } = msg.managerData
- parts.push(`Manager Thinking: ${thinking ?? ''}`)
- parts.push(`PRD: ${JSON.stringify(prd ?? {}, null, 2)}`)
- if (builderTodo && builderTodo.length > 0) {
- parts.push(`Builder Tasks: ${JSON.stringify(builderTodo, null, 2)}`)
- }
- }
- if (msg.trackerData) {
- const state = normalizeTrackerState(msg.trackerData)
- if (state) {
- parts.push(`Current Tracker State (JSON): ${JSON.stringify(state, null, 2)}`)
- }
- }
- if (msg.content) parts.push(String(msg.content))
- return parts.join('\n')
+  const parts: string[] = [];
+  if (msg.managerData) {
+    const { thinking, prd, builderTodo } = msg.managerData;
+    parts.push(`Manager Thinking: ${thinking ?? ""}`);
+    parts.push(`PRD: ${JSON.stringify(prd ?? {}, null, 2)}`);
+    if (builderTodo && builderTodo.length > 0) {
+      parts.push(`Builder Tasks: ${JSON.stringify(builderTodo, null, 2)}`);
+    }
+  }
+  if (msg.trackerData) {
+    const state = normalizeTrackerState(msg.trackerData);
+    if (state) {
+      parts.push(
+        `Current Tracker State (JSON): ${JSON.stringify(state, null, 2)}`,
+      );
+    }
+  }
+  if (msg.content) parts.push(String(msg.content));
+  return parts.join("\n");
 }
 
 /**
  * Build the conversation context string from recent messages (user + assistant pairs).
  */
 export function buildConversationContext(messages: unknown[]): string {
- if (!messages.length) return ''
- const typed = messages as ChatMessage[]
- const userMessages = typed.filter((m) => m.role === 'user')
- const assistantMessages = typed.filter((m) => m.role === 'assistant')
- const lastUser = userMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE)
- const lastAssistant = assistantMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE)
- const parts: string[] = []
- for (const msg of lastUser) {
- parts.push(`User: ${msg.content ?? ''}`)
- }
- for (const msg of lastAssistant) {
- const formatted = formatAssistantMessage(msg)
- if (formatted) parts.push(`Assistant:\n${formatted}`)
- }
- return parts.join('\n\n') + (parts.length ? '\n\n' : '')
+  if (!messages.length) return "";
+  const typed = messages as ChatMessage[];
+  const userMessages = typed.filter((m) => m.role === "user");
+  const assistantMessages = typed.filter((m) => m.role === "assistant");
+  const lastUser = userMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE);
+  const lastAssistant = assistantMessages.slice(-MAX_CONTEXT_MESSAGES_PER_ROLE);
+  const parts: string[] = [];
+  for (const msg of lastUser) {
+    parts.push(`User: ${msg.content ?? ""}`);
+  }
+  for (const msg of lastAssistant) {
+    const formatted = formatAssistantMessage(msg);
+    if (formatted) parts.push(`Assistant:\n${formatted}`);
+  }
+  return parts.join("\n\n") + (parts.length ? "\n\n" : "");
 }
 
 /**
@@ -238,27 +302,28 @@ export function buildConversationContext(messages: unknown[]): string {
  * Empty object `{}` (clean / not dirty) must not be treated as patchable state.
  */
 export function inferTrackerDirtyFromPayload(currentTracker: unknown): boolean {
- if (currentTracker == null) return false
- if (isPlainRecord(currentTracker) && Object.keys(currentTracker).length === 0) return false
- const state = normalizeTrackerState(currentTracker)
- if (!state) return false
- return !isUntouchedDefaultState(state)
+  if (currentTracker == null) return false;
+  if (isPlainRecord(currentTracker) && Object.keys(currentTracker).length === 0)
+    return false;
+  const state = normalizeTrackerState(currentTracker);
+  if (!state) return false;
+  return !isUntouchedDefaultState(state);
 }
 
 /**
  * True when the prompt includes full "Current Tracker State (JSON)" (patch mode).
  */
 export function hasFullTrackerStateForPatch(currentTracker: unknown): boolean {
- const state = normalizeTrackerState(currentTracker)
- return state != null && !isUntouchedDefaultState(state)
+  const state = normalizeTrackerState(currentTracker);
+  return state != null && !isUntouchedDefaultState(state);
 }
 
 /**
  * Build the "Current Tracker State (JSON)" prefix for the user prompt, or empty when none.
  */
 export function buildCurrentStateBlock(currentTracker: unknown): string {
- const state = normalizeTrackerState(currentTracker)
- if (!state) return ''
- if (isUntouchedDefaultState(state)) return ''
- return `Current Tracker State (JSON): ${JSON.stringify(state, null, 2)}\n\n`
+  const state = normalizeTrackerState(currentTracker);
+  if (!state) return "";
+  if (isUntouchedDefaultState(state)) return "";
+  return `Current Tracker State (JSON): ${JSON.stringify(state, null, 2)}\n\n`;
 }

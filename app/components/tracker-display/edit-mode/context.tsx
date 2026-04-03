@@ -1,82 +1,90 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react'
-import type { TrackerDisplayProps } from '../types'
+import { createContext, useContext, useMemo, type ReactNode } from "react";
+import type { TrackerDisplayProps } from "../types";
 
 export interface EditModeContextValue {
- /** Whether layout editing is active. */
- editMode: boolean
- /** Current schema (only set when editMode is true). Used to produce updated schema on change. */
- schema: TrackerDisplayProps | undefined
- /** Call with full updated schema when user adds/removes/reorders. */
- onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
- /** Undo last edit-mode change. Set when parent uses useUndoableSchemaChange. */
- undo?: () => void
- /** Whether undo is available. */
- canUndo?: boolean
- /** Optional tracker schema id for LLM usage attribution in field settings. */
- trackerSchemaId?: string | null
- /** Project id for loading sibling trackers in bindings UI. */
- projectId?: string | null
+  /** Whether layout editing is active. */
+  editMode: boolean;
+  /** Current schema (only set when editMode is true). Used to produce updated schema on change. */
+  schema: TrackerDisplayProps | undefined;
+  /** Call with full updated schema when user adds/removes/reorders. */
+  onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined;
+  /** Undo last edit-mode change. Set when parent uses useUndoableSchemaChange. */
+  undo?: () => void;
+  /** Whether undo is available. */
+  canUndo?: boolean;
+  /** Optional tracker schema id for LLM usage attribution in field settings. */
+  trackerSchemaId?: string | null;
+  /** Project id for loading sibling trackers in bindings UI. */
+  projectId?: string | null;
 }
 
 const EditModeContext = createContext<EditModeContextValue>({
- editMode: false,
- schema: undefined,
- onSchemaChange: undefined,
- undo: undefined,
- canUndo: undefined,
- trackerSchemaId: undefined,
- projectId: undefined,
-})
+  editMode: false,
+  schema: undefined,
+  onSchemaChange: undefined,
+  undo: undefined,
+  canUndo: undefined,
+  trackerSchemaId: undefined,
+  projectId: undefined,
+});
 
 export interface EditModeProviderProps {
- editMode: boolean
- schema: TrackerDisplayProps | undefined
- onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined
- undo?: () => void
- canUndo?: boolean
- trackerSchemaId?: string | null
- projectId?: string | null
- children: ReactNode
+  editMode: boolean;
+  schema: TrackerDisplayProps | undefined;
+  onSchemaChange: ((schema: TrackerDisplayProps) => void) | undefined;
+  undo?: () => void;
+  canUndo?: boolean;
+  trackerSchemaId?: string | null;
+  projectId?: string | null;
+  children: ReactNode;
 }
 
 /** Provides edit mode state to grid components. Wrap tracker content when editMode is used. */
 export function EditModeProvider({
- editMode,
- schema,
- onSchemaChange,
- undo,
- canUndo,
- trackerSchemaId,
- projectId,
- children,
+  editMode,
+  schema,
+  onSchemaChange,
+  undo,
+  canUndo,
+  trackerSchemaId,
+  projectId,
+  children,
 }: EditModeProviderProps) {
- const value = useMemo<EditModeContextValue>(
- () => ({
- editMode: !!editMode,
- schema,
- onSchemaChange,
- undo,
- canUndo,
- trackerSchemaId,
- projectId,
- }),
- [editMode, schema, onSchemaChange, undo, canUndo, trackerSchemaId, projectId]
- )
- return (
- <EditModeContext.Provider value={value}>
- {children}
- </EditModeContext.Provider>
- )
+  const value = useMemo<EditModeContextValue>(
+    () => ({
+      editMode: !!editMode,
+      schema,
+      onSchemaChange,
+      undo,
+      canUndo,
+      trackerSchemaId,
+      projectId,
+    }),
+    [
+      editMode,
+      schema,
+      onSchemaChange,
+      undo,
+      canUndo,
+      trackerSchemaId,
+      projectId,
+    ],
+  );
+  return (
+    <EditModeContext.Provider value={value}>
+      {children}
+    </EditModeContext.Provider>
+  );
 }
 
 export function useEditMode(): EditModeContextValue {
- return useContext(EditModeContext)
+  return useContext(EditModeContext);
 }
 
 /** True when edit mode is active and schema/onSchemaChange are available. */
 export function useCanEditLayout(): boolean {
- const { editMode, schema, onSchemaChange } = useEditMode()
- return editMode === true && !!schema && !!onSchemaChange
+  const { editMode, schema, onSchemaChange } = useEditMode();
+  return editMode === true && !!schema && !!onSchemaChange;
 }

@@ -11,11 +11,11 @@ CLAI is a CLI-style assistant panel on the dashboard: a movable, resizable float
 
 ## Component map
 
-| Component      | Responsibility |
-|----------------|----------------|
+| Component        | Responsibility                                                                                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ClaiProvider** | React context: `open`, `setOpen`. Holds **instances** (tabs) each with `id`, `lines`, `location`; `activeId`; pathname → location; optional localStorage for position/size. Renders FAB and CLAI window via portal. |
-| **ClaiWindow**   | Movable/resizable shell (react-rnd): **tab bar** as drag handle (tabs, "+", window close), no title bar. Contains ClaiPanel for the active instance. |
-| **ClaiPanel**    | Inner CLI (Warp-style): scrollable output, fixed input row with **location prompt** (e.g. `~ ›`). Accepts `lines`, `location`, and `onSubmit`. |
+| **ClaiWindow**   | Movable/resizable shell (react-rnd): **tab bar** as drag handle (tabs, "+", window close), no title bar. Contains ClaiPanel for the active instance.                                                                |
+| **ClaiPanel**    | Inner CLI (Warp-style): scrollable output, fixed input row with **location prompt** (e.g. `~ ›`). Accepts `lines`, `location`, and `onSubmit`.                                                                      |
 
 Data flow: Provider owns `instances` and per-tab `onSubmit`; pathname drives current location for the active tab. Submit appends a command line and (placeholder) reply. Later, `onSubmit` can dispatch to a command registry or agent API.
 

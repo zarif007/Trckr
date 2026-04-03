@@ -1,22 +1,22 @@
-'use client'
+"use client";
 
-import { memo, useCallback } from 'react'
-import { format } from 'date-fns'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { SearchableSelect } from '@/components/ui/select'
-import { MultiSelect } from '@/components/ui/multi-select'
-import { Calendar } from '@/components/ui/calendar'
+import { memo, useCallback } from "react";
+import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SearchableSelect } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
+import { Calendar } from "@/components/ui/calendar";
 import {
- Popover,
- PopoverContent,
- PopoverTrigger,
-} from '@/components/ui/popover'
-import { FieldWrapper } from '../../shared/FieldWrapper'
-import { FIELD_INNER_INPUT_BASE_CLASS } from '@/lib/style-utils'
-import type { DivGridFieldCellProps } from './types'
-import { ADD_OPTION_VALUE } from './constants'
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { FieldWrapper } from "../../shared/FieldWrapper";
+import { FIELD_INNER_INPUT_BASE_CLASS } from "@/lib/style-utils";
+import type { DivGridFieldCellProps } from "./types";
+import { ADD_OPTION_VALUE } from "./constants";
 
 /**
  * Focus the first interactive element inside a container.
@@ -24,245 +24,272 @@ import { ADD_OPTION_VALUE } from './constants'
  * immediately activates the input rather than requiring a second click.
  */
 function focusInputInContainer(container: HTMLElement) {
- const input = container.querySelector<HTMLElement>(
- 'input, textarea, [role="combobox"], [role="listbox"]'
- )
- if (input && document.activeElement !== input) {
- input.focus()
- }
+  const input = container.querySelector<HTMLElement>(
+    'input, textarea, [role="combobox"], [role="listbox"]',
+  );
+  if (input && document.activeElement !== input) {
+    input.focus();
+  }
 }
 
 export const DivGridFieldCell = memo(function DivGridFieldCell({
- field,
- value,
- valueString,
- options = [],
- showError,
- validationError,
- isDisabled,
- inputTextClass,
- wrapperClassName,
- onUpdate,
- onUpdateWithTouched,
- onSelectChange,
- openAddOption,
- datePickerOpen,
- onDatePickerOpenChange,
- optionsSourceLabel,
+  field,
+  value,
+  valueString,
+  options = [],
+  showError,
+  validationError,
+  isDisabled,
+  inputTextClass,
+  wrapperClassName,
+  onUpdate,
+  onUpdateWithTouched,
+  onSelectChange,
+  openAddOption,
+  datePickerOpen,
+  onDatePickerOpenChange,
+  optionsSourceLabel,
 }: DivGridFieldCellProps) {
- const fieldId = field.id
- const fieldLabel = field.ui.label
- const opts = options ?? []
- const prefix = typeof field.config?.prefix === 'string' ? field.config.prefix.trim() : ''
- const showPrefix =
- Boolean(prefix) &&
- (field.dataType === 'string' ||
- field.dataType === 'number' ||
- field.dataType === 'currency' ||
- field.dataType === 'percentage')
+  const fieldId = field.id;
+  const fieldLabel = field.ui.label;
+  const opts = options ?? [];
+  const prefix =
+    typeof field.config?.prefix === "string" ? field.config.prefix.trim() : "";
+  const showPrefix =
+    Boolean(prefix) &&
+    (field.dataType === "string" ||
+      field.dataType === "number" ||
+      field.dataType === "currency" ||
+      field.dataType === "percentage");
 
- const onBooleanChange = useCallback(
- (checked: boolean) => onUpdateWithTouched(fieldId, checked),
- [fieldId, onUpdateWithTouched]
- )
+  const onBooleanChange = useCallback(
+    (checked: boolean) => onUpdateWithTouched(fieldId, checked),
+    [fieldId, onUpdateWithTouched],
+  );
 
- const toItemValue = (v: unknown) => {
- const s = String(v ?? '').trim()
- return s === '' ? '__empty__' : s
- }
- const selectOptions = opts.map((option) => ({
- value: toItemValue(option.value ?? option.id ?? option.label),
- label: option.label,
- }))
- const multiOpts = opts.map((o) => ({ label: o.label, id: String(o.value ?? o.id ?? o.label) }))
+  const toItemValue = (v: unknown) => {
+    const s = String(v ?? "").trim();
+    return s === "" ? "__empty__" : s;
+  };
+  const selectOptions = opts.map((option) => ({
+    value: toItemValue(option.value ?? option.id ?? option.label),
+    label: option.label,
+  }));
+  const multiOpts = opts.map((o) => ({
+    label: o.label,
+    id: String(o.value ?? o.id ?? o.label),
+  }));
 
- const innerClass = `${FIELD_INNER_INPUT_BASE_CLASS} ${inputTextClass}`
+  const innerClass = `${FIELD_INNER_INPUT_BASE_CLASS} ${inputTextClass}`;
 
- const renderInput = () => {
- switch (field.dataType) {
- case 'text':
- return (
- <Textarea
- className={`min-h-[100px] leading-7 text-foreground/90 ${innerClass}`}
- value={valueString}
- placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
- disabled={isDisabled}
- onChange={(e) => onUpdate(fieldId, e.target.value)}
- onBlur={(e) => onUpdateWithTouched(fieldId, e.target.value)}
- />
- )
- case 'boolean':
- return (
- <div className="flex items-center min-h-[2.5rem]">
- <Checkbox
- checked={value === true}
- disabled={isDisabled}
- onCheckedChange={onBooleanChange}
- />
- </div>
- )
- case 'options':
- return (
- <SearchableSelect
- options={selectOptions}
- value={typeof value === 'string' && value !== '' && value.trim() !== '' ? value : '__empty__'}
- disabled={isDisabled}
- onValueChange={(val) => {
- if (val === ADD_OPTION_VALUE) {
- openAddOption(fieldId, value)
- return
- }
- onSelectChange(fieldId, val === '__empty__' ? '' : val)
- }}
- searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
- className={`w-full ${innerClass}`}
- onAddOptionClick={() => openAddOption(fieldId, value)}
- addOptionLabel="Add option..."
- optionsSourceLabel={optionsSourceLabel}
- />
- )
- case 'multiselect':
- return (
- <MultiSelect
- options={multiOpts}
- value={Array.isArray(value) ? value.map(String) : []}
- onChange={(val) => onSelectChange(fieldId, val)}
- disabled={isDisabled}
- className={`w-full ${innerClass}`}
- onAddOptionClick={() => openAddOption(fieldId, value)}
- optionsSourceLabel={optionsSourceLabel}
- />
- )
- case 'dynamic_select': {
- const selectValue = (value === '' || value == null) ? '__empty__' : String(value)
- return (
- <SearchableSelect
- options={selectOptions}
- value={selectValue}
- disabled={isDisabled}
- onValueChange={(val) => onSelectChange(fieldId, val === '__empty__' ? '' : val)}
- searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
- className={`w-full ${innerClass}`}
- optionsSourceLabel={optionsSourceLabel}
- />
- )
- }
- case 'dynamic_multiselect':
- return (
- <MultiSelect
- options={multiOpts}
- value={Array.isArray(value) ? value.map(String) : []}
- onChange={(val) => onSelectChange(fieldId, val)}
- disabled={isDisabled}
- className={`w-full ${innerClass}`}
- optionsSourceLabel={optionsSourceLabel}
- />
- )
- case 'date':
- return (
- <Popover modal open={datePickerOpen} onOpenChange={onDatePickerOpenChange}>
- <PopoverTrigger asChild>
- <button
- type="button"
- className={`w-full text-left flex items-center py-2 px-3 min-h-9 ${innerClass} ${!value ? 'text-muted-foreground' : ''}`}
- disabled={isDisabled}
- >
- {value ? format(new Date(String(value)), 'PPP') : <span>Pick a date</span>}
- </button>
- </PopoverTrigger>
- <PopoverContent className="w-auto p-0 z-[60]" align="start">
- <Calendar
- mode="single"
- selected={value ? new Date(String(value)) : undefined}
- onSelect={(selected) => {
- if (isDisabled) return
- if (selected instanceof Date) {
- const d = new Date(selected)
- d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
- onUpdateWithTouched(fieldId, d.toISOString())
- }
- }}
- onCloseRequest={() => onDatePickerOpenChange(false)}
- disabled={(date) => date > new Date('2100-01-01') || date < new Date('1900-01-01')}
- initialFocus
- />
- </PopoverContent>
- </Popover>
- )
- case 'number': {
- const numValue = typeof value === 'number' ? value : valueString
- return (
- <Input
- type="number"
- className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
- value={numValue === '' ? '' : numValue}
- placeholder="0"
- disabled={isDisabled}
- onChange={(e) => {
- const raw = e.target.value
- onUpdate(fieldId, raw === '' ? undefined : Number(raw))
- }}
- onBlur={(e) =>
- onUpdateWithTouched(fieldId, e.target.value === '' ? undefined : Number(e.target.value))
- }
- />
- )
- }
- case 'currency':
- case 'percentage': {
- const numValue = typeof value === 'number' ? value : valueString
- return (
- <Input
- type="number"
- className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
- value={numValue === '' ? '' : numValue}
- placeholder="0"
- disabled={isDisabled}
- onChange={(e) => {
- const raw = e.target.value
- onUpdate(fieldId, raw === '' ? undefined : Number(raw))
- }}
- onBlur={(e) =>
- onUpdateWithTouched(fieldId, e.target.value === '' ? undefined : Number(e.target.value))
- }
- />
- )
- }
- default:
- return (
- <Input
- className={`${showPrefix ? 'pl-9' : ''} ${innerClass}`}
- value={valueString}
- placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
- disabled={isDisabled}
- onChange={(e) => onUpdate(fieldId, e.target.value)}
- onBlur={(e) => onUpdateWithTouched(fieldId, e.target.value)}
- />
- )
- }
- }
+  const renderInput = () => {
+    switch (field.dataType) {
+      case "text":
+        return (
+          <Textarea
+            className={`min-h-[100px] leading-7 text-foreground/90 ${innerClass}`}
+            value={valueString}
+            placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
+            disabled={isDisabled}
+            onChange={(e) => onUpdate(fieldId, e.target.value)}
+            onBlur={(e) => onUpdateWithTouched(fieldId, e.target.value)}
+          />
+        );
+      case "boolean":
+        return (
+          <div className="flex items-center min-h-[2.5rem]">
+            <Checkbox
+              checked={value === true}
+              disabled={isDisabled}
+              onCheckedChange={onBooleanChange}
+            />
+          </div>
+        );
+      case "options":
+        return (
+          <SearchableSelect
+            options={selectOptions}
+            value={
+              typeof value === "string" && value !== "" && value.trim() !== ""
+                ? value
+                : "__empty__"
+            }
+            disabled={isDisabled}
+            onValueChange={(val) => {
+              if (val === ADD_OPTION_VALUE) {
+                openAddOption(fieldId, value);
+                return;
+              }
+              onSelectChange(fieldId, val === "__empty__" ? "" : val);
+            }}
+            searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
+            className={`w-full ${innerClass}`}
+            onAddOptionClick={() => openAddOption(fieldId, value)}
+            addOptionLabel="Add option..."
+            optionsSourceLabel={optionsSourceLabel}
+          />
+        );
+      case "multiselect":
+        return (
+          <MultiSelect
+            options={multiOpts}
+            value={Array.isArray(value) ? value.map(String) : []}
+            onChange={(val) => onSelectChange(fieldId, val)}
+            disabled={isDisabled}
+            className={`w-full ${innerClass}`}
+            onAddOptionClick={() => openAddOption(fieldId, value)}
+            optionsSourceLabel={optionsSourceLabel}
+          />
+        );
+      case "dynamic_select": {
+        const selectValue =
+          value === "" || value == null ? "__empty__" : String(value);
+        return (
+          <SearchableSelect
+            options={selectOptions}
+            value={selectValue}
+            disabled={isDisabled}
+            onValueChange={(val) =>
+              onSelectChange(fieldId, val === "__empty__" ? "" : val)
+            }
+            searchPlaceholder={`Select ${fieldLabel.toLowerCase()}...`}
+            className={`w-full ${innerClass}`}
+            optionsSourceLabel={optionsSourceLabel}
+          />
+        );
+      }
+      case "dynamic_multiselect":
+        return (
+          <MultiSelect
+            options={multiOpts}
+            value={Array.isArray(value) ? value.map(String) : []}
+            onChange={(val) => onSelectChange(fieldId, val)}
+            disabled={isDisabled}
+            className={`w-full ${innerClass}`}
+            optionsSourceLabel={optionsSourceLabel}
+          />
+        );
+      case "date":
+        return (
+          <Popover
+            modal
+            open={datePickerOpen}
+            onOpenChange={onDatePickerOpenChange}
+          >
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`w-full text-left flex items-center py-2 px-3 min-h-9 ${innerClass} ${!value ? "text-muted-foreground" : ""}`}
+                disabled={isDisabled}
+              >
+                {value ? (
+                  format(new Date(String(value)), "PPP")
+                ) : (
+                  <span>Pick a date</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[60]" align="start">
+              <Calendar
+                mode="single"
+                selected={value ? new Date(String(value)) : undefined}
+                onSelect={(selected) => {
+                  if (isDisabled) return;
+                  if (selected instanceof Date) {
+                    const d = new Date(selected);
+                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+                    onUpdateWithTouched(fieldId, d.toISOString());
+                  }
+                }}
+                onCloseRequest={() => onDatePickerOpenChange(false)}
+                disabled={(date) =>
+                  date > new Date("2100-01-01") || date < new Date("1900-01-01")
+                }
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        );
+      case "number": {
+        const numValue = typeof value === "number" ? value : valueString;
+        return (
+          <Input
+            type="number"
+            className={`${showPrefix ? "pl-9" : ""} ${innerClass}`}
+            value={numValue === "" ? "" : numValue}
+            placeholder="0"
+            disabled={isDisabled}
+            onChange={(e) => {
+              const raw = e.target.value;
+              onUpdate(fieldId, raw === "" ? undefined : Number(raw));
+            }}
+            onBlur={(e) =>
+              onUpdateWithTouched(
+                fieldId,
+                e.target.value === "" ? undefined : Number(e.target.value),
+              )
+            }
+          />
+        );
+      }
+      case "currency":
+      case "percentage": {
+        const numValue = typeof value === "number" ? value : valueString;
+        return (
+          <Input
+            type="number"
+            className={`${showPrefix ? "pl-9" : ""} ${innerClass}`}
+            value={numValue === "" ? "" : numValue}
+            placeholder="0"
+            disabled={isDisabled}
+            onChange={(e) => {
+              const raw = e.target.value;
+              onUpdate(fieldId, raw === "" ? undefined : Number(raw));
+            }}
+            onBlur={(e) =>
+              onUpdateWithTouched(
+                fieldId,
+                e.target.value === "" ? undefined : Number(e.target.value),
+              )
+            }
+          />
+        );
+      }
+      default:
+        return (
+          <Input
+            className={`${showPrefix ? "pl-9" : ""} ${innerClass}`}
+            value={valueString}
+            placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
+            disabled={isDisabled}
+            onChange={(e) => onUpdate(fieldId, e.target.value)}
+            onBlur={(e) => onUpdateWithTouched(fieldId, e.target.value)}
+          />
+        );
+    }
+  };
 
- return (
- <div className="space-y-1 min-w-0">
- <FieldWrapper
- className={wrapperClassName}
- error={showError}
- errorTitle={validationError ?? undefined}
- onPointerDown={(e) => e.stopPropagation()}
- onClick={(e) => focusInputInContainer(e.currentTarget as HTMLElement)}
- >
- {showPrefix && (
- <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
- {prefix}
- </span>
- )}
- {renderInput()}
- </FieldWrapper>
- {showError && validationError ? (
- <p className="text-xs text-destructive" role="alert">
- {validationError}
- </p>
- ) : null}
- </div>
- )
-})
+  return (
+    <div className="space-y-1 min-w-0">
+      <FieldWrapper
+        className={wrapperClassName}
+        error={showError}
+        errorTitle={validationError ?? undefined}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => focusInputInContainer(e.currentTarget as HTMLElement)}
+      >
+        {showPrefix && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+            {prefix}
+          </span>
+        )}
+        {renderInput()}
+      </FieldWrapper>
+      {showError && validationError ? (
+        <p className="text-xs text-destructive" role="alert">
+          {validationError}
+        </p>
+      ) : null}
+    </div>
+  );
+});

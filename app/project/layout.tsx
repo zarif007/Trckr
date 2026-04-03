@@ -1,16 +1,15 @@
-import { getProjectsForUser } from '@/lib/dashboard-data'
-import { DashboardLayoutClient } from '../dashboard/components/layout/DashboardLayoutClient'
+import { getProjectsForUser } from "@/lib/dashboard-data";
+import { DashboardLayoutClient } from "../dashboard/components/layout/DashboardLayoutClient";
 
 export default async function ProjectLayout({
- children,
+  children,
 }: {
- children: React.ReactNode
+  children: React.ReactNode;
 }) {
- const initialProjects = await getProjectsForUser()
- return (
- <DashboardLayoutClient initialProjects={initialProjects}>
- {children}
- </DashboardLayoutClient>
- )
+  const initialProjects = await getProjectsForUser();
+  return (
+    <DashboardLayoutClient initialProjects={initialProjects}>
+      {children}
+    </DashboardLayoutClient>
+  );
 }
-

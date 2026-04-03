@@ -21,6 +21,6 @@ Prompt guidance:
 - Keep tracker count focused; avoid unnecessary trackers.
 
 Output JSON only. Do not include explanations or extra text.
-`
+`;
 
-export default projectPlannerPrompt
+export default projectPlannerPrompt;

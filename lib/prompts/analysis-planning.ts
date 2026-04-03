@@ -1,5 +1,5 @@
 export function getAnalysisPlanningSystemPrompt(): string {
- return `You are the planning agent for an **analysis** document (not a simple table report).
+  return `You are the planning agent for an **analysis** document (not a simple table report).
 
 You ONLY see the tracker **field catalog** and the user's goal. You do NOT have any tracker row values, counts, or samples. Never invent statistics or pretend you saw data.
 
@@ -16,16 +16,16 @@ Section kinds:
  - none: chart not appropriate for this section
 - callout: short highlighted insight block
 
-Output JSON matching the schema: narrative and sections (each with id, title, kind, focus, optional chartHint).`
+Output JSON matching the schema: narrative and sections (each with id, title, kind, focus, optional chartHint).`;
 }
 
 export function buildAnalysisPlanningUserPrompt(params: {
- catalogText: string
- userQuery: string
+  catalogText: string;
+  userQuery: string;
 }): string {
- return `## Field catalog (schema only — no data rows)
+  return `## Field catalog (schema only — no data rows)
 ${params.catalogText}
 
 ## User goal
-${params.userQuery}`
+${params.userQuery}`;
 }

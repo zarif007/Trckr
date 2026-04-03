@@ -18,52 +18,52 @@ Both hooks implement:
 **Signature**
 
 ```ts
-type AutoSaveState = 'idle' | 'saving' | 'error'
+type AutoSaveState = "idle" | "saving" | "error";
 
 interface UseAutoSaveOptions<TData> {
-  enabled: boolean
-  getData: () => TData
-  save: (data: TData) => Promise<void>
-  debounceMs?: number      // default 800
-  idleMs?: number          // default 0 (disabled)
-  onStateChange?: (state: AutoSaveState, error?: Error) => void
+  enabled: boolean;
+  getData: () => TData;
+  save: (data: TData) => Promise<void>;
+  debounceMs?: number; // default 800
+  idleMs?: number; // default 0 (disabled)
+  onStateChange?: (state: AutoSaveState, error?: Error) => void;
 }
 
 function useAutoSave<TData>(options: UseAutoSaveOptions<TData>): {
-  scheduleSave: () => void
-}
+  scheduleSave: () => void;
+};
 ```
 
 **Usage example (generic form data)**
 
 ```tsx
 const [form, setForm] = useState<{ name: string; email: string }>({
-  name: '',
-  email: '',
-})
+  name: "",
+  email: "",
+});
 
 const { scheduleSave } = useAutoSave({
   enabled: true,
   getData: () => form,
   save: async (data) => {
-    await fetch('/api/profile', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+    await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    })
+    });
   },
   debounceMs: 1500,
   idleMs: 2000,
   onStateChange: (state, error) => {
     // Integrate with a “saving…” / “saved” indicator if desired
   },
-})
+});
 
 // Call this whenever the user changes a field
 const handleChange = (next: Partial<typeof form>) => {
-  setForm((prev) => ({ ...prev, ...next }))
-  scheduleSave()
-}
+  setForm((prev) => ({ ...prev, ...next }));
+  scheduleSave();
+};
 ```
 
 **Behaviour details**
@@ -95,20 +95,20 @@ the existing call sites, while delegating to the generic hook.
 **Signature**
 
 ```ts
-import type { GridDataSnapshot } from '@/lib/tracker-data'
+import type { GridDataSnapshot } from "@/lib/tracker-data";
 
 interface UseAutoSaveTrackerDataOptions {
-  enabled: boolean
-  getData: () => GridDataSnapshot
-  save: (data: GridDataSnapshot) => Promise<void>
-  debounceMs?: number
-  idleMs?: number
-  onStateChange?: (state: AutoSaveState, error?: Error) => void
+  enabled: boolean;
+  getData: () => GridDataSnapshot;
+  save: (data: GridDataSnapshot) => Promise<void>;
+  debounceMs?: number;
+  idleMs?: number;
+  onStateChange?: (state: AutoSaveState, error?: Error) => void;
 }
 
-function useAutoSaveTrackerData(
-  options: UseAutoSaveTrackerDataOptions
-): { scheduleSave: () => void }
+function useAutoSaveTrackerData(options: UseAutoSaveTrackerDataOptions): {
+  scheduleSave: () => void;
+};
 ```
 
 **Usage example (tracker data auto-save)**
@@ -118,22 +118,21 @@ const { scheduleSave } = useAutoSaveTrackerData({
   enabled: allowAutoSave,
   getData: () => trackerDataRef.current?.() ?? {},
   save: async (data) => {
-    await saveTrackerData({ data })
+    await saveTrackerData({ data });
   },
   debounceMs: 2000,
   idleMs: 2000,
   onStateChange: (state, error) => {
     // Hook into nav bar “Saving…” / “Saved” / “Error” indicators
   },
-})
+});
 
 // In your grid-change handler:
 const handleGridDataChange = () => {
-  if (!allowAutoSave) return
-  scheduleSave()
-}
+  if (!allowAutoSave) return;
+  scheduleSave();
+};
 ```
 
 This keeps the tracker-specific usage ergonomic while making the auto-save mechanism itself
 fully reusable across the app via `useAutoSave`.
-

@@ -18,13 +18,13 @@ Editing UI for field validation and calculation expressions. Supports a visual f
 
 ## Files
 
-| File | Role |
-|------|------|
-| ExprRuleEditor.tsx | Tabbed wrapper: Visual / JSON / AI; uses ExprFlowBuilder and generate-expr API |
-| ExprFlowBuilder.tsx | React Flow UI: palette, nodes, edges, compile on Apply |
-| expr-graph.ts | compileExprFromGraph, exprToGraph, FLOW_CONSTANTS, ExprFlowNodeData |
-| expr-types.ts | ExprFlowOperator, AvailableField, ExprFlowNodeType |
-| index.ts | Barrel exports |
+| File                | Role                                                                           |
+| ------------------- | ------------------------------------------------------------------------------ |
+| ExprRuleEditor.tsx  | Tabbed wrapper: Visual / JSON / AI; uses ExprFlowBuilder and generate-expr API |
+| ExprFlowBuilder.tsx | React Flow UI: palette, nodes, edges, compile on Apply                         |
+| expr-graph.ts       | compileExprFromGraph, exprToGraph, FLOW_CONSTANTS, ExprFlowNodeData            |
+| expr-types.ts       | ExprFlowOperator, AvailableField, ExprFlowNodeType                             |
+| index.ts            | Barrel exports                                                                 |
 
 ## Usage
 

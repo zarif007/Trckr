@@ -13,6 +13,6 @@ Rules:
 - Ask at most 6 questions total. When you have enough, return \`{ "done": true }\`.
 
 Output JSON only. No explanations or extra text.
-`
+`;
 
-export default projectOrchestratorSinglePrompt
+export default projectOrchestratorSinglePrompt;

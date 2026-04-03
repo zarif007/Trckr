@@ -166,21 +166,21 @@ TrackerDisplayInline (entry: tabs + state + callbacks)
 
 ## How to Extend
 
-1. **New view type (e.g. calendar)**  
-   - Add the type to `GridType` in `types.ts`.  
-   - Add a label in `constants.ts` (`VIEW_LABEL`).  
-   - In `GridViewContent.tsx`, add a branch that renders your grid component.  
+1. **New view type (e.g. calendar)**
+   - Add the type to `GridType` in `types.ts`.
+   - Add a label in `constants.ts` (`VIEW_LABEL`).
+   - In `GridViewContent.tsx`, add a branch that renders your grid component.
    - Implement the grid component (e.g. `TrackerCalendarGrid`) with the same props pattern: `grid`, `layoutNodes`, `fields`, `gridData`, `onUpdate`, etc.
 
-2. **New field type in TrackerCell**  
-   - Extend `TrackerFieldType` in `types.ts`.  
+2. **New field type in TrackerCell**
+   - Extend `TrackerFieldType` in `types.ts`.
    - In `TrackerCell.tsx`, add a case and render the appropriate UI.
 
-3. **Custom section or tab layout**  
-   - Import from `layout/` (tokens, SectionBar, ViewBlockWrapper) and `blocks/` (GridBlockHeader, GridBlockContent).  
+3. **Custom section or tab layout**
+   - Import from `layout/` (tokens, SectionBar, ViewBlockWrapper) and `blocks/` (GridBlockHeader, GridBlockContent).
    - Compose your own section/tab component using the same tokens so spacing stays consistent.
 
-4. **Change vertical gap globally**  
+4. **Change vertical gap globally**
    - Edit `layout/layout-tokens.ts` only (e.g. `SECTION_STACK_GAP`, `GRIDS_CONTAINER`). Edit and view both consume these, so they stay in sync.
 
 ---

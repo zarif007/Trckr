@@ -43,12 +43,12 @@ flowchart LR
 
 ## Files
 
-| File | Role |
-|------|------|
-| **useUndoableSchemaChange.ts** | Hook that maintains the undo stack and wraps `onSchemaChange`. |
-| **useUndoKeyboardShortcut.ts** | Hook that binds Ctrl+Z / Cmd+Z to `undo`. |
-| **EditModeUndoButton.tsx** | Button component that calls `undo` and shows "Undo (Ctrl+Z)". |
-| **index.ts** | Exports useUndoableSchemaChange, EditModeUndoButton, useUndoKeyboardShortcut. |
+| File                           | Role                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| **useUndoableSchemaChange.ts** | Hook that maintains the undo stack and wraps `onSchemaChange`.                |
+| **useUndoKeyboardShortcut.ts** | Hook that binds Ctrl+Z / Cmd+Z to `undo`.                                     |
+| **EditModeUndoButton.tsx**     | Button component that calls `undo` and shows "Undo (Ctrl+Z)".                 |
+| **index.ts**                   | Exports useUndoableSchemaChange, EditModeUndoButton, useUndoKeyboardShortcut. |
 
 Context (`EditModeProvider`) can optionally receive `undo` and `canUndo` so any child can call `useEditMode().undo()` or show UI; the toolbar often lives outside the provider, so the page passes `undo`/`canUndo` into the button and the keyboard hook.
 

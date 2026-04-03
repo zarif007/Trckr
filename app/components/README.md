@@ -10,13 +10,13 @@ Feature and layout components used by the app. Each subfolder has a **single res
 
 ## Structure
 
-| Folder / file | Responsibility |
-|---------------|-----------------|
+| Folder / file        | Responsibility                                                                                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **tracker-display/** | Render tracker schema: tabs, sections, table/kanban/form views. Grid implementations live in `tracker-display/grids/` (data-table, kanban). See [tracker-display/README.md](./tracker-display/README.md). |
-| **tracker-page/** | UI for the `/tracker` route: dialog, message list, input area, empty state. See [tracker-page/README.md](./tracker-page/README.md). |
-| **landing-page/** | Landing page sections: Hero, Demo, Features, CTA, etc. |
-| **NavBar.tsx** | Top navigation. |
-| **ThemeToggle.tsx** | Theme switch. |
+| **tracker-page/**    | UI for the `/tracker` route: dialog, message list, input area, empty state. See [tracker-page/README.md](./tracker-page/README.md).                                                                       |
+| **landing-page/**    | Landing page sections: Hero, Demo, Features, CTA, etc.                                                                                                                                                    |
+| **NavBar.tsx**       | Top navigation.                                                                                                                                                                                           |
+| **ThemeToggle.tsx**  | Theme switch.                                                                                                                                                                                             |
 
 ## Import convention
 

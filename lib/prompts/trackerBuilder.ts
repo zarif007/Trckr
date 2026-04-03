@@ -364,6 +364,6 @@ Examples (WRONG — will be rejected):
  ✗ "add the order_total from orders_grid to the price field" — cross-grid arithmetic reference
 
 Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
-`
+`;
 
-export default trackerBuilderPrompt
+export default trackerBuilderPrompt;

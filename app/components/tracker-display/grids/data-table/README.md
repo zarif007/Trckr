@@ -14,15 +14,15 @@ Generic **table component** with columns, sorting, pagination, row selection, in
 
 ## Files
 
-| File | Role |
-|------|------|
-| `data-table.tsx` | Main table UI, column visibility, add/delete, dialogs |
-| `data-table-cell.tsx` | Cell renderer + inline edit by field type |
-| `data-table-input.tsx` | Inputs for form/cell (string, number, date, select, multiselect, etc.) |
-| `entry-form-dialog.tsx` | “Add entry” dialog (used by table and kanban) |
-| `form-dialog.tsx` | Generic form dialog wrapper |
-| `utils.ts` | `FieldMetadata`, `OptionsGridFieldDef`, validation, field icons |
-| `index.ts` | Re-exports |
+| File                    | Role                                                                   |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `data-table.tsx`        | Main table UI, column visibility, add/delete, dialogs                  |
+| `data-table-cell.tsx`   | Cell renderer + inline edit by field type                              |
+| `data-table-input.tsx`  | Inputs for form/cell (string, number, date, select, multiselect, etc.) |
+| `entry-form-dialog.tsx` | “Add entry” dialog (used by table and kanban)                          |
+| `form-dialog.tsx`       | Generic form dialog wrapper                                            |
+| `utils.ts`              | `FieldMetadata`, `OptionsGridFieldDef`, validation, field icons        |
+| `index.ts`              | Re-exports                                                             |
 
 ## Dependencies
 
