@@ -390,7 +390,7 @@ export default function Demo() {
 
               {/* Content */}
               <div
-                className="relative overflow-hidden"
+                className="relative overflow-y-auto rounded-sm"
                 style={{ maxHeight: maxContentHeight }}
               >
                 <div key={current} className="animate-demoFadeIn">
@@ -398,7 +398,7 @@ export default function Demo() {
                 </div>
 
                 {/* Bottom gradient fade */}
-                <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                <div className="sticky bottom-0 inset-x-0 h-28 bg-gradient-to-t from-background to-transparent pointer-events-none" />
               </div>
             </div>
 
