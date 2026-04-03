@@ -26,7 +26,15 @@ function getBinaryOperands(
   return null
 }
 
-function validateExprNode(
+function getVariadicArgs(node: Record<string, unknown>): unknown[] | null {
+  const args = node.args
+  if (Array.isArray(args) && args.length >= 1) return args
+  const pair = getBinaryOperands(node)
+  if (pair) return [pair.left, pair.right]
+  return null
+}
+
+export function validateValidationExprNode(
   node: ExprNode,
   ctx: ValidationContext,
   path: string,
@@ -52,9 +60,12 @@ function validateExprNode(
     case 'add':
     case 'mul':
     case 'and':
-    case 'or': {
-      const args = (normalizedNode as Extract<ExprNode, { op: 'add' | 'mul' | 'and' | 'or' }>).args
-      if (!Array.isArray(args) || args.length === 0) {
+    case 'or':
+    case 'min':
+    case 'max':
+    case 'concat': {
+      const args = getVariadicArgs(normalizedNode as Record<string, unknown>)
+      if (!args || args.length === 0) {
         errors.push(`${path}.args must be a non-empty array`)
         return errors
       }
@@ -63,12 +74,15 @@ function validateExprNode(
           errors.push(`${path}.args[${idx}] is not a valid expression node`)
           return
         }
-        errors.push(...validateExprNode(arg, ctx, `${path}.args[${idx}]`))
+        errors.push(...validateValidationExprNode(arg, ctx, `${path}.args[${idx}]`))
       })
       return errors
     }
     case 'sub':
     case 'div':
+    case 'mod':
+    case 'pow':
+    case 'includes':
     case 'eq':
     case 'neq':
     case 'gt':
@@ -83,21 +97,29 @@ function validateExprNode(
       if (!isExprNode(pair.left)) {
         errors.push(`${path}.left (or .args[0]) is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(pair.left, ctx, `${path}.left`))
+        errors.push(...validateValidationExprNode(pair.left, ctx, `${path}.left`))
       }
       if (!isExprNode(pair.right)) {
         errors.push(`${path}.right (or .args[1]) is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(pair.right, ctx, `${path}.right`))
+        errors.push(...validateValidationExprNode(pair.right, ctx, `${path}.right`))
       }
       return errors
     }
-    case 'not': {
+    case 'not':
+    case 'abs':
+    case 'round':
+    case 'floor':
+    case 'ceil':
+    case 'length':
+    case 'trim':
+    case 'toUpper':
+    case 'toLower': {
       const arg = (normalizedNode as Extract<ExprNode, { op: 'not' }>).arg
       if (!isExprNode(arg)) {
         errors.push(`${path}.arg is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(arg, ctx, `${path}.arg`))
+        errors.push(...validateValidationExprNode(arg, ctx, `${path}.arg`))
       }
       return errors
     }
@@ -106,17 +128,17 @@ function validateExprNode(
       if (!isExprNode(triple.cond)) {
         errors.push(`${path}.cond is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(triple.cond, ctx, `${path}.cond`))
+        errors.push(...validateValidationExprNode(triple.cond, ctx, `${path}.cond`))
       }
       if (!isExprNode(triple.then)) {
         errors.push(`${path}.then is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(triple.then, ctx, `${path}.then`))
+        errors.push(...validateValidationExprNode(triple.then, ctx, `${path}.then`))
       }
       if (!isExprNode(triple.else)) {
         errors.push(`${path}.else is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(triple.else, ctx, `${path}.else`))
+        errors.push(...validateValidationExprNode(triple.else, ctx, `${path}.else`))
       }
       return errors
     }
@@ -125,7 +147,7 @@ function validateExprNode(
       if (!isExprNode(regex.value)) {
         errors.push(`${path}.value is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(regex.value, ctx, `${path}.value`))
+        errors.push(...validateValidationExprNode(regex.value, ctx, `${path}.value`))
       }
       if (typeof regex.pattern !== 'string') {
         errors.push(`${path}.pattern must be a string`)
@@ -138,6 +160,44 @@ function validateExprNode(
       }
       if (regex.flags != null && typeof regex.flags !== 'string') {
         errors.push(`${path}.flags must be a string when provided`)
+      }
+      return errors
+    }
+    case 'clamp': {
+      const clamp = normalizedNode as Extract<ExprNode, { op: 'clamp' }>
+      if (!isExprNode(clamp.value)) {
+        errors.push(`${path}.value is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(clamp.value, ctx, `${path}.value`))
+      }
+      if (!isExprNode(clamp.min)) {
+        errors.push(`${path}.min is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(clamp.min, ctx, `${path}.min`))
+      }
+      if (!isExprNode(clamp.max)) {
+        errors.push(`${path}.max is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(clamp.max, ctx, `${path}.max`))
+      }
+      return errors
+    }
+    case 'slice': {
+      const slice = normalizedNode as Extract<ExprNode, { op: 'slice' }>
+      if (!isExprNode(slice.value)) {
+        errors.push(`${path}.value is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(slice.value, ctx, `${path}.value`))
+      }
+      if (!isExprNode(slice.start)) {
+        errors.push(`${path}.start is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(slice.start, ctx, `${path}.start`))
+      }
+      if (!isExprNode(slice.end)) {
+        errors.push(`${path}.end is not a valid expression node`)
+      } else {
+        errors.push(...validateValidationExprNode(slice.end, ctx, `${path}.end`))
       }
       return errors
     }
@@ -311,7 +371,7 @@ export function validateValidations(ctx: ValidationContext): ValidatorResult {
             errors.push(`${path}.expr must be a valid expression node`)
             return
           }
-          errors.push(...validateExprNode(expr, ctx, `${path}.expr`))
+          errors.push(...validateValidationExprNode(expr, ctx, `${path}.expr`))
           return
         }
         default:

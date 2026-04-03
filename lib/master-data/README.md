@@ -49,16 +49,16 @@ LLM output can include `masterDataTrackers` entries that define the full schema 
 - `applyMasterDataBindings()` — binding creation/reuse, placeholder replacement, and metadata embedding.
 - `buildMasterDataSchema()` — minimal master data tracker schema.
 
-## Chat audit (builder UI)
+## Tool calls (builder UI)
 
-Module/project binding also produces a **persisted audit** on assistant chat messages (`Message.masterDataBuildResult` JSON) so users can expand **Functions** and **Created** in the builder, similar to expression-agent **Tools**.
+Module/project binding now logs **master data reuse/create** as tool calls alongside bindings, validations, and calculations. The chat-audit payload is legacy and no longer surfaced in the UI.
 
-- **Library:** [`chat-audit/`](./chat-audit/README.md) — Zod schema, parsing, formatting, selectors. **Start there** when changing the payload or adding steps.
-- **UI:** [`app/components/tracker-page/master-data-chat-audit/`](../app/components/tracker-page/master-data-chat-audit/) — presentational panels only; no binding logic.
+- **Tool logging:** `applyMasterDataBindings()` actions are mapped into tool calls in the build-tracker post-process pipeline.
+- **Legacy:** [`chat-audit/`](./chat-audit/README.md) remains for historical messages but is not used in new flows.
 
 ## Tests
 See `lib/master-data/__tests__` for coverage of:
 - default scope inheritance
 - module container creation/reuse
 - placeholder replacement + local options grid stripping
-- chat audit JSON parsing (`chat-audit/__tests__/schema.test.ts`)
+- legacy chat-audit JSON parsing (`chat-audit/__tests__/schema.test.ts`)

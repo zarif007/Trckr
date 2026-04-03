@@ -1,10 +1,7 @@
-import type { ToolCallEntry } from '@/app/tracker/hooks/resolveExprIntents'
+import type { ToolCallEntry } from '@/lib/agent/tool-calls'
+import { coerceToolCallPurpose } from '@/lib/agent/tool-calls'
 
 type ToolCallStatus = ToolCallEntry['status']
-
-function coercePurpose(raw: unknown): 'validation' | 'calculation' {
-  return raw === 'validation' || raw === 'calculation' ? raw : 'calculation'
-}
 
 function coerceStatus(raw: unknown): ToolCallStatus {
   const s = typeof raw === 'string' ? raw.toLowerCase() : ''
@@ -26,7 +23,7 @@ export function mapApiToolCallsToEntries(
     const id = typeof o.id === 'string' ? o.id : `tc-${out.length}`
     const fieldPath = typeof o.fieldPath === 'string' ? o.fieldPath : ''
     const description = typeof o.description === 'string' ? o.description : ''
-    const purpose = coercePurpose(o.purpose)
+    const purpose = coerceToolCallPurpose(o.purpose)
     const status = coerceStatus(o.status)
     const error = o.error != null && typeof o.error === 'string' ? o.error : undefined
     const result = 'result' in o ? o.result : undefined

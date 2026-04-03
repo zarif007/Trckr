@@ -29,15 +29,11 @@ interface TrackerChatPanelProps {
   messages: Message[]
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   setMessageToolsOpen: (idx: number, open: boolean) => void
-  setMessageMasterDataFunctionsOpen?: (idx: number, open: boolean) => void
-  setMessageMasterDataCreatedOpen?: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   object: unknown
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
   activeTrackerMessageIndex?: number | null
   toolCalls?: ToolCallEntry[]
-  isResolvingExpressions?: boolean
-  isResolvingMasterData?: boolean
   statusMessage?: string
   mode?: 'schema' | 'data'
   isConversationLoading?: boolean
@@ -63,15 +59,11 @@ export function TrackerChatPanel({
   messages,
   setMessageThinkingOpen,
   setMessageToolsOpen,
-  setMessageMasterDataFunctionsOpen,
-  setMessageMasterDataCreatedOpen,
   messagesEndRef,
   object,
   onViewTracker,
   activeTrackerMessageIndex,
   toolCalls,
-  isResolvingExpressions,
-  isResolvingMasterData = false,
   statusMessage,
   mode = 'schema',
   isConversationLoading = false,
@@ -163,14 +155,10 @@ export function TrackerChatPanel({
                   object={object}
                   setMessageThinkingOpen={setMessageThinkingOpen}
                   setMessageToolsOpen={setMessageToolsOpen}
-                  setMessageMasterDataFunctionsOpen={setMessageMasterDataFunctionsOpen}
-                  setMessageMasterDataCreatedOpen={setMessageMasterDataCreatedOpen}
                   messagesEndRef={messagesEndRef}
                   onViewTracker={onViewTracker}
                   activeTrackerMessageIndex={activeTrackerMessageIndex}
                   toolCalls={toolCalls}
-                  isResolvingExpressions={isResolvingExpressions}
-                  isResolvingMasterData={isResolvingMasterData}
                   statusMessage={statusMessage}
                   mode={mode}
                 />

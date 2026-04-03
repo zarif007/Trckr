@@ -10,11 +10,6 @@ import { removeEmptyOverviewTabIfUnused } from '@/app/tracker/utils/removeEmptyO
 import { mapApiToolCallsToEntries } from '@/app/tracker/utils/mapConversationToolCalls'
 import type { TrackerDisplayProps } from '@/app/components/tracker-display/types'
 import { INITIAL_TRACKER_SCHEMA } from '@/app/components/tracker-display/tracker-editor'
-import {
-  parseMasterDataBuildAuditFromUnknown,
-  type MasterDataBuildAudit,
-} from '@/lib/master-data/chat-audit'
-import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 import { ensureConversation, persistMessage } from './conversation'
 import {
   CONTINUE_PROMPT,
@@ -26,11 +21,12 @@ import {
   normalizeValidationAndCalculations,
   trackerHasAnyData,
 } from './normalization'
-import { collectExprIntents } from '@/lib/expr-intents'
-import { resolveExprIntents, type ToolCallEntry } from './resolveExprIntents'
+import type { ToolCallEntry } from '@/lib/agent/tool-calls'
 
-export type { ToolCallEntry } from './resolveExprIntents'
+export type { ToolCallEntry } from '@/lib/agent/tool-calls'
 export { suggestions } from './constants'
+
+const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.'
 
 export type TrackerResponse = TrackerDisplayProps
 
@@ -42,12 +38,10 @@ export interface Message {
   errorMessage?: string
   isThinkingOpen?: boolean
   isToolsOpen?: boolean
-  /** Expression-agent tool calls persisted with this assistant turn */
+  /** Tool calls persisted with this assistant turn */
   toolCalls?: ToolCallEntry[]
-  /** Module/project master data binding (reuse/create) for this assistant turn */
-  masterDataBuildResult?: MasterDataBuildAudit
-  isMasterDataFunctionsOpen?: boolean
-  isMasterDataCreatedOpen?: boolean
+  /** Internal-only message (not rendered in the UI). */
+  internal?: boolean
 }
 
 export interface UseTrackerChatOptions {
@@ -93,18 +87,16 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [activeTrackerData, _setActiveTrackerData] = useState<TrackerResponse | null>(initialTracker ?? null)
   const [generationErrorMessage, setGenerationErrorMessage] = useState<string | null>(null)
-  const [isResolvingMasterData, setIsResolvingMasterData] = useState(false)
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [pendingContinue, setPendingContinue] = useState(false)
   const [resumingAfterError, setResumingAfterError] = useState(false)
+  const [suppressErrors, setSuppressErrors] = useState(false)
   const [toolCalls, setToolCalls] = useState<ToolCallEntry[]>([])
-  const [isResolvingExpressions, setIsResolvingExpressions] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const continueCountRef = useRef(0)
   const validationFixRetryCountRef = useRef(0)
   const lastObjectRef = useRef<MultiAgentSchema | undefined>(undefined)
-  const masterDataSpecsRef = useRef<MultiAgentSchema['masterDataTrackers'] | undefined>(undefined)
   const trackerDataRef = useRef<(() => Record<string, Array<Record<string, unknown>>>) | null>(null)
   const messagesRef = useRef<Message[]>([])
   const activeTrackerRef = useRef<TrackerResponse | null>(null)
@@ -133,13 +125,9 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages(
       initialMessages.map((m) => {
         const normalized = mapApiToolCallsToEntries(m.toolCalls)
-        const masterDataBuildResult = parseMasterDataBuildAuditFromUnknown(
-          (m as { masterDataBuildResult?: unknown }).masterDataBuildResult,
-        )
         return {
           ...m,
           ...(normalized?.length ? { toolCalls: normalized } : {}),
-          ...(masterDataBuildResult ? { masterDataBuildResult } : {}),
         }
       }),
     )
@@ -156,6 +144,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     if (activeTrackerRef.current) return activeTrackerRef.current
     const reversed = [...messagesRef.current].reverse()
     return reversed.find((msg) => msg.trackerData)?.trackerData ?? null
+  }, [])
+
+  const stripInternalMessages = useCallback((msgs: Message[]) => {
+    return msgs.filter((m) => !m.internal)
   }, [])
 
   /**
@@ -184,6 +176,16 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       (INITIAL_TRACKER_SCHEMA as TrackerResponse)
     return !isUntouchedFirstRunScaffold(draft as TrackerLike)
   }, [])
+
+  const getMasterDataScopeForApi = useCallback((): string | undefined => {
+    const fromActive = (activeTrackerRef.current as { masterDataScope?: unknown } | null)?.masterDataScope
+    if (typeof fromActive === 'string' && fromActive.trim()) return fromActive.trim()
+    const fromDraft = (firstRunUserDraftRef.current as { masterDataScope?: unknown } | null)?.masterDataScope
+    if (typeof fromDraft === 'string' && fromDraft.trim()) return fromDraft.trim()
+    const fromInitial = (initialTracker as { masterDataScope?: unknown } | null)?.masterDataScope
+    if (typeof fromInitial === 'string' && fromInitial.trim()) return fromInitial.trim()
+    return undefined
+  }, [initialTracker])
 
   const setResolvedTrackerData = useCallback(
     (next: TrackerResponse | null) => {
@@ -217,11 +219,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     }
 
     if (!rawTracker) return null
-    if (Array.isArray(response.masterDataTrackers) && response.masterDataTrackers.length) {
-      masterDataSpecsRef.current = response.masterDataTrackers
-    } else {
-      masterDataSpecsRef.current = undefined
-    }
     rawTracker = normalizeValidationAndCalculations(rawTracker)
     rawTracker = removeEmptyOverviewTabIfUnused(rawTracker as TrackerLike)
     const built = buildBindingsFromSchema(rawTracker as TrackerLike)
@@ -229,79 +226,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     return tracker as TrackerResponse
   }, [getBaseTracker])
 
-  const resolveMasterDataIfNeeded = useCallback(
-    async (
-      tracker: TrackerResponse | null,
-    ): Promise<{ tracker: TrackerResponse | null; masterDataBuildResult?: MasterDataBuildAudit }> => {
-      if (!tracker) return { tracker: null, masterDataBuildResult: undefined }
-      const scope = normalizeMasterDataScope(tracker.masterDataScope)
-      if (!scope || scope === 'tracker') return { tracker, masterDataBuildResult: undefined }
-      if (!trackerId && !projectId) return { tracker, masterDataBuildResult: undefined }
-
-      const isPlaceholderSourceId = (value: unknown) => {
-        if (typeof value !== 'string') return false
-        const trimmed = value.trim()
-        return trimmed === '__master_data__' || trimmed === 'master_data' || trimmed === 'MASTER_DATA'
-      }
-
-      const fields = tracker.fields ?? []
-      const layoutNodes = tracker.layoutNodes ?? []
-      const gridByFieldId = new Map<string, string>()
-      for (const node of layoutNodes) {
-        if (node?.fieldId && node?.gridId) {
-          gridByFieldId.set(node.fieldId, node.gridId)
-        }
-      }
-
-      let needsResolution = false
-      for (const field of fields) {
-        if (field.dataType !== 'options' && field.dataType !== 'multiselect') continue
-        const gridId = gridByFieldId.get(field.id)
-        if (!gridId) continue
-        const fieldPath = `${gridId}.${field.id}`
-        const binding = tracker.bindings?.[fieldPath]
-        if (!binding || !binding.optionsSourceSchemaId || isPlaceholderSourceId(binding.optionsSourceSchemaId)) {
-          needsResolution = true
-          break
-        }
-      }
-
-      if (!needsResolution) return { tracker, masterDataBuildResult: undefined }
-
-      try {
-        setIsResolvingMasterData(true)
-        const res = await fetch('/api/master-data/build', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            tracker,
-            ...(trackerId ? { trackerSchemaId: trackerId } : { projectId, ...(moduleId ? { moduleId } : {}) }),
-            masterDataScope: scope,
-            masterDataTrackers: masterDataSpecsRef.current,
-          }),
-        })
-        if (!res.ok) return { tracker, masterDataBuildResult: undefined }
-        const data = (await res.json()) as Record<string, unknown>
-        const nextTracker = (data.tracker as TrackerResponse | undefined) ?? tracker
-        const masterDataBuildResult = parseMasterDataBuildAuditFromUnknown({
-          actions: data.actions,
-          createdTrackerIds: data.createdTrackerIds,
-        })
-        return { tracker: nextTracker, masterDataBuildResult }
-      } catch {
-        return { tracker, masterDataBuildResult: undefined }
-      } finally {
-        setIsResolvingMasterData(false)
-      }
-    },
-    [trackerId, projectId, moduleId],
-  )
+  
 
   const finalizeTracker = useCallback((
     tracker: TrackerResponse | null,
     managerData: MultiAgentSchema['manager'],
     toolCallsForPersist?: ToolCallEntry[],
-    masterDataBuildResult?: MasterDataBuildAudit,
   ) => {
     const validation = tracker ? validateTracker(tracker as TrackerLike) : { valid: true, errors: [], warnings: [] }
 
@@ -322,6 +252,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       const nextMessages = [...messagesRef.current, assistantMessage, fixUserMessage]
       setMessages(nextMessages)
       const cidFix = conversationIdRef.current
+      const masterDataScopeForApi = getMasterDataScopeForApi()
       if (cidFix) {
         persistMessage(cidFix, { role: 'USER', content: fixPrompt }).catch((e) =>
           console.error('Failed to persist user message:', e)
@@ -329,12 +260,13 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       }
       submitRef.current({
         query: fixPrompt,
-        messages: nextMessages,
+        messages: stripInternalMessages(nextMessages),
         currentTracker: tracker as TrackerResponse,
         dirty: true,
         ...(trackerId ? { trackerSchemaId: trackerId } : {}),
         ...(projectId ? { projectId } : {}),
         ...(moduleId ? { moduleId } : {}),
+        ...(masterDataScopeForApi ? { masterDataScope: masterDataScopeForApi } : {}),
       })
       return
     }
@@ -353,7 +285,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       trackerData: tracker as TrackerResponse,
       managerData,
       ...(toolCallsForPersist?.length ? { toolCalls: toolCallsForPersist } : {}),
-      ...(masterDataBuildResult ? { masterDataBuildResult } : {}),
     }
     setMessages((prev) => [...prev, assistantMessage])
     if (toolCallsForPersist?.length) {
@@ -370,18 +301,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       if (toolCallsForPersist?.length) {
         payload.toolCalls = toolCallsForPersist.map((tc) => ({
           purpose: tc.purpose,
-          fieldPath: tc.fieldPath,
+          fieldPath: tc.fieldPath ?? '',
           description: tc.description,
           status: tc.status,
           ...(tc.error != null && { error: tc.error }),
           ...(tc.result !== undefined && { result: tc.result }),
         }))
-      }
-      if (masterDataBuildResult?.actions?.length) {
-        payload.masterDataBuildResult = {
-          actions: masterDataBuildResult.actions,
-          createdTrackerIds: masterDataBuildResult.createdTrackerIds ?? [],
-        }
       }
       persistMessage(cid, payload).catch((err) => console.error('Failed to persist assistant message:', err))
     }
@@ -393,69 +318,29 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         setPendingContinue(true)
       } else {
         continueCountRef.current = 0
-        setGenerationErrorMessage(
-          'The AI responded but did not produce a complete tracker (missing or empty tabs). You can click "Continue" to try again from where it left off.'
-        )
+        setGenerationErrorMessage(GENERIC_ERROR_MESSAGE)
       }
     }
-  }, [setResolvedTrackerData, trackerId])
+  }, [setResolvedTrackerData, trackerId, projectId, moduleId, getMasterDataScopeForApi])
 
-  const { object, submit, isLoading, error, phase, statusMessage } = useAgentStream({
+  const { object, toolCalls: _streamToolCalls, submit, isLoading, error, phase, statusMessage } = useAgentStream({
     api: '/api/agent/build-tracker',
-    onFinish: ({ object: finishedObject }: { object?: MultiAgentSchema }) => {
+    onFinish: ({ object: finishedObject, toolCalls: finishedToolCalls }: { object?: MultiAgentSchema; toolCalls?: ToolCallEntry[] }) => {
+      setSuppressErrors(false)
       setGenerationErrorMessage(null)
       setResumingAfterError(false)
       setValidationErrors([])
-      setToolCalls([])
-      setIsResolvingExpressions(false)
       if (finishedObject) {
         let tracker = buildTrackerFromResponse(finishedObject)
         if (tracker) {
           tracker = autoFixBindings(tracker as TrackerLike) as TrackerResponse
         }
-
-        resolveMasterDataIfNeeded(tracker)
-          .then(({ tracker: resolvedTracker, masterDataBuildResult }) => {
-            const trackerForIntents = resolvedTracker
-              ? (autoFixBindings(resolvedTracker as TrackerLike) as TrackerResponse)
-              : resolvedTracker
-            const intents = trackerForIntents ? collectExprIntents(trackerForIntents as TrackerLike) : []
-
-            if (intents.length > 0 && trackerForIntents) {
-              setIsResolvingExpressions(true)
-              resolveExprIntents(trackerForIntents as TrackerLike, setToolCalls, {
-                trackerSchemaId: trackerId,
-              })
-                .then(({ tracker: resolved, errors, toolCalls: resolvedToolCalls }) => {
-                  let resolvedTrackerFinal = resolved as TrackerResponse
-                  if (resolvedTrackerFinal) {
-                    resolvedTrackerFinal = autoFixBindings(resolvedTrackerFinal as TrackerLike) as TrackerResponse
-                  }
-                  if (errors.length > 0) {
-                    setValidationErrors((prev) => [...prev, ...errors])
-                  }
-                  finalizeTracker(
-                    resolvedTrackerFinal,
-                    finishedObject.manager,
-                    resolvedToolCalls,
-                    masterDataBuildResult,
-                  )
-                })
-                .catch((err) => {
-                  console.error('Expression resolution failed:', err)
-                  finalizeTracker(trackerForIntents as TrackerResponse, finishedObject.manager, undefined, masterDataBuildResult)
-                })
-                .finally(() => {
-                  setIsResolvingExpressions(false)
-                })
-              return
-            }
-
-            finalizeTracker(trackerForIntents, finishedObject.manager, undefined, masterDataBuildResult)
-          })
-          .catch(() => {
-            finalizeTracker(tracker, finishedObject.manager)
-          })
+        if (finishedToolCalls?.length) {
+          setToolCalls(finishedToolCalls)
+        } else {
+          setToolCalls([])
+        }
+        finalizeTracker(tracker, finishedObject.manager, finishedToolCalls)
       } else {
         // When stream ends with no valid object (e.g. truncated at 8K), use partial if available
         const partial = lastObjectRef.current
@@ -485,27 +370,20 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
           if (partialTracker) setResolvedTrackerData(partialTracker as TrackerResponse)
           if (continueCountRef.current < MAX_AUTO_CONTINUES) {
             setPendingContinue(true)
-            setGenerationErrorMessage(
-              'The response was cut off (output limit). Click "Continue" to complete the tracker from where it left off.'
-            )
           } else {
             continueCountRef.current = 0
-            setGenerationErrorMessage(
-              'The response was cut off. You can click "Continue" to try again from where it left off.'
-            )
+            setGenerationErrorMessage(GENERIC_ERROR_MESSAGE)
           }
         } else {
-          const noResponseMessage =
-            'The AI did not return a valid response. Please try again or rephrase your request.'
-          setGenerationErrorMessage(noResponseMessage)
+          setGenerationErrorMessage(GENERIC_ERROR_MESSAGE)
           const errorMessageObj: Message = {
             role: 'assistant',
-            content: noResponseMessage,
+            content: GENERIC_ERROR_MESSAGE,
           }
           setMessages((prev) => [...prev, errorMessageObj])
           const cid = conversationIdRef.current
           if (cid) {
-            persistMessage(cid, { role: 'ASSISTANT', content: noResponseMessage }).catch((err) =>
+            persistMessage(cid, { role: 'ASSISTANT', content: GENERIC_ERROR_MESSAGE }).catch((err) =>
               console.error('Failed to persist assistant message:', err)
             )
           }
@@ -513,6 +391,12 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       }
     },
     onError: (err: Error) => {
+      const message = err.message || 'An unknown error occurred'
+      const shouldAutoContinue = !(
+        message.includes('Schema validation failed') ||
+        message.includes('Missing project context for master data resolution') ||
+        message.includes('Builder produced no tracker')
+      )
       const partial = lastObjectRef.current
       let partialTracker = buildTrackerFromResponse(partial)
       if (partialTracker) {
@@ -522,11 +406,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         partial &&
         (partial.manager || trackerHasAnyData(partialTracker))
 
-      if (hasPartial && partial) {
-        setResumingAfterError(true)
-        setGenerationErrorMessage(
-          'Connection failed. Starting a new request to continue from where you left off…'
-        )
+      if (hasPartial && partial && shouldAutoContinue) {
+        setSuppressErrors(true)
         const assistantMessage: Message = {
           role: 'assistant',
           trackerData: partialTracker ?? undefined,
@@ -545,8 +426,10 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         setPendingContinue(true)
         continueCountRef.current = 0
       } else {
-        setGenerationErrorMessage(err.message || 'An unknown error occurred')
-        const errorContent = `Sorry, I encountered an error: ${err.message || 'An unknown error occurred'}. Please try again.`
+        setSuppressErrors(false)
+        setResumingAfterError(false)
+        setGenerationErrorMessage(GENERIC_ERROR_MESSAGE)
+        const errorContent = GENERIC_ERROR_MESSAGE
         const errorMessageObj: Message = {
           role: 'assistant',
           content: errorContent,
@@ -588,6 +471,8 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
 
     continueCountRef.current = 0
     validationFixRetryCountRef.current = 0
+    setSuppressErrors(false)
+    setToolCalls([])
     const userMessage = input.trim()
     setInput('')
 
@@ -635,9 +520,11 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     }
 
     const dirty = getDirtyForApi()
+    const masterDataScopeForApi = getMasterDataScopeForApi()
+    const visibleMessages = stripInternalMessages(messagesRef.current)
     submit({
       query: userMessage,
-      messages: messages,
+      messages: visibleMessages,
       currentTracker: dirty
         ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
         : {},
@@ -645,29 +532,28 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
       ...(projectId ? { projectId } : {}),
       ...(moduleId ? { moduleId } : {}),
+      ...(masterDataScopeForApi ? { masterDataScope: masterDataScopeForApi } : {}),
     })
   }
 
   const handleContinue = () => {
     setGenerationErrorMessage(null)
-    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
-    const nextMessages = [...messages, continueMessage]
+    setSuppressErrors(false)
+    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT, internal: true }
+    const baseMessages = stripInternalMessages(messages)
+    const nextMessages = [...baseMessages, continueMessage]
     setMessages(nextMessages)
-    const cid = conversationIdRef.current
-    if (cid) {
-      persistMessage(cid, { role: 'USER', content: CONTINUE_PROMPT }).catch((e) =>
-        console.error('Failed to persist user message:', e)
-      )
-    }
     const dirtyContinue = getDirtyForApi()
+    const masterDataScopeForApi = getMasterDataScopeForApi()
     submit({
       query: CONTINUE_PROMPT,
-      messages: nextMessages,
+      messages: stripInternalMessages(nextMessages),
       currentTracker: dirtyContinue
       ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
       : {},
       dirty: dirtyContinue,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
+      ...(masterDataScopeForApi ? { masterDataScope: masterDataScopeForApi } : {}),
     })
     continueCountRef.current = 0
   }
@@ -676,28 +562,35 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     if (!pendingContinue || isLoading || continueCountRef.current >= MAX_AUTO_CONTINUES) return
 
     setResumingAfterError(false)
-    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT }
-    const nextMessages = [...messages, continueMessage]
+    setSuppressErrors(false)
+    const continueMessage: Message = { role: 'user', content: CONTINUE_PROMPT, internal: true }
+    const baseMessages = stripInternalMessages(messages)
+    const nextMessages = [...baseMessages, continueMessage]
     setMessages(nextMessages)
-    const cid = conversationIdRef.current
-    if (cid) {
-      persistMessage(cid, { role: 'USER', content: CONTINUE_PROMPT }).catch((e) =>
-        console.error('Failed to persist user message:', e)
-      )
-    }
     const dirtyPending = getDirtyForApi()
+    const masterDataScopeForApi = getMasterDataScopeForApi()
     submit({
       query: CONTINUE_PROMPT,
-      messages: nextMessages,
+      messages: stripInternalMessages(nextMessages),
       currentTracker: dirtyPending
       ? (getCurrentTrackerForApi() ?? (INITIAL_TRACKER_SCHEMA as TrackerResponse))
       : {},
       dirty: dirtyPending,
       ...(trackerId ? { trackerSchemaId: trackerId } : {}),
+      ...(masterDataScopeForApi ? { masterDataScope: masterDataScopeForApi } : {}),
     })
     setPendingContinue(false)
     continueCountRef.current += 1
-  }, [pendingContinue, isLoading, messages, submit, getCurrentTrackerForApi, getDirtyForApi])
+  }, [
+    pendingContinue,
+    isLoading,
+    messages,
+    submit,
+    getCurrentTrackerForApi,
+    getDirtyForApi,
+    getMasterDataScopeForApi,
+    stripInternalMessages,
+  ])
 
   useEffect(() => {
     if (isLoading && (object?.tracker || object?.trackerPatch)) {
@@ -733,18 +626,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     setMessages((prev) => prev.map((m, i) => (i === idx ? { ...m, isToolsOpen: open } : m)))
   }
 
-  const setMessageMasterDataFunctionsOpen = (idx: number, open: boolean) => {
-    setMessages((prev) =>
-      prev.map((m, i) => (i === idx ? { ...m, isMasterDataFunctionsOpen: open } : m)),
-    )
-  }
-
-  const setMessageMasterDataCreatedOpen = (idx: number, open: boolean) => {
-    setMessages((prev) =>
-      prev.map((m, i) => (i === idx ? { ...m, isMasterDataCreatedOpen: open } : m)),
-    )
-  }
-
   const isChatEmpty = messages.length === 0 && !isLoading
 
   const clearDialogError = () => {
@@ -764,18 +645,15 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     applySuggestion,
     setMessageThinkingOpen,
     setMessageToolsOpen,
-    setMessageMasterDataFunctionsOpen,
-    setMessageMasterDataCreatedOpen,
     isLoading,
-    error,
+    error: suppressErrors ? undefined : error,
     object,
     streamedDisplayTracker,
     isDialogOpen,
     setIsDialogOpen,
     activeTrackerData,
     setActiveTrackerData,
-    isResolvingMasterData,
-    generationErrorMessage,
+    generationErrorMessage: suppressErrors ? null : generationErrorMessage,
     validationErrors,
     resumingAfterError,
     trackerDataRef,
@@ -784,7 +662,6 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
     isChatEmpty,
     clearDialogError,
     toolCalls,
-    isResolvingExpressions,
     phase,
     statusMessage,
   }

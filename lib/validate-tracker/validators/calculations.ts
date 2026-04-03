@@ -27,6 +27,14 @@ function getBinaryOperands(
   return null
 }
 
+function getVariadicArgs(node: Record<string, unknown>): unknown[] | null {
+  const args = node.args
+  if (Array.isArray(args) && args.length >= 1) return args
+  const pair = getBinaryOperands(node)
+  if (pair) return [pair.left, pair.right]
+  return null
+}
+
 function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<string> {
   const normalizedOp = normalizeExprOp(node.op)
   const normalizedNode = (normalizedOp === node.op ? node : { ...node, op: normalizedOp }) as ExprNode
@@ -40,14 +48,21 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
     case 'add':
     case 'mul':
     case 'and':
-    case 'or': {
-      for (const arg of normalizedNode.args ?? []) {
+    case 'or':
+    case 'min':
+    case 'max':
+    case 'concat': {
+      const args = getVariadicArgs(normalizedNode as Record<string, unknown>) ?? []
+      for (const arg of args) {
         if (isExprNode(arg)) collectExprFieldRefs(arg, out)
       }
       return out
     }
     case 'sub':
     case 'div':
+    case 'mod':
+    case 'pow':
+    case 'includes':
     case 'eq':
     case 'neq':
     case 'gt':
@@ -61,6 +76,14 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
       return out
     }
     case 'not':
+    case 'abs':
+    case 'round':
+    case 'floor':
+    case 'ceil':
+    case 'length':
+    case 'trim':
+    case 'toUpper':
+    case 'toLower':
       if (isExprNode(normalizedNode.arg)) collectExprFieldRefs(normalizedNode.arg, out)
       return out
     case 'if':
@@ -70,6 +93,16 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
       return out
     case 'regex':
       if (isExprNode(normalizedNode.value)) collectExprFieldRefs(normalizedNode.value, out)
+      return out
+    case 'clamp':
+      if (isExprNode(normalizedNode.value)) collectExprFieldRefs(normalizedNode.value, out)
+      if (isExprNode(normalizedNode.min)) collectExprFieldRefs(normalizedNode.min, out)
+      if (isExprNode(normalizedNode.max)) collectExprFieldRefs(normalizedNode.max, out)
+      return out
+    case 'slice':
+      if (isExprNode(normalizedNode.value)) collectExprFieldRefs(normalizedNode.value, out)
+      if (isExprNode(normalizedNode.start)) collectExprFieldRefs(normalizedNode.start, out)
+      if (isExprNode(normalizedNode.end)) collectExprFieldRefs(normalizedNode.end, out)
       return out
     case 'accumulate':
     case 'sum':
@@ -81,7 +114,7 @@ function collectExprFieldRefs(node: ExprNode, out = new Set<string>()): Set<stri
   }
 }
 
-function validateExprNode(
+export function validateCalculationExprNode(
   node: ExprNode,
   ctx: ValidationContext,
   targetGridId: string,
@@ -226,9 +259,12 @@ function validateExprNode(
     case 'add':
     case 'mul':
     case 'and':
-    case 'or': {
-      const args = normalizedNode.args
-      if (!Array.isArray(args) || args.length === 0) {
+    case 'or':
+    case 'min':
+    case 'max':
+    case 'concat': {
+      const args = getVariadicArgs(normalizedNode as Record<string, unknown>)
+      if (!args || args.length === 0) {
         errors.push(`${path}.args must be a non-empty array`)
         return errors
       }
@@ -237,12 +273,15 @@ function validateExprNode(
           errors.push(`${path}.args[${idx}] is not a valid expression node`)
           return
         }
-        errors.push(...validateExprNode(arg, ctx, targetGridId, `${path}.args[${idx}]`))
+        errors.push(...validateCalculationExprNode(arg, ctx, targetGridId, `${path}.args[${idx}]`))
       })
       return errors
     }
     case 'sub':
     case 'div':
+    case 'mod':
+    case 'pow':
+    case 'includes':
     case 'eq':
     case 'neq':
     case 'gt':
@@ -257,20 +296,28 @@ function validateExprNode(
       if (!isExprNode(pair.left)) {
         errors.push(`${path}.left (or .args[0]) is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(pair.left, ctx, targetGridId, `${path}.left`))
+        errors.push(...validateCalculationExprNode(pair.left, ctx, targetGridId, `${path}.left`))
       }
       if (!isExprNode(pair.right)) {
         errors.push(`${path}.right (or .args[1]) is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(pair.right, ctx, targetGridId, `${path}.right`))
+        errors.push(...validateCalculationExprNode(pair.right, ctx, targetGridId, `${path}.right`))
       }
       return errors
     }
-    case 'not': {
+    case 'not':
+    case 'abs':
+    case 'round':
+    case 'floor':
+    case 'ceil':
+    case 'length':
+    case 'trim':
+    case 'toUpper':
+    case 'toLower': {
       if (!isExprNode(normalizedNode.arg)) {
         errors.push(`${path}.arg is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(normalizedNode.arg, ctx, targetGridId, `${path}.arg`))
+        errors.push(...validateCalculationExprNode(normalizedNode.arg, ctx, targetGridId, `${path}.arg`))
       }
       return errors
     }
@@ -278,17 +325,17 @@ function validateExprNode(
       if (!isExprNode(normalizedNode.cond)) {
         errors.push(`${path}.cond is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(normalizedNode.cond, ctx, targetGridId, `${path}.cond`))
+        errors.push(...validateCalculationExprNode(normalizedNode.cond, ctx, targetGridId, `${path}.cond`))
       }
       if (!isExprNode(normalizedNode.then)) {
         errors.push(`${path}.then is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(normalizedNode.then, ctx, targetGridId, `${path}.then`))
+        errors.push(...validateCalculationExprNode(normalizedNode.then, ctx, targetGridId, `${path}.then`))
       }
       if (!isExprNode(normalizedNode.else)) {
         errors.push(`${path}.else is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(normalizedNode.else, ctx, targetGridId, `${path}.else`))
+        errors.push(...validateCalculationExprNode(normalizedNode.else, ctx, targetGridId, `${path}.else`))
       }
       return errors
     }
@@ -296,7 +343,7 @@ function validateExprNode(
       if (!isExprNode(normalizedNode.value)) {
         errors.push(`${path}.value is not a valid expression node`)
       } else {
-        errors.push(...validateExprNode(normalizedNode.value, ctx, targetGridId, `${path}.value`))
+        errors.push(...validateCalculationExprNode(normalizedNode.value, ctx, targetGridId, `${path}.value`))
       }
       if (typeof normalizedNode.pattern !== 'string') {
         errors.push(`${path}.pattern must be a string`)
@@ -309,6 +356,44 @@ function validateExprNode(
       }
       if (normalizedNode.flags != null && typeof normalizedNode.flags !== 'string') {
         errors.push(`${path}.flags must be a string when provided`)
+      }
+      return errors
+    }
+    case 'clamp': {
+      const clamp = normalizedNode as Extract<ExprNode, { op: 'clamp' }>
+      if (!isExprNode(clamp.value)) {
+        errors.push(`${path}.value is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(clamp.value, ctx, targetGridId, `${path}.value`))
+      }
+      if (!isExprNode(clamp.min)) {
+        errors.push(`${path}.min is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(clamp.min, ctx, targetGridId, `${path}.min`))
+      }
+      if (!isExprNode(clamp.max)) {
+        errors.push(`${path}.max is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(clamp.max, ctx, targetGridId, `${path}.max`))
+      }
+      return errors
+    }
+    case 'slice': {
+      const slice = normalizedNode as Extract<ExprNode, { op: 'slice' }>
+      if (!isExprNode(slice.value)) {
+        errors.push(`${path}.value is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(slice.value, ctx, targetGridId, `${path}.value`))
+      }
+      if (!isExprNode(slice.start)) {
+        errors.push(`${path}.start is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(slice.start, ctx, targetGridId, `${path}.start`))
+      }
+      if (!isExprNode(slice.end)) {
+        errors.push(`${path}.end is not a valid expression node`)
+      } else {
+        errors.push(...validateCalculationExprNode(slice.end, ctx, targetGridId, `${path}.end`))
       }
       return errors
     }
@@ -387,7 +472,7 @@ export function validateCalculations(ctx: ValidationContext): ValidatorResult {
       errors.push(`calculations.${key}.expr must be a valid expression node`)
       continue
     }
-    errors.push(...validateExprNode(rule.expr, ctx, gridId, `calculations.${key}.expr`))
+    errors.push(...validateCalculationExprNode(rule.expr, ctx, gridId, `calculations.${key}.expr`))
 
     const refs = collectExprFieldRefs(rule.expr)
     const deps = new Set<string>()
@@ -410,4 +495,3 @@ export function validateCalculations(ctx: ValidationContext): ValidatorResult {
 
   return errors.length > 0 ? { errors } : {}
 }
-

@@ -40,7 +40,7 @@ export async function runBuilderAgent(
   manager: ManagerSchema,
   write: (event: AgentStreamEvent) => void,
   opts: RunBuilderAgentOptions = {},
-): Promise<void> {
+): Promise<BuilderOutput> {
   const system = getBuilderSystemPrompt()
   const prompt = buildBuilderUserPrompt(inputs, manager)
 
@@ -80,8 +80,7 @@ export async function runBuilderAgent(
     if (!hasValidOutput(output)) {
       throw new Error('Builder produced no tracker or trackerPatch after streaming.')
     }
-    write({ t: 'builder_finish', output: output as BuilderOutput })
-    return
+    return output as BuilderOutput
   } catch (error) {
     if (opts.logContext) {
       logAiError(opts.logContext, 'builder-stream-failed', error)
@@ -116,9 +115,7 @@ export async function runBuilderAgent(
             `Attempt ${i + 1}/${MAX_FALLBACK_ATTEMPTS}`,
           )
         }
-        // No partial events for fallback — emit a single builder_finish
-        write({ t: 'builder_finish', output: object })
-        return
+        return object
       }
     } catch (err) {
       lastError = err

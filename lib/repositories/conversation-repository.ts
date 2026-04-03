@@ -1,9 +1,9 @@
 import { ConversationMode, Role, ToolCallStatus } from '@prisma/client'
-import type { MasterDataBuildAudit } from '@/lib/master-data/chat-audit'
 import { prisma } from '@/lib/db'
+import type { ToolCallPurpose } from '@/lib/agent/tool-calls'
 
 export type ToolCallInsert = {
-  purpose: 'validation' | 'calculation'
+  purpose: ToolCallPurpose
   fieldPath: string
   description: string
   status: 'pending' | 'running' | 'done' | 'error'
@@ -198,7 +198,6 @@ export async function appendConversationMessage(params: {
   trackerSchemaSnapshot?: object
   managerData?: unknown
   toolCalls?: ToolCallInsert[]
-  masterDataBuildResult?: MasterDataBuildAudit
 }) {
   const canAccess = await userOwnsConversation(params.conversationId, params.userId)
   if (!canAccess) return null
@@ -211,9 +210,6 @@ export async function appendConversationMessage(params: {
         content: params.content,
         trackerSchemaSnapshot: params.trackerSchemaSnapshot,
         managerData: sanitizeManagerData(params.managerData),
-        ...(params.masterDataBuildResult != null && {
-          masterDataBuildResult: params.masterDataBuildResult as object,
-        }),
       },
     })
 

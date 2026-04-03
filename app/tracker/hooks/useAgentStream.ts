@@ -18,17 +18,19 @@ import { useState, useCallback, useRef } from 'react'
 import { readAgentStream } from '@/lib/agent/stream-reader'
 import type { MultiAgentSchema, ManagerSchema } from '@/lib/schemas/multi-agent'
 import type { BuilderOutput } from '@/lib/agent/builder-schema'
+import type { ToolCallEntry } from '@/lib/agent/tool-calls'
 
 export type AgentPhase = 'idle' | 'manager' | 'master-data' | 'builder'
 
 export interface UseAgentStreamOptions {
   api: string
-  onFinish: (event: { object?: MultiAgentSchema }) => void
+  onFinish: (event: { object?: MultiAgentSchema; toolCalls?: ToolCallEntry[] }) => void
   onError: (err: Error) => void
 }
 
 export interface UseAgentStreamResult {
   object: Partial<MultiAgentSchema> | undefined
+  toolCalls: ToolCallEntry[]
   /** Starts a new generation request. */
   submit: (input: Record<string, unknown>) => void
   isLoading: boolean
@@ -95,6 +97,7 @@ function deriveBuilderStatus(partial: Partial<BuilderOutput>): string {
 export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamResult {
   const { api } = options
   const [object, setObject] = useState<Partial<MultiAgentSchema> | undefined>(undefined)
+  const [toolCalls, setToolCalls] = useState<ToolCallEntry[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<Error | undefined>(undefined)
   const [phase, setPhase] = useState<AgentPhase>('idle')
@@ -121,6 +124,7 @@ export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamRe
 
       accumulatedRef.current = {}
       setObject(undefined)
+      setToolCalls([])
       setError(undefined)
       setPhase('idle')
       setStatusMessage('')
@@ -214,10 +218,18 @@ export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamRe
                   masterDataTrackers: output.masterDataTrackers,
                 }
                 setObject({ ...accumulatedRef.current })
+                if (event.toolCalls && event.toolCalls.length > 0) {
+                  setToolCalls(event.toolCalls)
+                } else {
+                  setToolCalls([])
+                }
                 setIsLoading(false)
                 setPhase('idle')
                 setStatusMessage('')
-                onFinishRef.current({ object: accumulatedRef.current as MultiAgentSchema })
+                onFinishRef.current({
+                  object: accumulatedRef.current as MultiAgentSchema,
+                  toolCalls: event.toolCalls,
+                })
                 return
               }
               case 'error': {
@@ -238,6 +250,7 @@ export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamRe
                 accumulated.tracker || accumulated.trackerPatch || accumulated.manager
                   ? (accumulated as MultiAgentSchema)
                   : undefined,
+              toolCalls: toolCalls.length ? toolCalls : undefined,
             })
           }
         } catch (err) {
@@ -262,5 +275,5 @@ export function useAgentStream(options: UseAgentStreamOptions): UseAgentStreamRe
     [api],
   )
 
-  return { object, submit, isLoading, error, stop, phase, statusMessage }
+  return { object, toolCalls, submit, isLoading, error, stop, phase, statusMessage }
 }

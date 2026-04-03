@@ -10,6 +10,7 @@ import {
 import { prisma } from '@/lib/db'
 import { isMasterDataModuleSettings } from '@/lib/master-data-scope'
 import { readMasterDataMeta, withMasterDataMeta } from '@/lib/master-data/meta'
+import { resolveSelfBindings } from '@/lib/binding'
 
 const patchTrackerBodySchema = z
   .object({
@@ -94,7 +95,8 @@ export async function PATCH(
         })
       }
     }
-    updateData.schema = schema as object
+    const resolvedSchema = resolveSelfBindings(schema, trackerId)
+    updateData.schema = resolvedSchema as object
   }
 
   if (Object.keys(updateData).length === 0) {

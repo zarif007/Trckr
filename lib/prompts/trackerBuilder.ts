@@ -48,6 +48,7 @@ Scope behavior:
    - Tab: { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
    - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
    - Create local master data grids (id ending with _options_grid) inside master_data_section.
+   - For EVERY bindings entry, set optionsSourceSchemaId to "__self__" (local tracker).
 2) masterDataScope = "module" or "project"
    - NEVER create any local grids on this tracker for options/master data — not master_data_tab, not
      _options_grid grids, not any grid whose id appears in a masterDataTrackers schema. The primary
@@ -107,7 +108,10 @@ labelField is the path to the option field that provides BOTH display and stored
 BINDINGS STRUCTURE (paths are grid.field - NO TAB):
 bindings: {
   "<grid_id>.<field_id>": {
-    // OPTIONAL: optionsSourceSchemaId — id of another tracker schema in the same project. When set, optionsGrid / labelField / mapping "from" refer to that tracker; "to" paths stay on this tracker. Omit for normal bindings (options live on this tracker).
+    // optionsSourceSchemaId:
+    // - tracker scope: ALWAYS "__self__"
+    // - module/project scope: id of another tracker schema in the same project (from pre-resolved block)
+    // - omit only when explicitly instructed (legacy)
     optionsGrid: "<grid_id>",              // Grid id containing options (e.g. product_options_grid)
     labelField: "<options_grid_id>.<option_field_id>",   // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
     optionsSourceKey: "student",           // REQUIRED for module/project scope (matches masterDataTrackers.key)
@@ -213,6 +217,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - EVERY select/multiselect field MUST have a bindings entry.
 - Key is "<grid_id>.<field_id>" (no tab).
 - optionsGrid MUST be an options grid (id ending with _options_grid) for local tracker scope. If optionsSourceSchemaId is set (module/project scope), optionsGrid MUST match the master data tracker's grid id. Never use a main data grid as optionsGrid.
+- For tracker scope, ALWAYS set optionsSourceSchemaId to "__self__".
 - Contains optionsGrid, labelField, and fieldMappings array.
 
 9. Output

@@ -96,8 +96,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     applySuggestion,
     setMessageThinkingOpen,
     setMessageToolsOpen,
-    setMessageMasterDataFunctionsOpen,
-    setMessageMasterDataCreatedOpen,
     isLoading,
     error,
     object,
@@ -112,8 +110,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     textareaRef,
     isChatEmpty,
     toolCalls,
-    isResolvingExpressions,
-    isResolvingMasterData,
     phase,
     statusMessage,
   } = useTrackerChat({
@@ -539,16 +535,13 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [activeTrackerData, viewingMessageIndex, allowSchemaAutoSave, dataSave])
 
   const effectiveDisplaySchema = useMemo(() => {
-    const isTrackerBusy =
-      isLoading || isResolvingExpressions || isResolvingMasterData
+    const isTrackerBusy = isLoading
     if (isTrackerBusy && streamedDisplayTracker) return streamedDisplayTracker
     if (viewingMessageIndex !== null) return schema
     if (activeTrackerData && lastSyncedTracker !== activeTrackerData) return activeTrackerData
     return schema
   }, [
     isLoading,
-    isResolvingExpressions,
-    isResolvingMasterData,
     streamedDisplayTracker,
     viewingMessageIndex,
     activeTrackerData,
@@ -580,8 +573,8 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   }, [isDesktop, mobileTab])
 
   useEffect(() => {
-    if (isLoading || isResolvingExpressions || isResolvingMasterData) setEditMode(false)
-  }, [isLoading, isResolvingExpressions, isResolvingMasterData])
+    if (isLoading) setEditMode(false)
+  }, [isLoading])
 
   const hasGeneratedTracker = useMemo(
     () => messages.some((message) => Boolean(message.trackerData)),
@@ -652,8 +645,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       onViewTracker: undefined,
       activeTrackerMessageIndex: undefined,
       toolCalls: undefined,
-      isResolvingExpressions: false,
-      isResolvingMasterData: false,
       mode: 'data' as const,
       isConversationLoading: analystConversationLoading,
       conversationWindows: analystChatWindows,
@@ -676,15 +667,11 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
       messages,
       setMessageThinkingOpen,
       setMessageToolsOpen,
-      setMessageMasterDataFunctionsOpen,
-      setMessageMasterDataCreatedOpen,
       messagesEndRef,
       object,
       onViewTracker: handleViewHistoricalTracker,
       activeTrackerMessageIndex: viewingMessageIndex ?? lastTrackerMessageIndex,
       toolCalls,
-      isResolvingExpressions,
-      isResolvingMasterData,
       statusMessage,
       mode: 'schema' as const,
       isConversationLoading: builderConversationLoading,
@@ -712,7 +699,6 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     effectiveDisplaySchema,
     canEditSchema,
     isStreamingTracker,
-    isResolvingMasterData,
     isAgentRunning,
     trackerDataRef,
     handleGridDataChange,

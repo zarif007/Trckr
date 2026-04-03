@@ -12,6 +12,7 @@
 
 import type { ManagerSchema } from '@/lib/schemas/multi-agent'
 import type { BuilderOutput } from './builder-schema'
+import type { ToolCallEntry } from '@/lib/agent/tool-calls'
 
 export type AgentPhase = 'manager' | 'master-data' | 'builder'
 
@@ -23,7 +24,7 @@ export type AgentStreamEvent =
   /** Progress during master data pre-resolution — emitted once all entities are resolved. */
   | { t: 'master_data_progress'; resolved: number; total: number; name: string }
   | { t: 'builder_partial'; partial: Partial<BuilderOutput> }
-  | { t: 'builder_finish'; output: BuilderOutput }
+  | { t: 'builder_finish'; output: BuilderOutput; toolCalls?: ToolCallEntry[] }
   | { t: 'error'; message: string }
 
 /**

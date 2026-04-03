@@ -3,7 +3,8 @@ import { Prisma, TrackerSchemaType } from '@prisma/client'
 import { createEmptyTrackerSchema } from '@/app/components/tracker-display/tracker-editor/constants'
 import { badRequest, jsonOk } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { createTrackerForUser } from '@/lib/repositories'
+import { createTrackerForUser, updateTrackerByIdForUser } from '@/lib/repositories'
+import { resolveSelfBindings } from '@/lib/binding'
 import { prisma } from '@/lib/db'
 import { normalizeMasterDataScope, type MasterDataScope } from '@/lib/master-data-scope'
 
@@ -68,7 +69,7 @@ export async function POST(request: Request) {
   // Auto-save is only for single-instance trackers without version control
   const autoSave = instance === 'SINGLE' && !versionControl ? (body.autoSave ?? true) : false
 
-  const tracker = await createTrackerForUser({
+  let tracker = await createTrackerForUser({
     userId: authResult.user.id,
     name,
     schema: schema as object,
@@ -79,6 +80,14 @@ export async function POST(request: Request) {
     autoSave,
     type: TrackerSchemaType.GENERAL,
   })
+
+  const resolvedSchema = resolveSelfBindings(tracker.schema as Record<string, unknown>, tracker.id)
+  if (resolvedSchema !== tracker.schema) {
+    const updated = await updateTrackerByIdForUser(tracker.id, authResult.user.id, {
+      schema: resolvedSchema as object,
+    })
+    if (updated) tracker = updated
+  }
 
   const shouldPersistDefault =
     body.setMasterDataDefaultForOwner === true || body.updateMasterDataDefaultForOwner === true

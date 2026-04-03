@@ -1,11 +1,17 @@
 import { z } from 'zod'
 import { badRequest, jsonOk, notFound, readParams, requireParam } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
-import { masterDataBuildResultBodySchema } from '@/lib/master-data/chat-audit'
 import { appendConversationMessage } from '@/lib/repositories'
 
 const toolCallSchema = z.object({
-  purpose: z.enum(['validation', 'calculation']),
+  purpose: z.enum([
+    'validation',
+    'calculation',
+    'field-rule',
+    'binding',
+    'master-data-lookup',
+    'master-data-create',
+  ]),
   fieldPath: z.string(),
   description: z.string(),
   status: z.enum(['pending', 'running', 'done', 'error']),
@@ -20,7 +26,6 @@ const createMessageBodySchema = z
     trackerSchemaSnapshot: z.unknown().optional(),
     managerData: z.unknown().optional(),
     toolCalls: z.array(toolCallSchema).optional(),
-    masterDataBuildResult: masterDataBuildResultBodySchema.optional(),
   })
   .passthrough()
 
@@ -55,7 +60,13 @@ export async function POST(
   const toolCalls =
     Array.isArray(body.toolCalls) && body.toolCalls.length > 0
       ? body.toolCalls.map((tc) => ({
-          purpose: tc.purpose as 'validation' | 'calculation',
+          purpose: tc.purpose as
+            | 'validation'
+            | 'calculation'
+            | 'field-rule'
+            | 'binding'
+            | 'master-data-lookup'
+            | 'master-data-create',
           fieldPath: tc.fieldPath,
           description: tc.description,
           status: tc.status as 'pending' | 'running' | 'done' | 'error',
@@ -63,8 +74,6 @@ export async function POST(
           result: tc.result,
         }))
       : undefined
-
-  const masterDataBuildResult = body.masterDataBuildResult
 
   const message = await appendConversationMessage({
     conversationId,
@@ -74,7 +83,6 @@ export async function POST(
     trackerSchemaSnapshot: trackerSchemaSnapshot ?? undefined,
     managerData: body.managerData,
     toolCalls,
-    masterDataBuildResult,
   })
   if (!message) return notFound('Conversation not found')
 

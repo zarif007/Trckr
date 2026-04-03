@@ -203,6 +203,7 @@ export function buildBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
           optionsGrid: existing.optionsGrid,
           labelField: existing.labelField,
           optionsSourceSchemaId: existing.optionsSourceSchemaId,
+          ...(existing.optionsSourceKey ? { optionsSourceKey: existing.optionsSourceKey } : {}),
           fieldMappings: hasValueMapping ? existing.fieldMappings : [valueMapping, ...(existing.fieldMappings ?? [])],
         }
       }

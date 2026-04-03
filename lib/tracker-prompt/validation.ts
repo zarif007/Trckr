@@ -19,6 +19,7 @@ export type ParseResult =
       trackerSchemaId?: string
       projectId?: string
       moduleId?: string
+      masterDataScope?: string
     }
   | { ok: false; error: string; status: number }
 
@@ -83,5 +84,6 @@ export function parseRequestBody(body: unknown): ParseResult {
     trackerSchemaId: optionalId(b.trackerSchemaId),
     projectId: optionalId(b.projectId),
     moduleId: optionalId(b.moduleId),
+    masterDataScope: typeof b.masterDataScope === 'string' ? b.masterDataScope.trim() || undefined : undefined,
   }
 }

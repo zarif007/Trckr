@@ -8,13 +8,14 @@ export function collectOptionsSourceSchemaIds(
   const set = new Set<string>()
   if (!bindings) return []
   const self = currentTrackerSchemaId?.trim() ?? ''
+  const selfPlaceholder = '__self__'
   for (const entry of Object.values(bindings)) {
     if (!entry || typeof entry !== 'object') continue
     const sid =
       'optionsSourceSchemaId' in entry && typeof entry.optionsSourceSchemaId === 'string'
         ? entry.optionsSourceSchemaId.trim()
         : ''
-    if (!sid || (self && sid === self)) continue
+    if (!sid || sid === selfPlaceholder || (self && sid === self)) continue
     set.add(sid)
   }
   return Array.from(set).sort()

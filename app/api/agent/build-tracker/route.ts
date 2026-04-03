@@ -13,6 +13,8 @@ import { logAiError, logAiStage } from '@/lib/ai'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { resolveLlmUsageAttribution, scheduleRecordLlmUsage } from '@/lib/llm-usage'
 import { encodeEvent } from '@/lib/agent/events'
+import { resolveMasterDataDefaultScope } from '@/lib/master-data/resolve-default'
+import { normalizeMasterDataScope } from '@/lib/master-data-scope'
 
 import {
   buildConversationContext,
@@ -64,15 +66,28 @@ export async function POST(request: Request) {
     const currentStateBlock = buildCurrentStateBlock(trackerForPrompt)
     const hasMessages = messages.length > 0
 
-    // Extract masterDataScope from the current tracker schema (available for existing trackers)
-    const masterDataScope = (() => {
-      const ct = parsed.currentTracker
-      if (ct && typeof ct === 'object' && !Array.isArray(ct)) {
-        const s = (ct as Record<string, unknown>).masterDataScope
-        if (typeof s === 'string' && s.trim()) return s.trim()
-      }
-      return undefined
-    })()
+    // Resolve masterDataScope deterministically:
+    // 1) current tracker schema (if provided)
+    // 2) module/project default settings
+    // 3) fallback to "tracker"
+    let masterDataScope: string | undefined
+    if (parsed.masterDataScope) {
+      masterDataScope = normalizeMasterDataScope(parsed.masterDataScope) ?? undefined
+    }
+    const ct = parsed.currentTracker
+    if (!masterDataScope && ct && typeof ct === 'object' && !Array.isArray(ct)) {
+      const s = (ct as Record<string, unknown>).masterDataScope
+      masterDataScope = normalizeMasterDataScope(s) ?? undefined
+    }
+    if (!masterDataScope && parsed.projectId) {
+      const defaultScopeResolution = await resolveMasterDataDefaultScope({
+        projectId: parsed.projectId,
+        userId: authResult.user.id,
+        moduleId: parsed.moduleId ?? null,
+      })
+      masterDataScope = defaultScopeResolution.inheritedDefault ?? 'tracker'
+    }
+    if (!masterDataScope) masterDataScope = 'tracker'
 
     const promptInputs: PromptInputs = {
       query,
@@ -80,6 +95,7 @@ export async function POST(request: Request) {
       hasFullTrackerStateForPatch: hasFullTrackerStateForPatch(trackerForPrompt),
       conversationContext,
       hasMessages,
+      masterDataScope,
     }
 
     const encoder = new TextEncoder()
@@ -88,12 +104,18 @@ export async function POST(request: Request) {
       async start(controller) {
         try {
           logAiStage(logContext, 'orchestrate-start', 'Starting multi-agent build-tracker.')
+          const baseTrackerForPostprocess =
+            hasFullTrackerStateForPatch(trackerForPrompt) && trackerForPrompt && typeof trackerForPrompt === 'object'
+              ? (trackerForPrompt as Record<string, unknown>)
+              : null
+
           await orchestrateBuildTracker(promptInputs, controller, {
             logContext,
             userId: authResult.user.id,
             projectId: parsed.projectId,
             moduleId: parsed.moduleId,
             masterDataScope,
+            currentTracker: baseTrackerForPostprocess,
             onManagerLlmUsage: (usage) =>
               scheduleRecordLlmUsage({
                 userId: authResult.user.id,

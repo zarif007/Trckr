@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Wrench, Check, X, Loader2 } from 'lucide-react'
-import type { ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
+import type { ToolCallEntry } from '@/lib/agent/tool-calls'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 
@@ -25,7 +25,10 @@ function StatusIcon({ status }: { status: ToolCallEntry['status'] }) {
   }
 }
 
-function purposeLabel(purpose: 'validation' | 'calculation' | 'field-rule') {
+function purposeLabel(purpose: ToolCallEntry['purpose']) {
+  if (purpose === 'binding') return 'Bind'
+  if (purpose === 'master-data-lookup') return 'MD Lookup'
+  if (purpose === 'master-data-create') return 'MD Create'
   if (purpose === 'calculation') return 'Calculate'
   if (purpose === 'field-rule') return 'Field Rule'
   return 'Validate'
@@ -54,7 +57,7 @@ export function ToolCallProgress({ toolCalls, className }: ToolCallProgressProps
         <div className="flex items-center gap-2">
           <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Expression Agent
+            Tools
           </span>
         </div>
         <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
@@ -89,9 +92,16 @@ export function ToolCallProgress({ toolCalls, className }: ToolCallProgressProps
           >
             <StatusIcon status={tc.status} />
             <span className="font-medium shrink-0">{purposeLabel(tc.purpose)}</span>
-            <span className="text-muted-foreground truncate font-mono text-[11px]">
-              {tc.fieldPath}
-            </span>
+            {tc.fieldPath ? (
+              <span className="text-muted-foreground truncate font-mono text-[11px]">
+                {tc.fieldPath}
+              </span>
+            ) : null}
+            {tc.description ? (
+              <span className="text-muted-foreground truncate text-[11px]">
+                {tc.description}
+              </span>
+            ) : null}
             {tc.status === 'running' && !allDone && (
               <span className="ml-auto text-[10px] text-blue-500/70 shrink-0">
                 generating...

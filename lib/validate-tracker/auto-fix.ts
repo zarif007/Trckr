@@ -51,7 +51,8 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
 
   // --- Fix invalid bindings: select field id must not equal options grid label field id ---
   for (const [fieldPath, entry] of Object.entries(fixed.bindings!)) {
-    if (entry.optionsSourceSchemaId?.trim()) continue
+    const sourceId = entry.optionsSourceSchemaId?.trim()
+    if (sourceId && sourceId !== '__self__') continue
     const { fieldId: selectFieldId } = parsePath(fieldPath)
     const optGridId = normalizeOptionsGridId(entry.optionsGrid)
     const labelParsed = parsePath(entry.labelField)

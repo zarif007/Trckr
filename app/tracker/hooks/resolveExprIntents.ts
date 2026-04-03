@@ -5,19 +5,7 @@ import {
   type ExprIntent,
 } from '@/lib/expr-intents'
 import type { TrackerLike } from '@/lib/validate-tracker'
-
-export type ToolCallStatus = 'pending' | 'running' | 'done' | 'error'
-
-export interface ToolCallEntry {
-  id: string
-  fieldPath: string
-  purpose: 'validation' | 'calculation' | 'field-rule'
-  description: string
-  status: ToolCallStatus
-  error?: string
-  /** Resolved expr (or validation rule payload) when status is done; stored in DB for audit. */
-  result?: unknown
-}
+import type { ToolCallEntry, ToolCallStatus } from '@/lib/agent/tool-calls'
 
 /** @deprecated Use collectExprIntents from @/lib/expr-intents */
 export const detectIntents = collectExprIntents

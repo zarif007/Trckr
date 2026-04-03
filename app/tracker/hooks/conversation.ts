@@ -1,9 +1,13 @@
-import type { MasterDataBuildAudit } from '@/lib/master-data/chat-audit'
-
 export type ConversationMode = 'BUILDER' | 'ANALYST'
 
 export interface ToolCallPayload {
-  purpose: 'validation' | 'calculation' | 'field-rule'
+  purpose:
+    | 'validation'
+    | 'calculation'
+    | 'field-rule'
+    | 'binding'
+    | 'master-data-lookup'
+    | 'master-data-create'
   fieldPath: string
   description: string
   status: 'pending' | 'running' | 'done' | 'error'
@@ -17,7 +21,6 @@ export interface PersistMessagePayload {
   trackerSchemaSnapshot?: object
   managerData?: object
   toolCalls?: ToolCallPayload[]
-  masterDataBuildResult?: MasterDataBuildAudit
 }
 
 export interface ConversationListItem {
@@ -86,7 +89,6 @@ export interface ConversationWithMessages {
       error?: string
       result?: unknown
     }>
-    masterDataBuildResult?: MasterDataBuildAudit
   }>
 }
 
@@ -132,17 +134,13 @@ export async function persistMessage(
   if (payload.toolCalls?.length) {
     body.toolCalls = payload.toolCalls.map((tc) => ({
       purpose: tc.purpose,
-      fieldPath: tc.fieldPath,
+      fieldPath: tc.fieldPath ?? '',
       description: tc.description,
       status: tc.status,
       ...(tc.error != null && { error: tc.error }),
       ...(tc.result !== undefined && { result: tc.result }),
     }))
   }
-  if (payload.masterDataBuildResult?.actions?.length) {
-    body.masterDataBuildResult = payload.masterDataBuildResult
-  }
-
   const res = await fetch(`/api/conversations/${conversationId}/messages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

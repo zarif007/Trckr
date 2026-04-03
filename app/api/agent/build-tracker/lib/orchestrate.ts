@@ -14,6 +14,7 @@ import type { PromptInputs } from './prompts'
 import { runManagerAgent } from './manager-agent'
 import { runMasterDataAgent } from './master-data-agent'
 import { runBuilderAgent } from './builder-agent'
+import { postProcessBuilderOutput } from './postprocess'
 
 export interface OrchestrateOptions {
   logContext?: RequestLogContext
@@ -21,6 +22,7 @@ export interface OrchestrateOptions {
   projectId?: string | null
   moduleId?: string | null
   masterDataScope?: string | null
+  currentTracker?: Record<string, unknown> | null
   onManagerLlmUsage?: (usage: LanguageModelUsage) => void
   onBuilderLlmUsage?: (usage: LanguageModelUsage) => void
 }
@@ -99,8 +101,24 @@ export async function orchestrateBuildTracker(
   write({ t: 'phase', phase: 'builder' })
   if (opts.logContext) logAiStage(opts.logContext, 'builder-start', 'Starting builder agent.')
 
-  await runBuilderAgent(builderInputs, manager, write, {
+  const builderOutput = await runBuilderAgent(builderInputs, manager, write, {
     logContext: opts.logContext,
     onLlmUsage: opts.onBuilderLlmUsage,
   })
+
+  if (!opts.userId) {
+    write({ t: 'builder_finish', output: builderOutput })
+    return
+  }
+
+  const scopeForPost = effectiveScope ?? 'tracker'
+  const postProcessed = await postProcessBuilderOutput(builderOutput, {
+    masterDataScope: scopeForPost,
+    userId: opts.userId,
+    projectId: opts.projectId ?? null,
+    moduleId: opts.moduleId ?? null,
+    baseTracker: opts.currentTracker ?? null,
+  })
+
+  write({ t: 'builder_finish', output: postProcessed.output, toolCalls: postProcessed.toolCalls })
 }

@@ -86,7 +86,8 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
       warnings.push(`Binding key "${fieldPath}": field "${fieldId}" not found`)
     }
 
-    const foreignSource = Boolean(entry.optionsSourceSchemaId?.trim())
+    const sourceId = entry.optionsSourceSchemaId?.trim()
+    const foreignSource = Boolean(sourceId && sourceId !== '__self__')
 
     const optGridId = entry.optionsGrid?.includes('.')
       ? entry.optionsGrid.split('.').pop()!

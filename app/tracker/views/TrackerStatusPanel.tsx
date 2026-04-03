@@ -61,7 +61,7 @@ export function TrackerStatusPanel({
               {generationErrorMessage || error.message || 'An error occurred.'}
             </p>
             <Button variant="ghost" size="sm" onClick={onContinue} className="mt-2 h-8 text-xs font-semibold">
-              Continue
+              Retry
             </Button>
           </div>
         </div>
@@ -76,7 +76,7 @@ export function TrackerStatusPanel({
               {generationErrorMessage || 'The AI responded but did not produce a valid tracker.'}
             </p>
             <Button variant="ghost" size="sm" onClick={onContinue} className="mt-2 h-8 text-xs font-semibold">
-              Continue
+              Retry
             </Button>
           </div>
         </div>

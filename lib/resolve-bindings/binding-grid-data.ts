@@ -16,7 +16,7 @@ export function getOptionsGridRowsForBinding(
   const gridId = normalizeOptionsGridId(binding.optionsGrid)
   if (!gridId) return []
   const sourceId = binding.optionsSourceSchemaId?.trim()
-  if (sourceId) {
+  if (sourceId && sourceId !== '__self__') {
     return foreignGridDataBySchemaId?.[sourceId]?.[gridId] ?? []
   }
   return localGridData[gridId] ?? []

@@ -12,3 +12,4 @@ export {
   resolveFieldOptionsV2Async,
   getFieldBinding,
 } from './options'
+export { resolveSelfBindings } from './self-bindings'

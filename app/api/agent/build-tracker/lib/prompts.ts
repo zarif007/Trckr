@@ -123,9 +123,10 @@ If the tracker would be very large, output a complete but minimal tracker (fewer
  * Provides context and asks the manager to produce a PRD + builderTodo.
  */
 export function buildManagerUserPrompt(inputs: PromptInputs): string {
-  const { query, currentStateBlock, conversationContext, hasMessages, hasFullTrackerStateForPatch } =
+  const { query, currentStateBlock, conversationContext, hasMessages, hasFullTrackerStateForPatch, masterDataScope } =
     inputs
-  const prefix = currentStateBlock + conversationContext
+  const scopeBlock = formatMasterDataScope(masterDataScope)
+  const prefix = scopeBlock + currentStateBlock + conversationContext
   const stateTail = hasFullTrackerStateForPatch
     ? ' There is an existing tracker in context — analyze it and plan specific changes.'
     : ''
@@ -149,9 +150,10 @@ export function buildManagerUserPrompt(inputs: PromptInputs): string {
  * The plan block gives the builder clear, authoritative instructions.
  */
 export function buildBuilderUserPrompt(inputs: PromptInputs, manager: ManagerSchema): string {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData } = inputs
+  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
   const managerBlock = formatManagerPlan(manager)
-  const prefix = currentStateBlock + conversationContext
+  const scopeBlock = formatMasterDataScope(masterDataScope)
+  const prefix = scopeBlock + currentStateBlock + conversationContext
   const stateTail = hasFullTrackerStateForPatch
     ? ' Start from the Current Tracker State above when present.'
     : ''
@@ -168,15 +170,16 @@ export function buildBuilderFallbackPrompts(
   inputs: PromptInputs,
   manager: ManagerSchema,
 ): string[] {
-  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData } = inputs
+  const { query, currentStateBlock, conversationContext, hasFullTrackerStateForPatch, resolvedMasterData, masterDataScope } = inputs
   const managerBlock = formatManagerPlan(manager)
+  const scopeBlock = formatMasterDataScope(masterDataScope)
   const stateHint =
     currentStateBlock && hasFullTrackerStateForPatch ? ' Start from the Current Tracker State above.' : ''
   const mdBlock = resolvedMasterData?.length ? formatResolvedMasterData(resolvedMasterData) : ''
 
   return [
-    `${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
-    `${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
+    `${scopeBlock}${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
+    `${scopeBlock}${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
     'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings.',
   ]
 }
@@ -246,4 +249,10 @@ function formatResolvedMasterData(entries: ResolvedMasterDataEntry[]): string {
   }
   lines.push('\n=== End Pre-Resolved Master Data ===\n')
   return lines.join('\n')
+}
+
+function formatMasterDataScope(scope?: string | null): string {
+  const trimmed = typeof scope === 'string' ? scope.trim() : ''
+  if (!trimmed) return ''
+  return `Master Data Scope: ${trimmed}\n\n`
 }

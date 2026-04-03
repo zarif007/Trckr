@@ -99,7 +99,14 @@ export function normalizeValidationAndCalculations(tracker: TrackerLike): Tracke
   }
 
   const normalized: Record<string, FieldValidationRule[]> = {}
+  const coerceRules = (value: unknown): FieldValidationRule[] => {
+    if (Array.isArray(value)) return value as FieldValidationRule[]
+    if (value && typeof value === 'object') return [value as FieldValidationRule]
+    return []
+  }
   for (const [key, rules] of Object.entries(validations)) {
+    const ruleList = coerceRules(rules)
+    if (ruleList.length === 0) continue
     if (!key.includes('.')) {
       const fieldId = key
       if (!fieldIds.has(fieldId)) continue
@@ -108,7 +115,7 @@ export function normalizeValidationAndCalculations(tracker: TrackerLike): Tracke
       for (const gridId of gridSet) {
         const path = `${gridId}.${fieldId}`
         const existing = normalized[path]
-        normalized[path] = existing ? [...existing, ...rules] : rules
+        normalized[path] = existing ? [...existing, ...ruleList] : ruleList
       }
       continue
     }
@@ -116,7 +123,7 @@ export function normalizeValidationAndCalculations(tracker: TrackerLike): Tracke
     const [gridId, fieldId] = key.split('.')
     if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
     const existing = normalized[key]
-    normalized[key] = existing ? [...existing, ...rules] : rules
+    normalized[key] = existing ? [...existing, ...ruleList] : ruleList
   }
 
   const normalizedCalculations: Record<string, FieldCalculationRule> = {}

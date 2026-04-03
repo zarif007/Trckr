@@ -77,10 +77,11 @@ Examples of thinking:
 For multi-domain projects (5+ independent trackers): suggest modules to group related trackers.
 Single-tracker requests: omit suggestedModules.
 
-=== MASTER DATA ENTITIES (module/project scope only) ===
+=== MASTER DATA ENTITIES (ALL SCOPES) ===
 
-When the tracker will use masterDataScope "module" or "project" (i.e. it lives in a project/module context
-and selects from shared reference data), output requiredMasterData listing every external entity needed.
+Always output requiredMasterData listing every distinct select/multiselect entity needed, regardless of scope.
+For tracker scope, these are used for bindings and tool logging; for module/project scope, they drive shared
+master data resolution.
 
 Each entry is a reference data entity whose records live in a separate master data tracker:
 - key: stable snake_case singular identifier (e.g. "customer", "product", "employee")
@@ -93,8 +94,8 @@ requiredMasterData: [
   { key: "product", name: "Product", labelFieldId: "product_name" }
 ]
 
-Omit requiredMasterData for "tracker" scope or when no shared reference data is needed.
-The server resolves these BEFORE the builder runs, so the builder gets real tracker IDs directly.
+Omit requiredMasterData only when no select/multiselect entities are needed.
+The server resolves these BEFORE the builder runs for module/project scope, so the builder gets real tracker IDs directly.
 
 === OUTPUT SCHEMA ===
 

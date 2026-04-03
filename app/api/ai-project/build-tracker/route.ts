@@ -5,7 +5,8 @@ import { createRequestLogContext, jsonError } from '@/lib/api'
 import { requireAuthenticatedUser } from '@/lib/auth/server'
 import { prisma } from '@/lib/db'
 import { scheduleRecordLlmUsage } from '@/lib/llm-usage'
-import { createTrackerForUser } from '@/lib/repositories'
+import { createTrackerForUser, updateTrackerByIdForUser } from '@/lib/repositories'
+import { resolveSelfBindings } from '@/lib/binding'
 import { getCombinedSystemPrompt } from '@/lib/prompts/combined'
 import { buildTrackerBuilderPrompt } from '../lib/prompts'
 import { parseBuildBody } from '../lib/validation'
@@ -260,6 +261,17 @@ export async function POST(request: Request) {
               versionControl: trackerSpec.versionControl ?? false,
               autoSave: trackerSpec.autoSave ?? true,
             })
+
+            const resolvedSchema = resolveSelfBindings(
+              masterDataResult.tracker as Record<string, unknown>,
+              createdTracker.id,
+            )
+            if (resolvedSchema !== masterDataResult.tracker) {
+              const updated = await updateTrackerByIdForUser(createdTracker.id, authResult.user.id, {
+                schema: resolvedSchema as object,
+              })
+              if (updated) createdTracker = updated as typeof createdTracker
+            }
           } catch (createErr) {
             if (usage) {
               scheduleRecordLlmUsage({

@@ -193,6 +193,12 @@ export function applyTrackerPatch(
 
   const normalizedValidations: Record<string, FieldValidationRule[]> = {}
   for (const [key, rules] of Object.entries(validations)) {
+    const ruleList = Array.isArray(rules)
+      ? rules
+      : rules && typeof rules === 'object'
+        ? [rules as FieldValidationRule]
+        : []
+    if (ruleList.length === 0) continue
     // Legacy key: "<fieldId>"
     if (!key.includes('.')) {
       const fieldId = key
@@ -202,7 +208,7 @@ export function applyTrackerPatch(
       for (const gridId of gridSet) {
         const path = `${gridId}.${fieldId}`
         const existing = normalizedValidations[path]
-        normalizedValidations[path] = existing ? [...existing, ...rules] : rules
+        normalizedValidations[path] = existing ? [...existing, ...ruleList] : ruleList
       }
       continue
     }
@@ -211,7 +217,7 @@ export function applyTrackerPatch(
     const [gridId, fieldId] = key.split('.')
     if (!gridId || !fieldId || !gridIds.has(gridId) || !fieldIds.has(fieldId)) continue
     const existing = normalizedValidations[key]
-    normalizedValidations[key] = existing ? [...existing, ...rules] : rules
+    normalizedValidations[key] = existing ? [...existing, ...ruleList] : ruleList
   }
 
   const calculations: Record<string, CalculationEntryMerge> = { ...(base.calculations ?? {}) } as Record<string, CalculationEntryMerge>

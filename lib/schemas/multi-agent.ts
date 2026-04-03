@@ -45,7 +45,7 @@ export const managerSchema = z
       )
       .optional()
       .describe(
-        'For module/project masterDataScope only: all external master data entities this tracker needs. Server pre-resolves these before the builder runs.',
+        'All master data entities this tracker needs for select/multiselect fields (all scopes). Server pre-resolves these for module/project scope before the builder runs.',
       ),
   })
   .passthrough()

@@ -19,7 +19,8 @@ export function getInitialGridDataFromBindings(bindings: TrackerBindings): GridD
   const gridMeta: Record<string, { labelFieldId: string; valueFieldId: string }> = {}
 
   for (const [fieldPath, entry] of Object.entries(bindings)) {
-    if (entry.optionsSourceSchemaId?.trim()) continue
+    const sourceId = entry.optionsSourceSchemaId?.trim()
+    if (sourceId && sourceId !== '__self__') continue
     const optionsGridId = normalizeOptionsGridId(entry.optionsGrid)
     if (!optionsGridId) continue
 

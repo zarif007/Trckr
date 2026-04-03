@@ -24,6 +24,7 @@ export interface TrackerLike {
     string,
     {
       optionsSourceSchemaId?: string
+      optionsSourceKey?: string
       optionsGrid: string
       labelField: string
       fieldMappings: Array<{ from: string; to: string }>

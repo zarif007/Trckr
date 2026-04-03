@@ -19,7 +19,6 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     handlePointerDown,
     effectiveDisplaySchema,
     isStreamingTracker,
-    isResolvingMasterData,
     isAgentRunning,
     trackerDataRef,
     handleGridDataChange,
@@ -63,7 +62,6 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           isChatOpen={isChatOpen}
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
-          isResolvingMasterData={isResolvingMasterData}
           isAgentRunning={isAgentRunning}
           trackerDataRef={trackerDataRef}
           onGridDataChange={handleGridDataChange}

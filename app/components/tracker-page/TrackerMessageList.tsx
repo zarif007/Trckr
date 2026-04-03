@@ -1,16 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye, Wrench, Box, PackagePlus } from 'lucide-react'
+import { Sparkles, User, Loader2, Target, ChevronDown, ChevronUp, Eye, Wrench } from 'lucide-react'
 import Markdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import type { Message, TrackerResponse, ToolCallEntry } from '@/app/tracker/hooks/useTrackerChat'
-import { masterDataAuditHasCreated } from '@/lib/master-data/chat-audit'
-import {
-  MasterDataCreatedTrackersPanel,
-  MasterDataFunctionCallsPanel,
-} from './master-data-chat-audit'
+ 
 import { ToolCallProgress } from './ToolCallProgress'
 
 interface TrackerMessageListProps {
@@ -20,16 +16,12 @@ interface TrackerMessageListProps {
   object: unknown
   setMessageThinkingOpen: (idx: number, open: boolean) => void
   setMessageToolsOpen: (idx: number, open: boolean) => void
-  setMessageMasterDataFunctionsOpen?: (idx: number, open: boolean) => void
-  setMessageMasterDataCreatedOpen?: (idx: number, open: boolean) => void
   messagesEndRef: React.RefObject<HTMLDivElement | null>
   /** Callback when user wants to view a specific message's tracker version */
   onViewTracker?: (trackerData: TrackerResponse, messageIndex: number) => void
   /** Index of the message whose tracker is currently being viewed (for highlighting) */
   activeTrackerMessageIndex?: number | null
   toolCalls?: ToolCallEntry[]
-  isResolvingExpressions?: boolean
-  isResolvingMasterData?: boolean
   statusMessage?: string
   mode?: 'schema' | 'data'
 }
@@ -49,23 +41,17 @@ export function TrackerMessageList({
   object: streamedObject,
   setMessageThinkingOpen,
   setMessageToolsOpen,
-  setMessageMasterDataFunctionsOpen: setMdFunctionsOpen = () => {},
-  setMessageMasterDataCreatedOpen: setMdCreatedOpen = () => {},
   messagesEndRef,
   onViewTracker,
   activeTrackerMessageIndex,
   toolCalls = [],
-  isResolvingExpressions = false,
-  isResolvingMasterData = false,
   statusMessage,
   mode = 'schema',
 }: TrackerMessageListProps) {
   const [previewToolsOpen, setPreviewToolsOpen] = useState(false)
-  useEffect(() => {
-    if (isResolvingExpressions && toolCalls.length > 0) {
-      setPreviewToolsOpen(true)
-    }
-  }, [isResolvingExpressions, toolCalls.length])
+  const visibleMessages = messages
+    .map((message, index) => ({ message, index }))
+    .filter(({ message }) => !message.internal)
 
   const isAnalystMode = mode === 'data'
   const object = streamedObject as {
@@ -81,9 +67,9 @@ export function TrackerMessageList({
       transition={{ duration: 0.2 }}
       className="space-y-6 pt-4"
     >
-      {messages.map((message, idx) => (
+      {visibleMessages.map(({ message, index }) => (
         <motion.div
-          key={idx}
+          key={index}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
@@ -115,8 +101,7 @@ export function TrackerMessageList({
             )}
             {message.role === 'assistant' &&
               (message.managerData ||
-                (message.toolCalls && message.toolCalls.length > 0) ||
-                message.masterDataBuildResult) && (
+              (message.toolCalls && message.toolCalls.length > 0)) && (
                 <div className="w-full min-w-0 space-y-2">
                   {message.managerData && (
                     <div className="w-full min-w-0">
@@ -124,7 +109,7 @@ export function TrackerMessageList({
                         <button
                           type="button"
                           onClick={() => {
-                            setMessageThinkingOpen(idx, !message.isThinkingOpen)
+                            setMessageThinkingOpen(index, !message.isThinkingOpen)
                           }}
                           className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         >
@@ -177,7 +162,7 @@ export function TrackerMessageList({
                       <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
                         <button
                           type="button"
-                          onClick={() => setMessageToolsOpen(idx, !message.isToolsOpen)}
+                          onClick={() => setMessageToolsOpen(index, !message.isToolsOpen)}
                           className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <div className="flex items-center gap-2">
@@ -202,100 +187,27 @@ export function TrackerMessageList({
                       </div>
                     </div>
                   )}
-                  {message.masterDataBuildResult && (
-                    <>
-                      <div className="w-full min-w-0">
-                        <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setMdFunctionsOpen(idx, !message.isMasterDataFunctionsOpen)
-                            }
-                            className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Box className="w-3 h-3" />
-                              Functions
-                            </div>
-                            {message.isMasterDataFunctionsOpen ? (
-                              <ChevronUp className="w-3 h-3" />
-                            ) : (
-                              <ChevronDown className="w-3 h-3" />
-                            )}
-                          </button>
-                          {message.isMasterDataFunctionsOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden w-full min-w-0"
-                            >
-                              <MasterDataFunctionCallsPanel
-                                audit={message.masterDataBuildResult}
-                                className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
-                              />
-                            </motion.div>
-                          )}
-                        </div>
-                      </div>
-                      {masterDataAuditHasCreated(message.masterDataBuildResult) && (
-                        <div className="w-full min-w-0">
-                          <div className="flex flex-col gap-2 p-3 rounded-md bg-muted/40 border border-border/30 min-w-0 w-full">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMdCreatedOpen(idx, !message.isMasterDataCreatedOpen)
-                              }
-                              className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <PackagePlus className="w-3 h-3" />
-                                Created
-                              </div>
-                              {message.isMasterDataCreatedOpen ? (
-                                <ChevronUp className="w-3 h-3" />
-                              ) : (
-                                <ChevronDown className="w-3 h-3" />
-                              )}
-                            </button>
-                            {message.isMasterDataCreatedOpen && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden w-full min-w-0"
-                              >
-                                <MasterDataCreatedTrackersPanel
-                                  audit={message.masterDataBuildResult}
-                                  className="border-0 bg-transparent shadow-none p-0 pt-2 rounded-none"
-                                />
-                              </motion.div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+                  
                 </div>
               )}
             {message.trackerData && (
               <div
                 className={`rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
-                  activeTrackerMessageIndex === idx
+                  activeTrackerMessageIndex === index
                     ? 'border-foreground/20 bg-muted/50 text-foreground'
                     : 'border-border/40 bg-muted/30 text-muted-foreground'
                 }`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span>
-                    {activeTrackerMessageIndex === idx ? 'Viewing this version' : 'Tracker updated'}
+                    {activeTrackerMessageIndex === index ? 'Viewing this version' : 'Tracker updated'}
                   </span>
-                  {onViewTracker && activeTrackerMessageIndex !== idx && (
+                  {onViewTracker && activeTrackerMessageIndex !== index && (
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-xs font-medium hover:bg-foreground/10 hover:text-foreground"
-                      onClick={() => onViewTracker(message.trackerData!, idx)}
+                      onClick={() => onViewTracker(message.trackerData!, index)}
                     >
                       <Eye className="h-3 w-3 mr-1" />
                       View
@@ -312,7 +224,7 @@ export function TrackerMessageList({
           )}
         </motion.div>
       ))}
-      {(isLoading || isResolvingExpressions || isResolvingMasterData) && (
+      {isLoading && (
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -331,15 +243,11 @@ export function TrackerMessageList({
                     ? (object as { content?: string } | undefined)?.content
                       ? 'Writing analysis…'
                       : 'Analyzing your data…'
-                    : isResolvingMasterData
-                      ? 'Linking master data…'
-                      : isResolvingExpressions
-                        ? 'Generating expressions…'
-                        : statusMessage
-                          ? statusMessage
-                          : !object?.manager ? 'Consulting product manager…' :
-                            !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
-                              'Building your tracker…'}
+                    : statusMessage
+                      ? statusMessage
+                      : !object?.manager ? 'Consulting product manager…' :
+                        !(object?.tracker || object?.trackerPatch) ? 'Architecting structure…' :
+                          'Building your tracker…'}
                 </p>
               </div>
 
@@ -356,10 +264,10 @@ export function TrackerMessageList({
               )}
 
               {!isAnalystMode &&
-                (((isLoading || isResolvingMasterData) && object?.manager) ||
+                (((isLoading) && object?.manager) ||
                   toolCalls.length > 0) && (
                   <div className="w-full min-w-0 space-y-2">
-                    {(isLoading || isResolvingMasterData) && object?.manager && (
+                    {(isLoading) && object?.manager && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -440,7 +348,6 @@ export function TrackerMessageList({
             isLoading &&
             (object?.tracker || object?.trackerPatch) &&
             renderStreamingStatus('Streaming tracker…')}
-          {!isAnalystMode && isResolvingMasterData && renderStreamingStatus('Linking master data…')}
         </motion.div>
       )}
       <div ref={messagesEndRef} />

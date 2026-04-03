@@ -4,14 +4,7 @@
 
 import type { FieldCalculationRule, FieldValidationRule } from '@/lib/functions/types'
 import type { DynamicOptionsDefinitions } from '@/lib/dynamic-options'
-
-/** Binding entry structure for validation (no valueField - value is in fieldMappings) */
-export interface BindingEntry {
-  optionsSourceSchemaId?: string
-  optionsGrid: string
-  labelField: string
-  fieldMappings: Array<{ from: string; to: string }>
-}
+import type { TrackerBindingEntry } from '@/lib/types/tracker-bindings'
 
 export interface TrackerLike {
   tabs?: Array<{ id: string; name?: string; placeId?: number; config?: Record<string, unknown> }>
@@ -24,7 +17,7 @@ export interface TrackerLike {
     config?: Record<string, unknown> | null
   }>
   layoutNodes?: Array<{ gridId: string; fieldId: string; order?: number; row?: number; col?: number }>
-  bindings?: Record<string, BindingEntry>
+  bindings?: Record<string, TrackerBindingEntry>
   validations?: Record<string, FieldValidationRule[]>
   calculations?: Record<string, FieldCalculationRule>
   fieldRules?: Array<{ source?: string; targets?: string[]; action?: string; operator?: string; value?: unknown }>

@@ -15,7 +15,7 @@ import {
   validateCalculations,
 } from './validators'
 
-export type { TrackerLike, ValidationResult, BindingEntry } from './types'
+export type { TrackerLike, ValidationResult } from './types'
 export { autoFixBindings } from './auto-fix'
 export { validateBindings, validateFieldRules, validateValidations, validateCalculations } from './validators'
 
