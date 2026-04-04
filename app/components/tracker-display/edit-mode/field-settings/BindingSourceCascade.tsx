@@ -16,6 +16,7 @@ import {
 } from "../../bindings/bindings-utils";
 import type { TrackerDisplayProps } from "../../types";
 import type { BindingDraft } from "../../bindings/bindings-utils";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 
 type Step = "tracker" | "grid" | "field";
 
@@ -41,8 +42,10 @@ function pickSchema(
   sourceId: string | undefined,
   localSchema: TrackerDisplayProps,
   sourceSchema: TrackerDisplayProps | null,
+  currentTrackerId?: string | null,
 ): TrackerDisplayProps | null {
   if (!sourceId?.trim()) return localSchema;
+  if (isSelfBinding(sourceId, currentTrackerId)) return localSchema;
   return sourceSchema;
 }
 
@@ -66,8 +69,8 @@ export function BindingSourceCascade({
   const draftSourceId = bindingDraft.optionsSourceSchemaId?.trim();
 
   const pickerSchema = useMemo(
-    () => pickSchema(draftSourceId, localSchema, sourceSchema),
-    [draftSourceId, localSchema, sourceSchema],
+    () => pickSchema(draftSourceId, localSchema, sourceSchema, currentTrackerSchemaId),
+    [draftSourceId, localSchema, sourceSchema, currentTrackerSchemaId],
   );
 
   const gridPickerOptions = useMemo(
@@ -114,12 +117,13 @@ export function BindingSourceCascade({
     localSchema,
   ]);
 
+  const isSelf = isSelfBinding(draftSourceId, currentTrackerSchemaId);
   const foreignLoading =
-    Boolean(draftSourceId) && (sourceSchemaLoading || !pickerSchema);
+    Boolean(draftSourceId) && !isSelf && (sourceSchemaLoading || !pickerSchema);
 
   const selectThisTracker = () => {
     onPick({
-      optionsSourceSchemaId: undefined,
+      optionsSourceSchemaId: currentTrackerSchemaId || undefined,
       optionsGrid: "",
       labelField: "",
     });

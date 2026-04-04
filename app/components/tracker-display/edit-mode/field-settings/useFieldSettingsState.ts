@@ -22,6 +22,7 @@ import {
   type BindingDraft,
 } from "../../bindings/bindings-utils";
 import { parsePath } from "@/lib/resolve-bindings";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 import type { DynamicOptionsDefinitions } from "@/lib/dynamic-options";
 import type { FieldRule } from "@/lib/field-rules";
 import {
@@ -807,7 +808,13 @@ export function useFieldSettingsState({
           fieldMappings,
         };
         const src = bindingDraft.optionsSourceSchemaId?.trim();
-        if (src) entry.optionsSourceSchemaId = src;
+        const isLocal = !src || isSelfBinding(src, ctxTrackerSchemaId);
+        if (isLocal && ctxTrackerSchemaId) {
+          entry.optionsSourceSchemaId = ctxTrackerSchemaId;
+          entry.optionsSourceKey = bindingDraft.optionsGrid.trim();
+        } else if (src) {
+          entry.optionsSourceSchemaId = src;
+        }
         nextBindings[bindingKey] = entry;
       }
     }
@@ -877,6 +884,7 @@ export function useFieldSettingsState({
     dynamicOptionsArgsText,
     dynamicCacheTtlText,
     dynamicOptionsDraft,
+    ctxTrackerSchemaId,
   ]);
 
   const isNumeric = useMemo(

@@ -13,11 +13,12 @@ export function getOptionsGridRowsForBinding(
   binding: TrackerBindingEntry,
   localGridData: GridData,
   foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null,
+  currentTrackerId?: string | null,
 ): Record<string, unknown>[] {
   const gridId = normalizeOptionsGridId(binding.optionsGrid);
   if (!gridId) return [];
   const sourceId = binding.optionsSourceSchemaId?.trim();
-  if (sourceId && !isSelfBinding(sourceId)) {
+  if (sourceId && !isSelfBinding(sourceId, currentTrackerId)) {
     return foreignGridDataBySchemaId?.[sourceId]?.[gridId] ?? [];
   }
   return localGridData[gridId] ?? [];

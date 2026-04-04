@@ -123,6 +123,8 @@ function getCachedOptionRowIndex(
  * @param binding - Binding configuration
  * @param selectedValue - Value to find
  * @param selectFieldPath - Path to the select field
+ * @param foreignGridDataBySchemaId - Grid data from foreign trackers
+ * @param currentTrackerId - Current tracker's schema ID (for self-binding detection)
  * @returns Matching option row or undefined
  *
  * @example
@@ -137,6 +139,7 @@ export function findOptionRow(
   selectedValue: unknown,
   selectFieldPath: FieldPath,
   foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null,
+  currentTrackerId?: string | null,
 ): Record<string, unknown> | undefined {
   const gridId = normalizeOptionsGridId(binding.optionsGrid);
   const valueFieldId = getValueFieldIdFromBinding(binding, selectFieldPath);
@@ -170,6 +173,7 @@ export function findOptionRow(
     binding,
     gridData,
     foreignGridDataBySchemaId,
+    currentTrackerId,
   );
   debugLog(`Options grid "${gridId}" has ${rows.length} rows`, rows);
 
@@ -251,6 +255,8 @@ export interface ResolvedOption {
  * @param binding - Binding configuration specifying options grid and fields
  * @param gridData - All grid data containing the options rows
  * @param selectFieldPath - Path to the select field being configured
+ * @param foreignGridDataBySchemaId - Grid data from foreign trackers
+ * @param currentTrackerId - Current tracker's schema ID (for self-binding detection)
  * @returns Array of normalized options with id, label, and value
  *
  * @example
@@ -264,6 +270,7 @@ export function resolveOptionsFromBinding(
   gridData: GridData,
   selectFieldPath: FieldPath,
   foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null,
+  currentTrackerId?: string | null,
 ): ResolvedOption[] {
   const gridId = normalizeOptionsGridId(binding.optionsGrid);
   const { fieldId: labelFieldId } = parsePath(binding.labelField);
@@ -287,6 +294,7 @@ export function resolveOptionsFromBinding(
     binding,
     gridData,
     foreignGridDataBySchemaId,
+    currentTrackerId,
   );
 
   if (rows.length === 0) {
@@ -316,12 +324,15 @@ export function resolveOptionsFromBinding(
  *
  * @param binding - Binding configuration
  * @param gridData - All grid data
+ * @param foreignGridDataBySchemaId - Grid data from foreign trackers
+ * @param currentTrackerId - Current tracker's schema ID (for self-binding detection)
  * @returns Array of complete row objects from the options grid
  */
 export function getFullOptionRows(
   binding: TrackerBindingEntry,
   gridData: GridData,
   foreignGridDataBySchemaId?: ForeignGridDataBySchemaId | null,
+  currentTrackerId?: string | null,
 ): Array<Record<string, unknown>> {
   const gridId = normalizeOptionsGridId(binding.optionsGrid);
   if (!gridId) return [];
@@ -329,5 +340,6 @@ export function getFullOptionRows(
     binding,
     gridData,
     foreignGridDataBySchemaId,
+    currentTrackerId,
   );
 }

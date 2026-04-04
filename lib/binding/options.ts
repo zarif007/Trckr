@@ -103,11 +103,13 @@ export function resolveFieldOptionsV2(
   if (binding) {
     const selectFieldPath = buildFieldPath(gridId, field.id);
     const foreign = trackerContext?.foreignGridDataBySchemaId;
+    const currentTrackerId = trackerContext?.trackerSchemaId;
     const options = resolveOptionsFromBinding(
       binding,
       gridData,
       selectFieldPath,
       foreign,
+      currentTrackerId,
     );
     return options.map(normalizeOption);
   }

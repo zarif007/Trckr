@@ -40,8 +40,6 @@ export type PostProcessResult = {
   toolCalls: ToolCallEntry[];
 };
 
-const SELF_SOURCE_ID = "ThisTracker";
-
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -193,20 +191,6 @@ function repairTrackerStructure(
     sections: nextSections,
     grids: nextGrids,
   };
-}
-
-function applySelfBindingsPlaceholder(
-  tracker: Record<string, unknown>,
-): Record<string, unknown> {
-  const bindingsRaw = isPlainObject(tracker.bindings) ? tracker.bindings : {};
-  const bindings: Record<string, unknown> = { ...bindingsRaw };
-  for (const [fieldPath, entry] of Object.entries(bindings)) {
-    if (!isPlainObject(entry)) continue;
-    const source = entry.optionsSourceSchemaId;
-    if (typeof source === "string" && source.trim() !== "") continue;
-    bindings[fieldPath] = { ...entry, optionsSourceSchemaId: SELF_SOURCE_ID };
-  }
-  return { ...tracker, bindings };
 }
 
 function stableStringify(value: unknown): string {
@@ -662,9 +646,7 @@ export async function postProcessBuilderOutput(
   }
 
   tracker = autoFixBindings(tracker as TrackerLike) as Record<string, unknown>;
-  if (scope === "tracker") {
-    tracker = applySelfBindingsPlaceholder(tracker);
-  }
+  // Note: Local bindings are normalized to use actual tracker ID when saved via resolveSelfBindings
 
   const afterBindings = isPlainObject(tracker.bindings)
     ? (tracker.bindings as Record<string, unknown>)

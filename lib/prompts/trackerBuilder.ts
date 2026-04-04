@@ -48,7 +48,7 @@ Scope behavior:
  - Tab: { id: "master_data_tab", name: "Master Data", placeId: 999, config: {} }
  - Section: { id: "master_data_section", name: "Master Data", tabId: "master_data_tab", placeId: 1, config: {} }
  - Create local master data grids (id ending with _options_grid) inside master_data_section.
- - For EVERY bindings entry, set optionsSourceSchemaId to "ThisTracker" (local tracker).
+ - For bindings entries: OMIT optionsSourceSchemaId entirely (do NOT set it). The system will fill in the actual tracker ID automatically when saved.
 2) masterDataScope = "module" or "project"
  - NEVER create any local grids on this tracker for options/master data — not master_data_tab, not
  _options_grid grids, not any grid whose id appears in a masterDataTrackers schema. The primary
@@ -118,9 +118,8 @@ BINDINGS STRUCTURE (paths are grid.field - NO TAB):
 bindings: {
  "<grid_id>.<field_id>": {
  // optionsSourceSchemaId:
- // - tracker scope: ALWAYS "ThisTracker"
+ // - tracker scope: OMIT entirely (do NOT set it - system fills in tracker ID automatically)
  // - module/project scope: id of another tracker schema in the same project (from pre-resolved block)
- // - omit only when explicitly instructed (legacy)
  optionsGrid: "<grid_id>", // Grid id containing options (e.g. product_options_grid)
  labelField: "<options_grid_id>.<option_field_id>", // Path to the DEDICATED option field (different id than select), e.g. exercise_options_grid.exercise_option
  optionsSourceKey: "student", // REQUIRED for module/project scope (matches masterDataTrackers.key)
@@ -177,7 +176,6 @@ EXAMPLE 4 - Intra-tracker cross-grid reference (Costing picks from Sales Order i
 
 bindings: {
  "costing_grid.sales_order": {
- optionsSourceSchemaId: "ThisTracker",
  optionsGrid: "sales_order_grid",
  labelField: "sales_order_grid.order_number",
  fieldMappings: [
@@ -187,16 +185,17 @@ bindings: {
 }
 // sales_order_grid is a PRIMARY data grid — NOT an _options_grid.
 // Do NOT add "Sales Order" to masterDataTrackers or requiredMasterData.
+// optionsSourceSchemaId is OMITTED — system will fill in actual tracker ID automatically.
 
 BINDINGS RULES:
 1. EVERY select/multiselect field MUST have a bindings entry - NO EXCEPTIONS
 2. Key is ALWAYS: "<grid_id>.<field_id>" (NO tab in any path)
-3. If optionsSourceSchemaId is "ThisTracker" or is omitted, optionsGrid must be one of:
+3. If optionsSourceSchemaId is OMITTED (tracker scope - local binding), optionsGrid must be one of:
    (a) a local options grid (id ending with _options_grid) for static/enumerated option lists, OR
    (b) a PRIMARY DATA GRID in this tracker when this field is an intra-tracker cross-grid reference
-       (e.g. Costing → Sales Order within the same tracker; always set optionsSourceSchemaId: "ThisTracker").
+       (e.g. Costing → Sales Order within the same tracker).
    NEVER use a primary data grid as optionsGrid for static lookups — only for case (b) intra-tracker references.
-4. If optionsSourceSchemaId is present (module/project scope), optionsGrid MUST match the grid id used in the referenced masterDataTrackers.schema, and optionsSourceKey MUST match a masterDataTrackers.key.
+4. If optionsSourceSchemaId is set to a foreign tracker ID (module/project scope), optionsGrid MUST match the grid id used in the referenced masterDataTrackers.schema, and optionsSourceKey MUST match a masterDataTrackers.key.
 5. labelField = "options_grid_id.<option_field_id>" — must point to a DEDICATED option field with a different id than the select field (e.g. "exercise_options_grid.exercise_option", not "exercise_options_grid.exercise" when the select field is "exercise"). For module/project scope, labelField is "<optionsGrid>.<labelFieldId>" from the matching masterDataTrackers entry.
 6. fieldMappings MUST have at least one entry where "to" is this select field path and "from" equals labelField (same path)
 7. Other fieldMappings entries auto-populate other main grid fields when an option is selected
@@ -245,7 +244,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - EVERY select/multiselect field MUST have a bindings entry.
 - Key is "<grid_id>.<field_id>" (no tab).
 - optionsGrid MUST be an options grid (id ending with _options_grid) for local tracker scope. If optionsSourceSchemaId is set (module/project scope), optionsGrid MUST match the master data tracker's grid id. Never use a main data grid as optionsGrid.
-- For tracker scope, ALWAYS set optionsSourceSchemaId to "ThisTracker".
+- For tracker scope, OMIT optionsSourceSchemaId (do NOT set it - system fills in actual tracker ID automatically).
 - Contains optionsGrid, labelField, and fieldMappings array.
 
 9. Output

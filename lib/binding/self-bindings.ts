@@ -6,28 +6,32 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Returns true when the given optionsSourceSchemaId refers to the current tracker itself.
- * Handles the canonical value ("ThisTracker") and the legacy value ("__self__").
+ * Handles the canonical value ("ThisTracker"), legacy value ("__self__"), and the actual tracker ID.
+ *
+ * @param sourceId - The optionsSourceSchemaId to check
+ * @param currentTrackerId - Optional current tracker's schema ID (when provided, also matches the actual ID)
  */
 export function isSelfBinding(
   sourceId: string | null | undefined,
+  currentTrackerId?: string | null,
 ): boolean {
   if (!sourceId) return false;
   const s = sourceId.trim();
-  return s === "ThisTracker" || s === "__self__";
+  if (s === "ThisTracker" || s === "__self__") return true;
+  if (currentTrackerId && s === currentTrackerId.trim()) return true;
+  return false;
 }
 
 /**
- * Clears intra-tracker self-binding source IDs so that the runtime resolves options
- * from localGridData (the current tracker's own snapshot rows).
+ * Normalizes intra-tracker self-binding source IDs to use the actual tracker ID.
  *
- * Local cross-grid bindings work correctly with an empty optionsSourceSchemaId — the
- * runtime falls through to localGridData for any binding whose source is empty or a
- * self-binding placeholder. Storing a real tracker ID breaks this because the runtime
- * then looks in foreignGridDataBySchemaId, where the current tracker's own data is not
- * available as a foreign source.
+ * Local cross-grid bindings now consistently use the actual tracker ID as optionsSourceSchemaId.
+ * The runtime recognizes this via isSelfBinding(sourceId, currentTrackerId) and resolves options
+ * from localGridData.
  *
- * - "ThisTracker" / "__self__" → cleared (optionsSourceSchemaId set to "")
- * - <own trackerId>            → cleared (normalizes bindings saved by old code)
+ * - "ThisTracker" / "__self__" → normalized to the actual trackerId
+ * - Empty string               → normalized to the actual trackerId (local binding)
+ * - <own trackerId>            → kept as-is (already correct)
  * - Foreign tracker IDs        → untouched
  *
  * Returns the original tracker when no changes are needed.
@@ -52,10 +56,11 @@ export function resolveSelfBindings<T extends Record<string, unknown>>(
       typeof entry.optionsSourceSchemaId === "string"
         ? entry.optionsSourceSchemaId.trim()
         : "";
-    if (source === "" || source === "ThisTracker") continue; // already canonical
-    if (source === "__self__" || source === trackerId) {
-      // Clear the self-reference — local cross-grid bindings use empty source
-      nextBindings[fieldPath] = { ...entry, optionsSourceSchemaId: "" };
+    // Skip if already using the actual tracker ID or a foreign tracker ID
+    if (source === trackerId) continue;
+    // Normalize self-binding placeholders and empty to actual tracker ID
+    if (source === "" || source === "ThisTracker" || source === "__self__") {
+      nextBindings[fieldPath] = { ...entry, optionsSourceSchemaId: trackerId };
       changed = true;
     }
   }
