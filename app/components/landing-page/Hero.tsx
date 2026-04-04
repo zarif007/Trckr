@@ -7,7 +7,7 @@ import { theme } from "@/lib/theme";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-visible px-0 sm:px-2 pt-[1rem] sm:pt-[2.5rem] md:pt-[3rem]">
+    <section className="relative overflow-visible px-0 sm:px-2 pt-[1rem]">
       <div className="fixed inset-0 pointer-events-none z-0 bg-grid opacity-[0.04] dark:opacity-[0.07]" />
 
       <div className="relative z-10 mx-auto max-w-6xl mb-2 sm:mb-3">

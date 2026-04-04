@@ -4,6 +4,7 @@
  */
 
 import type { TrackerBindings } from "@/lib/types/tracker-bindings";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 import type { GridData } from "./grid-data";
 import { parsePath } from "./path";
 import { normalizeOptionsGridId } from "./path";
@@ -25,7 +26,7 @@ export function getInitialGridDataFromBindings(
 
   for (const [fieldPath, entry] of Object.entries(bindings)) {
     const sourceId = entry.optionsSourceSchemaId?.trim();
-    if (sourceId && sourceId !== "__self__") continue;
+    if (sourceId && !isSelfBinding(sourceId)) continue;
     const optionsGridId = normalizeOptionsGridId(entry.optionsGrid);
     if (!optionsGridId) continue;
 

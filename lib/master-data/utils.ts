@@ -10,9 +10,7 @@ export function titleCase(str: string): string {
 
 export function normalizeName(value: string): string {
   const trimmed = value.trim().toLowerCase();
-  const alnum = trimmed.replace(/[^a-z0-9]+/g, "");
-  if (alnum.length > 3 && alnum.endsWith("s")) return alnum.slice(0, -1);
-  return alnum;
+  return trimmed.replace(/[^a-z0-9]+/g, "");
 }
 
 export function toSnakeId(value: string, fallback = "master_data"): string {

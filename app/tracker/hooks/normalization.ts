@@ -176,9 +176,26 @@ export function normalizeValidationAndCalculations(
     normalizedCalculations[key] = rule as FieldCalculationRule;
   }
 
+  // Coerce fieldRulesV2 entries to arrays — the LLM occasionally emits a single rule
+  // object instead of an array, which causes "rules is not iterable" in the resolver.
+  const fieldRulesSource = (
+    tracker as TrackerLike & { fieldRulesV2?: unknown }
+  ).fieldRulesV2;
+  const coercedFieldRules: Record<string, unknown[]> = {};
+  if (isPlainObject(fieldRulesSource)) {
+    for (const [key, value] of Object.entries(fieldRulesSource)) {
+      if (Array.isArray(value)) {
+        coercedFieldRules[key] = value;
+      } else if (value && typeof value === "object") {
+        coercedFieldRules[key] = [value];
+      }
+    }
+  }
+
   return {
     ...tracker,
     validations: normalized,
     calculations: normalizedCalculations,
+    fieldRulesV2: coercedFieldRules,
   } as TrackerLike;
 }

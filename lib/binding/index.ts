@@ -19,4 +19,4 @@ export {
   resolveFieldOptionsV2Async,
   getFieldBinding,
 } from "./options";
-export { resolveSelfBindings } from "./self-bindings";
+export { resolveSelfBindings, isSelfBinding, SELF_SOURCE_ID } from "./self-bindings";

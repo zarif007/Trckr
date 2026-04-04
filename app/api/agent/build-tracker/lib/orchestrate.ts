@@ -60,15 +60,7 @@ export async function orchestrateBuildTracker(
   });
 
   // ─── Phase 2: Master Data Agent ─────────────────────────────────────────────
-  const requiredMasterData = Array.isArray(
-    (manager as Record<string, unknown>).requiredMasterData,
-  )
-    ? ((manager as Record<string, unknown>).requiredMasterData as Array<{
-        key: string;
-        name: string;
-        labelFieldId?: string;
-      }>)
-    : [];
+  const requiredMasterData = manager.requiredMasterData ?? [];
 
   const effectiveScope = opts.masterDataScope?.trim();
   const needsMasterData =
@@ -79,6 +71,9 @@ export async function orchestrateBuildTracker(
 
   let builderInputs: PromptInputs = inputs;
 
+  // Tracker scope: all bindings are intra-tracker (__self__ placeholders resolved
+  // in postprocess via buildBindingsFromSchema + enrichBindingsFromSchema).
+  // The builder sees the full local grid structure directly — no external resolution needed.
   if (needsMasterData) {
     write({ t: "phase", phase: "master-data" });
     try {

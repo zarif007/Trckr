@@ -4,6 +4,7 @@
  */
 
 import { parsePath } from "@/lib/resolve-bindings";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 import {
   KNOWN_DYNAMIC_OPTIONS_FUNCTION_IDS,
   dynamicConnectorSchema,
@@ -91,7 +92,7 @@ export function validateBindings(ctx: ValidationContext): ValidatorResult {
     }
 
     const sourceId = entry.optionsSourceSchemaId?.trim();
-    const foreignSource = Boolean(sourceId && sourceId !== "__self__");
+    const foreignSource = Boolean(sourceId && !isSelfBinding(sourceId));
 
     const optGridId = entry.optionsGrid?.includes(".")
       ? entry.optionsGrid.split(".").pop()!

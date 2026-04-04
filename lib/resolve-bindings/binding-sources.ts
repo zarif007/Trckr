@@ -1,4 +1,5 @@
 import type { TrackerBindings } from "@/lib/types/tracker-bindings";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 
 /** Unique optionsSourceSchemaId values from bindings, excluding empty and the current tracker. */
 export function collectOptionsSourceSchemaIds(
@@ -8,7 +9,6 @@ export function collectOptionsSourceSchemaIds(
   const set = new Set<string>();
   if (!bindings) return [];
   const self = currentTrackerSchemaId?.trim() ?? "";
-  const selfPlaceholder = "__self__";
   for (const entry of Object.values(bindings)) {
     if (!entry || typeof entry !== "object") continue;
     const sid =
@@ -16,7 +16,7 @@ export function collectOptionsSourceSchemaIds(
       typeof entry.optionsSourceSchemaId === "string"
         ? entry.optionsSourceSchemaId.trim()
         : "";
-    if (!sid || sid === selfPlaceholder || (self && sid === self)) continue;
+    if (!sid || isSelfBinding(sid) || (self && sid === self)) continue;
     set.add(sid);
   }
   return Array.from(set).sort();

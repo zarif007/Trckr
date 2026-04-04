@@ -333,7 +333,7 @@ export function useTrackerChat(options: UseTrackerChatOptions = {}) {
         trackerData: tracker as TrackerResponse,
         managerData,
         ...(toolCallsForPersist?.length
-          ? { toolCalls: toolCallsForPersist }
+          ? { toolCalls: toolCallsForPersist, isToolsOpen: true }
           : {}),
       };
       setMessages((prev) => [...prev, assistantMessage]);

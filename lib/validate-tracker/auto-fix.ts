@@ -4,6 +4,7 @@
  */
 
 import { parsePath, normalizeOptionsGridId } from "@/lib/resolve-bindings";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 import type { TrackerLike } from "./types";
 import { titleCase } from "./utils";
 import {
@@ -59,7 +60,7 @@ export function autoFixBindings<T extends TrackerLike>(tracker: T): T {
   // --- Fix invalid bindings: select field id must not equal options grid label field id ---
   for (const [fieldPath, entry] of Object.entries(fixed.bindings!)) {
     const sourceId = entry.optionsSourceSchemaId?.trim();
-    if (sourceId && sourceId !== "__self__") continue;
+    if (sourceId && !isSelfBinding(sourceId)) continue;
     const { fieldId: selectFieldId } = parsePath(fieldPath);
     const optGridId = normalizeOptionsGridId(entry.optionsGrid);
     const labelParsed = parsePath(entry.labelField);

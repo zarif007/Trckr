@@ -91,6 +91,11 @@ OUTPUT COMPLETENESS:
 - Every tab, section, grid, and field listed in builderTodo MUST appear in your output.
 - Every binding, rule, validation, and calculation in builderTodo MUST be in your output.
 
+MASTER DATA SCOPE RULE (module/project scope):
+- If "Pre-Resolved Master Data" is present in the user message: those entities ALREADY EXIST in external trackers. Do NOT create any local grids for them (no supplier_grid, no warehouse_grid, etc.).
+- Only create grids for local-only entities that are NOT listed in "Pre-Resolved Master Data".
+- All select/multiselect fields for external entities MUST use the foreign binding from "Pre-Resolved Master Data" — not "ThisTracker" or local optionsGrid references.
+
 CRITICAL OUTPUT RULES:
 - Output EITHER "tracker" (full schema) OR "trackerPatch" (incremental changes). Never both.
 - Never output "manager" — only "tracker", "trackerPatch", and/or "masterDataTrackers".
@@ -275,7 +280,11 @@ function formatResolvedMasterData(entries: ResolvedMasterDataEntry[]): string {
     "These master data trackers are ALREADY IN THE DATABASE. Use their EXACT IDs in bindings.",
   );
   lines.push(
-    'Do NOT use "__master_data__" placeholder. Do NOT create local master data grids. Do NOT output masterDataTrackers.\n',
+    'STRICT RULES: Do NOT use "__master_data__" placeholder. Do NOT create local grids for ANY of these entities. Do NOT output masterDataTrackers.',
+  );
+  const entityNames = entries.map((e) => `"${e.name}"`).join(", ");
+  lines.push(
+    `Do NOT create grids named after or related to: ${entityNames}. These exist externally.\n`,
   );
   for (const e of entries) {
     lines.push(`• key: "${e.key}" name: "${e.name}"`);

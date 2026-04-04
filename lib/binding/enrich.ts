@@ -5,6 +5,7 @@
 
 import type { TrackerLike } from "./types";
 import { normalizeOptionsGridId } from "@/lib/resolve-bindings";
+import { isSelfBinding } from "./self-bindings";
 
 /** Parse "grid_id.field_id" and return the field id (last part). */
 function parsePathFieldId(path: string): string | null {
@@ -78,7 +79,7 @@ export function enrichBindingsFromSchema<T extends TrackerLike>(tracker: T): T {
   let anyChanged = false;
   for (const [fieldPath, entry] of Object.entries(bindings)) {
     const sourceId = entry.optionsSourceSchemaId?.trim();
-    if (sourceId && sourceId !== "__self__") continue;
+    if (sourceId && !isSelfBinding(sourceId)) continue;
     const parts = fieldPath.split(".");
     if (parts.length < 2) continue;
     const mainGridId = parts[0]!;

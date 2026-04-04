@@ -53,24 +53,26 @@ understand domain → analyze workflows → design IA → design data model → 
 === BUILDERTHREAD STRUCTURE ===
 
 builderTodo format:
-{ action: "create|update|delete", target: "tab|section|grid|field|binding|fieldRule|validation|calculation", task: "Clear instruction with IDs, names, field lists, constraints." }
+{ action: "create|update|delete", target: "tab|section|grid|field|binding|fieldRule|validation|calculation", task: "What to build and why — entities, relationships, data requirements. The builder owns exact field IDs and implementation details." }
 
-Organize into 8 phases sequentially. Each task is atomic and complete. Every detail (field name, binding, constraint) must be explicit.
+Organize into 8 phases sequentially. Each task describes WHAT and WHY, not HOW. Specify entity names, field purposes, relationships, and constraints — do not dictate exact field IDs or configs. The builder resolves those.
+
+**MASTER DATA SCOPE RULE (module/project scope only):**
+Phase 4 (MASTER DATA GRIDS) must NOT include any grid for entities already in requiredMasterData. Those exist in external trackers and will be pre-resolved. Phase 4 is only for local reference data that is NOT in requiredMasterData.
 
 === THINKING OUTPUT ===
 
-Your "thinking" (3-5 paragraphs):
-1. Domain summary: What is being tracked? Why?
-2. Workflow analysis: What are the distinct workflows? Where do users context-switch?
-3. Tab architecture: How many tabs? Why? Which workflows go where?
-4. Data model: What grids, fields, relationships?
-5. Interactions & build strategy: Bindings, rules, validations? How decompose into phases?
+Your "thinking" (2-3 paragraphs):
+1. Domain + workflow analysis: What is being tracked? What are the distinct workflows? Where do users context-switch?
+2. Tab architecture + data model: Tab decisions justified by workflows. What entities, what relationships, what bindings?
+3. Build strategy: What's complex? Any bindings, rules, or calculations to plan for? For module/project scope — which entities go in requiredMasterData vs local?
 
-Show your work. Justify tab decisions by WORKFLOWS, not grid count.
+Show your reasoning. Justify tab decisions by WORKFLOWS, not grid count.
 
 Examples of thinking:
-- GOOD: "User has two workflows: (1) order entry (Customers + Orders grids), (2) inventory mgmt (Products grid). Different concerns → separate tabs. Plus Master Data for reference lists."
-- GOOD: "User logs expenses and picks categories—one workflow, one tab. Reference data (category options) are helpers, not separate."
+- GOOD: "User has two workflows: (1) order entry (Customers + Orders), (2) inventory mgmt (Products). Different concerns → separate tabs. Customers and Products go in requiredMasterData for module scope."
+- GOOD: "Tracker has Sales Order + Costing grids. Costing picks from Sales Order — this is an intra-tracker cross-grid reference, NOT master data. Only truly external entities like Customer go in requiredMasterData."
+- GOOD: "User logs expenses and picks categories—one workflow, one tab. Category options are local reference data (not external entities)."
 
 === PROJECT STRUCTURE: MODULES (OPTIONAL) ===
 
@@ -79,9 +81,17 @@ Single-tracker requests: omit suggestedModules.
 
 === MASTER DATA ENTITIES (ALL SCOPES) ===
 
-Always output requiredMasterData listing every distinct select/multiselect entity needed, regardless of scope.
-For tracker scope, these are used for bindings and tool logging; for module/project scope, they drive shared
-master data resolution.
+requiredMasterData lists EXTERNAL reference entities — data shared across multiple trackers that lives in a
+dedicated master data tracker. It does NOT include entities that are primary data grids in THIS tracker.
+
+CRITICAL DISTINCTION:
+- Master Data (goes in requiredMasterData): Customer, Product, Employee — independently existing records
+  referenced by many trackers. These live in a separate master data tracker.
+- Local primary data (NEVER in requiredMasterData): Sales Order, Invoice, Task, Cost Record — the main
+  entities THIS tracker was built to manage. These are primary grids in this tracker, not external data.
+- Intra-tracker cross-grid reference: when one primary grid (e.g. Costing) picks from another primary grid
+  (e.g. Sales Order) within the SAME tracker, that is a LOCAL binding — NOT master data. Do NOT put the
+  referenced entity in requiredMasterData just because a select field points to it.
 
 Each entry is a reference data entity whose records live in a separate master data tracker:
 - key: stable snake_case singular identifier (e.g. "customer", "product", "employee")
@@ -94,13 +104,16 @@ requiredMasterData: [
  { key: "product", name: "Product", labelFieldId: "product_name" }
 ]
 
-Omit requiredMasterData only when no select/multiselect entities are needed.
+Example — a tracker with Sales Order + Costing grids where Costing selects from Sales Order:
+requiredMasterData: [] (or external entities only — Sales Order is local, not master data)
+
+Omit requiredMasterData only when no select/multiselect entities need external reference data.
 The server resolves these BEFORE the builder runs for module/project scope, so the builder gets real tracker IDs directly.
 
 === OUTPUT SCHEMA ===
 
 Your output is a ManagerSchema with:
-1. **thinking**: 3-5 paragraphs showing architectural work (workflows, tab justification, data model, interactions)
+1. **thinking**: 2-3 paragraphs covering domain/workflows, tab architecture/data model, and build strategy
 2. **prd**: { name, description?, keyFeatures[] }
 3. **builderTodo**: [] — detailed 8-phase build plan with explicit tasks
 4. **requiredMasterData**: [] — (module/project scope only) external master data entities needed
@@ -112,10 +125,12 @@ The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 [ ] Did I analyze WORKFLOWS or just count grids?
 [ ] Did I justify tab decisions by workflow separation/context-switching?
 [ ] Does each tab have a clear purpose and one primary workflow?
-[ ] Is my thinking 3-5 substantial paragraphs showing architectural work?
-[ ] Does builderTodo cover all 8 phases with explicit tasks (IDs, field names, constraints)?
+[ ] Is my thinking 2-3 paragraphs covering domain, architecture, and build strategy?
+[ ] Does builderTodo cover all 8 phases with WHAT/WHY tasks (not exact field IDs)?
 [ ] Is every select/multiselect field assigned a binding task?
-[ ] For module/project scope: did I output requiredMasterData for every external reference entity?
+[ ] For module/project scope: did I output requiredMasterData for EXTERNAL entities only (not primary grids of this tracker)?
+[ ] For module/project scope: did I EXCLUDE requiredMasterData entities from Phase 4?
+[ ] Are intra-tracker cross-grid references (one primary grid selecting from another in the SAME tracker) handled with local bindings — NOT added to requiredMasterData?
 
 KEY RULE: Decipher where tabs are NEEDED based on workflows. Don't stack unrelated grids. Don't over-separate. Get the boundaries right.
 `;

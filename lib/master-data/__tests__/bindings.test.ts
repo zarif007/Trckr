@@ -611,4 +611,195 @@ describe("applyMasterDataBindings", () => {
     ).toBe(false);
     expect(prismaMock.module.findMany).not.toHaveBeenCalled();
   });
+
+  it("resolves broken self-binding when optionsGrid doesn't exist in main tracker", async () => {
+    prismaMock.project.findFirst.mockResolvedValue({ id: "project-1" });
+    prismaMock.module.findMany.mockResolvedValue([
+      {
+        id: "md-mod-1",
+        name: "Master Data",
+        settings: { masterDataModule: true },
+      },
+    ]);
+
+    const statusMdSchema = {
+      masterDataScope: "tracker" as const,
+      tabs: [{ id: "overview_tab", name: "Overview", placeId: 0, config: {} }],
+      sections: [
+        {
+          id: "status_master_data_section",
+          name: "Status Master Data",
+          tabId: "overview_tab",
+          placeId: 1,
+          config: {},
+        },
+      ],
+      grids: [
+        {
+          id: "status_grid",
+          name: "Status",
+          sectionId: "status_master_data_section",
+          placeId: 1,
+          config: {},
+          views: [{ id: "master_data_table_view", name: "Table", type: "table" as const, config: {} }],
+        },
+      ],
+      fields: [
+        { id: "value", dataType: "string" as const, ui: { label: "Value" }, config: {} },
+      ],
+      layoutNodes: [{ gridId: "status_grid", fieldId: "value", order: 1 }],
+      bindings: {},
+      validations: {},
+      calculations: {},
+      fieldRules: [],
+      formActions: [{ id: "default_save_action", label: "Save", statusTag: "Saved", isEditable: true }],
+      styles: {},
+    };
+
+    prismaMock.trackerSchema.findMany.mockResolvedValue([
+      { id: "md-tracker-status", name: "Status", schema: statusMdSchema },
+    ]);
+
+    // Main tracker: Status field has a broken __self__ binding pointing to status_grid,
+    // but status_grid does NOT exist in the main tracker (only main_grid does).
+    const result = await applyMasterDataBindings({
+      tracker: {
+        masterDataScope: "module",
+        tabs: [{ id: "overview_tab", name: "Overview", placeId: 0, config: {} }],
+        sections: [{ id: "main_section", name: "Main", tabId: "overview_tab", placeId: 1, config: {} }],
+        grids: [
+          {
+            id: "main_grid",
+            name: "Main",
+            sectionId: "main_section",
+            placeId: 1,
+            config: {},
+            views: [{ id: "main_table_view", name: "Table", type: "table", config: {} }],
+          },
+        ],
+        fields: [
+          { id: "status", dataType: "options", ui: { label: "Status" }, config: {} },
+        ],
+        layoutNodes: [{ gridId: "main_grid", fieldId: "status", order: 1 }],
+        bindings: {
+          "main_grid.status": {
+            optionsSourceSchemaId: "ThisTracker",
+            optionsGrid: "status_grid",
+            labelField: "status_grid.value",
+            fieldMappings: [],
+          },
+        },
+      },
+      scope: "module",
+      masterDataTrackers: [],
+      projectId: "project-1",
+      moduleId: "module-1",
+      userId: "user-1",
+    });
+
+    const binding = (result.tracker.bindings as Record<string, unknown>)[
+      "main_grid.status"
+    ] as { optionsSourceSchemaId: string; optionsGrid: string };
+
+    expect(binding.optionsSourceSchemaId).toBe("md-tracker-status");
+    expect(binding.optionsGrid).toBe("status_grid");
+    expect(createTrackerForUserMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves broken self-binding via grid ID hint when field label diverges from MD tracker name", async () => {
+    prismaMock.project.findFirst.mockResolvedValue({ id: "project-1" });
+    prismaMock.module.findMany.mockResolvedValue([
+      {
+        id: "md-mod-1",
+        name: "Master Data",
+        settings: { masterDataModule: true },
+      },
+    ]);
+
+    const statusMdSchema = {
+      masterDataScope: "tracker" as const,
+      tabs: [{ id: "overview_tab", name: "Overview", placeId: 0, config: {} }],
+      sections: [
+        {
+          id: "status_master_data_section",
+          name: "Status Master Data",
+          tabId: "overview_tab",
+          placeId: 1,
+          config: {},
+        },
+      ],
+      grids: [
+        {
+          id: "status_grid",
+          name: "Status",
+          sectionId: "status_master_data_section",
+          placeId: 1,
+          config: {},
+          views: [{ id: "master_data_table_view", name: "Table", type: "table" as const, config: {} }],
+        },
+      ],
+      fields: [
+        { id: "value", dataType: "string" as const, ui: { label: "Value" }, config: {} },
+      ],
+      layoutNodes: [{ gridId: "status_grid", fieldId: "value", order: 1 }],
+      bindings: {},
+      validations: {},
+      calculations: {},
+      fieldRules: [],
+      formActions: [{ id: "default_save_action", label: "Save", statusTag: "Saved", isEditable: true }],
+      styles: {},
+    };
+
+    // MD tracker is named "Status" but field.id is "status_name" and label is "Status Name".
+    // normalizeName("Status Name") = "statusname" which does NOT match normalizeName("Status") = "status".
+    // The gridIdHint extracted from optionsGrid "status_grid" → "status" → "status" should match.
+    prismaMock.trackerSchema.findMany.mockResolvedValue([
+      { id: "md-tracker-status", name: "Status", schema: statusMdSchema },
+    ]);
+
+    const result = await applyMasterDataBindings({
+      tracker: {
+        masterDataScope: "module",
+        tabs: [{ id: "overview_tab", name: "Overview", placeId: 0, config: {} }],
+        sections: [{ id: "main_section", name: "Main", tabId: "overview_tab", placeId: 1, config: {} }],
+        grids: [
+          {
+            id: "main_grid",
+            name: "Main",
+            sectionId: "main_section",
+            placeId: 1,
+            config: {},
+            views: [{ id: "main_table_view", name: "Table", type: "table", config: {} }],
+          },
+        ],
+        fields: [
+          // Field ID "status_name" and label "Status Name" — diverges from MD tracker "Status"
+          { id: "status_name", dataType: "options", ui: { label: "Status Name" }, config: {} },
+        ],
+        layoutNodes: [{ gridId: "main_grid", fieldId: "status_name", order: 1 }],
+        bindings: {
+          "main_grid.status_name": {
+            optionsSourceSchemaId: "ThisTracker",
+            optionsGrid: "status_grid",
+            labelField: "status_grid.value",
+            fieldMappings: [],
+          },
+        },
+      },
+      scope: "module",
+      masterDataTrackers: [],
+      projectId: "project-1",
+      moduleId: "module-1",
+      userId: "user-1",
+    });
+
+    const binding = (result.tracker.bindings as Record<string, unknown>)[
+      "main_grid.status_name"
+    ] as { optionsSourceSchemaId: string; optionsGrid: string };
+
+    // Should match "Status" MD tracker via grid ID hint, not create a new "Status Name" tracker
+    expect(binding.optionsSourceSchemaId).toBe("md-tracker-status");
+    expect(binding.optionsGrid).toBe("status_grid");
+    expect(createTrackerForUserMock).not.toHaveBeenCalled();
+  });
 });

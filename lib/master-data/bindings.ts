@@ -11,6 +11,7 @@ import {
   withMasterDataMeta,
 } from "./meta";
 import { isPlainObject, normalizeName, titleCase } from "./utils";
+import { isSelfBinding } from "@/lib/binding/self-bindings";
 import type { MasterDataTrackerSpec } from "@/lib/schemas/multi-agent";
 import {
   normalizeMasterDataScope,
@@ -300,24 +301,56 @@ function ensureBindingEntry(options: {
   };
 }
 
+const SELF_SOURCE_ID = "ThisTracker";
+
+/**
+ * Derives a human-readable entity name token from a grid ID.
+ * "status_grid"         → "status"
+ * "status_options_grid" → "status"
+ * "customer_order_grid" → "customer order"
+ */
+function extractEntityFromGridId(gridId: string): string {
+  return gridId
+    .replace(/_options_grid$/, "")
+    .replace(/_grid$/, "")
+    .replace(/_/g, " ")
+    .trim();
+}
+
 function resolveUnboundSelectFields(options: {
   tracker: Record<string, unknown>;
   bindings: Record<string, unknown>;
   gridByFieldId: Map<string, string>;
+  /** Grid IDs that belong to master data specs — these will be stripped, so bindings pointing
+   *  at them are NOT valid local bindings and must be resolved to foreign master data. */
+  specGridIds: Set<string>;
 }): Array<{
   field: Field;
   fieldPath: string;
   binding?: Record<string, unknown>;
+  gridIdHint?: string;
 }> {
-  const { tracker, bindings, gridByFieldId } = options;
+  const { tracker, bindings, gridByFieldId, specGridIds } = options;
   const fields = Array.isArray(tracker.fields)
     ? (tracker.fields as Field[])
     : [];
+
+  // Build the set of grid IDs that actually exist in this tracker (before any stripping).
+  // Used to distinguish intra-tracker cross-grid references from unresolved bindings.
+  const trackerGrids = Array.isArray(tracker.grids)
+    ? (tracker.grids as Grid[])
+    : [];
+  const localGridIds = new Set(
+    trackerGrids
+      .map((g) => g.id)
+      .filter((id): id is string => typeof id === "string"),
+  );
 
   const unresolved: Array<{
     field: Field;
     fieldPath: string;
     binding?: Record<string, unknown>;
+    gridIdHint?: string;
   }> = [];
   for (const field of fields) {
     if (field.dataType !== "options" && field.dataType !== "multiselect")
@@ -330,13 +363,48 @@ function resolveUnboundSelectFields(options: {
       | Record<string, unknown>
       | undefined;
     const sourceId = existingBinding?.optionsSourceSchemaId;
+
+    // Already resolved to a real foreign tracker — keep it.
     if (
       sourceId &&
       String(sourceId).trim().length > 0 &&
-      !isPlaceholderSourceId(sourceId)
+      !isPlaceholderSourceId(sourceId) &&
+      !isSelfBinding(String(sourceId))
     )
       continue;
-    unresolved.push({ field, fieldPath, binding: existingBinding });
+
+    // For module/project scope, treat "__self__" as potentially unresolved, BUT only if the
+    // binding does not point at a primary data grid within this same tracker.
+    // A field like "costing_grid.sales_order" with optionsGrid: "sales_order_grid" is a valid
+    // intra-tracker cross-grid reference — it should stay local and NOT become master data.
+    const optionsGridId =
+      typeof existingBinding?.optionsGrid === "string"
+        ? existingBinding.optionsGrid.trim()
+        : "";
+    if (
+      optionsGridId &&
+      localGridIds.has(optionsGridId) &&
+      !optionsGridId.endsWith("_options_grid") &&
+      !specGridIds.has(optionsGridId)
+    ) {
+      // Valid intra-tracker binding pointing at a primary data grid — preserve it.
+      continue;
+    }
+
+    // When the field has a broken self-binding (optionsGrid points to a non-existent local
+    // grid), extract the entity name from the grid ID as a hint for MD lookup. This is more
+    // reliable than field.id which often carries extra context (e.g. "status_name" → "Status
+    // Name" when the intended entity is "Status").
+    let gridIdHint: string | undefined;
+    if (
+      isSelfBinding(String(sourceId ?? "")) &&
+      optionsGridId &&
+      !localGridIds.has(optionsGridId)
+    ) {
+      const extracted = extractEntityFromGridId(optionsGridId);
+      if (extracted) gridIdHint = extracted;
+    }
+    unresolved.push({ field, fieldPath, binding: existingBinding, gridIdHint });
   }
   return unresolved;
 }
@@ -375,14 +443,10 @@ export async function applyMasterDataBindings(options: {
     gridByFieldId.set(node.fieldId, node.gridId);
   }
 
-  const unresolvedFields = resolveUnboundSelectFields({
-    tracker: nextTracker,
-    bindings,
-    gridByFieldId,
-  });
-
-  // Build spec index and grid ID set now — needed for stripping even when unresolvedFields is empty
-  // (LLM may have placed master data grids locally even if all bindings were pre-resolved).
+  // Build spec index and grid ID set BEFORE resolving unbound fields — specGridIds is needed
+  // to distinguish master data grids (to be replaced) from intra-tracker primary data grids
+  // (to be preserved as local bindings). Also needed for stripping even when all bindings are
+  // already resolved (LLM may still have placed master data grids locally).
   const specs = Array.isArray(options.masterDataTrackers)
     ? options.masterDataTrackers
     : [];
@@ -399,6 +463,13 @@ export async function applyMasterDataBindings(options: {
       if (gridId) specGridIds.add(gridId);
     }
   }
+
+  const unresolvedFields = resolveUnboundSelectFields({
+    tracker: nextTracker,
+    bindings,
+    gridByFieldId,
+    specGridIds,
+  });
 
   if (unresolvedFields.length === 0) {
     const afterOptions = stripLocalOptionsGrids(nextTracker);
@@ -495,7 +566,7 @@ export async function applyMasterDataBindings(options: {
   };
 
   for (const entry of unresolvedFields) {
-    const { field, fieldPath, binding } = entry;
+    const { field, fieldPath, binding, gridIdHint } = entry;
     if (!field.id) continue;
 
     const rawKey =
@@ -606,10 +677,26 @@ export async function applyMasterDataBindings(options: {
     const entityName = titleCase(String(label));
     const normalized = normalizeName(entityName);
 
-    const fallbackKey = nameCacheKey(normalized);
+    // When the field has a broken self-binding, gridIdHint carries the entity name extracted
+    // from optionsGrid (e.g. "status_grid" → "status"). This is often a cleaner signal than
+    // field.id (which can be "status_name" → "Status Name" while the MD tracker is "Status").
+    const hintEntityName = gridIdHint ? titleCase(gridIdHint) : undefined;
+    const hintNormalized = hintEntityName ? normalizeName(hintEntityName) : undefined;
+
+    // Resolve active cache key — prefer hint key when primary isn't cached but hint is.
+    const primaryKey = nameCacheKey(normalized);
+    const hintKey = hintNormalized ? nameCacheKey(hintNormalized) : undefined;
+    const fallbackKey =
+      !targetCache.has(primaryKey) && hintKey && targetCache.has(hintKey)
+        ? hintKey
+        : primaryKey;
+
     if (!targetCache.has(fallbackKey)) {
       let match = trackerIndex.find(
-        (t) => t.normalized === normalized && hasMasterDataGrid(t.schema),
+        (t) =>
+          hasMasterDataGrid(t.schema) &&
+          (t.normalized === normalized ||
+            (hintNormalized !== undefined && t.normalized === hintNormalized)),
       );
       if (!match) {
         const fallbackSchema = buildMasterDataSchema(entityName);
@@ -682,6 +769,9 @@ export async function applyMasterDataBindings(options: {
       optionsFieldIds: target.fieldIds,
     });
   }
+
+  // Local cross-grid bindings intentionally have no optionsSourceSchemaId — the runtime
+  // resolves options from localGridData when the source is empty. No pass needed here.
 
   const afterOptions = stripLocalOptionsGrids(nextTracker);
   const afterForeign = stripLocalMasterDataGrids(afterOptions, specGridIds);

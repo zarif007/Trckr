@@ -5,6 +5,7 @@ import type { MasterDataTrackerSpec } from "@/lib/schemas/multi-agent";
 import {
   buildBindingsFromSchema,
   enrichBindingsFromSchema,
+  isSelfBinding,
 } from "@/lib/binding";
 import {
   collectExprIntents,
@@ -24,6 +25,7 @@ import { normalizeMasterDataScope } from "@/lib/master-data-scope";
 import { applyTrackerPatch } from "@/app/tracker/utils/mergeTracker";
 import { extractFieldRefsFromExpr } from "@/lib/field-rules/extract-field-refs";
 import { parsePath } from "@/lib/resolve-bindings";
+import { isPlaceholderSourceId } from "@/lib/master-data/bindings";
 
 export type PostProcessOptions = {
   masterDataScope: string;
@@ -38,7 +40,7 @@ export type PostProcessResult = {
   toolCalls: ToolCallEntry[];
 };
 
-const SELF_SOURCE_ID = "__self__";
+const SELF_SOURCE_ID = "ThisTracker";
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -218,7 +220,7 @@ function stableStringify(value: unknown): string {
   return JSON.stringify(value);
 }
 
-function coerceValidationRules(
+function coerceRules(
   raw: unknown,
 ): Record<string, Array<Record<string, unknown>>> {
   if (!isPlainObject(raw)) return {};
@@ -237,25 +239,10 @@ function coerceValidationRules(
   return out;
 }
 
-function coerceFieldRules(
-  raw: unknown,
-): Record<string, Array<Record<string, unknown>>> {
-  if (!isPlainObject(raw)) return {};
-  const out: Record<string, Array<Record<string, unknown>>> = {};
-  for (const [key, value] of Object.entries(raw)) {
-    if (Array.isArray(value)) {
-      out[key] = value.filter((v): v is Record<string, unknown> =>
-        isPlainObject(v),
-      );
-    }
-  }
-  return out;
-}
-
 function sanitizeTracker(
   tracker: Record<string, unknown>,
 ): Record<string, unknown> {
-  const validations = coerceValidationRules(tracker.validations);
+  const validations = coerceRules(tracker.validations);
   const calculationsRaw = isPlainObject(tracker.calculations)
     ? tracker.calculations
     : {};
@@ -263,14 +250,7 @@ function sanitizeTracker(
   for (const [key, value] of Object.entries(calculationsRaw)) {
     if (isPlainObject(value)) calculations[key] = value;
   }
-  const fieldRulesV2 = coerceFieldRules(tracker.fieldRulesV2);
-
-  const base = {
-    ...tracker,
-    validations,
-    calculations,
-    fieldRulesV2,
-  };
+  const fieldRulesV2 = coerceRules(tracker.fieldRulesV2);
 
   // `buildValidationContext` only needs layout structure to compute `fieldPaths`.
   // Passing raw `validations/calculations` here breaks `TrackerLike` typing.
@@ -379,7 +359,7 @@ function buildBindingToolCalls(
         ? nextEntry.optionsSourceSchemaId
         : "";
     const sourceLabel =
-      sourceId === SELF_SOURCE_ID
+      isSelfBinding(sourceId)
         ? "local"
         : sourceId
           ? `source ${sourceId}`
@@ -531,6 +511,84 @@ async function resolveExprIntentsServer(tracker: TrackerLike): Promise<{
   return { tracker: nextTracker as TrackerLike, toolCalls, errors };
 }
 
+function validateBindingIntegrity(tracker: TrackerLike): {
+  errors: string[];
+  warnings: string[];
+} {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const bindings = isPlainObject(tracker.bindings) ? tracker.bindings : {};
+  const grids = Array.isArray(tracker.grids) ? tracker.grids : [];
+  const gridIds = new Set(
+    grids
+      .filter((g) => isPlainObject(g) && typeof g.id === "string")
+      .map((g) => g.id as string),
+  );
+
+  for (const [fieldPath, entry] of Object.entries(bindings)) {
+    if (!isPlainObject(entry)) {
+      warnings.push(`Binding at "${fieldPath}" is not a valid object`);
+      continue;
+    }
+
+    const sourceId =
+      typeof entry.optionsSourceSchemaId === "string"
+        ? entry.optionsSourceSchemaId
+        : "";
+
+    // Empty sourceId is valid for local cross-grid bindings (optionsGrid points to a
+    // primary data grid within this same tracker). Foreign MD bindings must have a real ID.
+    if (!sourceId.trim()) {
+      const optGridId =
+        typeof entry.optionsGrid === "string" ? entry.optionsGrid.trim() : "";
+      if (optGridId && gridIds.has(optGridId)) {
+        continue; // local cross-grid binding — no source ID needed
+      }
+      errors.push(`Binding "${fieldPath}" has no optionsSourceSchemaId`);
+      continue;
+    }
+
+    // Placeholder that survived the pipeline = something went wrong
+    if (isPlaceholderSourceId(sourceId)) {
+      errors.push(
+        `Binding "${fieldPath}" still has a placeholder source ID "${sourceId}"`,
+      );
+      continue;
+    }
+
+    // ThisTracker / __self__ are valid for intra-tracker bindings — skip further checks
+    if (isSelfBinding(sourceId)) {
+      const optionsGrid =
+        typeof entry.optionsGrid === "string" ? entry.optionsGrid : "";
+      if (optionsGrid && !gridIds.has(optionsGrid)) {
+        errors.push(
+          `Binding "${fieldPath}" references non-existent grid "${optionsGrid}"`,
+        );
+      }
+      continue;
+    }
+
+    // Foreign master data binding should have optionsGrid and labelField
+    const optionsGrid =
+      typeof entry.optionsGrid === "string" ? entry.optionsGrid : "";
+    const labelField =
+      typeof entry.labelField === "string" ? entry.labelField : "";
+
+    if (!optionsGrid.trim()) {
+      warnings.push(
+        `Binding "${fieldPath}" has foreign source but no optionsGrid`,
+      );
+    }
+    if (!labelField.trim()) {
+      warnings.push(
+        `Binding "${fieldPath}" has foreign source but no labelField`,
+      );
+    }
+  }
+
+  return { errors, warnings };
+}
+
 function materializeTracker(
   output: BuilderOutput,
   baseTracker?: Record<string, unknown> | null,
@@ -551,7 +609,11 @@ export async function postProcessBuilderOutput(
   output: BuilderOutput,
   options: PostProcessOptions,
 ): Promise<PostProcessResult> {
-  const scope = normalizeMasterDataScope(options.masterDataScope) ?? "tracker";
+  const rawScope = normalizeMasterDataScope(options.masterDataScope);
+  const scope =
+    rawScope && rawScope !== "tracker" && !options.projectId
+      ? "tracker"
+      : rawScope ?? "tracker";
   const baseTracker = options.baseTracker ?? null;
   const materialized = materializeTracker(output, baseTracker);
   if (!materialized) {
@@ -604,8 +666,6 @@ export async function postProcessBuilderOutput(
     tracker = applySelfBindingsPlaceholder(tracker);
   }
 
-  tracker = sanitizeTracker(tracker);
-
   const afterBindings = isPlainObject(tracker.bindings)
     ? (tracker.bindings as Record<string, unknown>)
     : {};
@@ -613,6 +673,15 @@ export async function postProcessBuilderOutput(
 
   const exprResult = await resolveExprIntentsServer(tracker as TrackerLike);
   tracker = sanitizeTracker(exprResult.tracker as Record<string, unknown>);
+
+  // Validate binding integrity: catch unresolved placeholders and broken references
+  // before they reach the user
+  const bindingIntegrity = validateBindingIntegrity(tracker as TrackerLike);
+  if (bindingIntegrity.errors.length > 0) {
+    throw new Error(
+      `Binding integrity check failed: ${bindingIntegrity.errors.join("; ")}`,
+    );
+  }
 
   const validation = validateTracker(tracker as TrackerLike);
   if (!validation.valid) {
