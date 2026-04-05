@@ -204,6 +204,17 @@ export function formatOutputMarkdown(
   if (seg && rows.length > 0) {
     return rowsToSegmentedMarkdownTables(rows, seg);
   }
+  // Auto-segment by __gridId when rows span multiple grids and no explicit segment column set
+  if (rows.length > 0 && !seg) {
+    const gridIds = new Set(
+      rows
+        .map((r) => r.__gridId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    );
+    if (gridIds.size > 1) {
+      return rowsToSegmentedMarkdownTables(rows, "__gridId");
+    }
+  }
   if (style === "markdown_table") return rowsToMarkdownTable(rows);
   if (style === "markdown_summary") return rowsToMarkdownSummary(rows);
   return `${rowsToMarkdownSummary(rows)}\n\n---\n\n${rowsToMarkdownTable(rows)}`;

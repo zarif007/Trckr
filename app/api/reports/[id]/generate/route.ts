@@ -9,7 +9,8 @@ import {
 } from "@/lib/api/http";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { parseQueryPlan, type QueryPlanV1 } from "@/lib/reports/ast-schemas";
-import { isReplayable, runReportPipeline } from "@/lib/reports/orchestrator";
+import { isReplayable } from "@/lib/reports/orchestrator";
+import { orchestrateReport } from "@/app/api/agent/report/lib/orchestrate";
 import {
   mergeQueryPlanWithOverrides,
   replayQueryOverridesSchema,
@@ -68,7 +69,7 @@ export async function POST(
         controller.enqueue(encoder.encode(line));
       };
       try {
-        await runReportPipeline({
+        await orchestrateReport({
           userId: auth.user.id,
           reportId: id,
           userPrompt: prompt || savedPrompt,
