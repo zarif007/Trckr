@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   FolderPlus,
   FileText,
   BarChart2,
+  GitBranch,
 } from "lucide-react";
 import {
   Popover,
@@ -37,6 +39,7 @@ type CreateDropdownProjectProps = CreateDropdownBaseProps & {
   onTrackerCreated?: (trackerId: string) => void;
   onReportCreated?: () => void | Promise<void>;
   onAnalysisCreated?: () => void | Promise<void>;
+  onWorkflowCreated?: (id: string) => void;
   onAddConfig?: never;
 };
 
@@ -81,12 +84,15 @@ export function CreateDropdown(props: CreateDropdownProps) {
     "onReportCreated" in props ? props.onReportCreated : undefined;
   const onAnalysisCreated =
     "onAnalysisCreated" in props ? props.onAnalysisCreated : undefined;
+  const onWorkflowCreated =
+    "onWorkflowCreated" in props ? props.onWorkflowCreated : undefined;
 
   const projectId = "projectId" in props ? props.projectId : undefined;
   const isDashboard = isDashboardProps(props);
   const onCreateProjectClick = isDashboard
     ? props.onCreateProjectClick
     : undefined;
+  const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const [configSubmenuOpen, setConfigSubmenuOpen] = useState(false);
@@ -136,6 +142,14 @@ export function CreateDropdown(props: CreateDropdownProps) {
     setOpen(false);
     setModuleDialogOpen(true);
   }, []);
+
+  const handleWorkflowClick = useCallback(() => {
+    setOpen(false);
+    // Navigate to workflows list page
+    if (projectId) {
+      router.push(`/project/${projectId}/workflows`);
+    }
+  }, [projectId, router]);
 
   const handleConfigParentClick = useCallback(() => {
     if (hasConfigOptions) setConfigSubmenuOpen((prev) => !prev);
@@ -220,6 +234,16 @@ export function CreateDropdown(props: CreateDropdownProps) {
               >
                 <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
                 Module
+              </button>
+            )}
+            {!isDashboard && projectId && (
+              <button
+                type="button"
+                onClick={handleWorkflowClick}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-sm hover:bg-muted/60 transition-colors text-left w-full"
+              >
+                <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
+                Workflow
               </button>
             )}
             {hasConfigOptions && (

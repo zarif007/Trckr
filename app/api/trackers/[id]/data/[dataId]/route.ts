@@ -14,6 +14,7 @@ import {
   updateTrackerSnapshotForUser,
 } from "@/lib/repositories";
 import type { GridDataSnapshot } from "@/lib/tracker-data";
+import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
 
 const patchTrackerDataBodySchema = z
   .object({
@@ -73,6 +74,19 @@ export async function PATCH(
     );
   }
 
+  // Get old snapshot for workflow comparison
+  const existingSnapshot = await getTrackerSnapshotForUser(
+    snapshotId,
+    authResult.user.id
+  );
+  if (!existingSnapshot) {
+    return notFound("Tracker data not found");
+  }
+  const oldData = existingSnapshot.data as Record<
+    string,
+    Array<Record<string, unknown>>
+  >;
+
   const updateBody: {
     label?: string;
     formStatus?: string | null;
@@ -89,6 +103,20 @@ export async function PATCH(
   );
   if (!updated) {
     return notFound("Tracker data not found");
+  }
+
+  // Dispatch workflows if data changed
+  if (body.data !== undefined) {
+    const { id: trackerId } = await readParams(params);
+    dispatchTrackerEventAfterSave(
+      trackerId,
+      updated.data as Record<string, Array<Record<string, unknown>>>,
+      oldData,
+      authResult.user.id,
+      false // not a create, this is an update
+    ).catch((err) => {
+      console.error("Workflow dispatch failed:", err);
+    });
   }
 
   return jsonOk(updated);

@@ -28,7 +28,8 @@ export type ContextMenuRowKind =
   | "tracker"
   | "project"
   | "report"
-  | "analysis";
+  | "analysis"
+  | "workflow";
 
 export type TrackerHrefs = {
   trackerPageHref: string;

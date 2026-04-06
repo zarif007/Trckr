@@ -14,6 +14,7 @@ import {
   listTrackerSnapshotsForUser,
   upsertCurrentDataForUser,
 } from "@/lib/repositories";
+import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
 
 const createTrackerDataBodySchema = z
   .object({
@@ -97,6 +98,12 @@ export async function POST(
   if (!tracker) return notFound("Tracker not found");
 
   if (tracker.instance === "SINGLE" && !tracker.versionControl) {
+    // Get existing data for comparison (to detect changes)
+    const existingData = await prisma.trackerData.findFirst({
+      where: { trackerSchemaId: trackerId },
+      select: { data: true },
+    });
+
     const result = await upsertCurrentDataForUser(
       trackerId,
       authResult.user.id,
@@ -104,6 +111,23 @@ export async function POST(
       body.formStatus,
     );
     if (!result) return notFound("Tracker not found");
+
+    // Dispatch workflows async (don't block response)
+    const oldSnapshot =
+      (existingData?.data as Record<
+        string,
+        Array<Record<string, unknown>>
+      > | null) || null;
+    dispatchTrackerEventAfterSave(
+      trackerId,
+      result.data as Record<string, Array<Record<string, unknown>>>,
+      oldSnapshot,
+      authResult.user.id,
+      !existingData // isCreate if no existing data
+    ).catch((err) => {
+      console.error("Workflow dispatch failed:", err);
+    });
+
     return jsonOk(result);
   }
 
@@ -122,6 +146,27 @@ export async function POST(
   if (!created) {
     return notFound("Tracker not found");
   }
+
+  // For multi-instance, determine old snapshot
+  const oldSnapshot = body.basedOnId
+    ? ((
+        await prisma.trackerData.findUnique({
+          where: { id: body.basedOnId },
+          select: { data: true },
+        })
+      )?.data as Record<string, Array<Record<string, unknown>>> | null) ||
+      null
+    : null;
+
+  dispatchTrackerEventAfterSave(
+    trackerId,
+    created.data as Record<string, Array<Record<string, unknown>>>,
+    oldSnapshot,
+    authResult.user.id,
+    !body.basedOnId // isCreate if no base
+  ).catch((err) => {
+    console.error("Workflow dispatch failed:", err);
+  });
 
   return jsonOk(created);
 }

@@ -83,6 +83,7 @@ model Project {
   modules        Module[]
   reports        Report[]
   analyses       Analysis[]
+  workflows      Workflow[]
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   trackerSchemas TrackerSchema[]
 
@@ -103,6 +104,7 @@ model Module {
   reports        Report[]
   analyses       Analysis[]
   trackerSchemas TrackerSchema[]
+  workflows      Workflow[]
 
   @@index([projectId])
   @@index([parentId])
@@ -420,4 +422,60 @@ enum ToolCallStatus {
   running
   done
   error
+}
+
+enum WorkflowRunStatus {
+  pending
+  running
+  completed
+  failed
+  skipped
+}
+
+model Workflow {
+  id          String        @id @default(cuid())
+  projectId   String
+  moduleId    String?
+  name        String
+  description String?
+  enabled     Boolean       @default(true)
+  schema      Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  module      Module?       @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  runs        WorkflowRun[]
+
+  @@index([projectId])
+  @@index([moduleId])
+}
+
+model WorkflowRun {
+  id         String            @id @default(cuid())
+  workflowId String
+  status     WorkflowRunStatus @default(pending)
+  trigger    Json
+  startedAt  DateTime          @default(now())
+  finishedAt DateTime?
+  error      String?
+  workflow   Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  steps      WorkflowRunStep[]
+
+  @@index([workflowId])
+  @@index([status])
+}
+
+model WorkflowRunStep {
+  id         String            @id @default(cuid())
+  runId      String
+  nodeId     String
+  status     WorkflowRunStatus @default(pending)
+  inputData  Json?
+  outputData Json?
+  startedAt  DateTime?
+  finishedAt DateTime?
+  error      String?
+  run        WorkflowRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId])
 }

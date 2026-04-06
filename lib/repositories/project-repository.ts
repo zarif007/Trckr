@@ -38,6 +38,18 @@ export async function listProjectsForUser(userId: string) {
           trackerSchemas: { orderBy: { updatedAt: "desc" } },
         },
       },
+      workflows: {
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          enabled: true,
+          moduleId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      },
     },
   });
 }
@@ -75,6 +87,18 @@ export async function createProjectForUser(userId: string, name: string) {
           analyses: {
             orderBy: { updatedAt: "desc" },
             select: { id: true, name: true, moduleId: true, updatedAt: true },
+          },
+          workflows: {
+            orderBy: { updatedAt: "desc" },
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              enabled: true,
+              moduleId: true,
+              createdAt: true,
+              updatedAt: true,
+            },
           },
           modules: {
             orderBy: { updatedAt: "desc" },
@@ -117,6 +141,18 @@ export async function findProjectByIdForUser(
         orderBy: { updatedAt: "desc" },
         include: {
           trackerSchemas: { orderBy: { updatedAt: "desc" } },
+        },
+      },
+      workflows: {
+        orderBy: { updatedAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          enabled: true,
+          moduleId: true,
+          createdAt: true,
+          updatedAt: true,
         },
       },
     },

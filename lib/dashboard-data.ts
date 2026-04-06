@@ -10,6 +10,7 @@ import type {
   Module,
   ReportSummary,
   AnalysisSummary,
+  WorkflowSummary,
 } from "@/app/dashboard/dashboard-context";
 
 type ProjectFromDb = NonNullable<
@@ -48,6 +49,28 @@ function serializeAnalyses(
     name: a.name,
     moduleId: a.moduleId,
     updatedAt: a.updatedAt.toISOString(),
+  }));
+}
+
+function serializeWorkflows(
+  workflows: {
+    id: string;
+    name: string;
+    description: string | null;
+    enabled: boolean;
+    moduleId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[],
+): WorkflowSummary[] {
+  return workflows.map((w) => ({
+    id: w.id,
+    name: w.name,
+    description: w.description,
+    enabled: w.enabled,
+    moduleId: w.moduleId,
+    createdAt: w.createdAt.toISOString(),
+    updatedAt: w.updatedAt.toISOString(),
   }));
 }
 
@@ -115,6 +138,7 @@ function serializeProject(p: ProjectFromDb): Project | null {
     })),
     reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
+    workflows: serializeWorkflows(p.workflows ?? []),
     modules: buildModuleTree(flatModules),
   };
 }
@@ -191,6 +215,7 @@ function serializeProjectFromList(p: ProjectFromList): Project {
     })),
     reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
+    workflows: serializeWorkflows(p.workflows ?? []),
     modules: buildModuleTree(flatModules),
   };
 }

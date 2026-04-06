@@ -20,6 +20,7 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
+  GitBranch,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -184,6 +185,13 @@ export function ProjectContent({
           body: JSON.stringify({ name: newName }),
         });
         if (!res.ok) throw new Error("Failed to rename analysis");
+      } else if (kind === "workflow") {
+        const res = await fetch(`/api/workflows/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName }),
+        });
+        if (!res.ok) throw new Error("Failed to rename workflow");
       }
       await fetchProjects();
       invalidateProjectAndProjects();
@@ -229,6 +237,14 @@ export function ProjectContent({
                 ),
               };
             }
+            if (kind === "workflow") {
+              return {
+                ...prev,
+                workflows: (prev.workflows ?? []).map((w) =>
+                  w.id === id ? { ...w, name } : w,
+                ),
+              };
+            }
             return {
               ...prev,
               trackerSchemas: prev.trackerSchemas.map((t) =>
@@ -263,6 +279,14 @@ export function ProjectContent({
                 ...p,
                 analyses: (p.analyses ?? []).map((a) =>
                   a.id === id ? { ...a, name } : a,
+                ),
+              };
+            }
+            if (kind === "workflow") {
+              return {
+                ...p,
+                workflows: (p.workflows ?? []).map((w) =>
+                  w.id === id ? { ...w, name } : w,
                 ),
               };
             }
@@ -322,6 +346,13 @@ export function ProjectContent({
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Failed to delete analysis");
+        invalidateProjectAndProjects();
+        await fetchProjects();
+      } else if (item.kind === "workflow") {
+        const res = await fetch(`/api/workflows/${item.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete workflow");
         invalidateProjectAndProjects();
         await fetchProjects();
       }
@@ -526,6 +557,52 @@ export function ProjectContent({
           );
         };
       }
+      if (item.kind === "workflow" && project) {
+        const workflow = (project.workflows ?? []).find(
+          (w) => w.id === item.id,
+        );
+        if (!workflow) return;
+        queryClient.setQueryData<Project>(
+          dashboardQueryKeys.project(projectId),
+          (prev) =>
+            prev
+              ? {
+                  ...prev,
+                  workflows: (prev.workflows ?? []).filter(
+                    (w) => w.id !== item.id,
+                  ),
+                }
+              : prev,
+        );
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                  ...p,
+                  workflows: (p.workflows ?? []).filter(
+                    (w) => w.id !== item.id,
+                  ),
+                },
+          ),
+        );
+        return () => {
+          queryClient.setQueryData<Project>(
+            dashboardQueryKeys.project(projectId),
+            (prev) =>
+              prev
+                ? { ...prev, workflows: [...(prev.workflows ?? []), workflow] }
+                : prev,
+          );
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, workflows: [...(p.workflows ?? []), workflow] },
+            ),
+          );
+        };
+      }
     },
     [project, projectId, queryClient, setProjects, router, pathname],
   );
@@ -572,13 +649,18 @@ export function ProjectContent({
     () => (project?.analyses ?? []).filter((a) => a.moduleId == null),
     [project?.analyses],
   );
+  const projectLevelWorkflows = useMemo(
+    () => (project?.workflows ?? []).filter((w) => w.moduleId == null),
+    [project?.workflows],
+  );
   const hasProjectConfigs = projectSystemFiles.length > 0;
   const totalItems =
     (hasProjectConfigs ? 1 : 0) +
     modules.length +
     projectLevelTrackers.length +
     projectLevelReports.length +
-    projectLevelAnalyses.length;
+    projectLevelAnalyses.length +
+    projectLevelWorkflows.length;
   const isEmpty = totalItems === 0;
 
   const tableRows = useMemo(() => {
@@ -634,6 +716,15 @@ export function ProjectContent({
           label: string;
           sublabel: string;
           icon: typeof BarChart2;
+          updatedAt: string;
+          href: string;
+        }
+      | {
+          kind: "workflow";
+          id: string;
+          label: string;
+          sublabel: string;
+          icon: typeof GitBranch;
           updatedAt: string;
           href: string;
         }
@@ -717,12 +808,22 @@ export function ProjectContent({
       updatedAt: a.updatedAt,
       href: `/analysis/${a.id}`,
     }));
+    const workflowRows = projectLevelWorkflows.map((w) => ({
+      kind: "workflow" as const,
+      id: w.id,
+      label: w.name?.trim() || "Untitled workflow",
+      sublabel: "Workflow",
+      icon: GitBranch,
+      updatedAt: w.updatedAt,
+      href: `/project/${projectId}/workflows/${w.id}`,
+    }));
     return [
       ...rows,
       ...moduleRows,
       ...trackerRows,
       ...reportRows,
       ...analysisRows,
+      ...workflowRows,
     ];
   }, [
     pathname,
@@ -732,6 +833,7 @@ export function ProjectContent({
     projectLevelTrackers,
     projectLevelReports,
     projectLevelAnalyses,
+    projectLevelWorkflows,
     hasProjectConfigs,
   ]);
 
@@ -868,7 +970,8 @@ export function ProjectContent({
                       row.kind === "module" ||
                       row.kind === "tracker" ||
                       row.kind === "report" ||
-                      row.kind === "analysis";
+                      row.kind === "analysis" ||
+                      row.kind === "workflow";
                     const marqueeId = `${row.kind}:${row.id}`;
                     const isMarqueeSelected =
                       projectMarquee.selectedIds.has(marqueeId);
@@ -940,7 +1043,8 @@ export function ProjectContent({
                         </motion.button>
                         {(row.kind === "tracker" ||
                           row.kind === "report" ||
-                          row.kind === "analysis") &&
+                          row.kind === "analysis" ||
+                          row.kind === "workflow") &&
                           !isRenamingThis && (
                             <button
                               type="button"
@@ -950,7 +1054,9 @@ export function ProjectContent({
                                   ? "Report actions"
                                   : row.kind === "analysis"
                                     ? "Analysis actions"
-                                    : "Tracker actions"
+                                    : row.kind === "workflow"
+                                      ? "Workflow actions"
+                                      : "Tracker actions"
                               }
                               onClick={(e: MouseEvent<HTMLButtonElement>) => {
                                 e.stopPropagation();
