@@ -51,7 +51,11 @@ import type { FieldRulesMap, FieldRuleOverride } from "@/lib/field-rules";
 import { useTrackerOptionsContext } from "../../tracker-options-context";
 import type { OptionsGridFieldDef } from "../data-table/utils";
 import type { FieldMetadata } from "../data-table/utils";
-import { getValidationError } from "../data-table/utils";
+import { validateField } from "../data-table/utils";
+import {
+  getValidationDisplayState,
+  markFieldsAsInteracted,
+} from "@/lib/field-validation";
 import { EntryFormDialog } from "../data-table/entry-form-dialog";
 import { resolveDivStyles } from "@/lib/style-utils";
 import {
@@ -690,7 +694,11 @@ function TrackerDivGridInner({
         ? { ...calc.row, [fieldId]: value }
         : calc.row;
 
-      setDirtyFieldIds((prev) => new Set(prev).add(fieldId));
+      // Mark both the directly changed field AND any calculated fields as dirty
+      // so validation shows for indirectly updated fields (e.g., z = x + y)
+      setDirtyFieldIds((prev) =>
+        markFieldsAsInteracted(prev, fieldId, calc.updatedFieldIds),
+      );
       setDraftRow(finalRow);
       const updates = new Set<string>([fieldId, ...calc.updatedFieldIds]);
       for (const id of updates) {
@@ -892,9 +900,9 @@ function TrackerDivGridInner({
         (effectiveConfig as { value?: unknown }).value !== undefined);
 
     const validationRulesResolved = validationRules ?? [];
-    const validationError =
+    const validationResult =
       validationRulesResolved.length > 0
-        ? getValidationError({
+        ? validateField({
             value,
             fieldId: field.id,
             fieldType: field.dataType,
@@ -902,10 +910,20 @@ function TrackerDivGridInner({
             rules: validationRulesResolved,
             rowValues: rowValuesForValidation,
           })
-        : null;
-    const showError =
-      (dirtyFieldIds.has(field.id) || touchedFieldIds.has(field.id)) &&
-      !!validationError;
+        : {
+            error: null,
+            warning: null,
+            issues: [],
+            hasError: false,
+            hasWarning: false,
+          };
+    const hasInteracted =
+      dirtyFieldIds.has(field.id) || touchedFieldIds.has(field.id);
+    const { showError, showWarning } = getValidationDisplayState({
+      result: validationResult,
+      value,
+      hasInteracted,
+    });
 
     const wrapperClassName =
       `${ds.fontSize} ${field.dataType === "text" ? "h-auto" : ""}`.trim();
@@ -928,7 +946,9 @@ function TrackerDivGridInner({
         valueString={valueString}
         options={options}
         showError={showError}
-        validationError={validationError}
+        showWarning={showWarning}
+        validationError={validationResult.error}
+        validationWarning={validationResult.warning}
         isDisabled={isDisabled}
         inputTextClass={inputTextClass}
         wrapperClassName={wrapperClassName}

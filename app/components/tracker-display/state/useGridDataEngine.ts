@@ -28,6 +28,8 @@ interface GridDataEngineOutput {
     Record<string, Array<Record<string, unknown>>>
   >;
   editVersion: number;
+  /** Increments when calculations complete, triggers UI revalidation */
+  revalidationVersion: number;
   handleUpdate: (
     gridId: string,
     rowIndex: number,
@@ -77,6 +79,7 @@ export function useGridDataEngine({
     Record<string, Array<Record<string, unknown>>>
   >(() => ({}));
   const [editVersion, setEditVersion] = useState(0);
+  const [revalidationVersion, setRevalidationVersion] = useState(0);
 
   const baseGridData = seedGridData;
 
@@ -171,6 +174,9 @@ export function useGridDataEngine({
 
         return result;
       });
+
+      // Trigger revalidation after calculations complete
+      setRevalidationVersion((v) => v + 1);
     },
     [
       baseGridData,
@@ -229,6 +235,9 @@ export function useGridDataEngine({
 
         return result;
       });
+
+      // Trigger revalidation after calculations complete
+      setRevalidationVersion((v) => v + 1);
     },
     [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid],
   );
@@ -271,6 +280,9 @@ export function useGridDataEngine({
 
         return result;
       });
+
+      // Trigger revalidation after dependent grid recalculations
+      setRevalidationVersion((v) => v + 1);
     },
     [baseGridData, accumulateDepsBySourceGrid, compiledCalculationsByGrid],
   );
@@ -324,6 +336,7 @@ export function useGridDataEngine({
     gridData,
     gridDataRef,
     editVersion,
+    revalidationVersion,
     handleUpdate,
     handleAddEntry,
     handleDeleteEntries,

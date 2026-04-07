@@ -155,7 +155,7 @@ export interface FieldMetadata {
   };
 }
 
-export { getValidationError } from "@/lib/field-validation";
+export { getValidationError, validateField } from "@/lib/field-validation";
 
 export const getFieldIcon = (type: FieldType) => {
   switch (type) {

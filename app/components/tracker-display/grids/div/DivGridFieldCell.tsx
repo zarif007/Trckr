@@ -38,7 +38,9 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
   valueString,
   options = [],
   showError,
+  showWarning,
   validationError,
+  validationWarning,
   isDisabled,
   inputTextClass,
   wrapperClassName,
@@ -274,7 +276,8 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
       <FieldWrapper
         className={wrapperClassName}
         error={showError}
-        errorTitle={validationError ?? undefined}
+        warning={showWarning}
+        validationTitle={validationError ?? validationWarning ?? undefined}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => focusInputInContainer(e.currentTarget as HTMLElement)}
       >
@@ -288,6 +291,10 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
       {showError && validationError ? (
         <p className="text-xs text-destructive" role="alert">
           {validationError}
+        </p>
+      ) : showWarning && validationWarning ? (
+        <p className="text-xs text-yellow-600" role="status">
+          {validationWarning}
         </p>
       ) : null}
     </div>

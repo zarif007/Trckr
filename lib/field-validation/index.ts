@@ -41,6 +41,30 @@ import { evaluateExpr } from "@/lib/functions/evaluator";
 // Types
 // ============================================================================
 
+/** Single validation issue with severity */
+export interface ValidationIssue {
+  /** Error or warning message */
+  message: string;
+  /** Severity level: errors block submission, warnings don't */
+  severity: "error" | "warning";
+  /** Rule type that triggered this issue (for debugging) */
+  ruleType: FieldValidationRule["type"];
+}
+
+/** Complete validation result for a field */
+export interface ValidationResult {
+  /** First error message (for backward compat with string | null) */
+  error: string | null;
+  /** First warning message (null if none) */
+  warning: string | null;
+  /** All issues found (errors first, then warnings) */
+  issues: ValidationIssue[];
+  /** True if any error exists */
+  hasError: boolean;
+  /** True if any warning exists (but no errors) */
+  hasWarning: boolean;
+}
+
 /** Input for field validation */
 export interface ValidationInput {
   /** Value to validate */
@@ -161,6 +185,13 @@ const STRING_TYPES = new Set([
 ]);
 const NUMBER_TYPES = new Set(["number", "currency", "percentage", "rating"]);
 
+/**
+ * Check if a value is considered "empty" for validation purposes.
+ * Re-exported from display.ts for internal use.
+ */
+export { isEmptyValue } from "./display";
+
+/** @internal */
 const isEmpty = (v: unknown) =>
   v === undefined ||
   v === null ||
@@ -513,14 +544,289 @@ export function getValidationErrorFromCompiled({
 }
 
 /**
- * Validate a field value (main entry point).
+ * Validate a field value with severity support (errors and warnings).
  *
- * Automatically handles plan compilation and caching.
- * For repeated validations of the same field config, consider using
- * compileValidationPlan + getValidationErrorFromCompiled directly.
+ * Evaluates all validation rules and returns a structured result containing
+ * both errors (which block submission) and warnings (which don't block).
+ * Issues are sorted with errors first, warnings second.
  *
  * @param input - Complete validation input
- * @returns null if valid, error message string if invalid
+ * @returns ValidationResult with error, warning, and all issues
+ *
+ * @example
+ * ```ts
+ * const result = validateField({
+ *   value: 5,
+ *   fieldId: 'qty',
+ *   fieldType: 'number',
+ *   config: { min: 10 },
+ *   rules: [
+ *     { type: 'min', value: 10, severity: 'error', message: 'Too low' },
+ *     { type: 'max', value: 100, severity: 'warning', message: 'Consider lower quantity' }
+ *   ]
+ * });
+ * // result.hasError === true, result.error === 'Too low'
+ * // result.hasWarning === false (error takes precedence)
+ * ```
+ */
+export function validateField({
+  value,
+  fieldId,
+  fieldType,
+  config,
+  rules,
+  rowValues,
+}: ValidationInput): ValidationResult {
+  const plan = getCachedCompiledValidationPlan({
+    fieldId,
+    fieldType,
+    config,
+    rules,
+  });
+
+  const issues: ValidationIssue[] = [];
+
+  // Early exit if no validation needed
+  if (!plan.hasAnyRuleInput) {
+    return {
+      error: null,
+      warning: null,
+      issues: [],
+      hasError: false,
+      hasWarning: false,
+    };
+  }
+
+  // Skip validation if field is hidden or disabled
+  if (config?.isHidden || config?.isDisabled) {
+    return {
+      error: null,
+      warning: null,
+      issues: [],
+      hasError: false,
+      hasWarning: false,
+    };
+  }
+
+  // Evaluate each rule and collect issues
+  for (const rule of plan.combinedRules) {
+    let message: string | null = null;
+    const severity = rule.severity ?? "error"; // Default to error for backward compat
+
+    if (rule.type === "required") {
+      if (isEmpty(value)) {
+        message = rule.message ?? defaultMessage(rule);
+      }
+    } else if (rule.type === "min" || rule.type === "max") {
+      if (!isEmpty(value)) {
+        const n = parseNumber(value);
+        if (Number.isNaN(n)) {
+          message = rule.message ?? "Enter a valid number";
+        } else if (rule.type === "min" && n < rule.value) {
+          message = rule.message ?? defaultMessage(rule);
+        } else if (rule.type === "max" && n > rule.value) {
+          message = rule.message ?? defaultMessage(rule);
+        }
+      }
+    } else if (rule.type === "minLength" || rule.type === "maxLength") {
+      if (plan.isStringType) {
+        const s = typeof value === "string" ? value : String(value ?? "");
+        if (rule.type === "minLength" && s.length < rule.value) {
+          message = rule.message ?? defaultMessage(rule);
+        } else if (rule.type === "maxLength" && s.length > rule.value) {
+          message = rule.message ?? defaultMessage(rule);
+        }
+      }
+    } else if (rule.type === "expr") {
+      const mergedRowValues = { ...(rowValues ?? {}) };
+      if (plan.fieldId) mergedRowValues[plan.fieldId] = value;
+      const ctx: FunctionContext = {
+        rowValues: mergedRowValues,
+        fieldId: plan.fieldId,
+        fieldConfig: config ?? null,
+        fieldDataType: plan.fieldType,
+      };
+      message = evalExprRule(rule, ctx);
+    }
+
+    if (message) {
+      issues.push({ message, severity, ruleType: rule.type });
+    }
+  }
+
+  // Type-specific validation (these are always errors, not warnings)
+  if (plan.isNumberType && !isEmpty(value)) {
+    const n = parseNumber(value);
+    if (Number.isNaN(n)) {
+      issues.push({
+        message: "Enter a valid number",
+        severity: "error",
+        ruleType: "min", // Arbitrary, just for type safety
+      });
+    }
+  }
+
+  if (plan.fieldType === "email" && !isEmpty(value)) {
+    if (!isValidEmail(String(value).trim())) {
+      issues.push({
+        message: "Enter a valid email address",
+        severity: "error",
+        ruleType: "expr",
+      });
+    }
+  }
+
+  if (plan.fieldType === "phone" && !isEmpty(value)) {
+    if (!isValidPhone(String(value).trim())) {
+      issues.push({
+        message: "Enter a valid phone number",
+        severity: "error",
+        ruleType: "expr",
+      });
+    }
+  }
+
+  if (
+    (plan.fieldType === "url" || plan.fieldType === "link") &&
+    !isEmpty(value)
+  ) {
+    if (!isValidUrl(String(value).trim())) {
+      issues.push({
+        message: "Enter a valid URL",
+        severity: "error",
+        ruleType: "expr",
+      });
+    }
+  }
+
+  if (
+    plan.fieldType === "status" &&
+    !isEmpty(value) &&
+    Array.isArray(config?.statusOptions) &&
+    config.statusOptions.length > 0
+  ) {
+    if (!config.statusOptions.includes(String(value))) {
+      issues.push({
+        message: "Value must match a configured status option",
+        severity: "error",
+        ruleType: "expr",
+      });
+    }
+  }
+
+  if (plan.fieldType === "rating" && !isEmpty(value)) {
+    const rating = parseNumber(value);
+    if (Number.isNaN(rating)) {
+      issues.push({
+        message: "Enter a valid rating",
+        severity: "error",
+        ruleType: "min",
+      });
+    } else {
+      const maxRating =
+        typeof config?.ratingMax === "number" ? config.ratingMax : 5;
+      if (rating < 0 || rating > maxRating) {
+        issues.push({
+          message: `Rating must be between 0 and ${maxRating}`,
+          severity: "error",
+          ruleType: "min",
+        });
+      } else {
+        const step =
+          typeof config?.numberStep === "number"
+            ? config.numberStep
+            : config?.ratingAllowHalf
+              ? 0.5
+              : 1;
+        if (step > 0) {
+          const normalized = rating / step;
+          if (Math.abs(normalized - Math.round(normalized)) > 1e-9) {
+            issues.push({
+              message: `Rating must use increments of ${step}`,
+              severity: "error",
+              ruleType: "min",
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (plan.fieldType === "person" && !isEmpty(value)) {
+    if (config?.personAllowMultiple) {
+      if (!Array.isArray(value)) {
+        issues.push({
+          message: "Value must be a list of people",
+          severity: "error",
+          ruleType: "expr",
+        });
+      } else if (
+        value.some((entry) => typeof entry !== "string" || entry.trim() === "")
+      ) {
+        issues.push({
+          message: "Each person must be a non-empty string",
+          severity: "error",
+          ruleType: "expr",
+        });
+      }
+    } else if (typeof value !== "string" || value.trim() === "") {
+      issues.push({
+        message: "Value must be a person name",
+        severity: "error",
+        ruleType: "expr",
+      });
+    }
+  }
+
+  if (plan.fieldType === "files" && !isEmpty(value)) {
+    if (!Array.isArray(value)) {
+      issues.push({
+        message: "Value must be a list of files",
+        severity: "error",
+        ruleType: "expr",
+      });
+    } else if (
+      typeof config?.filesMaxCount === "number" &&
+      value.length > config.filesMaxCount
+    ) {
+      issues.push({
+        message: `No more than ${config.filesMaxCount} files allowed`,
+        severity: "error",
+        ruleType: "max",
+      });
+    }
+  }
+
+  // Sort issues: errors first, warnings second
+  issues.sort((a, b) => {
+    if (a.severity === "error" && b.severity === "warning") return -1;
+    if (a.severity === "warning" && b.severity === "error") return 1;
+    return 0;
+  });
+
+  const errors = issues.filter((i) => i.severity === "error");
+  const warnings = issues.filter((i) => i.severity === "warning");
+
+  return {
+    error: errors[0]?.message ?? null,
+    warning: warnings[0]?.message ?? null,
+    issues,
+    hasError: errors.length > 0,
+    hasWarning: warnings.length > 0,
+  };
+}
+
+/**
+ * Validate a field value and return error message (backward compatible).
+ *
+ * This is a convenience wrapper around validateField() that returns only
+ * the first error message. Warnings are ignored. For severity-aware validation,
+ * use validateField() directly.
+ *
+ * Automatically handles plan compilation and caching.
+ *
+ * @param input - Complete validation input
+ * @returns null if valid, error message string if invalid (warnings ignored)
  *
  * @example
  * ```ts
@@ -531,25 +837,37 @@ export function getValidationErrorFromCompiled({
  * config: { isRequired: true },
  * rules: [{ type: 'expr', expr: { op: 'regex', ... }, message: 'Invalid email' }]
  * });
+ * // Returns null if valid, error message if invalid
  * ```
  */
-export function getValidationError({
-  value,
-  fieldId,
-  fieldType,
-  config,
-  rules,
-  rowValues,
-}: ValidationInput): string | null {
-  const plan = getCachedCompiledValidationPlan({
-    fieldId,
-    fieldType,
-    config,
-    rules,
-  });
-  return getValidationErrorFromCompiled({
-    plan,
-    value,
-    rowValues,
-  });
+export function getValidationError(input: ValidationInput): string | null {
+  return validateField(input).error;
 }
+
+// ============================================================================
+// Re-exports from submodules
+// ============================================================================
+
+// Display utilities
+export {
+  getValidationDisplayState,
+  addInteractedFields,
+  markFieldsAsInteracted,
+  computeValidationSummary,
+  type ValidationDisplayOptions,
+  type ValidationDisplayState,
+  type ValidationSummary,
+} from "./display";
+
+// React hooks (client-side only)
+export {
+  useInteractionTracking,
+  useFieldValidationDisplay,
+  useCellValidation,
+  useFormValidation,
+  type InteractionTrackingState,
+  type FieldValidationDisplayInput,
+  type CellValidationOptions,
+  type CellValidationState,
+  type FormValidationState,
+} from "./hooks";

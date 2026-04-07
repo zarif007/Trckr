@@ -138,14 +138,26 @@ export type ExprNode =
  * ```
  */
 export type FieldValidationRule =
-  | { type: "required"; message?: string; enabled?: boolean }
+  | {
+      type: "required";
+      message?: string;
+      enabled?: boolean;
+      severity?: "error" | "warning";
+    }
   | {
       type: "min" | "max" | "minLength" | "maxLength";
       value: number;
       message?: string;
       enabled?: boolean;
+      severity?: "error" | "warning";
     }
-  | { type: "expr"; expr: ExprNode; message?: string; enabled?: boolean };
+  | {
+      type: "expr";
+      expr: ExprNode;
+      message?: string;
+      enabled?: boolean;
+      severity?: "error" | "warning";
+    };
 
 /**
  * Field Calculation Rule

@@ -96,14 +96,15 @@ export function ValidationsTab({
   }
 
   function handleAdd() {
+    let newRuleIndex = 0;
     setRules((prev) => {
-      const next = [
+      newRuleIndex = prev.length;
+      return [
         ...prev,
         { type: "required", enabled: true },
       ] as typeof prev;
-      setExpandedIndex(next.length - 1);
-      return next;
     });
+    setExpandedIndex(newRuleIndex);
   }
 
   if (rules.length === 0) {
@@ -138,6 +139,7 @@ export function ValidationsTab({
           </div>
         );
 
+        const isWarning = rule.severity === "warning";
         const badges = (
           <>
             <Badge
@@ -148,6 +150,17 @@ export function ValidationsTab({
               )}
             >
               {RULE_TYPE_LABELS[rule.type]}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] h-4 px-1.5 shrink-0",
+                isWarning
+                  ? "bg-amber-500/10 border-amber-500/25 text-amber-400"
+                  : "bg-red-500/10 border-red-500/25 text-red-400",
+              )}
+            >
+              {isWarning ? "warn" : "error"}
             </Badge>
             {subtitle && (
               <span className="text-[11px] text-muted-foreground truncate">
@@ -247,28 +260,55 @@ export function ValidationsTab({
                     </Select>
                   </div>
 
-                  {(rule.type === "min" ||
-                    rule.type === "max" ||
-                    rule.type === "minLength" ||
-                    rule.type === "maxLength") && (
-                    <div className="space-y-1.5">
-                      <span className="text-xs text-muted-foreground">
-                        Value
-                      </span>
-                      <Input
-                        type="number"
-                        value={String(rule.value ?? "")}
-                        onChange={(e) =>
-                          updateRule(index, {
-                            ...rule,
-                            value: toNumberOrUndefined(e.target.value) ?? 0,
-                          })
-                        }
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      Severity
+                    </span>
+                    <Select
+                      value={rule.severity ?? "error"}
+                      onValueChange={(value) =>
+                        updateRule(index, {
+                          ...rule,
+                          severity: value as "error" | "warning",
+                        })
+                      }
+                    >
+                      <SelectTrigger
                         className={cn(theme.patterns.inputBase, "h-7 text-xs")}
-                      />
-                    </div>
-                  )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="error">
+                          Error (blocks save)
+                        </SelectItem>
+                        <SelectItem value="warning">
+                          Warning (allows save)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+
+                {(rule.type === "min" ||
+                  rule.type === "max" ||
+                  rule.type === "minLength" ||
+                  rule.type === "maxLength") && (
+                  <div className="space-y-1.5">
+                    <span className="text-xs text-muted-foreground">Value</span>
+                    <Input
+                      type="number"
+                      value={String(rule.value ?? "")}
+                      onChange={(e) =>
+                        updateRule(index, {
+                          ...rule,
+                          value: toNumberOrUndefined(e.target.value) ?? 0,
+                        })
+                      }
+                      className={cn(theme.patterns.inputBase, "h-7 text-xs")}
+                    />
+                  </div>
+                )}
 
                 {rule.type === "expr" && (
                   <ExprRuleEditor
@@ -290,7 +330,7 @@ export function ValidationsTab({
 
                 <div className="space-y-1.5">
                   <span className="text-xs text-muted-foreground">
-                    Error message (optional)
+                    Message (optional)
                   </span>
                   <Input
                     value={rule.message ?? ""}

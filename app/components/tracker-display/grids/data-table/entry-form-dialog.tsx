@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  getValidationError,
+  validateField,
   sanitizeValue,
   getFieldIcon,
   type FieldMetadata,
@@ -17,6 +17,11 @@ import {
   compileCalculationsForGrid,
 } from "@/lib/field-calculation";
 import type { FieldCalculationRule } from "@/lib/functions/types";
+import {
+  getValidationDisplayState,
+  markFieldsAsInteracted,
+  computeValidationSummary,
+} from "@/lib/field-validation";
 
 export interface EntryFormDialogProps {
   open: boolean;
@@ -73,6 +78,9 @@ export function EntryFormDialog({
   );
   const [formData, setFormData] =
     useState<Record<string, unknown>>(initialValues);
+  const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   const compiledCalculationPlan = useMemo(() => {
     if (!gridId || !calculations || Object.keys(calculations).length === 0)
@@ -81,14 +89,19 @@ export function EntryFormDialog({
   }, [calculations, gridId]);
 
   const applyCalculatedValues = useCallback(
-    (values: Record<string, unknown>, changedFieldIds: string[]) => {
-      if (!compiledCalculationPlan) return values;
-      return applyCompiledCalculationsForRow({
+    (
+      values: Record<string, unknown>,
+      changedFieldIds: string[],
+    ): { row: Record<string, unknown>; updatedFieldIds: string[] } => {
+      if (!compiledCalculationPlan)
+        return { row: values, updatedFieldIds: [] };
+      const result = applyCompiledCalculationsForRow({
         plan: compiledCalculationPlan,
         row: values,
         changedFieldIds,
         gridData,
-      }).row;
+      });
+      return { row: result.row, updatedFieldIds: result.updatedFieldIds };
     },
     [compiledCalculationPlan, gridData],
   );
@@ -120,23 +133,29 @@ export function EntryFormDialog({
   useEffect(() => {
     if (open && !prevOpenRef.current) {
       const base = initialValues ?? {};
-      setFormData(applyCalculatedValues(base, orderedIds));
+      setFormData(applyCalculatedValues(base, orderedIds).row);
+      setTouchedFieldIds(new Set());
     }
     prevOpenRef.current = open;
   }, [open, initialValues, applyCalculatedValues, orderedIds]);
 
-  const hasError = useMemo(() => {
-    return orderedIds.some((columnId) => {
+  const validationSummary = useMemo(() => {
+    let errorCount = 0;
+    let warningCount = 0;
+
+    for (const columnId of orderedIds) {
       const fieldInfo = fieldMetadata[columnId];
-      if (!fieldInfo) return false;
+      if (!fieldInfo) continue;
+
       const overrides = getFieldOverrides?.(formData, columnId);
       const effectiveConfig = applyFieldOverrides(
         fieldInfo.config as Record<string, unknown> | null | undefined,
         overrides,
       );
-      if (effectiveConfig?.isHidden || effectiveConfig?.isDisabled)
-        return false;
-      return !!getValidationError({
+
+      if (effectiveConfig?.isHidden || effectiveConfig?.isDisabled) continue;
+
+      const result = validateField({
         value: formData[columnId],
         fieldId: columnId,
         fieldType: fieldInfo.type,
@@ -144,7 +163,12 @@ export function EntryFormDialog({
         rules: fieldInfo.validations,
         rowValues: rowValuesForValidation,
       });
-    });
+
+      if (result.hasError) errorCount++;
+      else if (result.hasWarning) warningCount++;
+    }
+
+    return { hasError: errorCount > 0, errorCount, warningCount };
   }, [
     formData,
     fieldMetadata,
@@ -154,7 +178,7 @@ export function EntryFormDialog({
   ]);
 
   const handleSave = useCallback(() => {
-    const resolved = applyCalculatedValues(formData, orderedIds);
+    const resolved = applyCalculatedValues(formData, orderedIds).row;
     onSave(resolved);
     setFormData({});
     onOpenChange(false);
@@ -162,11 +186,12 @@ export function EntryFormDialog({
 
   const handleSaveAndContinue = useCallback(() => {
     if (!onSaveAnother) return;
-    const resolved = applyCalculatedValues(formData, orderedIds);
+    const resolved = applyCalculatedValues(formData, orderedIds).row;
     onSaveAnother(resolved);
     // Reset form for the next entry but keep dialog open
     const base = initialValues ?? {};
-    setFormData(applyCalculatedValues(base, orderedIds));
+    setFormData(applyCalculatedValues(base, orderedIds).row);
+    setTouchedFieldIds(new Set());
   }, [
     formData,
     onSaveAnother,
@@ -189,7 +214,7 @@ export function EntryFormDialog({
       title={title}
       submitLabel={submitLabel}
       fieldCount={fieldCount}
-      disableSubmit={hasError}
+      disableSubmit={validationSummary.hasError}
       mode={mode}
       onSubmit={handleSave}
       onSubmitAndContinue={onSaveAnother ? handleSaveAndContinue : undefined}
@@ -207,7 +232,7 @@ export function EntryFormDialog({
           if (effectiveConfig?.isHidden) return null;
 
           const value = formData[columnId] ?? "";
-          const error = getValidationError({
+          const validationResult = validateField({
             value: formData[columnId],
             fieldId: columnId,
             fieldType: fieldInfo.type,
@@ -215,7 +240,21 @@ export function EntryFormDialog({
             rules: fieldInfo.validations,
             rowValues: rowValuesForValidation,
           });
-          const showError = columnId in formData ? !!error : false;
+          // Show validation on mount for non-empty values that fail validation.
+          // Only hide "required" errors (empty values) until user interaction.
+          const fieldValue = formData[columnId];
+          const valueIsEmpty =
+            fieldValue === undefined ||
+            fieldValue === null ||
+            fieldValue === "" ||
+            (Array.isArray(fieldValue) && fieldValue.length === 0);
+          const hasInteracted = touchedFieldIds.has(columnId);
+          const showError =
+            validationResult.hasError && (hasInteracted || !valueIsEmpty);
+          const showWarning =
+            validationResult.hasWarning &&
+            !validationResult.hasError &&
+            (hasInteracted || !valueIsEmpty);
           const Icon = getFieldIcon(fieldInfo.type);
 
           return (
@@ -236,7 +275,13 @@ export function EntryFormDialog({
                   <span className="text-destructive/80">*</span>
                 )}
               </label>
-              <FieldWrapper error={showError} errorTitle={error ?? undefined}>
+              <FieldWrapper
+                error={showError}
+                warning={showWarning}
+                validationTitle={
+                  validationResult.error ?? validationResult.warning ?? undefined
+                }
+              >
                 <DataTableInput
                   formField
                   value={value}
@@ -267,12 +312,19 @@ export function EntryFormDialog({
                           changedKeys.add(k);
                         }
                       }
-                      const calculated = applyCalculatedValues(
-                        next,
-                        Array.from(changedKeys),
-                      );
+                      const { row: calculated, updatedFieldIds } =
+                        applyCalculatedValues(next, Array.from(changedKeys));
                       if (!changed && recordsEqual(prev, calculated))
                         return prev;
+
+                      // Mark directly changed fields and calculated fields as touched
+                      setTouchedFieldIds((t) => {
+                        const newTouched = new Set(t);
+                        for (const k of changedKeys) newTouched.add(k);
+                        for (const id of updatedFieldIds) newTouched.add(id);
+                        return newTouched;
+                      });
+
                       return calculated;
                     });
                   }}
@@ -288,9 +340,14 @@ export function EntryFormDialog({
                   autoFocus={index === 0}
                 />
               </FieldWrapper>
-              {showError && error && (
+              {showError && validationResult.error && (
                 <p className="text-destructive text-xs flex items-center gap-1">
-                  {error}
+                  {validationResult.error}
+                </p>
+              )}
+              {showWarning && !showError && validationResult.warning && (
+                <p className="text-yellow-600 text-xs flex items-center gap-1">
+                  {validationResult.warning}
                 </p>
               )}
             </div>

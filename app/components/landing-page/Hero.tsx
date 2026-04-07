@@ -7,7 +7,7 @@ import { theme } from "@/lib/theme";
 
 export default function Hero() {
   return (
-    <section className="relative overflow-visible px-0 sm:px-2 pt-[1rem]">
+    <section className="relative overflow-visible px-0 pt-[1rem]">
       <div className="fixed inset-0 pointer-events-none z-0 bg-grid opacity-[0.04] dark:opacity-[0.07]" />
 
       <div className="relative z-10 mx-auto max-w-6xl mb-2 sm:mb-3">
@@ -21,7 +21,7 @@ export default function Hero() {
           )}
         >
           {/* Top bar */}
-          <div className="flex items-center justify-between px-6 sm:px-10 md:px-16 py-4 border-b">
+          <div className="flex items-center justify-between gap-2 px-2.5 sm:px-10 md:px-16 py-4 border-b">
             <div className="flex items-center gap-3">
               <div className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-foreground/15" />
@@ -37,7 +37,7 @@ export default function Hero() {
           </div>
 
           {/* Content */}
-          <div className="px-6 sm:px-10 md:px-16 py-24 sm:py-32 md:py-44 text-center">
+          <div className="px-2.5 sm:px-10 md:px-16 py-24 sm:py-32 md:py-44 text-center">
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] tracking-[-0.035em] text-foreground max-w-3xl mx-auto">
               Track
               <br />
@@ -55,10 +55,10 @@ export default function Hero() {
               No forms. No schema. No config screens. AI generates fields,
               views, rules, and validations from a single sentence.
             </p>
-            <div className="mt-7 sm:mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="mt-7 sm:mt-8 flex flex-row flex-nowrap items-center justify-center gap-2 sm:gap-3">
               <Button
                 size="lg"
-                className="h-11 px-7 text-sm font-medium rounded-sm bg-foreground text-background hover:bg-foreground/90 transition-colors"
+                className="h-10 shrink-0 px-4 text-[13px] sm:h-11 sm:px-7 sm:text-sm font-medium rounded-sm bg-foreground text-background hover:bg-foreground/90 transition-colors"
                 asChild
               >
                 <a href="/login?callbackUrl=/tracker">Start building</a>
@@ -67,7 +67,7 @@ export default function Hero() {
                 size="lg"
                 variant="outline"
                 className={cn(
-                  "h-11 px-7 text-sm font-medium bg-transparent hover:bg-muted/50 transition-colors",
+                  "h-10 shrink-0 px-4 text-[13px] sm:h-11 sm:px-7 sm:text-sm font-medium bg-transparent hover:bg-muted/50 transition-colors",
                   theme.radius.md,
                   theme.border.default,
                 )}
@@ -79,7 +79,7 @@ export default function Hero() {
           </div>
 
           {/* Bottom bar */}
-          <div className="flex items-center justify-between px-6 sm:px-10 md:px-16 py-3 sm:py-4 border-t">
+          <div className="flex items-center justify-between px-2.5 sm:px-10 md:px-16 py-3 sm:py-4 border-t">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/25">
               No setup · No config · No exports · Grounded in your data
             </p>

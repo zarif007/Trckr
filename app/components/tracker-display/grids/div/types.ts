@@ -60,7 +60,9 @@ export interface DivGridFieldCellProps {
   valueString: string;
   options: ResolvedOption[] | undefined;
   showError: boolean;
+  showWarning?: boolean;
   validationError: string | null;
+  validationWarning?: string | null;
   isDisabled: boolean;
   inputTextClass: string;
   wrapperClassName: string;

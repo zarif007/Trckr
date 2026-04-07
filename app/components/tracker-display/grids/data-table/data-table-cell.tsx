@@ -1,8 +1,7 @@
 import { Cell, Row, flexRender } from "@tanstack/react-table";
 import { TableCell } from "@/components/ui/table";
 import { DataTableInput } from "./data-table-input";
-import { FieldMetadata, getValidationError } from "./utils";
-import { useState, useEffect } from "react";
+import { FieldMetadata, validateField } from "./utils";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_INPUT_FONT_CLASS,
@@ -10,6 +9,10 @@ import {
 } from "@/lib/style-utils";
 import { applyFieldOverrides } from "@/lib/field-rules";
 import type { FieldRuleOverride } from "@/lib/field-rules";
+import {
+  useCellValidation,
+  getValidationDisplayState,
+} from "@/lib/field-validation";
 
 interface DataTableCellProps<TData> {
   cell: Cell<TData, any>;
@@ -57,22 +60,24 @@ export function DataTableCell<TData>({
       : undefined;
 
   const cellValue = cell.getValue();
-  const [value, setValue] = useState<unknown>(() =>
-    overrideValue !== undefined ? overrideValue : cellValue,
-  );
-  const [dirty, setDirty] = useState(false);
+  const initialValue =
+    overrideValue !== undefined ? overrideValue : cellValue;
 
-  useEffect(() => {
-    const next = overrideValue !== undefined ? overrideValue : cellValue;
-    setValue((prev: unknown) => (Object.is(prev, next) ? prev : next));
-  }, [cellValue, overrideValue]);
+  // Use centralized cell validation hook for state management
+  const cellState = useCellValidation({ initialValue });
+
+  // Sync with external value changes (from calculations or parent updates)
+  const externalValue =
+    overrideValue !== undefined ? overrideValue : cellValue;
+  if (!Object.is(cellState.value, externalValue)) {
+    cellState.syncFromExternal(externalValue);
+  }
 
   const handleUpdate = (
     newValue: any,
     options?: { bindingUpdates?: Record<string, unknown> },
   ) => {
-    setDirty(true);
-    setValue(newValue);
+    cellState.setValue(newValue);
     meta?.updateData?.(row.index, cell.column.id, newValue);
     const bindingUpdates = options?.bindingUpdates ?? {};
     Object.entries(bindingUpdates).forEach(([fieldId, val]) =>
@@ -80,17 +85,29 @@ export function DataTableCell<TData>({
     );
   };
 
-  const validationError = fieldInfo
-    ? getValidationError({
-        value,
+  const validationResult = fieldInfo
+    ? validateField({
+        value: cellState.value,
         fieldId: cell.column.id,
         fieldType: fieldInfo.type,
         config: effectiveConfig,
         rules: fieldInfo.validations,
         rowValues,
       })
-    : null;
-  const showError = dirty && !!validationError;
+    : {
+        error: null,
+        warning: null,
+        issues: [],
+        hasError: false,
+        hasWarning: false,
+      };
+
+  // Use centralized display state logic
+  const { showError, showWarning } = getValidationDisplayState({
+    result: validationResult,
+    value: cellState.value,
+    hasInteracted: cellState.dirty,
+  });
   const isMultiselect =
     fieldInfo?.type === "multiselect" ||
     fieldInfo?.type === "dynamic_multiselect";
@@ -111,8 +128,15 @@ export function DataTableCell<TData>({
         (isMultiselect || isFieldMappings || isTextareaType) &&
           "overflow-hidden",
         showError && "ring-2 ring-destructive ring-inset",
+        showWarning && "ring-2 ring-warning/50 ring-inset",
       )}
-      title={showError ? validationError! : undefined}
+      title={
+        showError
+          ? validationResult.error!
+          : showWarning
+            ? validationResult.warning!
+            : undefined
+      }
     >
       {isSelect ? (
         <div className="flex items-center justify-center w-full h-full">
@@ -128,7 +152,7 @@ export function DataTableCell<TData>({
             )}
           >
             <DataTableInput
-              value={value}
+              value={cellState.value}
               onChange={handleUpdate}
               type={fieldInfo.type}
               options={fieldInfo.options}
