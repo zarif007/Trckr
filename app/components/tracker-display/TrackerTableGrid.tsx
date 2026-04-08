@@ -11,7 +11,6 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
 } from "./types";
 import { TrackerCell } from "./TrackerCell";
 import {
@@ -68,8 +67,6 @@ interface TrackerTableGridProps {
   bindings?: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  /** Optional style overrides for this table view. */
-  styleOverrides?: StyleOverrides;
   fieldRulesV2?: FieldRulesMap;
   gridData?: Record<string, Array<Record<string, unknown>>>;
   gridDataRef?: React.RefObject<
@@ -101,7 +98,6 @@ function TrackerTableGridInner({
   bindings = {},
   validations,
   calculations,
-  styleOverrides,
   fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
@@ -785,7 +781,6 @@ function TrackerTableGridInner({
         onDeleteEntries={onDeleteEntries}
         getBindingUpdates={getBindingUpdates}
         config={grid.config}
-        styleOverrides={styleOverrides}
         gridId={grid.id}
         calculations={calculations}
         gridData={fullGridData}

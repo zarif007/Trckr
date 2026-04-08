@@ -5,7 +5,6 @@ import type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
 } from "../../types";
 import type { FieldCalculationRule } from "@/lib/functions/types";
 import type { FieldRulesMap } from "@/lib/field-rules";
@@ -32,7 +31,6 @@ export interface TrackerDivGridProps {
   bindings?: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styleOverrides?: StyleOverrides;
   fieldRulesV2?: FieldRulesMap;
   gridData?: Record<string, Array<Record<string, unknown>>>;
   gridDataRef?: React.RefObject<

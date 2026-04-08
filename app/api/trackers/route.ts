@@ -54,10 +54,16 @@ export async function POST(request: Request) {
   const schemaFromBody = body.schema;
   const requestedScope =
     normalizeMasterDataScope(body.masterDataScope) ?? "tracker";
+  const stripLegacyStyles = (value: unknown): Record<string, unknown> => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    const next = { ...(value as Record<string, unknown>) };
+    delete next.styles;
+    return next;
+  };
   const schema = isNew
     ? typeof schemaFromBody === "object" && schemaFromBody !== null
       ? {
-          ...(schemaFromBody as Record<string, unknown>),
+          ...stripLegacyStyles(schemaFromBody),
           masterDataScope: requestedScope,
         }
       : ({
@@ -69,6 +75,9 @@ export async function POST(request: Request) {
   if (schema === undefined || typeof schema !== "object" || schema === null) {
     return badRequest("Missing or invalid schema");
   }
+
+  // Silently drop legacy top-level schema.styles (deprecated).
+  const schemaWithoutStyles = stripLegacyStyles(schema) as object;
 
   const name =
     typeof body.name === "string" && body.name.trim()
@@ -86,7 +95,7 @@ export async function POST(request: Request) {
   let tracker = await createTrackerForUser({
     userId: authResult.user.id,
     name,
-    schema: schema as object,
+    schema: schemaWithoutStyles,
     projectId:
       typeof body.projectId === "string" ? body.projectId.trim() : undefined,
     moduleId:

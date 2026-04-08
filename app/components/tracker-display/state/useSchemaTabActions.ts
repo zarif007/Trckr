@@ -14,7 +14,6 @@ interface UseSchemaTabActionsInput {
   bindings: TrackerDisplayProps["bindings"];
   validations: TrackerDisplayProps["validations"];
   calculations: TrackerDisplayProps["calculations"];
-  styles: TrackerDisplayProps["styles"];
   dynamicOptions: TrackerDisplayProps["dynamicOptions"];
   onSchemaChange: TrackerDisplayProps["onSchemaChange"];
   normalizedTabs: TrackerTab[];
@@ -31,7 +30,6 @@ export function useSchemaTabActions({
   bindings,
   validations,
   calculations,
-  styles,
   dynamicOptions,
   onSchemaChange,
   normalizedTabs,
@@ -55,7 +53,6 @@ export function useSchemaTabActions({
       bindings: bindings ?? {},
       validations,
       calculations,
-      styles,
       dynamicOptions,
     });
     setActiveTabId(id);
@@ -68,7 +65,6 @@ export function useSchemaTabActions({
     bindings,
     validations,
     calculations,
-    styles,
     dynamicOptions,
     onSchemaChange,
     setActiveTabId,
@@ -108,7 +104,6 @@ export function useSchemaTabActions({
         bindings: bindings ?? {},
         validations,
         calculations,
-        styles,
         dynamicOptions,
       });
 
@@ -125,7 +120,6 @@ export function useSchemaTabActions({
       bindings,
       validations,
       calculations,
-      styles,
       dynamicOptions,
       onSchemaChange,
       activeTabId,
@@ -150,7 +144,6 @@ export function useSchemaTabActions({
         bindings: bindings ?? {},
         validations,
         calculations,
-        styles,
         dynamicOptions,
       });
     },
@@ -163,7 +156,6 @@ export function useSchemaTabActions({
       bindings,
       validations,
       calculations,
-      styles,
       dynamicOptions,
       onSchemaChange,
     ],
@@ -211,7 +203,6 @@ export function useSchemaTabActions({
         bindings: bindings ?? {},
         validations,
         calculations,
-        styles,
         dynamicOptions,
       });
     },
@@ -225,7 +216,6 @@ export function useSchemaTabActions({
       bindings,
       validations,
       calculations,
-      styles,
       dynamicOptions,
       onSchemaChange,
     ],

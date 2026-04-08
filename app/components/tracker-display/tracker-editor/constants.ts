@@ -40,7 +40,6 @@ export function createEmptyTrackerSchema(options?: {
     validations: {},
     calculations: {},
     dynamicOptions: {},
-    styles: undefined,
   };
 }
 

@@ -140,7 +140,6 @@ export function BlockEditor({
   bindings,
   validations,
   calculations,
-  styles,
   gridData,
   gridDataRef,
   onUpdate,
@@ -500,7 +499,6 @@ export function BlockEditor({
                             bindings={bindings}
                             validations={validations}
                             calculations={calculations}
-                            styles={styles}
                             gridData={gridData}
                             gridDataRef={gridDataRef}
                             onUpdate={onUpdate}

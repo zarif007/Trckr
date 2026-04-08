@@ -3,10 +3,7 @@ import { TableCell } from "@/components/ui/table";
 import { DataTableInput } from "./data-table-input";
 import { FieldMetadata, validateField } from "./utils";
 import { cn } from "@/lib/utils";
-import {
-  DEFAULT_INPUT_FONT_CLASS,
-  type ResolvedTableStyles,
-} from "@/lib/style-utils";
+import { DEFAULT_INPUT_FONT_CLASS } from "@/lib/field-input-classes";
 import { applyFieldOverrides } from "@/lib/field-rules";
 import type { FieldRuleOverride } from "@/lib/field-rules";
 import {
@@ -33,7 +30,6 @@ export function DataTableCell<TData>({
   const fieldInfo = fieldMetadata?.[cell.column.id];
   const meta = cell.getContext().table.options.meta as {
     updateData?: (rowIndex: number, columnId: string, value: any) => void;
-    tableStyles?: ResolvedTableStyles;
     getFieldOverrides?: (
       rowIndex: number,
       fieldId: string,
@@ -42,7 +38,6 @@ export function DataTableCell<TData>({
     gridId?: string;
   };
   const isEditable = meta?.editable !== false;
-  const tableStyles = meta?.tableStyles;
   const overrides =
     rowOverrides?.[cell.column.id] ??
     meta?.getFieldOverrides?.(row.index, cell.column.id);
@@ -164,15 +159,6 @@ export function DataTableCell<TData>({
               optionsGridFields={fieldInfo.optionsGridFields}
               getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
               optionsSourceLabel={fieldInfo.optionsGridName}
-              className={
-                tableStyles
-                  ? cn(
-                      tableStyles.fontSizeForInput,
-                      tableStyles.fontWeightForInput,
-                      tableStyles.textColorForInput,
-                    )
-                  : undefined
-              }
               compact
             />
           </div>
@@ -181,9 +167,7 @@ export function DataTableCell<TData>({
         <div
           className={cn(
             "w-full h-full px-4 flex items-center text-foreground/90",
-            tableStyles?.fontSize ?? DEFAULT_INPUT_FONT_CLASS,
-            tableStyles?.fontWeight,
-            tableStyles?.textColor,
+            DEFAULT_INPUT_FONT_CLASS,
           )}
         >
           <span className="truncate">

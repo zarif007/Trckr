@@ -23,7 +23,7 @@ import {
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FieldWrapper } from "../../shared/FieldWrapper";
-import { FIELD_FORM_INPUT_CLASS } from "@/lib/style-utils";
+import { FIELD_FORM_INPUT_CLASS } from "@/lib/field-input-classes";
 import type { TrackerFieldType } from "../../types";
 import type { AddColumnOrFieldDialogProps } from "../types";
 import { getCreatableFieldTypesWithLabels } from "../utils";

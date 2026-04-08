@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import {
   DEFAULT_INPUT_FONT_CLASS,
   FIELD_INNER_INPUT_BASE_CLASS,
-} from "@/lib/style-utils";
+} from "@/lib/field-input-classes";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";

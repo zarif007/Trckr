@@ -6,7 +6,6 @@ import type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
   GridDataRecord,
 } from "../types";
 import type {
@@ -29,7 +28,6 @@ export interface GridBlockContentProps {
   bindings: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styles?: Record<string, StyleOverrides>;
   fieldRulesV2?: FieldRulesMap;
   gridData?: GridDataRecord;
   gridDataRef?: RefObject<GridDataRecord> | null;
@@ -63,7 +61,6 @@ export function GridBlockContent({
   bindings,
   validations,
   calculations,
-  styles,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -83,8 +80,6 @@ export function GridBlockContent({
   const views = useMemo(() => normalizeGridViews(grid), [grid]);
 
   if (views.length === 1) {
-    const viewOverrides =
-      (views[0].id && styles?.[views[0].id]) || styles?.[grid.id] || undefined;
     return (
       <div className="w-full min-w-0 space-y-2.5">
         {!hideLabel && (
@@ -106,7 +101,6 @@ export function GridBlockContent({
           bindings={bindings}
           validations={validations}
           calculations={calculations}
-          styleOverrides={viewOverrides}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -139,8 +133,6 @@ export function GridBlockContent({
           ))}
         </TabsList>
         {views.map((view) => {
-          const viewOverrides =
-            (view.id && styles?.[view.id]) || styles?.[grid.id] || undefined;
           return (
             <TabsContent key={view.id} value={view.id} className="mt-2.5">
               <GridViewContent
@@ -155,7 +147,6 @@ export function GridBlockContent({
                 bindings={bindings}
                 validations={validations}
                 calculations={calculations}
-                styleOverrides={viewOverrides}
                 fieldRulesV2={fieldRulesV2}
                 gridData={gridData}
                 gridDataRef={gridDataRef}

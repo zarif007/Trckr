@@ -25,7 +25,6 @@ import { TrackerOptionsProvider } from "./tracker-options-context";
 import { EditModeProvider } from "./edit-mode";
 import { SHARED_TAB_ID } from "@/lib/field-rules-options";
 import { collectOptionsSourceSchemaIds } from "@/lib/resolve-bindings";
-import { cn } from "@/lib/utils";
 import { useTrackerTabs } from "./state/useTrackerTabs";
 import { useGridDataEngine } from "./state/useGridDataEngine";
 import { useSchemaTabActions } from "./state/useSchemaTabActions";
@@ -127,7 +126,6 @@ export function TrackerDisplayInline({
   bindings = {},
   validations,
   calculations,
-  styles,
   dynamicOptions,
   initialGridData,
   getDataRef,
@@ -234,7 +232,6 @@ export function TrackerDisplayInline({
             bindings,
             validations,
             calculations,
-            styles,
             fieldRulesV2,
             dynamicOptions,
           }
@@ -250,7 +247,6 @@ export function TrackerDisplayInline({
       bindings,
       validations,
       calculations,
-      styles,
       fieldRulesV2,
       dynamicOptions,
     ],
@@ -265,7 +261,6 @@ export function TrackerDisplayInline({
       bindings,
       validations,
       calculations,
-      styles,
       dynamicOptions,
       onSchemaChange,
       normalizedTabs,
@@ -358,7 +353,6 @@ export function TrackerDisplayInline({
             bindings={effectiveBindings}
             validations={validations}
             calculations={calculations}
-            styles={styles}
             fieldRulesV2={fieldRulesV2}
             gridData={gridData}
             gridDataRef={gridDataRef}

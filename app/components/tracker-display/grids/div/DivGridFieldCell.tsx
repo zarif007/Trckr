@@ -14,7 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { FieldWrapper } from "../../shared/FieldWrapper";
-import { FIELD_INNER_INPUT_BASE_CLASS } from "@/lib/style-utils";
+import { FIELD_INNER_INPUT_BASE_CLASS } from "@/lib/field-input-classes";
 import type { DivGridFieldCellProps } from "./types";
 import { ADD_OPTION_VALUE } from "./constants";
 

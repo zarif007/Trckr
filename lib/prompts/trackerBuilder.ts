@@ -310,17 +310,6 @@ CRITICAL for revisions:
 10. If the user asks for conditional behavior (show/hide/require/disable fields), include a fieldRules array with the required rules.
 11. Use "options" and "multiselect" for select fields (with bindings). Do not use "dynamic_select" or "dynamic_multiselect" unless explicitly mentioned and only when a function backs the options (e.g. built-in dynamic option functions).
 
-=== STYLES (only when user explicitly asks for visual changes) ===
-
-Top-level optional "styles": record keyed by grid id or view id. Do NOT add for structural changes.
-
-Rules: Only include requested tokens. Use stylesRemove in trackerPatch to reset.
-
-Tokens (all optional): fontSize ("xs"|"sm"|"base"|"lg"|"xl"), fontWeight, textColor, density, accentColor (border+background), headerStyle, stripedRows, borderStyle, cardSize, columnWidth.
-
-Example — "make the tasks table font bigger": styles: { "tasks_grid": { "fontSize": "lg" } }
-Example — "green accents on kanban": styles: { "tasks_kanban_view": { "accentColor": "green" } }
-
 === VALIDATIONS (TOP-LEVEL) ===
 
 Use a top-level "validations" object keyed by "<grid_id>.<field_id>" (like bindings, no tab).
@@ -390,7 +379,6 @@ Examples (WRONG — will be rejected):
  ✗ "multiply quantity by products_grid.cost" — reference is from another grid but not an aggregation
  ✗ "add the order_total from orders_grid to the price field" — cross-grid arithmetic reference
 
-Revisions: use "styles" to add/update, "stylesRemove" (array of ids) to remove.
 `;
 
 export default trackerBuilderPrompt;

@@ -9,7 +9,6 @@ import type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
   GridDataRecord,
 } from "../types";
 import type { FieldRulesMap } from "@/lib/field-rules";
@@ -34,7 +33,6 @@ export interface TrackerTabContentProps {
   bindings: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styles?: Record<string, StyleOverrides>;
   fieldRulesV2?: FieldRulesMap;
   gridData: GridDataRecord;
   gridDataRef?: RefObject<GridDataRecord> | null;
@@ -73,7 +71,6 @@ function areTabContentPropsEqual(
     prev.bindings !== next.bindings ||
     prev.validations !== next.validations ||
     prev.calculations !== next.calculations ||
-    prev.styles !== next.styles ||
     prev.fieldRulesV2 !== next.fieldRulesV2 ||
     prev.readOnly !== next.readOnly ||
     prev.onUpdate !== next.onUpdate ||
@@ -98,7 +95,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
   bindings,
   validations,
   calculations,
-  styles,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -143,7 +139,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
           bindings={bindings}
           validations={validations}
           calculations={calculations}
-          styles={styles}
           gridData={gridData}
           gridDataRef={gridDataRef}
           onUpdate={onUpdate}
@@ -176,7 +171,6 @@ export const TrackerTabContent = memo(function TrackerTabContent({
               bindings={bindings}
               validations={validations}
               calculations={calculations}
-              styles={styles}
               fieldRulesV2={fieldRulesV2}
               gridData={gridData}
               gridDataRef={gridDataRef}

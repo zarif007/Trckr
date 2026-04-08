@@ -7,7 +7,6 @@ import {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
   GridDataRecord,
 } from "../types";
 import type {
@@ -34,7 +33,6 @@ export interface TrackerSectionProps {
   bindings?: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styles?: Record<string, StyleOverrides>;
   fieldRulesV2?: FieldRulesMap;
   gridData?: GridDataRecord;
   gridDataRef?: RefObject<GridDataRecord> | null;
@@ -60,7 +58,6 @@ export function TrackerSection({
   bindings = {},
   validations,
   calculations,
-  styles,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -99,7 +96,6 @@ export function TrackerSection({
                   bindings={bindings}
                   validations={validations}
                   calculations={calculations}
-                  styles={styles}
                   fieldRulesV2={fieldRulesV2}
                   gridData={gridData}
                   gridDataRef={gridDataRef}

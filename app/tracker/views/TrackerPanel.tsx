@@ -581,7 +581,6 @@ export const TrackerPanel = memo(function TrackerPanel({
               calculations={
                 (schema.calculations || {}) as TrackerResponse["calculations"]
               }
-              styles={(schema.styles || {}) as TrackerResponse["styles"]}
               fieldRulesV2={schema.fieldRulesV2}
               dynamicOptions={
                 (schema.dynamicOptions ||
@@ -606,7 +605,6 @@ export const TrackerPanel = memo(function TrackerPanel({
               bindings={schema.bindings}
               validations={schema.validations}
               calculations={schema.calculations}
-              styles={schema.styles}
               fieldRulesV2={schema.fieldRulesV2}
               dynamicOptions={schema.dynamicOptions}
               getDataRef={trackerDataRef}

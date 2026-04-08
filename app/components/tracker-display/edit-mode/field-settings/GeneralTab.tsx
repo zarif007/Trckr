@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FieldWrapper } from "../../shared/FieldWrapper";
-import { FIELD_FORM_INPUT_CLASS } from "@/lib/style-utils";
+import { FIELD_FORM_INPUT_CLASS } from "@/lib/field-input-classes";
 import type { TrackerFieldType } from "../../types";
 import { GROUP_ORDER, sourceEntryId, sourceEntryLabel } from "./constants";
 

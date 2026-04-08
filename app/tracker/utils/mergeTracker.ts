@@ -299,26 +299,6 @@ export function applyTrackerPatch(
     normalizedCalculations[key] = rule as FieldCalculationRule;
   }
 
-  // --- Styles ---
-  const styles = { ...(base.styles ?? {}) };
-  if (patch.styles) {
-    for (const [key, value] of Object.entries(patch.styles)) {
-      if (value === null) {
-        delete styles[key];
-      } else if (isPlainObject(value)) {
-        const existing = isPlainObject(styles[key]) ? styles[key] : {};
-        styles[key] = { ...existing, ...value };
-      } else {
-        styles[key] = value as (typeof styles)[string];
-      }
-    }
-  }
-  if (patch.stylesRemove) {
-    for (const key of patch.stylesRemove) {
-      delete styles[key];
-    }
-  }
-
   // --- Dynamic options definitions ---
   const dynamicOptionsParsed = dynamicOptionsDefinitionsSchema.safeParse(
     (patch as Record<string, unknown>).dynamicOptions,
@@ -340,7 +320,6 @@ export function applyTrackerPatch(
     fieldRulesV2:
       (patch as { fieldRulesV2?: import("@/lib/field-rules").FieldRulesMap })
         .fieldRulesV2 ?? base.fieldRulesV2,
-    styles,
     dynamicOptions,
   };
 }

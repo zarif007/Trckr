@@ -90,6 +90,11 @@ export async function PATCH(
     body.schema !== null
   ) {
     let schema = body.schema as Record<string, unknown>;
+    // Silently drop legacy top-level schema.styles (deprecated).
+    if (Object.prototype.hasOwnProperty.call(schema, "styles")) {
+      schema = { ...schema };
+      delete schema.styles;
+    }
     if (tracker.moduleId) {
       const moduleRow = await prisma.module.findFirst({
         where: {

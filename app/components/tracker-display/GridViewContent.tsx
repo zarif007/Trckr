@@ -6,7 +6,6 @@ import type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
   GridDataRecord,
 } from "./types";
 import type {
@@ -36,7 +35,6 @@ export interface GridViewContentProps {
   bindings: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styleOverrides?: StyleOverrides;
   fieldRulesV2?: FieldRulesMap;
   gridData?: Record<string, Array<Record<string, unknown>>>;
   gridDataRef?: RefObject<GridDataRecord> | null;
@@ -65,7 +63,6 @@ export function GridViewContent({
   bindings,
   validations,
   calculations,
-  styleOverrides,
   fieldRulesV2,
   gridData,
   gridDataRef,
@@ -123,7 +120,6 @@ export function GridViewContent({
           bindings={bindings}
           validations={validations}
           calculations={calculations}
-          styleOverrides={styleOverrides}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -147,7 +143,6 @@ export function GridViewContent({
           bindings={bindings}
           validations={validations}
           calculations={calculations}
-          styleOverrides={styleOverrides}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}
@@ -171,7 +166,6 @@ export function GridViewContent({
           bindings={bindings}
           validations={validations}
           calculations={calculations}
-          styleOverrides={styleOverrides}
           fieldRulesV2={fieldRulesV2}
           gridData={gridData}
           gridDataRef={gridDataRef}

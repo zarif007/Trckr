@@ -13,7 +13,6 @@ import type {
   TrackerSection,
   TrackerGrid,
   TrackerBindings,
-  StyleOverrides,
 } from "../types";
 import type { FieldRulesMap } from "@/lib/field-rules";
 import type {
@@ -40,7 +39,6 @@ export interface BlockEditorProps {
   bindings: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styles?: Record<string, StyleOverrides>;
   fieldRulesV2?: FieldRulesMap;
   gridData: Record<string, Array<Record<string, unknown>>>;
   gridDataRef?: RefObject<GridDataRecord> | null;
@@ -69,7 +67,6 @@ export interface EditModeSchema {
   bindings?: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styles?: Record<string, unknown>;
   fieldRulesV2?: FieldRulesMap;
 }
 

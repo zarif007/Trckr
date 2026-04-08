@@ -47,7 +47,7 @@ import {
   applyFieldOverrides,
   resolveFieldRulesForRow,
 } from "@/lib/field-rules";
-import type { FieldRulesMap, FieldRuleOverride } from "@/lib/field-rules";
+import type { FieldRuleOverride } from "@/lib/field-rules";
 import { useTrackerOptionsContext } from "../../tracker-options-context";
 import type { OptionsGridFieldDef } from "../data-table/utils";
 import type { FieldMetadata } from "../data-table/utils";
@@ -57,7 +57,6 @@ import {
   markFieldsAsInteracted,
 } from "@/lib/field-validation";
 import { EntryFormDialog } from "../data-table/entry-form-dialog";
-import { resolveDivStyles } from "@/lib/style-utils";
 import {
   applyCompiledCalculationsForRow,
   compileCalculationsForGrid,
@@ -93,7 +92,6 @@ function TrackerDivGridInner({
   bindings = {},
   validations,
   calculations,
-  styleOverrides,
   fieldRulesV2,
   gridData = {},
   gridDataRef,
@@ -142,8 +140,6 @@ function TrackerDivGridInner({
   const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
     Record<string, ReturnType<typeof resolveFieldOptionsV2> | undefined>
   >({});
-
-  const ds = useMemo(() => resolveDivStyles(styleOverrides), [styleOverrides]);
   const isGridReadOnly = readOnly || grid.config?.isRowEditAble === false;
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>();
@@ -847,10 +843,7 @@ function TrackerDivGridInner({
     return field ?? null;
   }, [activeDragId, grid.id, fieldsById]);
 
-  const inputTextClass = useMemo(
-    () => `${ds.fontSize} ${ds.fontWeight} ${ds.textColor}`.trim(),
-    [ds.fontSize, ds.fontWeight, ds.textColor],
-  );
+  const inputTextClass = useMemo(() => "text-sm text-foreground", []);
   const setDatePickerOpenStable = useCallback(
     (open: boolean) => setDatePickerOpen(open),
     [],
@@ -925,12 +918,11 @@ function TrackerDivGridInner({
       hasInteracted,
     });
 
-    const wrapperClassName =
-      `${ds.fontSize} ${field.dataType === "text" ? "h-auto" : ""}`.trim();
+    const wrapperClassName = field.dataType === "text" ? "h-auto" : "";
 
     const labelContent = (
       <label
-        className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}
+        className="text-xs font-medium text-muted-foreground"
       >
         {field.ui.label}
         {effectiveConfig?.isRequired && (
@@ -1074,12 +1066,12 @@ function TrackerDivGridInner({
             {activeDragField ? (
               <div className="flex flex-col w-full min-w-0 space-y-1.5 rounded-sm border bg-background p-3">
                 <span
-                  className={`${ds.labelFontSize} font-medium text-muted-foreground ${ds.fontWeight}`}
+                  className="text-xs font-medium text-muted-foreground"
                 >
                   {activeDragField.ui.label}
                 </span>
                 <div
-                  className={`rounded-sm border border-dashed bg-muted/30 ${ds.fontSize} min-h-9`}
+                  className="rounded-sm border border-dashed bg-muted/30 text-sm min-h-9"
                   aria-hidden
                 />
               </div>

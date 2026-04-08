@@ -36,14 +36,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Settings2, ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Settings2, ChevronDown, Trash2 } from "lucide-react";
 import { FieldMetadata, getFieldIcon } from "./utils";
 import { DataTableCell } from "./data-table-cell";
 import { EntryFormDialog } from "./entry-form-dialog";
 import { EntryWayButton } from "../../entry-way/EntryWayButton";
 import type { EntryWayDefinition } from "../../entry-way/entry-way-types";
-import type { StyleOverrides } from "../../types";
-import { resolveTableStyles } from "@/lib/style-utils";
 import type { FieldCalculationRule } from "@/lib/functions/types";
 import type { FieldRuleOverride } from "@/lib/field-rules";
 import type { ReactNode } from "react";
@@ -77,8 +75,6 @@ interface DataTableProps<TData, TValue> {
   onAddEntry?: (newRow: Record<string, any>) => void;
   onDeleteEntries?: (rowIndices: number[]) => void;
   config?: any;
-  /** Optional style overrides for this table. */
-  styleOverrides?: StyleOverrides;
   /** For Add Entry dialog: when a select/multiselect changes, return binding updates to merge into form. */
   getBindingUpdates?: (
     fieldId: string,
@@ -143,7 +139,6 @@ export function DataTable<TData, TValue>({
   onAddEntry,
   onDeleteEntries,
   getBindingUpdates,
-  styleOverrides,
   getFieldOverrides,
   getRowOverrides,
   getFieldOverridesForRow,
@@ -346,11 +341,6 @@ export function DataTable<TData, TValue>({
     ];
   }, [columns, deletable, editLayoutAble, renderRowAction, showRowDetails]);
 
-  const ts = useMemo(
-    () => resolveTableStyles(styleOverrides),
-    [styleOverrides],
-  );
-
   const updateDraftCell = useCallback(
     (rowIndex: number, columnId: string, value: any) => {
       setTableData((prev) =>
@@ -391,7 +381,6 @@ export function DataTable<TData, TValue>({
     meta: {
       updateData: editable ? updateDraftCell : undefined,
       fieldMetadata: fieldMetadata,
-      tableStyles: ts,
       getFieldOverrides,
       getFieldOverridesForRow,
       editable,
@@ -578,22 +567,15 @@ export function DataTable<TData, TValue>({
       />
       <div
         className={cn(
-          "rounded-sm overflow-x-auto border border-border/20",
-          ts.borderStyle,
-          ts.accentBorder,
-          ts.tableBg || "bg-card/40",
+          "rounded-sm overflow-x-auto border border-border/20 bg-card/40",
         )}
       >
         <Table
           className={cn(
             "w-full min-w-max border-collapse",
-            ts.fontSize,
-            ts.fontWeight,
-            ts.textColor,
-            ts.tableBg && "bg-transparent",
           )}
         >
-          <TableHeader className={ts.headerBg}>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
@@ -614,12 +596,10 @@ export function DataTable<TData, TValue>({
                           isSelect || isActions ? fixedWidth : undefined,
                       }}
                       className={cn(
-                        ts.headerHeight,
                         "text-muted-foreground/90 font-medium border-r border-border/30 last:border-r-0 text-xs",
-                        ts.headerFontSize,
                         isSelect || isActions
                           ? "p-0 text-center min-w-[44px] w-[44px]"
-                          : ts.cellPadding,
+                          : "px-3 py-2",
                       )}
                     >
                       {header.isPlaceholder ? null : isSelect || isActions ? (
@@ -648,9 +628,9 @@ export function DataTable<TData, TValue>({
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody className={ts.tableBg ? "bg-transparent" : undefined}>
+          <TableBody>
             {table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row, rowIdx) => {
+              table.getRowModel().rows.map((row) => {
                 const rowOriginal = row.original as Record<string, unknown>;
                 const rowValues: Record<string, unknown> = { ...rowOriginal };
                 if (gridId && fieldMetadata) {
@@ -666,8 +646,6 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
                       "group border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
-                      ts.tableBg && "!bg-transparent",
-                      ts.stripedRows && rowIdx % 2 === 1 && "bg-muted/15",
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {

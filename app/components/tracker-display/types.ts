@@ -148,9 +148,6 @@ export type TrackerOption = {
   id?: string;
   [key: string]: unknown;
 };
-
-import type { StyleOverrides } from "@/lib/schemas/tracker";
-export type { StyleOverrides };
 import type {
   FieldCalculationRule,
   FieldValidationRule,
@@ -206,8 +203,6 @@ export interface TrackerDisplayProps {
   fieldRulesV2?: FieldRulesMap;
   /** Bindings for select/multiselect fields. Key is grid_id.field_id. Mandatory for all options/multiselect. */
   bindings?: TrackerBindings;
-  /** Optional style overrides keyed by grid id or view id. */
-  styles?: Record<string, StyleOverrides>;
   /** Optional initial grid data (e.g. for demos). Key is grid id, value is array of row objects. */
   initialGridData?: Record<string, Array<Record<string, unknown>>>;
   /** Optional tracker-local dynamic option function/connectors definitions. */

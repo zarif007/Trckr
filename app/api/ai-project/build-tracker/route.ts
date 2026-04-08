@@ -251,6 +251,9 @@ export async function POST(request: Request) {
               ...(trackerSchema as Record<string, unknown>),
               masterDataScope,
             };
+            if (Object.prototype.hasOwnProperty.call(schemaWithScope, "styles")) {
+              delete (schemaWithScope as Record<string, unknown>).styles;
+            }
             const masterDataTrackers = Array.isArray(
               fullObject?.masterDataTrackers,
             )
@@ -293,6 +296,17 @@ export async function POST(request: Request) {
               moduleId: parsed.moduleId ?? null,
               userId: authResult.user.id,
             });
+            if (
+              masterDataResult.tracker &&
+              typeof masterDataResult.tracker === "object" &&
+              !Array.isArray(masterDataResult.tracker) &&
+              Object.prototype.hasOwnProperty.call(
+                masterDataResult.tracker as Record<string, unknown>,
+                "styles",
+              )
+            ) {
+              delete (masterDataResult.tracker as Record<string, unknown>).styles;
+            }
 
             if (masterDataResult.actions.length) {
               for (const action of masterDataResult.actions) {

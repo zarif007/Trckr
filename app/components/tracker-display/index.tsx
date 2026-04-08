@@ -38,7 +38,6 @@ export type {
   TrackerBindings,
   FieldCalculationRule,
   FieldValidationRule,
-  StyleOverrides,
 } from "./types";
 export type { SectionBarProps, InlineEditableNameProps } from "./layout";
 export type { GridBlockHeaderProps, GridBlockContentProps } from "./blocks";

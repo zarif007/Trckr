@@ -38,7 +38,6 @@ import {
 } from "@/lib/resolve-bindings";
 import { resolveFieldRulesForRow } from "@/lib/field-rules";
 import type { FieldRulesMap } from "@/lib/field-rules";
-import { resolveKanbanStyles } from "@/lib/style-utils";
 import { EntryFormDialog } from "./grids/data-table/entry-form-dialog";
 import { useTrackerOptionsContext } from "./tracker-options-context";
 import { EntryWayButton } from "./entry-way/EntryWayButton";
@@ -55,7 +54,6 @@ import type {
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
-  StyleOverrides,
 } from "./types";
 import type { TrackerContextForOptions } from "@/lib/binding";
 import type {
@@ -75,7 +73,6 @@ export interface TrackerKanbanGridProps {
   bindings?: TrackerBindings;
   validations?: Record<string, FieldValidationRule[]>;
   calculations?: Record<string, FieldCalculationRule>;
-  styleOverrides?: StyleOverrides;
   fieldRulesV2?: FieldRulesMap;
   gridData?: Record<string, Array<Record<string, unknown>>>;
   gridDataRef?: React.RefObject<
@@ -103,7 +100,6 @@ function TrackerKanbanGridInner({
   bindings = {},
   validations,
   calculations,
-  styleOverrides,
   fieldRulesV2,
   gridData = {},
   gridDataForThisGrid,
@@ -146,11 +142,6 @@ function TrackerKanbanGridInner({
   const [cardFieldVisibility, setCardFieldVisibility] = useState<
     Record<string, boolean>
   >({});
-
-  const ks = useMemo(
-    () => resolveKanbanStyles(styleOverrides),
-    [styleOverrides],
-  );
 
   const kanbanState = useKanbanGroups({
     tabId,
@@ -443,19 +434,13 @@ function TrackerKanbanGridInner({
 
   const cardStyles = useMemo(
     () => ({
-      cardPadding: ks.cardPadding,
-      labelFontSize: ks.labelFontSize,
-      valueFontSize: ks.fontSize,
-      fontWeight: ks.fontWeight,
-      valueTextColor: ks.textColor,
+      cardPadding: "p-4",
+      labelFontSize: "text-xs",
+      valueFontSize: "text-sm",
+      fontWeight: "",
+      valueTextColor: "text-foreground",
     }),
-    [
-      ks.cardPadding,
-      ks.labelFontSize,
-      ks.fontSize,
-      ks.fontWeight,
-      ks.textColor,
-    ],
+    [],
   );
 
   const activeCard = useMemo(() => {
@@ -615,11 +600,7 @@ function TrackerKanbanGridInner({
           const cardsInGroup = groupedCards.get(group.id) ?? [];
 
           return (
-            <div
-              key={group.id}
-              className="shrink-0"
-              style={{ width: `${ks.columnWidth}px` }}
-            >
+    <div key={group.id} className="shrink-0 w-[320px]">
               <div
                 className={cn(
                   "mb-3 border bg-muted/50 px-4 py-3",
