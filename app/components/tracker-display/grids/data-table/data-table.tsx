@@ -36,6 +36,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 import { Settings2, ChevronDown, Trash2 } from "lucide-react";
 import { FieldMetadata, getFieldIcon } from "./utils";
 import { DataTableCell } from "./data-table-cell";
@@ -461,7 +462,10 @@ export function DataTable<TData, TValue>({
                 </PopoverTrigger>
                 <PopoverContent
                   align="end"
-                  className="w-52 rounded-sm border-border/50 p-1.5 "
+                  className={cn(
+                    "w-52 rounded-sm border p-1.5",
+                    theme.border.gridChromeMuted,
+                  )}
                 >
                   <div className="flex flex-col gap-0.5">
                     <Button
@@ -567,7 +571,8 @@ export function DataTable<TData, TValue>({
       />
       <div
         className={cn(
-          "rounded-sm overflow-x-auto border border-border/20 bg-card/40",
+          "rounded-sm overflow-x-auto border bg-card/40",
+          theme.border.gridChrome,
         )}
       >
         <Table
@@ -579,7 +584,10 @@ export function DataTable<TData, TValue>({
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow
                 key={headerGroup.id}
-                className="bg-muted/20 hover:bg-muted/20 border-b border-border/30"
+                className={cn(
+                  "bg-muted/20 hover:bg-muted/20 border-b",
+                  theme.border.gridChromeSubtle,
+                )}
               >
                 {headerGroup.headers.map((header) => {
                   const isSelect = header.id === "select";
@@ -596,7 +604,8 @@ export function DataTable<TData, TValue>({
                           isSelect || isActions ? fixedWidth : undefined,
                       }}
                       className={cn(
-                        "text-muted-foreground/90 font-medium border-r border-border/30 last:border-r-0 text-xs",
+                        "text-muted-foreground/90 font-medium border-r last:border-r-0 text-xs",
+                        theme.border.gridChromeSubtle,
                         isSelect || isActions
                           ? "p-0 text-center min-w-[44px] w-[44px]"
                           : "px-3 py-2",
@@ -645,7 +654,8 @@ export function DataTable<TData, TValue>({
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
-                      "group border-b border-border/50 last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
+                      "group border-b last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
+                      theme.border.gridChromeMuted,
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
@@ -654,7 +664,10 @@ export function DataTable<TData, TValue>({
                           <TableCell
                             key={cell.id}
                             style={{ width: fixedWidth, minWidth: fixedWidth }}
-                            className="p-0 text-center align-middle h-full border-r border-border/50 last:border-r-0 min-w-[44px]"
+                            className={cn(
+                              "p-0 text-center align-middle h-full border-r last:border-r-0 min-w-[44px]",
+                              theme.border.gridChromeMuted,
+                            )}
                           >
                             <div className="flex items-center justify-center w-full h-full min-h-[inherit]">
                               {flexRender(

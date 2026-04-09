@@ -14,6 +14,14 @@ export const border = {
   dividerRing: "ring-border/30",
   faint: "border-border/20",
   input: "border-input",
+  /**
+   * Table/kanban shells — same `--input` chroma as `patterns.outlineButton`
+   * (e.g. New Entry). Prefer these over ad-hoc `border-border/*` on grid UI.
+   */
+  gridChrome: "border-input",
+  gridChromeHover: "hover:border-ring",
+  gridChromeMuted: "border-input/50",
+  gridChromeSubtle: "border-input/30",
   ring: "border-ring",
   hover: "hover:border-ring",
   divideSubtle: "divide-border/60",

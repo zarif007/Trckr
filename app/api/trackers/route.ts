@@ -1,18 +1,20 @@
 import { z } from "zod";
 import { Prisma, TrackerSchemaType } from "@prisma/client";
-import { createEmptyTrackerSchema } from "@/app/components/tracker-display/tracker-editor/constants";
 import { badRequest, jsonOk } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import {
   createTrackerForUser,
-  updateTrackerByIdForUser,
+  getFullTrackerSchemaForUser,
 } from "@/lib/repositories";
-import { resolveSelfBindings } from "@/lib/binding";
 import { prisma } from "@/lib/db";
 import {
   normalizeMasterDataScope,
   type MasterDataScope,
 } from "@/lib/master-data-scope";
+import { trackerSchema as trackerSchemaZod } from "@/lib/schemas/tracker";
+import { decomposeTrackerSchema } from "@/lib/tracker-schema";
+import { assembleTrackerDisplayProps } from "@/lib/tracker-schema";
+import { createEmptyTrackerSchema } from "@/app/components/tracker-display/tracker-editor/constants";
 
 const createTrackerBodySchema = z
   .object({
@@ -32,12 +34,8 @@ const createTrackerBodySchema = z
 
 /**
  * POST /api/trackers
- * Create a tracker in the database.
- * Body: { name?, schema?, new?, projectId?, moduleId?, instance?, versionControl? }
- * - If new: true, creates a new tracker: use body.schema if valid, else empty schema; no schema required.
- * - Otherwise requires schema.
- * - instance defaults to SINGLE. Multi-instance trackers are stored as a single tracker schema.
- * - versionControl is only honoured for SINGLE instance (forced false for MULTI).
+ * Create a tracker with normalized schema tables.
+ * Body accepts the flat schema shape (for AI/legacy compat) and decomposes it.
  */
 export async function POST(request: Request) {
   const authResult = await requireAuthenticatedUser();
@@ -54,13 +52,15 @@ export async function POST(request: Request) {
   const schemaFromBody = body.schema;
   const requestedScope =
     normalizeMasterDataScope(body.masterDataScope) ?? "tracker";
+
   const stripLegacyStyles = (value: unknown): Record<string, unknown> => {
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
     const next = { ...(value as Record<string, unknown>) };
     delete next.styles;
     return next;
   };
-  const schema = isNew
+
+  const rawSchema = isNew
     ? typeof schemaFromBody === "object" && schemaFromBody !== null
       ? {
           ...stripLegacyStyles(schemaFromBody),
@@ -69,15 +69,41 @@ export async function POST(request: Request) {
       : ({
           ...createEmptyTrackerSchema(),
           masterDataScope: requestedScope,
-        } as object)
+        } as Record<string, unknown>)
     : schemaFromBody;
 
-  if (schema === undefined || typeof schema !== "object" || schema === null) {
+  if (
+    rawSchema === undefined ||
+    typeof rawSchema !== "object" ||
+    rawSchema === null
+  ) {
     return badRequest("Missing or invalid schema");
   }
 
-  // Silently drop legacy top-level schema.styles (deprecated).
-  const schemaWithoutStyles = stripLegacyStyles(schema) as object;
+  const schemaWithoutStyles = stripLegacyStyles(rawSchema);
+
+  const zodResult = trackerSchemaZod.safeParse(schemaWithoutStyles);
+  const flatSchema = zodResult.success
+    ? zodResult.data
+    : (schemaWithoutStyles as ReturnType<typeof trackerSchemaZod.parse>);
+
+  const decomposed = decomposeTrackerSchema(flatSchema);
+
+  // Validate foreign bindings - prevent access to trackers user doesn't own
+  if (decomposed.bindings) {
+    const { verifyForeignTrackerAccess } = await import("@/lib/repositories/authorization-helpers");
+    for (const binding of decomposed.bindings) {
+      const config = binding.config as { optionsSourceSchemaId?: string };
+      const sourceId = config.optionsSourceSchemaId;
+
+      if (sourceId && !sourceId.startsWith("_intent:") && !sourceId.startsWith("placeholder:")) {
+        const canAccess = await verifyForeignTrackerAccess(sourceId, authResult.user.id);
+        if (!canAccess) {
+          return badRequest(`Binding references inaccessible tracker: ${sourceId}`);
+        }
+      }
+    }
+  }
 
   const name =
     typeof body.name === "string" && body.name.trim()
@@ -85,17 +111,14 @@ export async function POST(request: Request) {
       : "Untitled tracker";
 
   const instance = body.instance === "MULTI" ? "MULTI" : "SINGLE";
-  // Version control is only for single-instance trackers
   const versionControl =
     instance === "SINGLE" ? (body.versionControl ?? false) : false;
-  // Auto-save is only for single-instance trackers without version control
   const autoSave =
     instance === "SINGLE" && !versionControl ? (body.autoSave ?? true) : false;
 
-  let tracker = await createTrackerForUser({
+  const tracker = await createTrackerForUser({
     userId: authResult.user.id,
     name,
-    schema: schemaWithoutStyles,
     projectId:
       typeof body.projectId === "string" ? body.projectId.trim() : undefined,
     moduleId:
@@ -104,22 +127,16 @@ export async function POST(request: Request) {
     versionControl,
     autoSave,
     type: TrackerSchemaType.GENERAL,
+    meta: decomposed.meta,
+    nodes: decomposed.nodes,
+    fields: decomposed.fields,
+    layoutNodes: decomposed.layoutNodes,
+    bindings: decomposed.bindings,
+    validations: decomposed.validations,
+    calculations: decomposed.calculations,
+    dynamicOptions: decomposed.dynamicOptions,
+    fieldRules: decomposed.fieldRules,
   });
-
-  const resolvedSchema = resolveSelfBindings(
-    tracker.schema as Record<string, unknown>,
-    tracker.id,
-  );
-  if (resolvedSchema !== tracker.schema) {
-    const updated = await updateTrackerByIdForUser(
-      tracker.id,
-      authResult.user.id,
-      {
-        schema: resolvedSchema as object,
-      },
-    );
-    if (updated) tracker = updated;
-  }
 
   const shouldPersistDefault =
     body.setMasterDataDefaultForOwner === true ||
@@ -169,5 +186,9 @@ export async function POST(request: Request) {
     }
   }
 
-  return jsonOk(tracker);
+  const full = await getFullTrackerSchemaForUser(
+    tracker.id,
+    authResult.user.id,
+  );
+  return jsonOk(full ?? tracker);
 }

@@ -1,5 +1,5 @@
-import { Instance, SystemFileType, TrackerSchemaType } from "@prisma/client";
-import { createEmptyTrackerSchema } from "@/app/components/tracker-display/tracker-editor/constants";
+import { Instance, Prisma, SystemFileType, TrackerSchemaType } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 
 const SYSTEM_FILE_TYPES: SystemFileType[] = [
@@ -73,7 +73,7 @@ export async function createProjectForUser(userId: string, name: string) {
           instance: Instance.SINGLE,
           versionControl: false,
           autoSave: true,
-          schema: createEmptyTrackerSchema() as object,
+          meta: Prisma.JsonNull,
         })),
       });
       return tx.project.findUniqueOrThrow({

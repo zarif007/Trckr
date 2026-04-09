@@ -8,18 +8,20 @@ import {
 } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
+import { NodeType } from "@prisma/client";
 
 const createBranchBodySchema = z.object({
   branchName: z.string().min(1),
-  basedOnId: z.string(),
+  basedOnBranch: z.string().optional(),
+  basedOnId: z.string().optional(),
   label: z.string().optional(),
-  formStatus: z.string().nullable().optional(),
 });
+
+type GridIdSlugPair = { id: string; slug: string };
 
 /**
  * GET /api/trackers/[id]/branches
- * List all branches (TrackerData records) for a version-controlled tracker.
- * Returns branches ordered by createdAt desc with author info.
+ * List all branches with their data for a version-controlled tracker.
  */
 export async function GET(
   _request: Request,
@@ -34,28 +36,85 @@ export async function GET(
 
   const tracker = await prisma.trackerSchema.findFirst({
     where: { id: trackerId, project: { userId: authResult.user.id } },
-    select: { id: true, versionControl: true },
+    select: {
+      id: true,
+      versionControl: true,
+      nodes: { where: { type: NodeType.GRID }, select: { id: true, slug: true } },
+    },
   });
   if (!tracker) return notFound("Tracker not found");
   if (!tracker.versionControl)
     return badRequest("Version control is not enabled for this tracker");
 
-  const branches = await prisma.trackerData.findMany({
-    where: { trackerSchemaId: trackerId },
-    orderBy: { createdAt: "desc" },
+  const gridIdToSlug = new Map(tracker.nodes.map((n: GridIdSlugPair) => [n.id, n.slug]));
+
+  const allRows = await prisma.gridRow.findMany({
+    where: { trackerId, deletedAt: null },
+    orderBy: { sortOrder: "asc" },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      createdByUser: { select: { id: true, name: true, email: true } },
     },
   });
+
+  const branchMap = new Map<
+    string,
+    {
+      branchName: string;
+      isMerged: boolean;
+      data: Record<string, Array<Record<string, unknown>>>;
+      rowCount: number;
+      latestUpdatedAt: Date;
+      statusTag: string | null;
+      author: { id: string; name: string | null; email: string | null } | null;
+    }
+  >();
+
+  for (const row of allRows) {
+    let branch = branchMap.get(row.branchName);
+    if (!branch) {
+      branch = {
+        branchName: row.branchName,
+        isMerged: row.isMerged,
+        data: {},
+        rowCount: 0,
+        latestUpdatedAt: row.updatedAt,
+        statusTag: row.statusTag,
+        author: row.createdByUser ?? null,
+      };
+      branchMap.set(row.branchName, branch);
+    }
+
+    const gridSlug = gridIdToSlug.get(row.gridId) ?? row.gridId;
+    if (!branch.data[gridSlug]) branch.data[gridSlug] = [];
+    branch.data[gridSlug].push({
+      ...(row.data as Record<string, unknown>),
+      _rowId: row.id,
+      _sortOrder: row.sortOrder,
+    });
+    branch.rowCount++;
+    if (row.updatedAt > branch.latestUpdatedAt)
+      branch.latestUpdatedAt = row.updatedAt;
+    if (row.isMerged) branch.isMerged = true;
+  }
+
+  const branches = Array.from(branchMap.values()).map((b) => ({
+    id: b.branchName,
+    branchName: b.branchName,
+    label: b.branchName,
+    data: b.data,
+    updatedAt: b.latestUpdatedAt.toISOString(),
+    formStatus: b.statusTag,
+    author: b.author,
+    rowCount: b.rowCount,
+    isMerged: b.isMerged,
+  }));
 
   return jsonOk({ branches });
 }
 
 /**
  * POST /api/trackers/[id]/branches
- * Create a new branch from an existing TrackerData (basedOnId).
- * Body: { branchName: string, basedOnId: string, label?: string }
- * Copies data from basedOnId and creates a new TrackerData with the given branch name.
+ * Create a new branch by copying all grid rows from basedOnBranch.
  */
 export async function POST(
   request: Request,
@@ -76,48 +135,81 @@ export async function POST(
 
   const tracker = await prisma.trackerSchema.findFirst({
     where: { id: trackerId, project: { userId: authResult.user.id } },
-    select: { id: true, versionControl: true },
+    select: {
+      id: true,
+      versionControl: true,
+      nodes: { where: { type: NodeType.GRID }, select: { id: true, slug: true } },
+    },
   });
   if (!tracker) return notFound("Tracker not found");
   if (!tracker.versionControl)
     return badRequest("Version control is not enabled for this tracker");
 
-  // Check branch name doesn't already exist (excluding merged branches)
-  const existingBranch = await prisma.trackerData.findFirst({
-    where: {
-      trackerSchemaId: trackerId,
-      branchName: body.branchName,
-      isMerged: false,
-    },
+  const gridIdToSlug = new Map(tracker.nodes.map((n: GridIdSlugPair) => [n.id, n.slug]));
+
+  const existingBranch = await prisma.gridRow.findFirst({
+    where: { trackerId, branchName: body.branchName, isMerged: false },
   });
   if (existingBranch)
     return badRequest(`Branch "${body.branchName}" already exists`);
 
-  // Fetch base snapshot data
-  const basedOn = await prisma.trackerData.findFirst({
-    where: { id: body.basedOnId, trackerSchemaId: trackerId },
-  });
-  if (!basedOn) return notFound("Base branch not found");
-  const nextFormStatus =
-    body.formStatus !== undefined
-      ? body.formStatus
-      : (basedOn.formStatus ?? null);
+  const baseBranch = body.basedOnBranch ?? body.basedOnId ?? "main";
 
-  const newBranch = await prisma.trackerData.create({
-    data: {
-      trackerSchemaId: trackerId,
-      branchName: body.branchName,
-      label: body.label ?? null,
-      formStatus: typeof nextFormStatus === "string" ? nextFormStatus : null,
-      data: basedOn.data ?? {},
-      authorId: authResult.user.id,
-      basedOnId: body.basedOnId,
-      isMerged: false,
+  const sourceRows = await prisma.gridRow.findMany({
+    where: {
+      trackerId,
+      branchName: baseBranch,
+      deletedAt: null,
     },
+  });
+
+  if (sourceRows.length > 0) {
+    await prisma.gridRow.createMany({
+      data: sourceRows.map((row) => ({
+        trackerId: row.trackerId,
+        gridId: row.gridId,
+        data: row.data ?? {},
+        schemaVersion: row.schemaVersion,
+        version: 1,
+        statusTag: row.statusTag,
+        sortOrder: row.sortOrder,
+        branchName: body.branchName,
+        isMerged: false,
+        createdBy: authResult.user.id,
+      })),
+    });
+  }
+
+  const created = await prisma.gridRow.findMany({
+    where: { trackerId, branchName: body.branchName },
+    orderBy: { sortOrder: "asc" },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      createdByUser: { select: { id: true, name: true, email: true } },
     },
   });
 
-  return jsonOk(newBranch);
+  const data: Record<string, Array<Record<string, unknown>>> = {};
+  for (const row of created) {
+    const gridSlug = gridIdToSlug.get(row.gridId) ?? row.gridId;
+    if (!data[gridSlug]) data[gridSlug] = [];
+    data[gridSlug].push({
+      ...(row.data as Record<string, unknown>),
+      _rowId: row.id,
+      _sortOrder: row.sortOrder,
+    });
+  }
+
+  const latestRow = created.length > 0 ? created[created.length - 1] : null;
+
+  return jsonOk({
+    id: body.branchName,
+    branchName: body.branchName,
+    label: body.label ?? body.branchName,
+    data,
+    updatedAt: latestRow?.updatedAt?.toISOString() ?? new Date().toISOString(),
+    formStatus: latestRow?.statusTag ?? null,
+    author: latestRow?.createdByUser ?? null,
+    rowCount: created.length,
+    isMerged: false,
+  });
 }

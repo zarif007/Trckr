@@ -10,7 +10,7 @@ import {
 } from "@/lib/api/http";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import {
-  buildFieldCatalog,
+  buildFieldCatalogFromNormalized,
   type FieldCatalog,
 } from "@/lib/insights-query/field-catalog";
 import { fingerprintFromCatalog } from "@/lib/insights-query/fingerprint";
@@ -36,7 +36,9 @@ export async function GET(
   const report = await getReportForUser(id, auth.user.id);
   if (!report) return notFound("Report not found.");
 
-  const catalog: FieldCatalog = buildFieldCatalog(report.trackerSchema.schema);
+  const catalog: FieldCatalog = buildFieldCatalogFromNormalized(
+    report.trackerSchema,
+  );
   const fingerprintNow = fingerprintFromCatalog(catalog);
   const def = report.definition;
   const staleDefinition = Boolean(

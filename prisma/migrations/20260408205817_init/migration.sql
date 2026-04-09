@@ -8,6 +8,9 @@ CREATE TYPE "ReportRunTrigger" AS ENUM ('initial', 'refresh');
 CREATE TYPE "ReportRunStatus" AS ENUM ('running', 'completed', 'failed');
 
 -- CreateEnum
+CREATE TYPE "NodeType" AS ENUM ('TAB', 'SECTION', 'GRID');
+
+-- CreateEnum
 CREATE TYPE "Instance" AS ENUM ('SINGLE', 'MULTI');
 
 -- CreateEnum
@@ -24,6 +27,9 @@ CREATE TYPE "ConversationMode" AS ENUM ('BUILDER', 'ANALYST');
 
 -- CreateEnum
 CREATE TYPE "ToolCallStatus" AS ENUM ('pending', 'running', 'done', 'error');
+
+-- CreateEnum
+CREATE TYPE "WorkflowRunStatus" AS ENUM ('pending', 'running', 'completed', 'failed', 'skipped');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -119,7 +125,8 @@ CREATE TABLE "TrackerSchema" (
     "versionControl" BOOLEAN NOT NULL DEFAULT false,
     "autoSave" BOOLEAN NOT NULL DEFAULT true,
     "listForSchemaId" TEXT,
-    "schema" JSONB NOT NULL,
+    "meta" JSONB,
+    "schemaVersion" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -261,20 +268,130 @@ CREATE TABLE "LlmTokenUsage" (
 );
 
 -- CreateTable
-CREATE TABLE "TrackerData" (
+CREATE TABLE "TrackerNode" (
     "id" TEXT NOT NULL,
-    "trackerSchemaId" TEXT NOT NULL,
-    "label" TEXT,
-    "formStatus" TEXT,
-    "data" JSONB NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "type" "NodeType" NOT NULL,
+    "slug" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "placeId" INTEGER NOT NULL,
+    "parentId" TEXT,
+    "config" JSONB,
+    "views" JSONB,
+
+    CONSTRAINT "TrackerNode_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerField" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "slug" TEXT NOT NULL,
+    "dataType" TEXT NOT NULL,
+    "ui" JSONB NOT NULL,
+    "config" JSONB,
+
+    CONSTRAINT "TrackerField_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerLayoutNode" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "fieldId" TEXT NOT NULL,
+    "order" DOUBLE PRECISION NOT NULL,
+    "row" INTEGER,
+    "col" INTEGER,
+    "renderAs" TEXT,
+
+    CONSTRAINT "TrackerLayoutNode_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerBinding" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "sourceGridId" TEXT,
+    "sourceFieldId" TEXT,
+    "targetGridId" TEXT NOT NULL,
+    "targetFieldId" TEXT NOT NULL,
+    "config" JSONB NOT NULL,
+
+    CONSTRAINT "TrackerBinding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerValidation" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "fieldId" TEXT NOT NULL,
+    "rules" JSONB NOT NULL,
+
+    CONSTRAINT "TrackerValidation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerCalculation" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "fieldId" TEXT NOT NULL,
+    "expression" JSONB NOT NULL,
+
+    CONSTRAINT "TrackerCalculation_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerDynamicOption" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "fieldId" TEXT NOT NULL,
+    "definition" JSONB NOT NULL,
+
+    CONSTRAINT "TrackerDynamicOption_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "TrackerFieldRule" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "fieldId" TEXT NOT NULL,
+    "config" JSONB NOT NULL,
+
+    CONSTRAINT "TrackerFieldRule_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GridRow" (
+    "id" TEXT NOT NULL,
+    "trackerId" TEXT NOT NULL,
+    "gridId" TEXT NOT NULL,
+    "data" JSONB NOT NULL DEFAULT '{}',
+    "schemaVersion" TEXT NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "statusTag" TEXT,
+    "sortOrder" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "branchName" TEXT NOT NULL DEFAULT 'main',
-    "authorId" TEXT,
-    "basedOnId" TEXT,
     "isMerged" BOOLEAN NOT NULL DEFAULT false,
+    "deletedAt" TIMESTAMP(3),
+    "createdBy" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "TrackerData_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "GridRow_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "GridRowReference" (
+    "fromRowId" TEXT NOT NULL,
+    "fromFieldId" TEXT NOT NULL,
+    "toRowId" TEXT NOT NULL,
+
+    CONSTRAINT "GridRowReference_pkey" PRIMARY KEY ("fromRowId","fromFieldId")
 );
 
 -- CreateTable
@@ -317,6 +434,49 @@ CREATE TABLE "ToolCall" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "ToolCall_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Workflow" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "moduleId" TEXT,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "schema" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Workflow_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "WorkflowRun" (
+    "id" TEXT NOT NULL,
+    "workflowId" TEXT NOT NULL,
+    "status" "WorkflowRunStatus" NOT NULL DEFAULT 'pending',
+    "trigger" JSONB NOT NULL,
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "finishedAt" TIMESTAMP(3),
+    "error" TEXT,
+
+    CONSTRAINT "WorkflowRun_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "WorkflowRunStep" (
+    "id" TEXT NOT NULL,
+    "runId" TEXT NOT NULL,
+    "nodeId" TEXT NOT NULL,
+    "status" "WorkflowRunStatus" NOT NULL DEFAULT 'pending',
+    "inputData" JSONB,
+    "outputData" JSONB,
+    "startedAt" TIMESTAMP(3),
+    "finishedAt" TIMESTAMP(3),
+    "error" TEXT,
+
+    CONSTRAINT "WorkflowRunStep_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -422,13 +582,82 @@ CREATE INDEX "LlmTokenUsage_userId_trackerSchemaId_analysisId_idx" ON "LlmTokenU
 CREATE INDEX "LlmTokenUsage_createdAt_idx" ON "LlmTokenUsage"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "TrackerData_trackerSchemaId_idx" ON "TrackerData"("trackerSchemaId");
+CREATE INDEX "TrackerNode_trackerId_idx" ON "TrackerNode"("trackerId");
 
 -- CreateIndex
-CREATE INDEX "TrackerData_authorId_idx" ON "TrackerData"("authorId");
+CREATE INDEX "TrackerNode_parentId_idx" ON "TrackerNode"("parentId");
 
 -- CreateIndex
-CREATE INDEX "TrackerData_basedOnId_idx" ON "TrackerData"("basedOnId");
+CREATE UNIQUE INDEX "TrackerNode_trackerId_slug_key" ON "TrackerNode"("trackerId", "slug");
+
+-- CreateIndex
+CREATE INDEX "TrackerField_trackerId_idx" ON "TrackerField"("trackerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerField_trackerId_slug_key" ON "TrackerField"("trackerId", "slug");
+
+-- CreateIndex
+CREATE INDEX "TrackerLayoutNode_trackerId_idx" ON "TrackerLayoutNode"("trackerId");
+
+-- CreateIndex
+CREATE INDEX "TrackerLayoutNode_gridId_idx" ON "TrackerLayoutNode"("gridId");
+
+-- CreateIndex
+CREATE INDEX "TrackerLayoutNode_fieldId_idx" ON "TrackerLayoutNode"("fieldId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerLayoutNode_gridId_fieldId_key" ON "TrackerLayoutNode"("gridId", "fieldId");
+
+-- CreateIndex
+CREATE INDEX "TrackerBinding_trackerId_idx" ON "TrackerBinding"("trackerId");
+
+-- CreateIndex
+CREATE INDEX "TrackerBinding_sourceGridId_idx" ON "TrackerBinding"("sourceGridId");
+
+-- CreateIndex
+CREATE INDEX "TrackerBinding_targetGridId_idx" ON "TrackerBinding"("targetGridId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerBinding_targetGridId_targetFieldId_key" ON "TrackerBinding"("targetGridId", "targetFieldId");
+
+-- CreateIndex
+CREATE INDEX "TrackerValidation_trackerId_idx" ON "TrackerValidation"("trackerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerValidation_gridId_fieldId_key" ON "TrackerValidation"("gridId", "fieldId");
+
+-- CreateIndex
+CREATE INDEX "TrackerCalculation_trackerId_idx" ON "TrackerCalculation"("trackerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerCalculation_gridId_fieldId_key" ON "TrackerCalculation"("gridId", "fieldId");
+
+-- CreateIndex
+CREATE INDEX "TrackerDynamicOption_trackerId_idx" ON "TrackerDynamicOption"("trackerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerDynamicOption_gridId_fieldId_key" ON "TrackerDynamicOption"("gridId", "fieldId");
+
+-- CreateIndex
+CREATE INDEX "TrackerFieldRule_trackerId_idx" ON "TrackerFieldRule"("trackerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "TrackerFieldRule_gridId_fieldId_key" ON "TrackerFieldRule"("gridId", "fieldId");
+
+-- CreateIndex
+CREATE INDEX "GridRow_trackerId_idx" ON "GridRow"("trackerId");
+
+-- CreateIndex
+CREATE INDEX "GridRow_gridId_idx" ON "GridRow"("gridId");
+
+-- CreateIndex
+CREATE INDEX "GridRow_gridId_branchName_idx" ON "GridRow"("gridId", "branchName");
+
+-- CreateIndex
+CREATE INDEX "GridRow_deletedAt_idx" ON "GridRow"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "GridRowReference_toRowId_idx" ON "GridRowReference"("toRowId");
 
 -- CreateIndex
 CREATE INDEX "Conversation_trackerSchemaId_idx" ON "Conversation"("trackerSchemaId");
@@ -438,6 +667,21 @@ CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
 
 -- CreateIndex
 CREATE INDEX "ToolCall_messageId_idx" ON "ToolCall"("messageId");
+
+-- CreateIndex
+CREATE INDEX "Workflow_projectId_idx" ON "Workflow"("projectId");
+
+-- CreateIndex
+CREATE INDEX "Workflow_moduleId_idx" ON "Workflow"("moduleId");
+
+-- CreateIndex
+CREATE INDEX "WorkflowRun_workflowId_idx" ON "WorkflowRun"("workflowId");
+
+-- CreateIndex
+CREATE INDEX "WorkflowRun_status_idx" ON "WorkflowRun"("status");
+
+-- CreateIndex
+CREATE INDEX "WorkflowRunStep_runId_idx" ON "WorkflowRunStep"("runId");
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -524,13 +768,91 @@ ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_trackerSchemaId_fkey" 
 ALTER TABLE "LlmTokenUsage" ADD CONSTRAINT "LlmTokenUsage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TrackerNode" ADD CONSTRAINT "TrackerNode_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_basedOnId_fkey" FOREIGN KEY ("basedOnId") REFERENCES "TrackerData"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TrackerNode" ADD CONSTRAINT "TrackerNode_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TrackerData" ADD CONSTRAINT "TrackerData_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "TrackerField" ADD CONSTRAINT "TrackerField_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerLayoutNode" ADD CONSTRAINT "TrackerLayoutNode_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerLayoutNode" ADD CONSTRAINT "TrackerLayoutNode_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerLayoutNode" ADD CONSTRAINT "TrackerLayoutNode_fieldId_fkey" FOREIGN KEY ("fieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerBinding" ADD CONSTRAINT "TrackerBinding_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerBinding" ADD CONSTRAINT "TrackerBinding_sourceGridId_fkey" FOREIGN KEY ("sourceGridId") REFERENCES "TrackerNode"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerBinding" ADD CONSTRAINT "TrackerBinding_sourceFieldId_fkey" FOREIGN KEY ("sourceFieldId") REFERENCES "TrackerField"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerBinding" ADD CONSTRAINT "TrackerBinding_targetGridId_fkey" FOREIGN KEY ("targetGridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerBinding" ADD CONSTRAINT "TrackerBinding_targetFieldId_fkey" FOREIGN KEY ("targetFieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerValidation" ADD CONSTRAINT "TrackerValidation_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerValidation" ADD CONSTRAINT "TrackerValidation_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerValidation" ADD CONSTRAINT "TrackerValidation_fieldId_fkey" FOREIGN KEY ("fieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerCalculation" ADD CONSTRAINT "TrackerCalculation_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerCalculation" ADD CONSTRAINT "TrackerCalculation_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerCalculation" ADD CONSTRAINT "TrackerCalculation_fieldId_fkey" FOREIGN KEY ("fieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerDynamicOption" ADD CONSTRAINT "TrackerDynamicOption_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerDynamicOption" ADD CONSTRAINT "TrackerDynamicOption_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerDynamicOption" ADD CONSTRAINT "TrackerDynamicOption_fieldId_fkey" FOREIGN KEY ("fieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerFieldRule" ADD CONSTRAINT "TrackerFieldRule_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerFieldRule" ADD CONSTRAINT "TrackerFieldRule_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "TrackerFieldRule" ADD CONSTRAINT "TrackerFieldRule_fieldId_fkey" FOREIGN KEY ("fieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRow" ADD CONSTRAINT "GridRow_trackerId_fkey" FOREIGN KEY ("trackerId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRow" ADD CONSTRAINT "GridRow_gridId_fkey" FOREIGN KEY ("gridId") REFERENCES "TrackerNode"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRow" ADD CONSTRAINT "GridRow_createdBy_fkey" FOREIGN KEY ("createdBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRowReference" ADD CONSTRAINT "GridRowReference_fromRowId_fkey" FOREIGN KEY ("fromRowId") REFERENCES "GridRow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRowReference" ADD CONSTRAINT "GridRowReference_fromFieldId_fkey" FOREIGN KEY ("fromFieldId") REFERENCES "TrackerField"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "GridRowReference" ADD CONSTRAINT "GridRowReference_toRowId_fkey" FOREIGN KEY ("toRowId") REFERENCES "GridRow"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Conversation" ADD CONSTRAINT "Conversation_trackerSchemaId_fkey" FOREIGN KEY ("trackerSchemaId") REFERENCES "TrackerSchema"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -540,3 +862,15 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "ToolCall" ADD CONSTRAINT "ToolCall_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Workflow" ADD CONSTRAINT "Workflow_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Workflow" ADD CONSTRAINT "Workflow_moduleId_fkey" FOREIGN KEY ("moduleId") REFERENCES "Module"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WorkflowRun" ADD CONSTRAINT "WorkflowRun_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "WorkflowRunStep" ADD CONSTRAINT "WorkflowRunStep_runId_fkey" FOREIGN KEY ("runId") REFERENCES "WorkflowRun"("id") ON DELETE CASCADE ON UPDATE CASCADE;

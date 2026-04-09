@@ -1,6 +1,9 @@
 /**
- * Derive a stable field catalog from TrackerSchema.schema JSON for LLM context
+ * Derive a stable field catalog from tracker schema data for LLM context
  * and fingerprinting (reports and analyses).
+ *
+ * Accepts either a flat schema object (legacy) or normalized DB includes
+ * (nodes, fields, layoutNodes).
  */
 
 export type FieldCatalogEntry = {
@@ -15,6 +18,53 @@ export type FieldCatalog = {
   fields: FieldCatalogEntry[];
   gridIds: string[];
 };
+
+/**
+ * Build a field catalog from a normalized tracker schema that includes
+ * nodes, fields, and layoutNodes from the DB.
+ */
+export function buildFieldCatalogFromNormalized(trackerSchema: {
+  nodes: Array<{ type: string; slug: string; name: string }>;
+  fields: Array<{ slug: string; dataType: string; ui: unknown }>;
+  layoutNodes: Array<{ gridId: string; fieldId: string }>;
+}): FieldCatalog {
+  const gridNodes = trackerSchema.nodes.filter((n) => n.type === "GRID");
+  const fieldMap = new Map(trackerSchema.fields.map((f) => [f.slug, f]));
+
+  const gridFields = new Map<string, string[]>();
+  for (const ln of trackerSchema.layoutNodes) {
+    const gridNode = trackerSchema.nodes.find((n) => n.slug === ln.gridId || n.type === "GRID");
+    if (!gridNode) continue;
+    const field = trackerSchema.fields.find((f) => f.slug === ln.fieldId);
+    if (!field) continue;
+    const list = gridFields.get(gridNode.slug) ?? [];
+    list.push(field.slug);
+    gridFields.set(gridNode.slug, list);
+  }
+
+  const entries: FieldCatalogEntry[] = [];
+  const gridIds: string[] = [];
+
+  for (const grid of gridNodes) {
+    gridIds.push(grid.slug);
+    const fieldIds = gridFields.get(grid.slug) ?? [];
+    for (const fSlug of fieldIds) {
+      const field = fieldMap.get(fSlug);
+      if (!field) continue;
+      const ui = field.ui as Record<string, unknown> | undefined;
+      const label = String(ui?.label ?? fSlug);
+      entries.push({
+        gridId: grid.slug,
+        gridName: grid.name,
+        fieldId: fSlug,
+        label,
+        dataType: field.dataType,
+      });
+    }
+  }
+
+  return { fields: entries, gridIds };
+}
 
 export function buildFieldCatalog(trackerSchema: unknown): FieldCatalog {
   if (!trackerSchema || typeof trackerSchema !== "object") {

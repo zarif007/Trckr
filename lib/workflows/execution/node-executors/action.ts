@@ -8,7 +8,7 @@ import type {
   ActionNode,
   WorkflowExecutionContext,
 } from "@/lib/workflows/types";
-import { prisma } from "@/lib/db";
+import { prisma, Prisma } from "@/lib/db";
 
 export async function executeActionNode(
   node: ActionNode,
@@ -58,97 +58,166 @@ export async function executeActionNode(
   throw new Error(`Unknown action type: ${(actionType as string) ?? "undefined"}`);
 }
 
+async function resolveGridNodeId(
+  trackerSchemaId: string,
+  gridSlug: string,
+): Promise<string> {
+  const node = await prisma.trackerNode.findFirst({
+    where: {
+      trackerId: trackerSchemaId,
+      slug: gridSlug,
+      type: "GRID",
+    },
+    select: { id: true },
+  });
+  if (!node) {
+    throw new Error(
+      `Grid not found: ${gridSlug} (tracker ${trackerSchemaId})`,
+    );
+  }
+  return node.id;
+}
+
+async function getTrackerSchemaVersion(
+  trackerSchemaId: string,
+): Promise<string> {
+  const t = await prisma.trackerSchema.findUnique({
+    where: { id: trackerSchemaId },
+    select: { schemaVersion: true },
+  });
+  if (!t) {
+    throw new Error(`Tracker schema not found: ${trackerSchemaId}`);
+  }
+  return String(t.schemaVersion);
+}
+
+async function nextSortOrder(
+  trackerSchemaId: string,
+  gridNodeId: string,
+  branchName: string,
+): Promise<number> {
+  const last = await prisma.gridRow.findFirst({
+    where: {
+      trackerId: trackerSchemaId,
+      gridId: gridNodeId,
+      branchName,
+      deletedAt: null,
+    },
+    orderBy: { sortOrder: "desc" },
+    select: { sortOrder: true },
+  });
+  return last ? last.sortOrder + 1 : 1;
+}
+
 async function executeCreateRow(
   trackerSchemaId: string,
-  gridId: string,
+  gridSlug: string,
   mappedData: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  const trackerData = await findOrCreateTrackerData(trackerSchemaId);
-  const dataObj =
-    typeof trackerData.data === "object"
-      ? (trackerData.data as Record<string, unknown>)
-      : {};
+  const gridNodeId = await resolveGridNodeId(trackerSchemaId, gridSlug);
+  const schemaVersion = await getTrackerSchemaVersion(trackerSchemaId);
+  const branchName = "main";
+  const newRowId = crypto.randomUUID();
+  const rowPayload: Record<string, unknown> = {
+    id: newRowId,
+    ...mappedData,
+  };
+  const sortOrder = await nextSortOrder(
+    trackerSchemaId,
+    gridNodeId,
+    branchName,
+  );
 
-  const grids = (dataObj.grids as Record<string, unknown[]>) ?? {};
-  const gridRows: Record<string, unknown>[] = (grids[gridId] as Record<string, unknown>[]) ?? [];
-  const newRow: Record<string, unknown> = { id: crypto.randomUUID(), ...mappedData };
-  gridRows.push(newRow);
-
-  (dataObj.grids as Record<string, unknown>)[gridId] = gridRows;
-
-  await prisma.trackerData.update({
-    where: { id: trackerData.id },
-    data: { data: dataObj as object },
+  await prisma.gridRow.create({
+    data: {
+      trackerId: trackerSchemaId,
+      gridId: gridNodeId,
+      data: rowPayload as Prisma.InputJsonValue,
+      schemaVersion,
+      sortOrder,
+      branchName,
+    },
   });
 
-  return { created: true, rowId: newRow.id };
+  return { created: true, rowId: newRowId };
 }
 
 async function executeUpdateRow(
   trackerSchemaId: string,
-  gridId: string,
+  gridSlug: string,
   mappedData: Record<string, unknown>,
   whereClause: unknown,
   context: WorkflowExecutionContext,
 ): Promise<Record<string, unknown>> {
-  const trackerData = await findOrCreateTrackerData(trackerSchemaId);
-  const dataObj =
-    typeof trackerData.data === "object"
-      ? (trackerData.data as Record<string, unknown>)
-      : {};
-
-  const grids = (dataObj.grids as Record<string, unknown[]>) ?? {};
-  const gridRows =
-    (grids[gridId] as Record<string, unknown>[]) ?? [];
+  const gridNodeId = await resolveGridNodeId(trackerSchemaId, gridSlug);
+  const rows = await prisma.gridRow.findMany({
+    where: {
+      trackerId: trackerSchemaId,
+      gridId: gridNodeId,
+      branchName: "main",
+      deletedAt: null,
+    },
+    select: { id: true, data: true, version: true },
+  });
 
   let updated = false;
-  for (const row of gridRows) {
-    if (rowMatchesWhere(row, whereClause, context)) {
-      Object.assign(row, mappedData);
+  for (const row of rows) {
+    const rowData =
+      typeof row.data === "object" && row.data !== null
+        ? (row.data as Record<string, unknown>)
+        : {};
+    if (rowMatchesWhere(rowData, whereClause, context)) {
+      await prisma.gridRow.update({
+        where: { id: row.id },
+        data: {
+          data: { ...rowData, ...mappedData } as Prisma.InputJsonValue,
+          version: row.version + 1,
+        },
+      });
       updated = true;
     }
   }
 
   if (!updated) return { updated: false, reason: "no_matching_rows" };
 
-  (dataObj.grids as Record<string, unknown>)[gridId] = gridRows;
-  await prisma.trackerData.update({
-    where: { id: trackerData.id },
-    data: { data: dataObj as object },
-  });
-
   return { updated: true };
 }
 
 async function executeDeleteRow(
   trackerSchemaId: string,
-  gridId: string,
+  gridSlug: string,
   whereClause: unknown,
   context: WorkflowExecutionContext,
 ): Promise<Record<string, unknown>> {
-  const trackerData = await findOrCreateTrackerData(trackerSchemaId);
-  const dataObj =
-    typeof trackerData.data === "object"
-      ? (trackerData.data as Record<string, unknown>)
-      : {};
-
-  const grids = (dataObj.grids as Record<string, unknown[]>) ?? {};
-  const gridRows =
-    (grids[gridId] as Record<string, unknown>[]) ?? [];
-
-  const filteredRows = gridRows.filter(
-    (row) => !rowMatchesWhere(row, whereClause, context),
-  );
-
-  (dataObj.grids as Record<string, unknown>)[gridId] = filteredRows;
-  await prisma.trackerData.update({
-    where: { id: trackerData.id },
-    data: { data: dataObj as object },
+  const gridNodeId = await resolveGridNodeId(trackerSchemaId, gridSlug);
+  const rows = await prisma.gridRow.findMany({
+    where: {
+      trackerId: trackerSchemaId,
+      gridId: gridNodeId,
+      branchName: "main",
+      deletedAt: null,
+    },
+    select: { id: true, data: true },
   });
+
+  let removedCount = 0;
+  for (const row of rows) {
+    const rowData =
+      typeof row.data === "object" && row.data !== null
+        ? (row.data as Record<string, unknown>)
+        : {};
+    if (rowMatchesWhere(rowData, whereClause, context)) {
+      await prisma.gridRow.update({
+        where: { id: row.id },
+        data: { deletedAt: new Date() },
+      });
+      removedCount += 1;
+    }
+  }
 
   return {
     deleted: true,
-    removedCount: gridRows.length - filteredRows.length,
+    removedCount,
   };
 }
 
@@ -160,22 +229,4 @@ function rowMatchesWhere(
   const fnCtx: FunctionContext = { rowValues: row, fieldId: "where" };
   const result = evaluateExpr(whereClause as any, fnCtx);
   return !!result;
-}
-
-async function findOrCreateTrackerData(trackerSchemaId: string) {
-  let trackerData = await prisma.trackerData.findFirst({
-    where: { trackerSchemaId },
-    orderBy: { updatedAt: "desc" },
-  });
-
-  if (!trackerData) {
-    trackerData = await prisma.trackerData.create({
-      data: {
-        trackerSchemaId,
-        data: { grids: {} } as object,
-      },
-    });
-  }
-
-  return trackerData;
 }

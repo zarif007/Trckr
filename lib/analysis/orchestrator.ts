@@ -20,7 +20,7 @@ import { scheduleRecordLlmUsage } from "@/lib/llm-usage";
 import { prisma } from "@/lib/db";
 import { withTracedRun } from "@/lib/insights/with-traced-run";
 import {
-  buildFieldCatalog,
+  buildFieldCatalogFromNormalized,
   formatCatalogForPrompt,
 } from "@/lib/insights-query/field-catalog";
 import { fingerprintFromCatalog } from "@/lib/insights-query/fingerprint";
@@ -144,7 +144,7 @@ export function isAnalysisReplayable(analysis: LoadedAnalysis): boolean {
   }
   const outlineParse = analysisOutlinePayloadSchema.safeParse(def.outline);
   if (!outlineParse.success) return false;
-  const catalog = buildFieldCatalog(analysis.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(analysis.trackerSchema);
   const fp = fingerprintFromCatalog(catalog);
   return fp === def.schemaFingerprint;
 }
@@ -218,7 +218,7 @@ export async function executeAnalysisFullGeneration(params: {
     throw new Error("DEEPSEEK_API_KEY is not configured.");
   }
 
-  const catalog = buildFieldCatalog(analysis.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(analysis.trackerSchema);
   const catalogText = formatCatalogForPrompt(catalog);
   const fp = fingerprintFromCatalog(catalog);
   const projectId = analysis.projectId;

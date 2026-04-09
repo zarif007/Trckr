@@ -11,9 +11,10 @@ import "server-only";
 import type { LanguageModelUsage } from "ai";
 
 import { hasDeepSeekApiKey } from "@/lib/ai";
+import { assembleTrackerDisplayProps } from "@/lib/tracker-schema";
 import { withTracedRun } from "@/lib/insights/with-traced-run";
 import {
-  buildFieldCatalog,
+  buildFieldCatalogFromNormalized,
   formatCatalogForPrompt,
 } from "@/lib/insights-query/field-catalog";
 import { fingerprintFromCatalog } from "@/lib/insights-query/fingerprint";
@@ -138,7 +139,7 @@ export function isReplayable(report: LoadedReport): boolean {
   if (def.calcPlan != null && parseCalcPlan(def.calcPlan) == null) {
     return false;
   }
-  const catalog = buildFieldCatalog(report.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(report.trackerSchema);
   const fp = fingerprintFromCatalog(catalog);
   if (fp !== def.schemaFingerprint) return false;
   return !!(
@@ -240,7 +241,7 @@ async function executeReportFullGeneration(params: {
     throw new Error("DEEPSEEK_API_KEY is not configured.");
   }
 
-  const catalog = buildFieldCatalog(report.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(report.trackerSchema);
   const catalogText = formatCatalogForPrompt(catalog);
   const fp = fingerprintFromCatalog(catalog);
   const trackerInstance =
@@ -373,13 +374,14 @@ async function executeReportFullGeneration(params: {
 
       let calcPlan: ReportCalcPlan = { version: 1, columns: [] };
       if (primaryGridId) {
+        const flatSchemaForCalc = assembleTrackerDisplayProps(report.trackerSchema as unknown as Parameters<typeof assembleTrackerDisplayProps>[0]);
         calcPlan = await runCalcAgent({
           intentSummary: intent.narrative,
           userQuery: userPrompt,
           columns: dataResult.columns.map((c) => c.key),
           sampleRows: dataResult.sampleRows,
           generationPlan: intent.generationPlan,
-          trackerSchema: report.trackerSchema.schema,
+          trackerSchema: flatSchemaForCalc,
           primaryGridId,
           write: forward,
           opts: opts && { onLlmUsage: opts.onLlmUsage },

@@ -11,21 +11,21 @@ datasource db {
 }
 
 model User {
-  id                  String          @id @default(cuid())
-  name                String?
-  email               String?         @unique
-  emailVerified       DateTime?
-  image               String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
-  accounts            Account[]
-  llmTokenUsages      LlmTokenUsage[]
-  loginEvents         LoginEvent[]
-  projects            Project[]
-  reports             Report[]
-  analyses            Analysis[]
-  sessions            Session[]
-  authoredTrackerData TrackerData[]   @relation("TrackerDataAuthor")
+  id              String          @id @default(cuid())
+  name            String?
+  email           String?         @unique
+  emailVerified   DateTime?
+  image           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  accounts        Account[]
+  llmTokenUsages  LlmTokenUsage[]
+  loginEvents     LoginEvent[]
+  projects        Project[]
+  reports         Report[]
+  analyses        Analysis[]
+  sessions        Session[]
+  createdGridRows GridRow[]       @relation("GridRowCreator")
 }
 
 model Account {
@@ -122,14 +122,27 @@ model TrackerSchema {
   autoSave        Boolean           @default(true)
   /// If set, this schema is the ".list" companion for the referenced parent schema (MULTI instance only)
   listForSchemaId String?           @unique
-  schema          Json
+  /// Tracker-level metadata: formActions, masterDataScope, masterDataMeta, dynamicConnectors
+  meta            Json?
+  schemaVersion   Int               @default(1)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  nodes           TrackerNode[]
+  fields          TrackerField[]
+  layoutNodes     TrackerLayoutNode[]
+  bindings        TrackerBinding[]
+  validations     TrackerValidation[]
+  calculations    TrackerCalculation[]
+  dynamicOptions  TrackerDynamicOption[]
+  fieldRules      TrackerFieldRule[]
+  gridRows        GridRow[]
+  cache           TrackerSchemaCache?
+
   conversations   Conversation[]
   llmTokenUsages  LlmTokenUsage[]
   reports         Report[]
   analyses        Analysis[]
-  trackerData     TrackerData[]
   listForSchema   TrackerSchema?    @relation("ListCompanion", fields: [listForSchemaId], references: [id], onDelete: Cascade)
   listCompanion   TrackerSchema?    @relation("ListCompanion")
   module          Module?           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -319,31 +332,246 @@ model LlmTokenUsage {
   @@index([createdAt])
 }
 
-model TrackerData {
-  id              String        @id @default(cuid())
-  trackerSchemaId String
-  label           String?
-  formStatus      String?
-  data            Json
-  /// Branch name for version-controlled trackers (default "main")
-  branchName      String        @default("main")
-  /// User who created/owns this branch or instance
-  authorId        String?
-  /// For VC branches: which TrackerData record this was branched from
-  basedOnId       String?
-  /// Whether this branch has been merged into main
-  isMerged        Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  author          User?         @relation("TrackerDataAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  basedOn         TrackerData?  @relation("BranchLineage", fields: [basedOnId], references: [id], onDelete: SetNull)
-  derivedBranches TrackerData[] @relation("BranchLineage")
-  trackerSchema   TrackerSchema @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
+// ---------------------------------------------------------------------------
+// Normalized tracker schema tables
+// ---------------------------------------------------------------------------
 
-  @@index([trackerSchemaId])
-  @@index([authorId])
-  @@index([basedOnId])
+enum NodeType {
+  TAB
+  SECTION
+  GRID
 }
+
+model TrackerNode {
+  id        String   @id @default(cuid())
+  trackerId String
+  type      NodeType
+  /// Semantic identifier unique within a tracker (e.g. "overview_tab", "tasks_grid")
+  slug      String
+  name      String
+  placeId   Int
+  parentId  String?
+  config    Json?
+  /// Grid-only: array of view objects (table, kanban, etc.)
+  views     Json?
+
+  tracker        TrackerSchema        @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  parent         TrackerNode?         @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       TrackerNode[]        @relation("NodeHierarchy")
+  layoutNodes    TrackerLayoutNode[]
+  gridRows       GridRow[]
+  sourceBindings TrackerBinding[]     @relation("BindingSourceGrid")
+  targetBindings TrackerBinding[]     @relation("BindingTargetGrid")
+  validations    TrackerValidation[]
+  calculations   TrackerCalculation[]
+  dynamicOptions TrackerDynamicOption[]
+  fieldRules     TrackerFieldRule[]
+
+  @@unique([trackerId, slug])
+  @@index([trackerId])
+  @@index([parentId])
+  @@index([trackerId, type])
+}
+
+model TrackerField {
+  id        String  @id @default(cuid())
+  trackerId String
+  /// Semantic identifier unique within a tracker (e.g. "task_name", "priority")
+  slug      String
+  dataType  String
+  ui        Json
+  config    Json?
+
+  tracker        TrackerSchema        @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  layoutNodes    TrackerLayoutNode[]
+  sourceBindings TrackerBinding[]     @relation("BindingSourceField")
+  targetBindings TrackerBinding[]     @relation("BindingTargetField")
+  validations    TrackerValidation[]
+  calculations   TrackerCalculation[]
+  dynamicOptions TrackerDynamicOption[]
+  fieldRules     TrackerFieldRule[]
+  rowReferences  GridRowReference[]
+
+  @@unique([trackerId, slug])
+  @@index([trackerId])
+}
+
+model TrackerLayoutNode {
+  id        String  @id @default(cuid())
+  trackerId String
+  gridId    String
+  fieldId   String
+  order     Float
+  /// Row index for div (form) grid layout
+  row       Int?
+  /// Column index for div (form) grid layout (max 3 per row)
+  col       Int?
+  renderAs  String?
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid    TrackerNode   @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  field   TrackerField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([gridId, fieldId])
+  @@index([trackerId])
+  @@index([gridId])
+  @@index([fieldId])
+  @@index([trackerId, gridId])
+}
+
+model TrackerBinding {
+  id            String  @id @default(cuid())
+  trackerId     String
+  /// Nullable for foreign (cross-tracker) bindings
+  sourceGridId  String?
+  sourceFieldId String?
+  targetGridId  String
+  targetFieldId String
+  /// fieldMappings, optionsSourceSchemaId, optionsSourceKey, etc.
+  config        Json
+
+  tracker     TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  sourceGrid  TrackerNode?  @relation("BindingSourceGrid", fields: [sourceGridId], references: [id], onDelete: SetNull)
+  sourceField TrackerField? @relation("BindingSourceField", fields: [sourceFieldId], references: [id], onDelete: SetNull)
+  targetGrid  TrackerNode   @relation("BindingTargetGrid", fields: [targetGridId], references: [id], onDelete: Cascade)
+  targetField TrackerField  @relation("BindingTargetField", fields: [targetFieldId], references: [id], onDelete: Cascade)
+
+  @@unique([targetGridId, targetFieldId])
+  @@index([trackerId])
+  @@index([sourceGridId])
+  @@index([targetGridId])
+  @@index([trackerId, targetGridId])
+}
+
+model TrackerValidation {
+  id        String @id @default(cuid())
+  trackerId String
+  gridId    String
+  fieldId   String
+  rules     Json
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid    TrackerNode   @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  field   TrackerField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([gridId, fieldId])
+  @@index([trackerId])
+}
+
+model TrackerCalculation {
+  id         String @id @default(cuid())
+  trackerId  String
+  gridId     String
+  fieldId    String
+  expression Json
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid    TrackerNode   @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  field   TrackerField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([gridId, fieldId])
+  @@index([trackerId])
+}
+
+model TrackerDynamicOption {
+  id         String @id @default(cuid())
+  trackerId  String
+  gridId     String
+  fieldId    String
+  definition Json
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid    TrackerNode   @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  field   TrackerField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([gridId, fieldId])
+  @@index([trackerId])
+}
+
+model TrackerFieldRule {
+  id        String @id @default(cuid())
+  trackerId String
+  gridId    String
+  fieldId   String
+  config    Json
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid    TrackerNode   @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  field   TrackerField  @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@unique([gridId, fieldId])
+  @@index([trackerId])
+}
+
+// ---------------------------------------------------------------------------
+// Data layer: per-row storage replacing TrackerData
+// ---------------------------------------------------------------------------
+
+model GridRow {
+  id            String    @id @default(cuid())
+  trackerId     String
+  gridId        String
+  data          Json      @default("{}")
+  schemaVersion String
+  version       Int       @default(1)
+  statusTag     String?
+  sortOrder     Float     @default(0)
+  branchName    String    @default("main")
+  isMerged      Boolean   @default(false)
+  deletedAt     DateTime?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tracker       TrackerSchema    @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+  grid          TrackerNode      @relation(fields: [gridId], references: [id], onDelete: Cascade)
+  createdByUser User?            @relation("GridRowCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  outgoingRefs  GridRowReference[] @relation("RefFrom")
+  incomingRefs  GridRowReference[] @relation("RefTo")
+
+  @@index([trackerId])
+  @@index([gridId])
+  @@index([gridId, branchName])
+  @@index([deletedAt])
+  @@index([trackerId, deletedAt, branchName, updatedAt])
+  @@index([trackerId, statusTag])
+}
+
+model GridRowReference {
+  fromRowId   String
+  fromFieldId String
+  toRowId     String
+  deletedAt   DateTime?
+
+  fromRow   GridRow      @relation("RefFrom", fields: [fromRowId], references: [id], onDelete: Cascade)
+  fromField TrackerField @relation(fields: [fromFieldId], references: [id], onDelete: Cascade)
+  toRow     GridRow      @relation("RefTo", fields: [toRowId], references: [id], onDelete: Cascade)
+
+  @@id([fromRowId, fromFieldId])
+  @@index([toRowId])
+  @@index([deletedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Schema cache for performance optimization
+// ---------------------------------------------------------------------------
+
+model TrackerSchemaCache {
+  id            String   @id @default(cuid())
+  trackerId     String   @unique
+  schemaVersion Int
+  assembledJson Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tracker TrackerSchema @relation(fields: [trackerId], references: [id], onDelete: Cascade)
+
+  @@index([trackerId, schemaVersion])
+}
+
+// ---------------------------------------------------------------------------
+// Conversations
+// ---------------------------------------------------------------------------
 
 model Conversation {
   id              String           @id @default(cuid())

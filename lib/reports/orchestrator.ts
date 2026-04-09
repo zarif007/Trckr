@@ -26,7 +26,7 @@ import {
 import { scheduleRecordLlmUsage } from "@/lib/llm-usage";
 import { withTracedRun } from "@/lib/insights/with-traced-run";
 import {
-  buildFieldCatalog,
+  buildFieldCatalogFromNormalized,
   formatCatalogForPrompt,
 } from "@/lib/insights-query/field-catalog";
 import { fingerprintFromCatalog } from "@/lib/insights-query/fingerprint";
@@ -97,7 +97,7 @@ export function isReplayable(report: LoadedReport): boolean {
   if (def.calcPlan != null && parseCalcPlan(def.calcPlan) == null) {
     return false;
   }
-  const catalog = buildFieldCatalog(report.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(report.trackerSchema);
   const fp = fingerprintFromCatalog(catalog);
   if (fp !== def.schemaFingerprint) return false;
   return !!(
@@ -238,7 +238,7 @@ export async function executeReportFullGeneration(params: {
     throw new Error("DEEPSEEK_API_KEY is not configured.");
   }
 
-  const catalog = buildFieldCatalog(report.trackerSchema.schema);
+  const catalog = buildFieldCatalogFromNormalized(report.trackerSchema);
   const catalogText = formatCatalogForPrompt(catalog);
   const fp = fingerprintFromCatalog(catalog);
   const projectId = report.projectId;
@@ -474,7 +474,7 @@ export async function executeReportFullGeneration(params: {
           });
           const gen = await generateReportExprAst({
             prompt: `${spec.name}: ${spec.instruction}`,
-            trackerSchema: report.trackerSchema.schema,
+            trackerSchema: report.trackerSchema,
             primaryGridId: primaryGrid,
             fieldId: `report.calc.${spec.name}`,
           });

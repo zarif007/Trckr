@@ -15,8 +15,11 @@ export type TrackerDataInput = {
 export function buildTrackerDataWhere(
   trackerSchemaId: string,
   load: QueryPlanV1["load"],
-): Prisma.TrackerDataWhereInput {
-  const where: Prisma.TrackerDataWhereInput = { trackerSchemaId };
+): Prisma.GridRowWhereInput {
+  const where: Prisma.GridRowWhereInput = {
+    trackerId: trackerSchemaId,
+    deletedAt: null,
+  };
 
   if (load.branchName === undefined) {
     where.branchName = "main";

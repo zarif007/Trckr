@@ -197,13 +197,13 @@ export function TrackerInstanceListView({
       try {
         const offset = pageNum * PAGE_SIZE;
         const res = await fetch(
-          `/api/trackers/${parentTrackerId}/data?limit=${PAGE_SIZE}&offset=${offset}`,
+          `/api/trackers/${parentTrackerId}/data?view=instances&limit=${PAGE_SIZE}&offset=${offset}`,
         );
         if (!res.ok) throw new Error("Failed to load instances");
-        const data = await res.json();
-        const items: Instance[] = data.items ?? [];
+        const json = await res.json();
+        const items: Instance[] = json.items ?? [];
         setInstances(items);
-        setTotal(data.total ?? items.length);
+        setTotal(json.total ?? items.length);
         setPage(pageNum);
       } catch (err) {
         setError(

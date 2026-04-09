@@ -1,7 +1,7 @@
 export type {
   GridDataSnapshot,
-  CreateTrackerDataBody,
-  UpdateTrackerDataBody,
+  CreateGridRowBody,
+  UpdateGridRowBody,
 } from "./types";
 export { validateGridDataSnapshot } from "./validate";
 export { backfillRowIds } from "./backfill";
@@ -13,11 +13,3 @@ export {
   maxNumericRowId,
   renormalizeGridRowIds,
 } from "./row-order-key";
-export {
-  createTrackerData,
-  listTrackerData,
-  getTrackerData,
-  updateTrackerData,
-  deleteTrackerData,
-  upsertCurrentData,
-} from "./service";

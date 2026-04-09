@@ -1,28 +1,19 @@
 /**
  * Shape of grid data: gridId -> array of row objects.
- * Matches the in-memory shape used by TrackerDisplayInline and getDataRef.
+ * Used as the in-memory representation by TrackerDisplayInline and getDataRef.
+ * In the normalized DB, each entry becomes a GridRow record.
  */
 export type GridDataSnapshot = Record<string, Array<Record<string, unknown>>>;
 
-/** Body for creating a new TrackerData snapshot or branch. */
-export interface CreateTrackerDataBody {
-  /** Optional label (e.g. "March 5", "Backup before migration"). */
-  label?: string;
-  /** Optional form status tag (e.g. Draft, Submitted). */
-  formStatus?: string | null;
-  /** Full grid data snapshot. Required. */
-  data: GridDataSnapshot;
-  /** Branch name for VC mode (default: "main"). */
+/** Body for creating grid row data (used by API). */
+export interface CreateGridRowBody {
+  data: Record<string, unknown>;
+  statusTag?: string | null;
   branchName?: string;
-  /** ID of the TrackerData record this branch was derived from. */
-  basedOnId?: string;
-  /** User ID of the author creating this branch/instance. */
-  authorId?: string;
 }
 
-/** Body for updating an existing TrackerData snapshot. */
-export interface UpdateTrackerDataBody {
-  label?: string;
-  formStatus?: string | null;
-  data?: GridDataSnapshot;
+/** Body for updating grid row data. */
+export interface UpdateGridRowBody {
+  data?: Record<string, unknown>;
+  statusTag?: string | null;
 }

@@ -16,8 +16,10 @@ import { prisma } from "@/lib/db";
 import { scheduleRecordLlmUsage } from "@/lib/llm-usage";
 import {
   createTrackerForUser,
+  replaceTrackerSchemaChildren,
   updateTrackerByIdForUser,
 } from "@/lib/repositories";
+import { decomposedPersistInputFromFlatRecord } from "@/lib/tracker-schema";
 import { resolveSelfBindings } from "@/lib/binding";
 import { getCombinedSystemPrompt } from "@/lib/prompts/combined";
 import { buildTrackerBuilderPrompt } from "../lib/prompts";
@@ -322,10 +324,21 @@ export async function POST(request: Request) {
               }
             }
 
+            const persistCreate = decomposedPersistInputFromFlatRecord(
+              masterDataResult.tracker as Record<string, unknown>,
+            );
             createdTracker = await createTrackerForUser({
               userId: authResult.user.id,
               name: resolvedName,
-              schema: masterDataResult.tracker as object,
+              meta: persistCreate.meta,
+              nodes: persistCreate.nodes,
+              fields: persistCreate.fields,
+              layoutNodes: persistCreate.layoutNodes,
+              bindings: persistCreate.bindings,
+              validations: persistCreate.validations,
+              calculations: persistCreate.calculations,
+              dynamicOptions: persistCreate.dynamicOptions,
+              fieldRules: persistCreate.fieldRules,
               projectId: parsed.projectId,
               moduleId: parsed.moduleId ?? undefined,
               instance: trackerSpec.instance === "MULTI" ? "MULTI" : "SINGLE",
@@ -338,14 +351,37 @@ export async function POST(request: Request) {
               createdTracker.id,
             );
             if (resolvedSchema !== masterDataResult.tracker) {
+              const persistUpdate = decomposedPersistInputFromFlatRecord(
+                resolvedSchema as Record<string, unknown>,
+              );
               const updated = await updateTrackerByIdForUser(
                 createdTracker.id,
                 authResult.user.id,
                 {
-                  schema: resolvedSchema as object,
+                  meta: persistUpdate.meta ?? undefined,
                 },
               );
-              if (updated) createdTracker = updated as typeof createdTracker;
+              await replaceTrackerSchemaChildren(
+                createdTracker.id,
+                authResult.user.id,
+                {
+                  nodes: persistUpdate.nodes,
+                  fields: persistUpdate.fields,
+                  layoutNodes: persistUpdate.layoutNodes,
+                  bindings: persistUpdate.bindings,
+                  validations: persistUpdate.validations,
+                  calculations: persistUpdate.calculations,
+                  dynamicOptions: persistUpdate.dynamicOptions,
+                  fieldRules: persistUpdate.fieldRules,
+                },
+              );
+              if (updated) {
+                createdTracker = {
+                  id: updated.id,
+                  name: updated.name,
+                  moduleId: updated.moduleId,
+                };
+              }
             }
           } catch (createErr) {
             if (usage) {

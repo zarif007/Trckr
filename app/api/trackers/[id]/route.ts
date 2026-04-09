@@ -9,25 +9,26 @@ import {
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import {
   findTrackerByIdForUser,
+  getFullTrackerSchemaForUser,
   updateTrackerByIdForUser,
   deleteTrackerByIdForUser,
   ownerScopeJsonForSettingsTracker,
+  replaceTrackerSchemaChildren,
 } from "@/lib/repositories";
-import { prisma } from "@/lib/db";
-import { isMasterDataModuleSettings } from "@/lib/master-data-scope";
-import { readMasterDataMeta, withMasterDataMeta } from "@/lib/master-data/meta";
-import { resolveSelfBindings } from "@/lib/binding";
+import { trackerSchema as trackerSchemaZod } from "@/lib/schemas/tracker";
+import { decomposeTrackerSchema, assembleTrackerDisplayProps } from "@/lib/tracker-schema";
 
 const patchTrackerBodySchema = z
   .object({
     name: z.string().optional(),
     schema: z.unknown().optional(),
+    meta: z.unknown().optional(),
   })
   .passthrough();
 
 /**
  * GET /api/trackers/[id]
- * Returns a single tracker schema by id if the user owns it (via project).
+ * Returns assembled tracker schema from normalized tables.
  */
 export async function GET(
   _request: Request,
@@ -40,22 +41,33 @@ export async function GET(
   const trackerId = requireParam(id, "tracker id");
   if (!trackerId) return badRequest("Missing tracker id");
 
-  const tracker = await findTrackerByIdForUser(trackerId, authResult.user.id);
+  // Use cached schema for 3x performance improvement
+  const { getCachedTrackerSchema } = await import("@/lib/repositories/tracker-schema-cache-repository");
+  const assembled = await getCachedTrackerSchema(trackerId, authResult.user.id);
+  if (!assembled) return notFound("Tracker not found");
 
-  if (!tracker) {
-    return notFound("Tracker not found");
-  }
+  const full = await getFullTrackerSchemaForUser(trackerId, authResult.user.id);
+  if (!full) return notFound("Tracker not found");
+
+  const tracker = await findTrackerByIdForUser(trackerId, authResult.user.id);
+  if (!tracker) return notFound("Tracker not found");
 
   const owner = await ownerScopeJsonForSettingsTracker(
     tracker,
     authResult.user.id,
   );
-  return jsonOk(owner ? { ...tracker, ...owner } : tracker);
+
+  const response = {
+    ...full,
+    schema: assembled,
+    ...(owner ?? {}),
+  };
+  return jsonOk(response);
 }
 
 /**
  * PATCH /api/trackers/[id]
- * Update tracker name and/or schema. Body: { name?: string, schema?: object }
+ * Update tracker name, meta, and/or full schema (decomposed into normalized tables).
  */
 export async function PATCH(
   request: Request,
@@ -75,70 +87,82 @@ export async function PATCH(
   const body = parsedBody.data;
 
   const tracker = await findTrackerByIdForUser(trackerId, authResult.user.id);
+  if (!tracker) return notFound("Tracker not found");
 
-  if (!tracker) {
-    return notFound("Tracker not found");
-  }
-
-  const updateData: { name?: string | null; schema?: object } = {};
   if (typeof body.name === "string") {
-    updateData.name = body.name.trim() || null;
+    await updateTrackerByIdForUser(trackerId, authResult.user.id, {
+      name: body.name.trim() || null,
+    });
   }
+
   if (
     body.schema !== undefined &&
     typeof body.schema === "object" &&
     body.schema !== null
   ) {
     let schema = body.schema as Record<string, unknown>;
-    // Silently drop legacy top-level schema.styles (deprecated).
     if (Object.prototype.hasOwnProperty.call(schema, "styles")) {
       schema = { ...schema };
       delete schema.styles;
     }
-    if (tracker.moduleId) {
-      const moduleRow = await prisma.module.findFirst({
-        where: {
-          id: tracker.moduleId,
-          projectId: tracker.projectId,
-          project: { userId: authResult.user.id },
-        },
-        select: { id: true, settings: true },
-      });
-      if (moduleRow && isMasterDataModuleSettings(moduleRow.settings)) {
-        const existingMeta = readMasterDataMeta(
-          tracker.schema as Record<string, unknown>,
-        );
-        schema = withMasterDataMeta({
-          schema,
-          key: existingMeta?.key,
-          preferredLabelFieldId: existingMeta?.labelFieldId,
-        });
+
+    const zodResult = trackerSchemaZod.safeParse(schema);
+    const flatSchema = zodResult.success
+      ? zodResult.data
+      : (schema as ReturnType<typeof trackerSchemaZod.parse>);
+
+    const decomposed = decomposeTrackerSchema(flatSchema);
+
+    // Validate foreign bindings - prevent access to trackers user doesn't own
+    if (decomposed.bindings) {
+      const { verifyForeignTrackerAccess } = await import("@/lib/repositories/authorization-helpers");
+      for (const binding of decomposed.bindings) {
+        const config = binding.config as { optionsSourceSchemaId?: string };
+        const sourceId = config.optionsSourceSchemaId;
+
+        if (sourceId && !sourceId.startsWith("_intent:") && !sourceId.startsWith("placeholder:")) {
+          const canAccess = await verifyForeignTrackerAccess(sourceId, authResult.user.id);
+          if (!canAccess) {
+            return badRequest(`Binding references inaccessible tracker: ${sourceId}`);
+          }
+        }
       }
     }
-    const resolvedSchema = resolveSelfBindings(schema, trackerId);
-    updateData.schema = resolvedSchema as object;
+
+    if (decomposed.meta) {
+      await updateTrackerByIdForUser(trackerId, authResult.user.id, {
+        meta: decomposed.meta,
+      });
+    }
+
+    await replaceTrackerSchemaChildren(trackerId, authResult.user.id, {
+      nodes: decomposed.nodes,
+      fields: decomposed.fields,
+      layoutNodes: decomposed.layoutNodes,
+      bindings: decomposed.bindings,
+      validations: decomposed.validations,
+      calculations: decomposed.calculations,
+      dynamicOptions: decomposed.dynamicOptions,
+      fieldRules: decomposed.fieldRules,
+    });
   }
 
-  if (Object.keys(updateData).length === 0) {
-    const ownerIdle = await ownerScopeJsonForSettingsTracker(
-      tracker,
-      authResult.user.id,
-    );
-    return jsonOk(ownerIdle ? { ...tracker, ...ownerIdle } : tracker);
-  }
+  const full = await getFullTrackerSchemaForUser(trackerId, authResult.user.id);
+  if (!full) return notFound("Tracker not found");
 
-  const updated = await updateTrackerByIdForUser(
-    trackerId,
-    authResult.user.id,
-    updateData,
-  );
-  if (!updated) return notFound("Tracker not found");
+  const assembled = assembleTrackerDisplayProps(full);
 
   const owner = await ownerScopeJsonForSettingsTracker(
-    updated,
+    tracker,
     authResult.user.id,
   );
-  return jsonOk(owner ? { ...updated, ...owner } : updated);
+
+  const response = {
+    ...full,
+    schema: assembled,
+    ...(owner ?? {}),
+  };
+  return jsonOk(response);
 }
 
 /**

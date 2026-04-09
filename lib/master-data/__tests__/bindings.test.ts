@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { decomposedPersistInputFromFlatRecord } from "@/lib/tracker-schema";
 
 const prismaMock = vi.hoisted(() => ({
   project: { findFirst: vi.fn() },
@@ -14,6 +15,75 @@ vi.mock("@/lib/repositories", () => ({
 }));
 
 import { applyMasterDataBindings } from "@/lib/master-data/bindings";
+
+/** Prisma-shaped tracker row for mocks (layout FKs use row ids; slugs live on nodes/fields). */
+function mockPrismaTrackerFromFlatSchema(
+  trackerRowId: string,
+  name: string,
+  flat: Record<string, unknown>,
+) {
+  const persist = decomposedPersistInputFromFlatRecord(flat);
+  const tabBySlug = new Map<string, string>();
+  const sectionBySlug = new Map<string, string>();
+  const gridBySlug = new Map<string, string>();
+  let nIdx = 0;
+  const rawNodes = persist.nodes.map((n) => {
+    const id = `${trackerRowId}-node-${nIdx++}`;
+    if (n.type === "TAB") tabBySlug.set(n.slug, id);
+    if (n.type === "SECTION") sectionBySlug.set(n.slug, id);
+    if (n.type === "GRID") gridBySlug.set(n.slug, id);
+    return { n, id };
+  });
+
+  const nodes = rawNodes.map(({ n, id }) => {
+    let parentId: string | null = null;
+    if (n.type === "SECTION" && n.parentId != null)
+      parentId = tabBySlug.get(String(n.parentId)) ?? null;
+    if (n.type === "GRID" && n.parentId != null)
+      parentId = sectionBySlug.get(String(n.parentId)) ?? null;
+    return {
+      id,
+      type: n.type,
+      slug: n.slug,
+      name: n.name,
+      placeId: n.placeId,
+      parentId,
+      config: n.config,
+      views: n.views,
+    };
+  });
+
+  let fIdx = 0;
+  const fields = persist.fields.map((f) => {
+    const id = `${trackerRowId}-field-${fIdx++}`;
+    return {
+      id,
+      slug: f.slug,
+      dataType: f.dataType,
+      ui: f.ui,
+      config: f.config,
+    };
+  });
+  const fieldBySlug = new Map(fields.map((f) => [f.slug, f.id]));
+
+  const layoutNodes = persist.layoutNodes.map((ln) => ({
+    gridId: gridBySlug.get(ln.gridId) ?? "",
+    fieldId: fieldBySlug.get(ln.fieldId) ?? "",
+    order: ln.order,
+    row: ln.row ?? null,
+    col: ln.col ?? null,
+    renderAs: ln.renderAs ?? null,
+  }));
+
+  return {
+    id: trackerRowId,
+    name,
+    meta: persist.meta,
+    nodes,
+    fields,
+    layoutNodes,
+  };
+}
 
 describe("applyMasterDataBindings", () => {
   beforeEach(() => {
@@ -83,7 +153,7 @@ describe("applyMasterDataBindings", () => {
       styles: {},
     };
     prismaMock.trackerSchema.findMany.mockResolvedValue([
-      { id: "md-tracker-1", name: "Status", schema: masterDataSchema },
+      mockPrismaTrackerFromFlatSchema("md-tracker-1", "Status", masterDataSchema),
     ]);
 
     const tracker = {
@@ -347,7 +417,6 @@ describe("applyMasterDataBindings", () => {
     createTrackerForUserMock.mockResolvedValue({
       id: "md-student-1",
       name: "Student",
-      schema: studentSchema,
     });
 
     await applyMasterDataBindings({
@@ -424,8 +493,9 @@ describe("applyMasterDataBindings", () => {
 
     expect(createTrackerForUserMock).toHaveBeenCalled();
     const call = createTrackerForUserMock.mock.calls[0]?.[0];
-    expect(call?.schema?.masterDataMeta?.key).toBe("student");
-    expect(call?.schema?.masterDataMeta?.labelFieldId).toBe("full_name");
+    const persistedMeta = call?.meta as { masterDataMeta?: { key?: string; labelFieldId?: string } } | undefined;
+    expect(persistedMeta?.masterDataMeta?.key).toBe("student");
+    expect(persistedMeta?.masterDataMeta?.labelFieldId).toBe("full_name");
   });
 
   it("strips empty master_data_tab when module scope and no local options grids", async () => {
@@ -657,7 +727,11 @@ describe("applyMasterDataBindings", () => {
     };
 
     prismaMock.trackerSchema.findMany.mockResolvedValue([
-      { id: "md-tracker-status", name: "Status", schema: statusMdSchema },
+      mockPrismaTrackerFromFlatSchema(
+        "md-tracker-status",
+        "Status",
+        statusMdSchema,
+      ),
     ]);
 
     // Main tracker: Status field has a broken __self__ binding pointing to status_grid,
@@ -754,7 +828,11 @@ describe("applyMasterDataBindings", () => {
     // normalizeName("Status Name") = "statusname" which does NOT match normalizeName("Status") = "status".
     // The gridIdHint extracted from optionsGrid "status_grid" → "status" → "status" should match.
     prismaMock.trackerSchema.findMany.mockResolvedValue([
-      { id: "md-tracker-status", name: "Status", schema: statusMdSchema },
+      mockPrismaTrackerFromFlatSchema(
+        "md-tracker-status",
+        "Status",
+        statusMdSchema,
+      ),
     ]);
 
     const result = await applyMasterDataBindings({

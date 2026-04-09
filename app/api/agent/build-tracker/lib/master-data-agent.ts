@@ -15,7 +15,11 @@ import { logAiError, logAiStage } from "@/lib/ai";
 import type { AgentStreamEvent } from "@/lib/agent/events";
 import { createTrackerForUser } from "@/lib/repositories";
 import { findOrCreateMasterDataModule } from "@/lib/master-data/module";
-import { buildMasterDataSchema } from "@/lib/master-data/schema";
+import {
+  buildMasterDataSchema,
+  flatSchemaRecordFromDbSubset,
+} from "@/lib/master-data/schema";
+import { decomposedPersistInputFromFlatRecord } from "@/lib/tracker-schema";
 import {
   buildMasterDataMeta,
   extractMasterDataFields,
@@ -86,11 +90,15 @@ export async function runMasterDataAgent(
 
     const existingTrackers = await prisma.trackerSchema.findMany({
       where: { projectId, moduleId: masterDataModule.id, type: "GENERAL" },
-      select: { id: true, name: true, schema: true },
+      include: {
+        nodes: true,
+        fields: true,
+        layoutNodes: true,
+      },
     });
 
     const trackerIndex = existingTrackers.map((t) => {
-      const schema = t.schema as Record<string, unknown>;
+      const schema = flatSchemaRecordFromDbSubset(t);
       const meta =
         readMasterDataMeta(schema) ?? buildMasterDataMeta({ schema });
       return {
@@ -122,10 +130,21 @@ export async function runMasterDataAgent(
           key,
           preferredLabelFieldId: entry.labelFieldId,
         });
+        const persist = decomposedPersistInputFromFlatRecord(
+          schemaWithMeta as Record<string, unknown>,
+        );
         const created = await createTrackerForUser({
           userId,
           name,
-          schema: schemaWithMeta as object,
+          meta: persist.meta,
+          nodes: persist.nodes,
+          fields: persist.fields,
+          layoutNodes: persist.layoutNodes,
+          bindings: persist.bindings,
+          validations: persist.validations,
+          calculations: persist.calculations,
+          dynamicOptions: persist.dynamicOptions,
+          fieldRules: persist.fieldRules,
           projectId,
           moduleId: masterDataModule.id,
         });

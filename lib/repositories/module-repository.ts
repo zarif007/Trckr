@@ -1,5 +1,5 @@
-import { Instance, SystemFileType, TrackerSchemaType } from "@prisma/client";
-import { createEmptyTrackerSchema } from "@/app/components/tracker-display/tracker-editor/constants";
+import { Instance, Prisma, SystemFileType, TrackerSchemaType } from "@prisma/client";
+
 import { prisma } from "@/lib/db";
 
 export async function listModulesForProject(projectId: string, userId: string) {
@@ -125,7 +125,7 @@ export async function addModuleSystemFile(
       instance: Instance.SINGLE,
       versionControl: false,
       autoSave: true,
-      schema: createEmptyTrackerSchema() as object,
+      meta: Prisma.JsonNull,
     },
   });
 }

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { validateGridDataSnapshot } from "@/lib/tracker-data";
 import {
   badRequest,
   jsonOk,
@@ -8,25 +7,75 @@ import {
   requireParam,
 } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
+import { prisma } from "@/lib/db";
 import {
-  deleteTrackerSnapshotForUser,
-  getTrackerSnapshotForUser,
-  updateTrackerSnapshotForUser,
-} from "@/lib/repositories";
-import type { GridDataSnapshot } from "@/lib/tracker-data";
-import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
+  getGridRow,
+  updateGridRow,
+  deleteGridRow,
+} from "@/lib/repositories/grid-row-repository";
+import type { GridRowData } from "@/lib/schemas/tracker";
+import { NodeType } from "@prisma/client";
 
-const patchTrackerDataBodySchema = z
+const patchGridRowBodySchema = z
   .object({
-    label: z.string().optional(),
-    formStatus: z.string().nullable().optional(),
     data: z.unknown().optional(),
+    formStatus: z.string().nullable().optional(),
+    statusTag: z.string().nullable().optional(),
   })
   .passthrough();
 
+function extractRowData(
+  data: unknown,
+  gridSlug: string,
+): GridRowData {
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const maybeSnapshot = data as Record<string, unknown>;
+    if (maybeSnapshot[gridSlug] && Array.isArray(maybeSnapshot[gridSlug])) {
+      const rows = maybeSnapshot[gridSlug] as Array<Record<string, unknown>>;
+      return (rows[0] ?? {}) as GridRowData;
+    }
+  }
+  return data as GridRowData;
+}
+
+function wrapRowAsSnapshot(
+  row: { id: string; gridId: string; data: unknown; statusTag: string | null; updatedAt: Date; sortOrder: number },
+  gridSlug: string,
+): {
+  id: string;
+  data: Record<string, Array<Record<string, unknown>>>;
+  label: string | null;
+  updatedAt: string;
+  formStatus: string | null;
+} {
+  return {
+    id: row.id,
+    data: {
+      [gridSlug]: [
+        {
+          ...(row.data as Record<string, unknown>),
+          _rowId: row.id,
+          _sortOrder: row.sortOrder,
+        },
+      ],
+    },
+    label: null,
+    updatedAt: row.updatedAt.toISOString(),
+    formStatus: row.statusTag,
+  };
+}
+
+async function resolveGridSlug(gridId: string): Promise<string> {
+  const node = await prisma.trackerNode.findFirst({
+    where: { id: gridId, type: NodeType.GRID },
+    select: { slug: true },
+  });
+  return node?.slug ?? gridId;
+}
+
 /**
  * GET /api/trackers/[id]/data/[dataId]
- * Return a single TrackerData snapshot.
+ * Return a single grid row wrapped in snapshot format for the UI.
  */
 export async function GET(
   _request: Request,
@@ -36,20 +85,22 @@ export async function GET(
   if (!authResult.ok) return authResult.response;
 
   const { dataId } = await readParams(params);
-  const snapshotId = requireParam(dataId, "data id");
-  if (!snapshotId) return badRequest("Missing data id");
+  const rowId = requireParam(dataId, "data id");
+  if (!rowId) return badRequest("Missing data id");
 
-  const row = await getTrackerSnapshotForUser(snapshotId, authResult.user.id);
-  if (!row) {
-    return notFound("Tracker data not found");
-  }
+  const row = await getGridRow(rowId, authResult.user.id);
+  if (!row) return notFound("Row not found");
 
-  return jsonOk(row);
+  const gridSlug = await resolveGridSlug(row.gridId);
+  return jsonOk(wrapRowAsSnapshot(row, gridSlug));
 }
 
 /**
  * PATCH /api/trackers/[id]/data/[dataId]
- * Update label and/or data. Body: { label?: string, data?: GridDataSnapshot }
+ * Update a single grid row's data or statusTag.
+ *
+ * Accepts `data` as either row-level data or a GridDataSnapshot.
+ * If a snapshot is provided, the row data for this row's grid is extracted.
  */
 export async function PATCH(
   request: Request,
@@ -59,72 +110,40 @@ export async function PATCH(
   if (!authResult.ok) return authResult.response;
 
   const { dataId } = await readParams(params);
-  const snapshotId = requireParam(dataId, "data id");
-  if (!snapshotId) return badRequest("Missing data id");
+  const rowId = requireParam(dataId, "data id");
+  if (!rowId) return badRequest("Missing data id");
 
   const rawBody = await request.json().catch(() => null);
   if (rawBody == null) return badRequest("Invalid JSON body");
-  const parsedBody = patchTrackerDataBodySchema.safeParse(rawBody);
+  const parsedBody = patchGridRowBodySchema.safeParse(rawBody);
   if (!parsedBody.success) return badRequest("Invalid JSON body");
   const body = parsedBody.data;
 
-  if (body.data !== undefined && !validateGridDataSnapshot(body.data)) {
-    return badRequest(
-      "Invalid data: must be an object with array-of-objects values",
-    );
-  }
+  const existingRow = await getGridRow(rowId, authResult.user.id);
+  if (!existingRow) return notFound("Row not found");
 
-  // Get old snapshot for workflow comparison
-  const existingSnapshot = await getTrackerSnapshotForUser(
-    snapshotId,
-    authResult.user.id
-  );
-  if (!existingSnapshot) {
-    return notFound("Tracker data not found");
-  }
-  const oldData = existingSnapshot.data as Record<
-    string,
-    Array<Record<string, unknown>>
-  >;
+  const gridSlug = await resolveGridSlug(existingRow.gridId);
 
   const updateBody: {
-    label?: string;
-    formStatus?: string | null;
-    data?: GridDataSnapshot;
+    data?: GridRowData;
+    statusTag?: string | null;
   } = {};
-  if (body.label !== undefined) updateBody.label = body.label;
-  if (body.formStatus !== undefined) updateBody.formStatus = body.formStatus;
-  if (body.data !== undefined) updateBody.data = body.data as GridDataSnapshot;
 
-  const updated = await updateTrackerSnapshotForUser(
-    snapshotId,
-    authResult.user.id,
-    updateBody,
-  );
-  if (!updated) {
-    return notFound("Tracker data not found");
-  }
-
-  // Dispatch workflows if data changed
   if (body.data !== undefined) {
-    const { id: trackerId } = await readParams(params);
-    dispatchTrackerEventAfterSave(
-      trackerId,
-      updated.data as Record<string, Array<Record<string, unknown>>>,
-      oldData,
-      authResult.user.id,
-      false // not a create, this is an update
-    ).catch((err) => {
-      console.error("Workflow dispatch failed:", err);
-    });
+    updateBody.data = extractRowData(body.data, gridSlug);
   }
+  const statusUpdate = body.formStatus ?? body.statusTag;
+  if (statusUpdate !== undefined) updateBody.statusTag = statusUpdate;
 
-  return jsonOk(updated);
+  const updated = await updateGridRow(rowId, authResult.user.id, updateBody);
+  if (!updated) return notFound("Row not found");
+
+  return jsonOk(wrapRowAsSnapshot(updated, gridSlug));
 }
 
 /**
  * DELETE /api/trackers/[id]/data/[dataId]
- * Delete a TrackerData snapshot.
+ * Soft-delete a grid row.
  */
 export async function DELETE(
   _request: Request,
@@ -134,16 +153,11 @@ export async function DELETE(
   if (!authResult.ok) return authResult.response;
 
   const { dataId } = await readParams(params);
-  const snapshotId = requireParam(dataId, "data id");
-  if (!snapshotId) return badRequest("Missing data id");
+  const rowId = requireParam(dataId, "data id");
+  if (!rowId) return badRequest("Missing data id");
 
-  const deleted = await deleteTrackerSnapshotForUser(
-    snapshotId,
-    authResult.user.id,
-  );
-  if (!deleted) {
-    return notFound("Tracker data not found");
-  }
+  const deleted = await deleteGridRow(rowId, authResult.user.id);
+  if (!deleted) return notFound("Row not found");
 
   return jsonOk({ deleted: true });
 }

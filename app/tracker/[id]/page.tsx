@@ -120,25 +120,17 @@ function getTrackerResource(
       // should start from a fresh draft. Existing instances are opened only
       // when a concrete instanceId is selected.
       if (tracker.instance === "MULTI" || instanceId === "new") return null;
-      const res = await fetch(`/api/trackers/${id}/data?limit=1`);
+      const res = await fetch(`/api/trackers/${id}/data`);
       if (!res.ok) return null;
       const payload = (await res.json()) as {
-        items?: Array<{
-          id?: string;
-          label?: string | null;
-          data?: Record<string, Array<Record<string, unknown>>> | null;
-          updatedAt?: string;
-          formStatus?: string | null;
-        }>;
+        data?: Record<string, Array<Record<string, unknown>>>;
+        total?: number;
       };
-      const row = payload.items?.[0];
-      if (!row?.id || !row?.data) return null;
+      if (!payload.data || payload.total === 0) return null;
       return {
-        id: row.id,
-        label: row.label ?? null,
-        data: row.data,
-        updatedAt: row.updatedAt,
-        formStatus: row.formStatus ?? null,
+        id: "current",
+        label: null,
+        data: payload.data,
       };
     })().catch(() => null);
 

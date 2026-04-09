@@ -158,6 +158,10 @@ describe("buildTrackerDataWhere", () => {
     const w = buildTrackerDataWhere("ts1", {
       maxTrackerDataRows: 10,
     });
-    expect(w).toMatchObject({ trackerSchemaId: "ts1", branchName: "main" });
+    expect(w).toMatchObject({
+      trackerId: "ts1",
+      branchName: "main",
+      deletedAt: null,
+    });
   });
 });

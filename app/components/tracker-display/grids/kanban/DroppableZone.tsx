@@ -1,6 +1,8 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 
 export interface DroppableEmptyColumnProps {
   id: string;
@@ -11,11 +13,12 @@ export function DroppableEmptyColumn({ id }: DroppableEmptyColumnProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`h-24 rounded-sm border-2 border-dashed transition-colors flex items-center justify-center ${
+      className={cn(
+        "flex h-24 items-center justify-center rounded-sm border-2 border-dashed transition-colors",
         isOver
           ? "border-primary/40 bg-primary/5"
-          : "border-border/30 bg-muted/10"
-      }`}
+          : cn(theme.border.gridChromeSubtle, "bg-muted/10"),
+      )}
     >
       <p className="text-xs text-muted-foreground text-center px-4">
         Drop here
@@ -33,9 +36,12 @@ export function ColumnDropZone({ id }: ColumnDropZoneProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[80px] rounded-sm border-2 border-dashed transition-colors flex items-center justify-center flex-shrink-0 ${
-        isOver ? "border-primary bg-primary/10" : "border-muted/50 bg-muted/10"
-      }`}
+      className={cn(
+        "flex min-h-[80px] flex-shrink-0 items-center justify-center rounded-sm border-2 border-dashed transition-colors",
+        isOver
+          ? "border-primary bg-primary/10"
+          : cn(theme.border.gridChromeMuted, "bg-muted/10"),
+      )}
     >
       <p className="text-xs text-muted-foreground">
         {isOver ? "Drop here" : ""}

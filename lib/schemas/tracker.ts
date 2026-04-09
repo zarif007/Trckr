@@ -3,6 +3,10 @@ import { dynamicOptionsDefinitionsSchema } from "@/lib/dynamic-options/user-func
 import { TRACKER_FIELD_TYPES } from "@/lib/tracker-field-types";
 import { fieldRulesSchema as fieldRulesV2ZodSchema } from "@/lib/field-rules";
 
+// ---------------------------------------------------------------------------
+// Shared ID helpers
+// ---------------------------------------------------------------------------
+
 const tabId = () =>
   z
     .string()
@@ -34,9 +38,11 @@ const fieldId = () =>
     { message: "row_id is reserved for system use" },
   );
 
-// --- Config standards (required for LLM output; components enforce these) ---
+// ---------------------------------------------------------------------------
+// JSONB column Zod schemas (used for app-level validation of jsonb columns)
+// ---------------------------------------------------------------------------
 
-/** Config is lenient so LLM output always passes; UI handles missing/wrong keys. */
+/** Lenient config so LLM output always passes; UI handles missing/wrong keys. */
 const anyConfig = () => z.record(z.string(), z.any()).nullish();
 
 /** Field config: lenient so LLM output passes; UI handles missing/wrong keys. */
@@ -61,7 +67,6 @@ const viewTypeEnum = z
     "div = single-instance only (meta, bio, summary). table/kanban/timeline/calendar = repetitive rows/items.",
   );
 
-/** View id for grid views (e.g. tasks_kanban_view). Optional _view suffix to avoid clashing with grid ids. */
 const viewId = () =>
   z
     .string()
@@ -69,7 +74,6 @@ const viewId = () =>
       "Unique view id (e.g. tasks_kanban_view). Same data as parent grid; different type/config.",
     );
 
-/** View: alternative representation of the same grid data (e.g. Kanban for a table grid). */
 export const gridViewSchema = z
   .object({
     id: viewId(),
@@ -94,11 +98,36 @@ const renderAsEnum = z
   .enum(["default", "table", "kanban", "calendar", "timeline"])
   .optional();
 
-// FIELD RULES (conditional field actions)
+// ---------------------------------------------------------------------------
+// Node config/views JSONB schemas (TrackerNode.config, TrackerNode.views)
+// ---------------------------------------------------------------------------
 
-// BINDINGS - select/multiselect auto-population
+export const nodeConfigSchema = anyConfig();
 
-/** Single field mapping: from source field in options grid to target field in main grid. Paths are grid_id.field_id */
+export const nodeViewsSchema = z
+  .array(gridViewSchema)
+  .default([])
+  .describe(
+    "Views for a GRID node. Each view has its own type and config (e.g. groupBy for kanban).",
+  );
+
+// ---------------------------------------------------------------------------
+// Field UI / config JSONB schemas (TrackerField.ui, TrackerField.config)
+// ---------------------------------------------------------------------------
+
+export const fieldUiSchema = z
+  .object({
+    label: z.string(),
+    placeholder: z.string().optional(),
+  })
+  .passthrough();
+
+// fieldConfigSchema is already exported above
+
+// ---------------------------------------------------------------------------
+// Binding config JSONB schema (TrackerBinding.config)
+// ---------------------------------------------------------------------------
+
 const fieldMappingSchema = z
   .object({
     from: z.string().describe("Path in options grid: grid_id.field_id"),
@@ -106,47 +135,20 @@ const fieldMappingSchema = z
   })
   .passthrough();
 
-/** Binding entry for a select/multiselect field. Option display and stored value come from the same field (labelField). Paths use grid.field, no tab. */
-const bindingEntrySchema = z
+export const bindingConfigSchema = z
   .object({
-    optionsSourceSchemaId: z
-      .string()
-      .optional()
-      .describe(
-        "Optional id of another tracker schema in the same project; when set, optionsGrid/labelField refer to that schema and rows load from that tracker data.",
-      ),
-    optionsSourceKey: z
-      .string()
-      .optional()
-      .describe(
-        "Optional stable key for master data tracker specs (module/project scope). Used to match bindings to master data tracker definitions.",
-      ),
-    optionsGrid: z
-      .string()
-      .describe("Grid id containing options (e.g. product_options_grid)"),
-    labelField: z
-      .string()
-      .describe(
-        "Path to the option field in options grid (grid_id.field_id). Must be a different field id than the select field—use a dedicated option field in the options grid (e.g. exercise_options_grid.exercise_option), not the same id as the bound select.",
-      ),
-    fieldMappings: z
-      .array(fieldMappingSchema)
-      .default([])
-      .describe(
-        'Must include one mapping where "to" is this select field and "from" is the same path as labelField; other mappings auto-populate',
-      ),
+    optionsSourceSchemaId: z.string().optional(),
+    optionsSourceKey: z.string().optional(),
+    optionsGrid: z.string(),
+    labelField: z.string(),
+    fieldMappings: z.array(fieldMappingSchema).default([]),
   })
   .passthrough();
 
-/** Top-level bindings object. Key is full field path: grid_id.field_id */
-export const bindingsSchema = z
-  .record(z.string(), bindingEntrySchema)
-  .default({})
-  .describe(
-    "Bindings for select/multiselect fields. Key is grid_id.field_id. MANDATORY for all select/multiselect fields.",
-  );
+// ---------------------------------------------------------------------------
+// Validation rules JSONB schema (TrackerValidation.rules)
+// ---------------------------------------------------------------------------
 
-/** Single validation rule (mirrors runtime FieldValidationRule; expr may use _intent until resolved). */
 export const fieldValidationRuleSchema = z.union([
   z
     .object({ type: z.literal("required"), message: z.string().optional() })
@@ -193,11 +195,136 @@ export const fieldValidationRuleSchema = z.union([
       message: z.string().optional(),
     })
     .passthrough(),
-  /** Lenient fallback for forward-compatible or malformed rules from the LLM */
   z.object({ type: z.string() }).passthrough(),
 ]);
 
-/** Top-level validations map (grid_id.field_id -> rules). */
+export const validationRulesSchema = z
+  .array(fieldValidationRuleSchema)
+  .default([]);
+
+// ---------------------------------------------------------------------------
+// Calculation expression JSONB schema (TrackerCalculation.expression)
+// ---------------------------------------------------------------------------
+
+export const calculationExpressionSchema = z
+  .union([
+    z.object({ expr: z.any() }).passthrough(),
+    z.object({ _intent: z.string() }).passthrough(),
+  ]);
+
+// ---------------------------------------------------------------------------
+// Dynamic option definition JSONB (TrackerDynamicOption.definition)
+// ---------------------------------------------------------------------------
+
+export { dynamicOptionsDefinitionsSchema };
+
+export const dynamicOptionDefinitionSchema = z.any();
+
+// ---------------------------------------------------------------------------
+// Field rule config JSONB (TrackerFieldRule.config)
+// ---------------------------------------------------------------------------
+
+export const fieldRuleConfigSchema = z
+  .array(
+    z
+      .object({
+        id: z.string(),
+        enabled: z.boolean().default(true),
+        trigger: z.enum([
+          "onMount",
+          "onRowCreate",
+          "onRowCopy",
+          "onRowFocus",
+          "onFieldChange",
+        ]),
+        condition: z.any().optional(),
+        property: z.enum([
+          "visibility",
+          "label",
+          "required",
+          "disabled",
+          "value",
+        ]),
+        outcome: z.any(),
+        engineType: z.enum(["property", "value"]),
+        label: z.string().optional(),
+      })
+      .passthrough(),
+  )
+  .default([]);
+
+// ---------------------------------------------------------------------------
+// Form action schema (stored in TrackerSchema.meta)
+// ---------------------------------------------------------------------------
+
+export const formActionSchema = z
+  .object({
+    id: z.string(),
+    label: z.string().trim().min(1),
+    statusTag: z.string().trim().min(1),
+    isEditable: z.boolean(),
+    persistOnly: z.boolean().optional(),
+    isLast: z.boolean().optional(),
+  })
+  .passthrough();
+
+// ---------------------------------------------------------------------------
+// Tracker meta JSONB schema (TrackerSchema.meta)
+// ---------------------------------------------------------------------------
+
+export const trackerMetaSchema = z
+  .object({
+    masterDataScope: masterDataScopeSchema,
+    masterDataMeta: z.any().optional(),
+    formActions: z
+      .array(formActionSchema)
+      .min(1)
+      .default([
+        {
+          id: "default_save_action",
+          label: "Save",
+          statusTag: "Saved",
+          isEditable: true,
+        },
+      ]),
+    dynamicConnectors: z
+      .record(z.string(), z.any())
+      .optional(),
+  })
+  .passthrough();
+
+export type TrackerMeta = z.infer<typeof trackerMetaSchema>;
+
+// ---------------------------------------------------------------------------
+// GridRow.data JSONB type
+// ---------------------------------------------------------------------------
+
+export type GridRowData = Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
+// Flat tracker schema (for AI agent output, backward compat)
+//
+// The AI builder still outputs this flat shape. The server decomposes it
+// into normalized table rows on persist.
+// ---------------------------------------------------------------------------
+
+const bindingEntrySchema = z
+  .object({
+    optionsSourceSchemaId: z.string().optional(),
+    optionsSourceKey: z.string().optional(),
+    optionsGrid: z.string(),
+    labelField: z.string(),
+    fieldMappings: z.array(fieldMappingSchema).default([]),
+  })
+  .passthrough();
+
+export const bindingsSchema = z
+  .record(z.string(), bindingEntrySchema)
+  .default({})
+  .describe(
+    "Bindings for select/multiselect fields. Key is grid_id.field_id. MANDATORY for all select/multiselect fields.",
+  );
+
 export const validationsSchema = z
   .record(z.string(), z.array(fieldValidationRuleSchema))
   .default({})
@@ -205,7 +332,6 @@ export const validationsSchema = z
     'Field validations keyed by grid_id.field_id (like bindings). For type "expr", use either { expr } or { _intent } until the expression agent resolves _intent.',
   );
 
-/** Top-level calculations map (target fieldId -> expression rule or intent). */
 export const calculationsSchema = z
   .record(
     z.string(),
@@ -336,18 +462,7 @@ export const trackerSchema = z
     bindings: bindingsSchema,
 
     formActions: z
-      .array(
-        z
-          .object({
-            id: z.string(),
-            label: z.string().trim().min(1),
-            statusTag: z.string().trim().min(1),
-            isEditable: z.boolean(),
-            persistOnly: z.boolean().optional(),
-            isLast: z.boolean().optional(),
-          })
-          .passthrough(),
-      )
+      .array(formActionSchema)
       .min(1)
       .default([
         {
@@ -363,3 +478,141 @@ export const trackerSchema = z
   .passthrough();
 
 export type TrackerSchema = z.infer<typeof trackerSchema>;
+
+// ---------------------------------------------------------------------------
+// Normalized DB types (mirror Prisma models for typed use in app code)
+// ---------------------------------------------------------------------------
+
+export type NodeType = "TAB" | "SECTION" | "GRID";
+
+export interface TrackerNodeRow {
+  id: string;
+  trackerId: string;
+  type: NodeType;
+  slug: string;
+  name: string;
+  placeId: number;
+  parentId: string | null;
+  config: Record<string, unknown> | null;
+  views: Array<z.infer<typeof gridViewSchema>> | null;
+}
+
+export interface TrackerFieldRow {
+  id: string;
+  trackerId: string;
+  slug: string;
+  dataType: string;
+  ui: { label: string; placeholder?: string; [key: string]: unknown };
+  config: Record<string, unknown> | null;
+}
+
+export interface TrackerLayoutNodeRow {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  fieldId: string;
+  order: number;
+  row: number | null;
+  col: number | null;
+  renderAs: string | null;
+}
+
+export interface TrackerBindingRow {
+  id: string;
+  trackerId: string;
+  sourceGridId: string | null;
+  sourceFieldId: string | null;
+  targetGridId: string;
+  targetFieldId: string;
+  config: {
+    optionsSourceSchemaId?: string;
+    optionsSourceKey?: string;
+    optionsGrid: string;
+    labelField: string;
+    fieldMappings: Array<{ from: string; to: string }>;
+    [key: string]: unknown;
+  };
+}
+
+export interface TrackerValidationRow {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  fieldId: string;
+  rules: unknown[];
+}
+
+export interface TrackerCalculationRow {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  fieldId: string;
+  expression: { expr?: unknown; _intent?: string; [key: string]: unknown };
+}
+
+export interface TrackerDynamicOptionRow {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  fieldId: string;
+  definition: unknown;
+}
+
+export interface TrackerFieldRuleRow {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  fieldId: string;
+  config: unknown[];
+}
+
+export interface GridRowRecord {
+  id: string;
+  trackerId: string;
+  gridId: string;
+  data: GridRowData;
+  schemaVersion: string;
+  version: number;
+  statusTag: string | null;
+  sortOrder: number;
+  branchName: string;
+  isMerged: boolean;
+  deletedAt: Date | null;
+  createdBy: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface GridRowReferenceRecord {
+  fromRowId: string;
+  fromFieldId: string;
+  toRowId: string;
+}
+
+// ---------------------------------------------------------------------------
+// Full assembled tracker (returned by API, consumed by components)
+// ---------------------------------------------------------------------------
+
+export interface FullTrackerSchema {
+  id: string;
+  projectId: string;
+  moduleId: string | null;
+  name: string | null;
+  type: string;
+  systemType: string | null;
+  instance: string;
+  versionControl: boolean;
+  autoSave: boolean;
+  listForSchemaId: string | null;
+  meta: TrackerMeta | null;
+  schemaVersion: number;
+
+  nodes: TrackerNodeRow[];
+  fields: TrackerFieldRow[];
+  layoutNodes: TrackerLayoutNodeRow[];
+  bindings: TrackerBindingRow[];
+  validations: TrackerValidationRow[];
+  calculations: TrackerCalculationRow[];
+  dynamicOptions: TrackerDynamicOptionRow[];
+  fieldRules: TrackerFieldRuleRow[];
+}

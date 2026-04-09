@@ -61,13 +61,15 @@ export async function getReportForUser(reportId: string, userId: string) {
     include: {
       definition: true,
       trackerSchema: {
-        select: {
-          id: true,
-          name: true,
-          schema: true,
-          projectId: true,
-          instance: true,
-          versionControl: true,
+        include: {
+          nodes: true,
+          fields: true,
+          layoutNodes: true,
+          bindings: true,
+          validations: true,
+          calculations: true,
+          dynamicOptions: true,
+          fieldRules: true,
         },
       },
       project: { select: { id: true, name: true } },

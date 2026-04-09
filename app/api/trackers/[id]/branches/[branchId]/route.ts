@@ -8,17 +8,36 @@ import {
 } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
-import { validateGridDataSnapshot } from "@/lib/tracker-data";
+import { NodeType } from "@prisma/client";
 
 const updateBranchBodySchema = z.object({
   data: z.unknown().optional(),
-  label: z.string().optional(),
   formStatus: z.string().nullable().optional(),
+  statusTag: z.string().nullable().optional(),
 });
+
+type GridIdSlugPair = { id: string; slug: string };
+
+function groupRowsByGridSlug(
+  rows: Array<{ id: string; gridId: string; data: unknown; sortOrder: number }>,
+  gridIdToSlug: Map<string, string>,
+): Record<string, Array<Record<string, unknown>>> {
+  const grouped: Record<string, Array<Record<string, unknown>>> = {};
+  for (const row of rows) {
+    const gridSlug = gridIdToSlug.get(row.gridId) ?? row.gridId;
+    if (!grouped[gridSlug]) grouped[gridSlug] = [];
+    grouped[gridSlug].push({
+      ...(row.data as Record<string, unknown>),
+      _rowId: row.id,
+      _sortOrder: row.sortOrder,
+    });
+  }
+  return grouped;
+}
 
 /**
  * GET /api/trackers/[id]/branches/[branchId]
- * Get a single branch by id.
+ * Get all rows for a specific branch (branchId is the branch name).
  */
 export async function GET(
   _request: Request,
@@ -29,29 +48,50 @@ export async function GET(
 
   const { id, branchId } = await readParams(params);
   const trackerId = requireParam(id, "tracker id");
-  const resolvedBranchId = requireParam(branchId, "branch id");
+  const branchName = requireParam(branchId, "branch name");
   if (!trackerId) return badRequest("Missing tracker id");
-  if (!resolvedBranchId) return badRequest("Missing branch id");
+  if (!branchName) return badRequest("Missing branch name");
 
-  const branch = await prisma.trackerData.findFirst({
-    where: {
-      id: resolvedBranchId,
-      trackerSchemaId: trackerId,
-      trackerSchema: { project: { userId: authResult.user.id } },
-    },
-    include: {
-      author: { select: { id: true, name: true, email: true } },
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: { id: trackerId, project: { userId: authResult.user.id } },
+    select: {
+      id: true,
+      nodes: { where: { type: NodeType.GRID }, select: { id: true, slug: true } },
     },
   });
-  if (!branch) return notFound("Branch not found");
+  if (!tracker) return notFound("Tracker not found");
 
-  return jsonOk(branch);
+  const gridIdToSlug = new Map(tracker.nodes.map((n: GridIdSlugPair) => [n.id, n.slug]));
+
+  const rows = await prisma.gridRow.findMany({
+    where: { trackerId, branchName, deletedAt: null },
+    orderBy: { sortOrder: "asc" },
+    include: {
+      createdByUser: { select: { id: true, name: true, email: true } },
+    },
+  });
+
+  const data = groupRowsByGridSlug(rows, gridIdToSlug);
+  const latestRow = rows.length > 0 ? rows[rows.length - 1] : null;
+
+  return jsonOk({
+    id: branchName,
+    branchName,
+    data,
+    label: branchName,
+    updatedAt: latestRow?.updatedAt?.toISOString(),
+    formStatus: latestRow?.statusTag ?? null,
+    author: latestRow?.createdByUser ?? null,
+    rowCount: rows.length,
+    isMerged: rows.some((r) => r.isMerged),
+  });
 }
 
 /**
  * PATCH /api/trackers/[id]/branches/[branchId]
- * Update branch data and/or label (saves changes to an existing branch).
- * Body: { data?: GridDataSnapshot, label?: string }
+ * Bulk update all rows for a branch (save snapshot).
+ *
+ * Returns the full branch record shape expected by the save hook.
  */
 export async function PATCH(
   request: Request,
@@ -62,9 +102,9 @@ export async function PATCH(
 
   const { id, branchId } = await readParams(params);
   const trackerId = requireParam(id, "tracker id");
-  const resolvedBranchId = requireParam(branchId, "branch id");
+  const branchName = requireParam(branchId, "branch name");
   if (!trackerId) return badRequest("Missing tracker id");
-  if (!resolvedBranchId) return badRequest("Missing branch id");
+  if (!branchName) return badRequest("Missing branch name");
 
   const rawBody = await request.json().catch(() => null);
   if (rawBody == null) return badRequest("Invalid JSON body");
@@ -72,49 +112,86 @@ export async function PATCH(
   if (!parsedBody.success) return badRequest(parsedBody.error.message);
   const body = parsedBody.data;
 
-  const branch = await prisma.trackerData.findFirst({
-    where: {
-      id: resolvedBranchId,
-      trackerSchemaId: trackerId,
-      trackerSchema: { project: { userId: authResult.user.id } },
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: { id: trackerId, project: { userId: authResult.user.id } },
+    select: {
+      id: true,
+      schemaVersion: true,
+      nodes: { where: { type: NodeType.GRID }, select: { id: true, slug: true } },
     },
   });
-  if (!branch) return notFound("Branch not found");
-  if (branch.isMerged) return badRequest("Cannot update a merged branch");
+  if (!tracker) return notFound("Tracker not found");
 
-  const updateData: {
-    data?: object;
-    label?: string | null;
-    formStatus?: string | null;
-  } = {};
-  if (body.data !== undefined) {
-    if (!validateGridDataSnapshot(body.data)) {
-      return badRequest(
-        "Invalid data: must be an object with array-of-objects values",
-      );
-    }
-    updateData.data = body.data as object;
-  }
-  if (body.label !== undefined) {
-    updateData.label =
-      typeof body.label === "string" && body.label.trim()
-        ? body.label.trim()
-        : null;
-  }
-  if (body.formStatus !== undefined) {
-    updateData.formStatus =
-      typeof body.formStatus === "string" ? body.formStatus : null;
+  const gridSlugToId = new Map(tracker.nodes.map((n: GridIdSlugPair) => [n.slug, n.id]));
+  const gridIdToSlug = new Map(tracker.nodes.map((n: GridIdSlugPair) => [n.id, n.slug]));
+  const statusTag = body.formStatus ?? body.statusTag ?? null;
+
+  if (
+    body.data !== undefined &&
+    typeof body.data === "object" &&
+    body.data !== null
+  ) {
+    const snapshot = body.data as Record<string, Array<Record<string, unknown>>>;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.gridRow.deleteMany({
+        where: { trackerId, branchName },
+      });
+
+      const creates: Array<{
+        trackerId: string;
+        gridId: string;
+        data: object;
+        schemaVersion: string;
+        sortOrder: number;
+        branchName: string;
+        statusTag: string | null;
+        createdBy: string;
+      }> = [];
+
+      for (const [gridSlug, rows] of Object.entries(snapshot)) {
+        const gridId = gridSlugToId.get(gridSlug);
+        if (!gridId || !Array.isArray(rows)) continue;
+        for (let i = 0; i < rows.length; i++) {
+          creates.push({
+            trackerId,
+            gridId,
+            data: rows[i] as object,
+            schemaVersion: String(tracker.schemaVersion),
+            sortOrder: i + 1,
+            branchName,
+            statusTag,
+            createdBy: authResult.user.id,
+          });
+        }
+      }
+
+      if (creates.length > 0) {
+        await tx.gridRow.createMany({ data: creates });
+      }
+    });
   }
 
-  if (Object.keys(updateData).length === 0) return jsonOk(branch);
-
-  const updated = await prisma.trackerData.update({
-    where: { id: resolvedBranchId },
-    data: updateData,
+  const savedRows = await prisma.gridRow.findMany({
+    where: { trackerId, branchName, deletedAt: null },
+    orderBy: { sortOrder: "asc" },
     include: {
-      author: { select: { id: true, name: true, email: true } },
+      createdByUser: { select: { id: true, name: true, email: true } },
     },
   });
 
-  return jsonOk(updated);
+  const data = groupRowsByGridSlug(savedRows, gridIdToSlug);
+  const latestRow = savedRows.length > 0 ? savedRows[savedRows.length - 1] : null;
+
+  return jsonOk({
+    id: branchName,
+    branchName,
+    data,
+    label: branchName,
+    updatedAt: latestRow?.updatedAt?.toISOString() ?? new Date().toISOString(),
+    formStatus: statusTag,
+    author: latestRow?.createdByUser ?? null,
+    rowCount: savedRows.length,
+    isMerged: false,
+  });
 }

@@ -83,11 +83,12 @@ export function KanbanCard({
     <Card
       className={cn(
         "group relative cursor-grab overflow-hidden border bg-card transition-[border-color,box-shadow] duration-200 active:cursor-grabbing",
-        isOverlay && "border-border/40",
+        isOverlay
+          ? theme.border.gridChromeMuted
+          : cn(theme.border.gridChrome, theme.border.gridChromeHover),
         cardPadding,
         fontWeight,
         theme.radius.md,
-        "border-border/30 hover:border-border/50 hover:",
       )}
     >
       <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">
@@ -123,7 +124,10 @@ export function KanbanCard({
             <PopoverContent
               align="end"
               side="bottom"
-              className="w-44 p-1 rounded-sm border-border/50 "
+              className={cn(
+                "w-44 border p-1 rounded-sm",
+                theme.border.gridChromeMuted,
+              )}
               onOpenAutoFocus={(e) => e.preventDefault()}
               onClick={(e) => e.stopPropagation()}
             >

@@ -13,23 +13,20 @@ import type {
 const trackerUrl = (schemaId: string) =>
   `/api/trackers/${encodeURIComponent(schemaId)}`;
 const trackerDataListUrl = (schemaId: string) =>
-  `/api/trackers/${encodeURIComponent(schemaId)}/data?limit=1`;
+  `/api/trackers/${encodeURIComponent(schemaId)}/data`;
 /** POST/PATCH target (no query string). */
 const trackerDataWriteUrl = (schemaId: string) =>
   `/api/trackers/${encodeURIComponent(schemaId)}/data`;
 const trackerDataItemUrl = (schemaId: string, dataId: string) =>
   `/api/trackers/${encodeURIComponent(schemaId)}/data/${encodeURIComponent(dataId)}`;
 
-type DataListPayload = {
-  items?: Array<{
-    id?: string;
-    data?: GridDataSnapshot | null;
-    formStatus?: string | null;
-  }>;
+type DataPayload = {
+  data?: GridDataSnapshot;
+  total?: number;
 };
 
-function parseDataListPayload(json: unknown): DataListPayload {
-  return json && typeof json === "object" ? (json as DataListPayload) : {};
+function parseDataPayload(json: unknown): DataPayload {
+  return json && typeof json === "object" ? (json as DataPayload) : {};
 }
 
 /** Extract grids / fields / layoutNodes from GET /api/trackers/:id JSON. */
@@ -74,14 +71,13 @@ export async function fetchLatestDataRow(
 ): Promise<LatestDataRow | null> {
   const res = await fetch(trackerDataListUrl(schemaId));
   if (!res.ok) return null;
-  const payload = parseDataListPayload(await res.json());
-  const item = payload.items?.[0];
+  const payload = parseDataPayload(await res.json());
   const gridData: GridDataSnapshot =
-    item?.data && typeof item.data === "object" ? item.data : {};
+    payload.data && typeof payload.data === "object" ? payload.data : {};
   return {
     gridData,
-    dataSnapshotId: typeof item?.id === "string" ? item.id : null,
-    formStatus: item?.formStatus,
+    dataSnapshotId: null,
+    formStatus: undefined,
   };
 }
 
@@ -99,19 +95,16 @@ export async function loadForeignBindingSource(
     ]);
 
     let gridData: GridDataSnapshot = {};
-    let dataSnapshotId: string | null = null;
-    let formStatus: string | null | undefined;
+    const dataSnapshotId: string | null = null;
+    const formStatus: string | null | undefined = undefined;
     let dataHydrated = false;
 
     if (dataRes.ok) {
-      const payload = parseDataListPayload(await dataRes.json());
-      const item = payload.items?.[0];
+      const payload = parseDataPayload(await dataRes.json());
       dataHydrated = true;
-      if (item?.data && typeof item.data === "object") {
-        gridData = item.data;
+      if (payload.data && typeof payload.data === "object") {
+        gridData = payload.data;
       }
-      dataSnapshotId = typeof item?.id === "string" ? item.id : null;
-      formStatus = item?.formStatus;
     }
 
     let schemaSlice: ForeignBindingSourceSchema | null = null;

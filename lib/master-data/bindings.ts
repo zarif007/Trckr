@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 import { createTrackerForUser } from "@/lib/repositories";
+import { decomposedPersistInputFromFlatRecord } from "@/lib/tracker-schema";
 import { findOrCreateMasterDataModule } from "./module";
-import { buildMasterDataSchema } from "./schema";
+import { buildMasterDataSchema, flatSchemaRecordFromDbSubset } from "./schema";
 import {
   buildMasterDataMeta,
   extractMasterDataFields,
@@ -495,11 +496,15 @@ export async function applyMasterDataBindings(options: {
       moduleId: masterDataModule.id,
       type: "GENERAL",
     },
-    select: { id: true, name: true, schema: true },
+    include: {
+      nodes: true,
+      fields: true,
+      layoutNodes: true,
+    },
   });
 
   const trackerIndex = existingMasterDataTrackers.map((t) => {
-    const schema = t.schema as Record<string, unknown>;
+    const schema = flatSchemaRecordFromDbSubset(t);
     const meta = readMasterDataMeta(schema) ?? buildMasterDataMeta({ schema });
     return {
       id: t.id,
@@ -616,10 +621,21 @@ export async function applyMasterDataBindings(options: {
             key: spec.key,
             preferredLabelFieldId: spec.labelFieldId,
           });
+          const persist = decomposedPersistInputFromFlatRecord(
+            schemaWithMeta as Record<string, unknown>,
+          );
           const created = await createTrackerForUser({
             userId,
             name: spec.name,
-            schema: schemaWithMeta as object,
+            meta: persist.meta,
+            nodes: persist.nodes,
+            fields: persist.fields,
+            layoutNodes: persist.layoutNodes,
+            bindings: persist.bindings,
+            validations: persist.validations,
+            calculations: persist.calculations,
+            dynamicOptions: persist.dynamicOptions,
+            fieldRules: persist.fieldRules,
             projectId,
             moduleId: masterDataModule.id,
           });
@@ -705,10 +721,21 @@ export async function applyMasterDataBindings(options: {
           key: normalized || undefined,
           preferredLabelFieldId: "value",
         });
+        const persist = decomposedPersistInputFromFlatRecord(
+          schemaWithMeta as Record<string, unknown>,
+        );
         const created = await createTrackerForUser({
           userId,
           name: entityName,
-          schema: schemaWithMeta as object,
+          meta: persist.meta,
+          nodes: persist.nodes,
+          fields: persist.fields,
+          layoutNodes: persist.layoutNodes,
+          bindings: persist.bindings,
+          validations: persist.validations,
+          calculations: persist.calculations,
+          dynamicOptions: persist.dynamicOptions,
+          fieldRules: persist.fieldRules,
           projectId,
           moduleId: masterDataModule.id,
         });
