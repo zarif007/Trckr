@@ -13,15 +13,18 @@ export const border = {
   /** Same chroma as `divider`, for `ring-*` utilities */
   dividerRing: "ring-border/30",
   faint: "border-border/20",
+  /** Form controls; same token as `gridChrome` / outline buttons. */
   input: "border-input",
   /**
-   * Table/kanban shells — same `--input` chroma as `patterns.outlineButton`
-   * (e.g. New Entry). Prefer these over ad-hoc `border-border/*` on grid UI.
+   * Same solid border color as `Button variant="outline"` / New Entry (`border-input`).
+   * Do not use opacity modifiers here — those read as a different color next to the toolbar.
    */
   gridChrome: "border-input",
   gridChromeHover: "hover:border-ring",
-  gridChromeMuted: "border-input/50",
-  gridChromeSubtle: "border-input/30",
+  /** Drag overlay — same hue as outline buttons, slightly softer */
+  gridChromeSoft: "border-input/55",
+  /** Radix-style active state — same border color as outline controls */
+  dataStateActiveChrome: "data-[state=active]:border-input",
   ring: "border-ring",
   hover: "hover:border-ring",
   divideSubtle: "divide-border/60",

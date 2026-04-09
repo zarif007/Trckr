@@ -18,11 +18,12 @@ className={cn(theme.surface.card, theme.border.default)}
 
 - `theme.surface` – background, card, muted, mutedSubtle, secondary, popover, input, overlay
 - `theme.text` – foreground, muted, primary, success, warning, destructive, info
-- `theme.border` – default, subtle, subtleAlt, verySubtle, input, ring, hover
+- `theme.border` – default, subtle, gridChrome (outline/input color), ring, hover, etc.
+- **`theme.uiChrome`** – **preferred** for product borders: `floating`, `border`, `hover`, `tabActive` (see `lib/theme/ui-chrome.ts`)
 - `theme.shadow` – **Do not use. Shadows are disabled app-wide.**
 - `theme.radius` – **use `md` for all boxed UI** (resolves to `rounded-sm`); `full` only for true circles (spinners, `animate-ping`, circular loaders). `sm` / `lg` are deprecated.
 - `theme.status` – success/warning/destructive/info each with .bg, .border, .text
-- `theme.patterns` – inputBase, card, interactive, hoverPrimary, menuPanel, menuItem
+- `theme.patterns` – inputBase, card, floatingChrome, outlineButton, interactive, hoverPrimary, menuPanel, menuItem, panelShell
 
 ## Shadows
 
@@ -36,12 +37,18 @@ className={cn(theme.surface.card, theme.border.default)}
 - **`rounded-none`:** only for flush alignment (table cell inputs, segmented controls, calendar range strips, blueprint frames like `LandingAxisFrame`).
 - **Reusable menus:** `theme.patterns.menuPanel` + `theme.patterns.menuItem` for portal context menus; override padding with `cn(theme.patterns.menuItem, 'py-2')` if needed.
 
-## Borders
+## Borders / chrome
 
-- `border-border` – default
-- `border-border/60` – subtle
-- `border-border/40` – very subtle
-- Hover: `hover:border-ring`
+**Product chrome** (dialogs, popovers, grids, tabs, section bars, toasts): use **`theme.uiChrome`** or **`theme.patterns.floatingChrome`** — same as outline buttons / inputs (`border-input`). Do **not** use `border-border/20`, `border-border/50`, etc. for that chrome.
+
+- **`theme.uiChrome.floating`** — `border` + chrome color for floating surfaces
+- **`theme.uiChrome.border`** — color only (with `border`, `border-b`, …)
+- **`theme.uiChrome.tabActive`** — active tab / segment border
+- **`theme.border.*`** — full token set; `gridChrome` === `uiChrome.border`
+
+**Hairlines / dividers** (not primary chrome): `theme.border.divider`, `hairline`, `faint`, etc. still apply.
+
+Hover on bordered controls: `theme.uiChrome.hover` or `theme.border.hover`
 
 ## Hover States
 

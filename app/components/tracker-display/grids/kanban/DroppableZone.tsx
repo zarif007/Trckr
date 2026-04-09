@@ -17,7 +17,7 @@ export function DroppableEmptyColumn({ id }: DroppableEmptyColumnProps) {
         "flex h-24 items-center justify-center rounded-sm border-2 border-dashed transition-colors",
         isOver
           ? "border-primary/40 bg-primary/5"
-          : cn(theme.border.gridChromeSubtle, "bg-muted/10"),
+          : cn(theme.border.gridChrome, "bg-muted/10"),
       )}
     >
       <p className="text-xs text-muted-foreground text-center px-4">
@@ -40,7 +40,7 @@ export function ColumnDropZone({ id }: ColumnDropZoneProps) {
         "flex min-h-[80px] flex-shrink-0 items-center justify-center rounded-sm border-2 border-dashed transition-colors",
         isOver
           ? "border-primary bg-primary/10"
-          : cn(theme.border.gridChromeMuted, "bg-muted/10"),
+          : cn(theme.border.gridChrome, "bg-muted/10"),
       )}
     >
       <p className="text-xs text-muted-foreground">

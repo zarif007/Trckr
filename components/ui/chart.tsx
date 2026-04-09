@@ -5,6 +5,7 @@ import * as RechartsPrimitive from "recharts"
 import type { LegendPayload, TooltipContentProps, TooltipPayloadEntry } from "recharts"
 
 import { cn } from "@/lib/utils"
+import { theme } from "@/lib/theme"
 
 type ChartTooltipContentProps = React.ComponentPropsWithoutRef<"div"> & {
  active?: boolean
@@ -192,7 +193,8 @@ const ChartTooltipContent = React.forwardRef<HTMLDivElement, ChartTooltipContent
  <div
  ref={ref}
  className={cn(
- "grid min-w-[8rem] items-start gap-1.5 rounded-sm border border-border/50 bg-background px-2.5 py-1.5 text-xs ",
+ "grid min-w-[8rem] items-start gap-1.5 rounded-sm bg-background px-2.5 py-1.5 text-xs",
+ theme.patterns.floatingChrome,
  className
  )}
  >

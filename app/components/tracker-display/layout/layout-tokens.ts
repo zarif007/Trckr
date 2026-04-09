@@ -4,6 +4,7 @@
  * so edit and view stay pixel-identical.
  */
 
+import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
 
 /** Gap between section groups (and before bottom row in edit). */
@@ -34,4 +35,8 @@ export const TAB_CONTENT_ROOT = "mt-4 w-full";
 export const TAB_CONTENT_INNER = "space-y-4 w-full min-w-0";
 
 /** Section bar: same class as edit mode BlockEditor section heading. */
-export const SECTION_BAR_CLASS = `w-full flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-sm border-l-[3px] border-l-info/60 bg-muted/25 border border-border/20 text-foreground text-sm font-semibold tracking-tight`;
+export const SECTION_BAR_CLASS = cn(
+  "w-full flex items-center gap-2 pl-2.5 pr-3 py-2 rounded-sm border-l-[3px] border-l-info/60 bg-muted/25 text-foreground text-sm font-semibold tracking-tight",
+  "border",
+  theme.border.gridChrome,
+);

@@ -84,7 +84,7 @@ export function KanbanCard({
       className={cn(
         "group relative cursor-grab overflow-hidden border bg-card transition-[border-color,box-shadow] duration-200 active:cursor-grabbing",
         isOverlay
-          ? theme.border.gridChromeMuted
+          ? theme.border.gridChromeSoft
           : cn(theme.border.gridChrome, theme.border.gridChromeHover),
         cardPadding,
         fontWeight,
@@ -126,7 +126,7 @@ export function KanbanCard({
               side="bottom"
               className={cn(
                 "w-44 border p-1 rounded-sm",
-                theme.border.gridChromeMuted,
+                theme.border.gridChrome,
               )}
               onOpenAutoFocus={(e) => e.preventDefault()}
               onClick={(e) => e.stopPropagation()}

@@ -122,12 +122,24 @@ Import from `@/lib/theme` for all colors, surfaces, borders, shadows, and radius
 
 ```tsx
 import { theme } from '@/lib/theme'
-className={cn(theme.surface.card, theme.border.default, theme.radius.md)}
+className={cn(theme.surface.card, theme.radius.md)}
 ```
 
 - Use `theme.radius.md` (or `rounded-sm`) for all boxed UI
 - **Do not use shadows** — no `shadow-*` classes, no `theme.shadow.*`, no `shadow-[...]`
 - Use `theme.patterns.*` for common patterns (inputBase, card, menuPanel, menuItem)
+
+### UI border chrome (outline / inputs / floating UI)
+
+All bordered product chrome should match **outline buttons** and **inputs** (`border-input`). Use the reusable API so tables, kanban, dialogs, popovers, tabs, toasts, and section bars stay consistent.
+
+- **`theme.uiChrome.floating`** — dialog, popover, select menu, toast shell (`border` + color). Same string as `theme.patterns.floatingChrome`.
+- **`theme.uiChrome.border`** — border color only; pair with `border`, `border-b`, `border-r`, etc. Same as `theme.border.gridChrome`.
+- **`theme.uiChrome.hover`** — `hover:border-ring` for bordered controls.
+- **`theme.uiChrome.tabActive`** — e.g. Radix tabs active segment (`data-[state=active]:border-input`).
+- **Do not** use ad-hoc `border-border/20`, `border-border/50`, etc. for that chrome — opacity reads as a different color next to the toolbar.
+
+Canonical definitions and rationale: `lib/theme/ui-chrome.ts`. Repo-wide agent summary: `AGENTS.md`.
 
 ### Component Patterns
 

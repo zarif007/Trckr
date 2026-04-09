@@ -464,7 +464,7 @@ export function DataTable<TData, TValue>({
                   align="end"
                   className={cn(
                     "w-52 rounded-sm border p-1.5",
-                    theme.border.gridChromeMuted,
+                    theme.border.gridChrome,
                   )}
                 >
                   <div className="flex flex-col gap-0.5">
@@ -586,7 +586,7 @@ export function DataTable<TData, TValue>({
                 key={headerGroup.id}
                 className={cn(
                   "bg-muted/20 hover:bg-muted/20 border-b",
-                  theme.border.gridChromeSubtle,
+                  theme.border.gridChrome,
                 )}
               >
                 {headerGroup.headers.map((header) => {
@@ -605,7 +605,7 @@ export function DataTable<TData, TValue>({
                       }}
                       className={cn(
                         "text-muted-foreground/90 font-medium border-r last:border-r-0 text-xs",
-                        theme.border.gridChromeSubtle,
+                        theme.border.gridChrome,
                         isSelect || isActions
                           ? "p-0 text-center min-w-[44px] w-[44px]"
                           : "px-3 py-2",
@@ -655,7 +655,7 @@ export function DataTable<TData, TValue>({
                     data-state={row.getIsSelected() && "selected"}
                     className={cn(
                       "group border-b last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
-                      theme.border.gridChromeMuted,
+                      theme.border.gridChrome,
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
@@ -666,7 +666,7 @@ export function DataTable<TData, TValue>({
                             style={{ width: fixedWidth, minWidth: fixedWidth }}
                             className={cn(
                               "p-0 text-center align-middle h-full border-r last:border-r-0 min-w-[44px]",
-                              theme.border.gridChromeMuted,
+                              theme.border.gridChrome,
                             )}
                           >
                             <div className="flex items-center justify-center w-full h-full min-h-[inherit]">

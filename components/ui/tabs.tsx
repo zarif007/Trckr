@@ -27,9 +27,9 @@ function TabsList({
  <TabsPrimitive.List
  data-slot="tabs-list"
  className={cn(
- theme.border.subtle,
  'rounded-sm',
  'inline-flex w-fit items-center gap-[2px] border bg-muted/25 p-0.5 backdrop-blur transition-colors',
+ theme.border.gridChrome,
  'ring-1 ring-inset',
  theme.border.dividerRing,
  className
@@ -52,7 +52,8 @@ function TabsTrigger({
  theme.text.muted,
  'border border-transparent',
  'hover:bg-background/60 hover:text-foreground/90',
- 'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:border-border/80 data-[state=active]:font-semibold',
+ 'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold',
+ theme.border.dataStateActiveChrome,
  'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background focus-visible:outline-none',
  'active:scale-[0.985]',
  'disabled:pointer-events-none disabled:opacity-50',

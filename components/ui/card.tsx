@@ -7,7 +7,7 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
  return (
  <div
  data-slot="card"
- className={cn(theme.patterns.card, "flex flex-col gap-6 border", className)}
+ className={cn(theme.patterns.card, "flex flex-col gap-6", className)}
  {...props}
  />
  )

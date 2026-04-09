@@ -5,6 +5,7 @@ import { Command as CommandPrimitive } from "cmdk"
 import { SearchIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { theme } from "@/lib/theme"
 import {
  Dialog,
  DialogContent,
@@ -67,7 +68,10 @@ function CommandInput({
  return (
  <div
  data-slot="command-input-wrapper"
- className="flex h-9 items-center gap-2 border-b px-3"
+ className={cn(
+ "flex h-9 items-center gap-2 border-b px-3",
+ theme.border.gridChrome,
+ )}
  >
  <SearchIcon className="size-4 shrink-0 opacity-50" />
  <CommandPrimitive.Input

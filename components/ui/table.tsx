@@ -47,6 +47,7 @@ function TableFooter({ className, ...props }: React.ComponentProps<'tfoot'>) {
  className={cn(
  theme.surface.mutedSubtle,
  'border-t font-medium [&>tr]:last:border-b-0',
+ theme.border.gridChrome,
  className
  )}
  {...props}
@@ -61,6 +62,7 @@ function TableRow({ className, ...props }: React.ComponentProps<'tr'>) {
  className={cn(
  theme.surface.mutedHover,
  'data-[state=selected]:bg-muted border-b transition-colors',
+ theme.border.gridChrome,
  className
  )}
  {...props}

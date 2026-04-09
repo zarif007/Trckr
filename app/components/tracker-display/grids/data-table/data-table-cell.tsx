@@ -3,6 +3,7 @@ import { TableCell } from "@/components/ui/table";
 import { DataTableInput } from "./data-table-input";
 import { FieldMetadata, validateField } from "./utils";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 import { DEFAULT_INPUT_FONT_CLASS } from "@/lib/field-input-classes";
 import { applyFieldOverrides } from "@/lib/field-rules";
 import type { FieldRuleOverride } from "@/lib/field-rules";
@@ -118,7 +119,8 @@ export function DataTableCell<TData>({
         ...(isMultiselect && { maxWidth: "150px" }),
       }}
       className={cn(
-        "p-0 h-10 border-r border-border/50 last:border-r-0 relative group/cell transition-colors",
+        "p-0 h-10 border-r last:border-r-0 relative group/cell transition-colors",
+        theme.border.gridChrome,
         !isSelect && "cursor-text hover:bg-muted/50 focus-within:bg-muted",
         (isMultiselect || isFieldMappings || isTextareaType) &&
           "overflow-hidden",

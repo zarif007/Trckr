@@ -14,20 +14,27 @@ export const patterns = {
     surface.input,
     "transition-[color,box-shadow] outline-none ring-0 focus:ring-0 focus-visible:ring-0",
   ].join(" "),
-  card: ["bg-card", text.card, radius.md, "border", "py-6"].join(" "),
+  card: ["bg-card", text.card, radius.md, "border", border.gridChrome, "py-6"].join(
+    " ",
+  ),
   interactive: "transition-colors hover:bg-muted cursor-pointer",
   hoverPrimary: "hover:bg-primary/10 hover:text-primary",
   /** Button `outline` variant — same border/input story as form fields */
   outlineButton: [
     "border",
-    border.input,
+    border.gridChrome,
     "bg-background dark:bg-input/30",
     "hover:bg-accent hover:text-accent-foreground",
     "dark:hover:bg-input/50",
   ].join(" "),
+  /**
+   * Dialog, popover, select menus, toasts — `border` + `gridChrome` (matches outline buttons / inputs).
+   */
+  floatingChrome: ["border", border.gridChrome].join(" "),
   /** Fixed context / account menu shell (portal menus) */
   menuPanel: [
     "fixed z-[100] min-w-[192px] border bg-popover text-popover-foreground py-1 animate-in fade-in-0 zoom-in-95",
+    border.gridChrome,
     radius.md,
   ].join(" "),
   /** Full-width row inside portal menus; use `cn(..., 'py-2')` when a taller hit target is needed */
@@ -38,7 +45,7 @@ export const patterns = {
   /** Floating panel shell — glass surface for standalone containers */
   panelShell: [
     "bg-background/60 backdrop-blur-sm border rounded-sm",
-    border.subtle,
+    border.gridChrome,
     radius.md,
   ].join(" "),
   /** Horizontal divider — thin, subtle, intentional */

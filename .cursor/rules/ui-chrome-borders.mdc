@@ -1,0 +1,18 @@
+---
+description: Mandatory UI border chrome — dialogs, popovers, grids, tabs (matches outline buttons)
+alwaysApply: true
+---
+
+# UI border chrome (mandatory)
+
+When adding or editing **bordered** UI (dialogs, popovers, menus, cards, tabs, tables, kanban, toasts, section bars, toolbars):
+
+1. `import { theme } from '@/lib/theme'`
+2. Floating layers: `cn('...', theme.uiChrome.floating)` (or `theme.patterns.floatingChrome`).
+3. Border color only: `theme.uiChrome.border` with `border` / `border-b` / `border-r`.
+4. Active tabs (Radix): `theme.uiChrome.tabActive`.
+5. Prefer `theme.patterns.card`, `theme.patterns.menuPanel`, `theme.patterns.inputBase` over custom border strings.
+
+**Avoid** `border-border/20`, `border-border/50`, and similar for primary chrome — use `theme.uiChrome` instead.
+
+See `lib/theme/ui-chrome.ts` and root `AGENTS.md`.
