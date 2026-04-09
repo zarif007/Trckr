@@ -14,7 +14,12 @@ export function backfillRowIds(data: GridDataSnapshot): GridDataSnapshot {
     }
     result[gridId] = rows.map((row, i) => {
       if (row != null && typeof row === "object") {
-        const rid = (row as Record<string, unknown>).row_id;
+        const rec = row as Record<string, unknown>;
+        /** Server-persisted rows: keep row object unchanged so `_rowId` stays authoritative. */
+        if (rec._rowId != null) {
+          return row;
+        }
+        const rid = rec.row_id;
         if (rid == null || typeof rid === "string" || !isNumericRowId(rid)) {
           return { ...row, row_id: i + 1 };
         }

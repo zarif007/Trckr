@@ -11,6 +11,35 @@ import type { TrackerResponse } from "../../../hooks/useTrackerChat";
 import type { BranchRecord } from "@/app/components/tracker-page/TrackerBranchPanel";
 import type { LoadedSnapshot } from "../types";
 import { DRAFT_STATUS_TAG } from "../types";
+import { listPaginatedGridSlugs } from "@/lib/grid-data-loading";
+import type { TrackerGrid } from "@/app/components/tracker-display/types";
+
+function stripPaginatedGridKeysFromSnapshot(
+  snapshot: GridDataSnapshot,
+  grids: TrackerGrid[] | undefined,
+): GridDataSnapshot {
+  const slugs = listPaginatedGridSlugs(grids ?? []);
+  if (slugs.length === 0) return snapshot;
+  const next = { ...snapshot };
+  for (const s of slugs) {
+    delete next[s];
+  }
+  return next;
+}
+
+/** After a bulk save response, keep paginated grids empty in client state (rows load via row API). */
+function normalizeSnapshotForPaginatedGrids(
+  snapshot: GridDataSnapshot,
+  grids: TrackerGrid[] | undefined,
+): GridDataSnapshot {
+  const slugs = listPaginatedGridSlugs(grids ?? []);
+  if (slugs.length === 0) return snapshot;
+  const next = { ...snapshot };
+  for (const s of slugs) {
+    next[s] = [];
+  }
+  return next;
+}
 
 export interface UseTrackerDataSaveParams {
   trackerId: string | null | undefined;
@@ -91,7 +120,9 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       options: { formStatus?: string | null; data?: GridDataSnapshot } = {},
     ) => {
       if (!trackerId) return;
-      const data = options.data ?? trackerDataRef.current?.() ?? {};
+      const rawData = options.data ?? trackerDataRef.current?.() ?? {};
+      const grids = schemaRef.current?.grids as TrackerGrid[] | undefined;
+      const data = stripPaginatedGridKeysFromSnapshot(rawData, grids);
       const nextFormStatus =
         options.formStatus !== undefined
           ? options.formStatus
@@ -109,10 +140,15 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
           throw new Error(msg);
         }
         if (saved?.id && saved?.data) {
+          const grids = schemaRef.current?.grids as TrackerGrid[] | undefined;
+          const data = normalizeSnapshotForPaginatedGrids(
+            saved.data as GridDataSnapshot,
+            grids,
+          );
           setLoadedSnapshot({
             id: saved.id,
             label: saved.label ?? null,
-            data: saved.data as GridDataSnapshot,
+            data,
             updatedAt: saved.updatedAt,
             formStatus: saved.formStatus ?? null,
           });
@@ -203,6 +239,7 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       setLoadedSnapshot,
       setVcBranches,
       setVcCurrentBranch,
+      schemaRef,
     ],
   );
 

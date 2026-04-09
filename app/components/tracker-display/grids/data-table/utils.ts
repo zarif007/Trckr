@@ -134,6 +134,14 @@ export interface OptionsGridFieldDef {
   calculation?: FieldCalculationRule;
 }
 
+export interface LazyOptionsConfig {
+  trackerId: string;
+  gridId: string;
+  labelField: string;
+  valueField?: string;
+  branchName?: string;
+}
+
 export interface FieldMetadata {
   [key: string]: {
     name: string;
@@ -152,6 +160,10 @@ export interface FieldMetadata {
     ) => Record<string, unknown>;
     /** Name of the options grid/table (for empty state: "No data. From table: X"). */
     optionsGridName?: string;
+    /** Lazy loading configuration for select fields with bindings (mutually exclusive with static options). */
+    lazyOptions?: LazyOptionsConfig;
+    /** Pre-selected values to always include in lazy loading (even if not in current page). */
+    preSelectedValues?: string[];
   };
 }
 

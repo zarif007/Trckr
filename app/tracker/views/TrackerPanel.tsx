@@ -593,6 +593,11 @@ export const TrackerPanel = memo(function TrackerPanel({
               trackerSchemaId={trackerId}
               projectId={projectId ?? undefined}
               onForeignBindingNavUiChange={onForeignBindingNavUiChange}
+              gridDataBranchName={
+                versionControl
+                  ? (vcCurrentBranch?.branchName ?? "main")
+                  : "main"
+              }
             />
           ) : (
             <TrackerDisplay
@@ -618,6 +623,11 @@ export const TrackerPanel = memo(function TrackerPanel({
               trackerSchemaId={trackerId}
               projectId={projectId ?? undefined}
               onForeignBindingNavUiChange={onForeignBindingNavUiChange}
+              gridDataBranchName={
+                versionControl
+                  ? (vcCurrentBranch?.branchName ?? "main")
+                  : "main"
+              }
             />
           )}
         </TrackerDisplayErrorBoundary>

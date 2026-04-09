@@ -11,6 +11,8 @@ import {
   getSortedRowModel,
   RowSelectionState,
   VisibilityState,
+  type PaginationState,
+  type OnChangeFn,
 } from "@tanstack/react-table";
 
 import {
@@ -53,14 +55,16 @@ function resolveGridDataRowIndex<TData>(
   data: readonly TData[],
 ): number {
   const rec = original as Record<string, unknown>;
-  const idKey = rec.row_id ?? rec.id;
+  const idKey = rec._rowId ?? rec.row_id ?? rec.id;
   if (
     idKey != null &&
     (typeof idKey === "number" || typeof idKey === "string")
   ) {
     const idx = data.findIndex((r) => {
       const o = r as Record<string, unknown>;
-      return o.row_id === idKey || o.id === idKey;
+      return (
+        o._rowId === idKey || o.row_id === idKey || o.id === idKey
+      );
     });
     if (idx >= 0) return idx;
   }
@@ -122,6 +126,15 @@ interface DataTableProps<TData, TValue> {
   pageSize?: number;
   /** Optional page size options for selector (e.g. [10, 25, 50]). */
   pageSizeOptions?: number[];
+  /** Server-driven pagination: parent owns page index / count. */
+  manualPagination?: boolean;
+  pageCount?: number;
+  pagination?: PaginationState;
+  onPaginationChange?: OnChangeFn<PaginationState>;
+  /** When manualPagination, total row count across all pages (for footer). */
+  totalRows?: number;
+  /** Replace table body with skeleton rows (e.g. server pagination fetch). */
+  isLoading?: boolean;
   /** Initial sort (column id and direction). */
   defaultSort?: { id: string; desc?: boolean };
   /** Optional custom renderer for the action column cell. */
@@ -153,13 +166,18 @@ export function DataTable<TData, TValue>({
   calculations,
   gridData: gridDataProp,
   pageSize: pageSizeProp,
-  pageSizeOptions,
+  pageSizeOptions = [10, 25, 50],
+  manualPagination = false,
+  pageCount: pageCountProp,
+  pagination: controlledPagination,
+  onPaginationChange,
+  totalRows: totalRowsProp,
+  isLoading = false,
   defaultSort: defaultSortProp,
   renderRowAction,
   showRowDetails = true,
   entryWays = [],
 }: DataTableProps<TData, TValue>) {
-  void pageSizeOptions;
   const pageSize = pageSizeProp ?? 10;
   const [tableData, setTableData] = useState<TData[]>(data);
   const [sorting, setSorting] = useState<SortingState>(() =>
@@ -168,6 +186,37 @@ export function DataTable<TData, TValue>({
       : [],
   );
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [uncontrolledPagination, setUncontrolledPagination] =
+    useState<PaginationState>({
+      pageIndex: 0,
+      pageSize,
+    });
+
+  useEffect(() => {
+    setUncontrolledPagination((p) =>
+      p.pageSize === pageSize ? p : { ...p, pageSize, pageIndex: 0 },
+    );
+  }, [pageSize]);
+
+  const paginationState: PaginationState =
+    controlledPagination ?? uncontrolledPagination;
+
+  const effectivePageSizeOptions = useMemo(() => {
+    const cur = paginationState.pageSize;
+    const base = pageSizeOptions.length > 0 ? pageSizeOptions : [10, 25, 50];
+    const uniq = new Set([...base, cur]);
+    return [...uniq].sort((a, b) => a - b);
+  }, [pageSizeOptions, paginationState.pageSize]);
+
+  const handlePaginationChange: OnChangeFn<PaginationState> = (updater) => {
+    if (onPaginationChange) {
+      onPaginationChange(updater);
+      return;
+    }
+    setUncontrolledPagination((prev) =>
+      typeof updater === "function" ? updater(prev) : updater,
+    );
+  };
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -361,24 +410,31 @@ export function DataTable<TData, TValue>({
     columns: columnsWithSelectionAndActions,
     getRowId: (row, index) =>
       String(
-        (row as Record<string, unknown>).row_id ??
+        (row as Record<string, unknown>)._rowId ??
+          (row as Record<string, unknown>).row_id ??
           (row as Record<string, unknown>).id ??
           index,
       ),
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    ...(manualPagination
+      ? {}
+      : { getPaginationRowModel: getPaginationRowModel() }),
+    manualPagination,
+    pageCount: manualPagination ? pageCountProp : undefined,
     onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     initialState: {
-      pagination: { pageSize },
+      pagination: { pageIndex: 0, pageSize },
     },
     state: {
       sorting,
       rowSelection,
       columnVisibility: effectiveVisibility,
+      pagination: paginationState,
     },
+    onPaginationChange: handlePaginationChange,
     meta: {
       updateData: editable ? updateDraftCell : undefined,
       fieldMetadata: fieldMetadata,
@@ -574,6 +630,7 @@ export function DataTable<TData, TValue>({
           "rounded-sm overflow-x-auto border bg-card/40",
           theme.border.gridChrome,
         )}
+        aria-busy={isLoading || undefined}
       >
         <Table
           className={cn(
@@ -638,7 +695,67 @@ export function DataTable<TData, TValue>({
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {isLoading ? (
+              Array.from(
+                {
+                  length: Math.min(
+                    Math.max(1, paginationState.pageSize),
+                    50,
+                  ),
+                },
+                (_, skeletonRowIdx) => (
+                  <TableRow
+                    key={`skeleton-row-${skeletonRowIdx}`}
+                    className={cn(
+                      "border-b last:border-0",
+                      theme.border.gridChrome,
+                    )}
+                  >
+                    {columnsWithSelectionAndActions.map((col, ci) => {
+                      const colId =
+                        (col as { id?: string }).id ??
+                        (col as { accessorKey?: string }).accessorKey ??
+                        String(ci);
+                      const narrow =
+                        colId === "select" || colId === "actions";
+                      return (
+                        <TableCell
+                          key={`${skeletonRowIdx}-${colId}`}
+                          style={
+                            narrow
+                              ? { width: fixedWidth, minWidth: fixedWidth }
+                              : undefined
+                          }
+                          className={cn(
+                            narrow
+                              ? "p-0 text-center align-middle border-r last:border-r-0 min-w-[44px]"
+                              : "px-3 py-2.5 border-r last:border-r-0",
+                            theme.border.gridChrome,
+                          )}
+                        >
+                          {narrow ? (
+                            <div className="flex items-center justify-center py-2">
+                              <div
+                                className="h-4 w-4 shrink-0 animate-pulse rounded-sm bg-muted/60"
+                                aria-hidden
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className="h-4 max-w-full animate-pulse rounded-sm bg-muted/60"
+                              style={{
+                                width: `${42 + ((skeletonRowIdx + ci) % 6) * 9}%`,
+                              }}
+                              aria-hidden
+                            />
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ),
+              )
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const rowOriginal = row.original as Record<string, unknown>;
                 const rowValues: Record<string, unknown> = { ...rowOriginal };
@@ -704,6 +821,72 @@ export function DataTable<TData, TValue>({
             )}
           </TableBody>
         </Table>
+        <div
+          className={cn(
+            "flex flex-wrap items-center justify-between gap-3 px-3 py-2 border-t",
+            theme.border.gridChrome,
+          )}
+        >
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {table.getFilteredRowModel().rows.length === 0
+              ? "0 rows"
+              : manualPagination
+                ? `Page ${table.getState().pagination.pageIndex + 1} of ${Math.max(1, table.getPageCount())}` +
+                  (totalRowsProp != null ? ` · ${totalRowsProp} total` : "")
+                : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}–${Math.min(
+                    (table.getState().pagination.pageIndex + 1) *
+                      table.getState().pagination.pageSize,
+                    table.getFilteredRowModel().rows.length,
+                  )} of ${table.getFilteredRowModel().rows.length}`}
+          </p>
+          <div className="flex items-center gap-2">
+            {effectivePageSizeOptions.length > 0 ? (
+              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="sr-only">Rows per page</span>
+                <span aria-hidden>Per page</span>
+                <select
+                  className={cn(
+                    "h-8 rounded-sm border bg-background px-2 text-xs",
+                    theme.uiChrome.border,
+                    theme.uiChrome.hover,
+                  )}
+                  value={String(table.getState().pagination.pageSize)}
+                  disabled={isLoading}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    if (!Number.isNaN(next)) table.setPageSize(next);
+                  }}
+                >
+                  {effectivePageSizeOptions.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage() || isLoading}
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage() || isLoading}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

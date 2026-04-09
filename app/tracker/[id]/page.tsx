@@ -8,6 +8,8 @@ import { TrackerPageSkeleton } from "./TrackerPageSkeleton";
 import { TrackerInstanceListView } from "../views/TrackerInstanceListView";
 import type { TrackerResponse, Message } from "../hooks/useTrackerChat";
 import { ownerScopeSettingsBannerFromTracker } from "../utils/ownerScopeSettingsBanner";
+import { listPaginatedGridSlugs } from "@/lib/grid-data-loading";
+import type { TrackerGrid } from "@/app/components/tracker-display/types";
 
 const STORAGE_KEY_PREFIX = "trckr:tracker:";
 
@@ -120,13 +122,22 @@ function getTrackerResource(
       // should start from a fresh draft. Existing instances are opened only
       // when a concrete instanceId is selected.
       if (tracker.instance === "MULTI" || instanceId === "new") return null;
-      const res = await fetch(`/api/trackers/${id}/data`);
+      const paginatedSlugs = listPaginatedGridSlugs(
+        (schema.grids ?? []) as TrackerGrid[],
+      );
+      const omitParam =
+        paginatedSlugs.length > 0
+          ? `?omitGridData=${encodeURIComponent(paginatedSlugs.join(","))}`
+          : "";
+      const res = await fetch(`/api/trackers/${id}/data${omitParam}`);
       if (!res.ok) return null;
       const payload = (await res.json()) as {
         data?: Record<string, Array<Record<string, unknown>>>;
         total?: number;
       };
-      if (!payload.data || payload.total === 0) return null;
+      if (!payload.data) return null;
+      const gridKeys = Object.keys(payload.data);
+      if (gridKeys.length === 0 && (payload.total ?? 0) === 0) return null;
       return {
         id: "current",
         label: null,

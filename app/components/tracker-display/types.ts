@@ -32,6 +32,19 @@ export type TrackerSection = {
 
 export type GridType = "div" | "table" | "kanban" | "timeline" | "calendar";
 
+/**
+ * Server-backed pagination / lazy kanban.
+ * Omit `mode` to use runtime defaults: table/kanban grids load via row APIs; `*_options_grid` stays snapshot.
+ * Set `mode: "snapshot"` to force full snapshot load for a large table/kanban if needed.
+ */
+export type GridDataLoadingConfig = {
+  mode?: "snapshot" | "paginated";
+  /** Table page size when `mode` is paginated (overrides `pageSize` if set). */
+  pageSize?: number;
+  /** Optional kanban-only page size; defaults to table `pageSize` / `dataLoading.pageSize`. */
+  kanbanPageSize?: number;
+};
+
 /** Grid config: layout (div), groupBy (kanban), row/layout edit flags, etc. */
 export type TrackerGridConfig = {
   layout?: "vertical" | "horizontal";
@@ -54,6 +67,7 @@ export type TrackerGridConfig = {
   defaultSort?: { id: string; desc?: boolean };
   /** Optional quick-create shortcuts for adding rows (“Entry Ways”), configured per grid. */
   entryWays?: import("./entry-way/entry-way-types").EntryWayConfig[];
+  dataLoading?: GridDataLoadingConfig;
   [key: string]: unknown;
 };
 
@@ -229,4 +243,9 @@ export interface TrackerDisplayProps {
   projectId?: string | null;
   /** Push linked-tracker load/save UI state to the host (e.g. TrackerNavBar via TrackerNavContext). */
   onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void;
+  /**
+   * Branch for grid row APIs (`main` when version control is off).
+   * Used by paginated grids for GET/POST rows and row PATCH consistency.
+   */
+  gridDataBranchName?: string;
 }

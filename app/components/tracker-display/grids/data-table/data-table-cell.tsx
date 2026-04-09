@@ -161,6 +161,8 @@ export function DataTableCell<TData>({
               optionsGridFields={fieldInfo.optionsGridFields}
               getBindingUpdatesFromRow={fieldInfo.getBindingUpdatesFromRow}
               optionsSourceLabel={fieldInfo.optionsGridName}
+              lazyOptions={fieldInfo.lazyOptions}
+              preSelectedValues={fieldInfo.preSelectedValues}
               compact
             />
           </div>

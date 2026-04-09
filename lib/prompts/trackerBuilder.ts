@@ -264,6 +264,7 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - View-specific config: each view has its own "config" object. For kanban views, config.groupBy is REQUIRED (field id to group columns by). For table/timeline/calendar views, config can be {} or type-specific. For div views, config.layout may be "vertical" | "horizontal".
 - Views share the grid's data and layoutNodes — no extra layoutNodes or bindings for view ids. layoutNodes and bindings always use the primary grid id only.
 - Example: tasks_grid with views: [{ id: "tasks_table_view", name: "Table", type: "table", config: {} }, { id: "tasks_kanban_view", name: "Kanban", type: "kanban", config: { groupBy: "status" } }].
+- Row loading: omit grid.config.dataLoading for normal table/kanban grids — the app loads rows per page / per kanban column from the API. Set dataLoading.mode to "snapshot" only if the user explicitly needs the entire grid in memory at once (rare). Option-list grids (*_options_grid) always stay on snapshot; do not override.
 
 === FIELD RULES (CONDITIONAL FIELD ACTIONS) ===
 

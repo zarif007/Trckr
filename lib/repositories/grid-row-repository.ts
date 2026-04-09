@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { assertSafeJsonPathKey } from "@/lib/grid-data-loading";
 import type { GridRowRecord, GridRowData } from "@/lib/schemas/tracker";
 import {
   getCompiledValidator,
@@ -67,6 +68,13 @@ export async function listGridRows(
     includeDeleted?: boolean;
     limit?: number;
     offset?: number;
+    /**
+     * Field id (JSON key on `row.data`). When set, filter rows by that key.
+     * v1: string equality only; multiselect / array group values are not supported.
+     */
+    groupFieldKey?: string;
+    /** Match `data[groupFieldKey]` as text; empty string = null, missing, or "". */
+    groupValue?: string;
   } = {},
 ) {
   const tracker = await prisma.trackerSchema.findFirst({
@@ -77,11 +85,70 @@ export async function listGridRows(
 
   const limit = Math.min(Math.max(1, options.limit ?? 100), 1000);
   const offset = Math.max(0, options.offset ?? 0);
+  const branchName = options.branchName ?? "main";
+
+  const useGroupFilter =
+    options.groupFieldKey != null && options.groupFieldKey.length > 0;
+
+  if (useGroupFilter) {
+    assertSafeJsonPathKey(options.groupFieldKey!);
+    const key = options.groupFieldKey!;
+    const keyLit = Prisma.raw(`'${key}'`);
+    const gv = options.groupValue ?? "";
+
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`r."trackerId" = ${trackerId}`,
+      Prisma.sql`r."gridId" = ${gridId}`,
+      Prisma.sql`r."branchName" = ${branchName}`,
+    ];
+    if (!options.includeDeleted) {
+      conditions.push(Prisma.sql`r."deletedAt" IS NULL`);
+    }
+    if (gv === "") {
+      conditions.push(
+        Prisma.sql`((r.data->>${keyLit}) IS NULL OR (r.data->>${keyLit}) = '')`,
+      );
+    } else {
+      conditions.push(Prisma.sql`(r.data->>${keyLit}) = ${gv}`);
+    }
+    const whereSql = Prisma.join(conditions, " AND ");
+
+    const [idPage, countRows] = await Promise.all([
+      prisma.$queryRaw<{ id: string }[]>`
+        SELECT r.id FROM "GridRow" r
+        WHERE ${whereSql}
+        ORDER BY r."sortOrder" ASC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      prisma.$queryRaw<[{ c: bigint }]>`
+        SELECT COUNT(*)::bigint AS c FROM "GridRow" r
+        WHERE ${whereSql}
+      `,
+    ]);
+
+    const ids = idPage.map((row) => row.id);
+    const total = Number(countRows[0]?.c ?? 0);
+
+    if (ids.length === 0) {
+      return { items: [], total };
+    }
+
+    const itemsUnordered = await prisma.gridRow.findMany({
+      where: { id: { in: ids } },
+      include: authorInclude,
+    });
+    const byId = new Map(itemsUnordered.map((row) => [row.id, row]));
+    const items = ids
+      .map((id) => byId.get(id))
+      .filter((row): row is NonNullable<typeof row> => row != null);
+
+    return { items, total };
+  }
 
   const where = {
     trackerId,
     gridId,
-    branchName: options.branchName ?? "main",
+    branchName,
     ...(options.includeDeleted ? {} : { deletedAt: null }),
   };
 
@@ -106,7 +173,7 @@ export async function listGridRows(
 export async function listAllGridRowsForTracker(
   trackerId: string,
   userId: string,
-  options: { branchName?: string } = {},
+  options: { branchName?: string; excludeGridIds?: string[] } = {},
 ) {
   const tracker = await prisma.trackerSchema.findFirst({
     where: { id: trackerId, project: { userId } },
@@ -114,11 +181,14 @@ export async function listAllGridRowsForTracker(
   });
   if (!tracker) return null;
 
+  const exclude = options.excludeGridIds?.filter(Boolean) ?? [];
+
   return prisma.gridRow.findMany({
     where: {
       trackerId,
       branchName: options.branchName ?? "main",
       deletedAt: null,
+      ...(exclude.length > 0 ? { gridId: { notIn: exclude } } : {}),
     },
     orderBy: { sortOrder: "asc" },
     include: authorInclude,

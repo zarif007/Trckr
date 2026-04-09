@@ -29,6 +29,7 @@ import { useTrackerTabs } from "./state/useTrackerTabs";
 import { useGridDataEngine } from "./state/useGridDataEngine";
 import { useSchemaTabActions } from "./state/useSchemaTabActions";
 import { useForeignBindingSources } from "./foreign-binding-sources";
+import { TrackerDataApiProvider } from "./tracker-data-api-context";
 // Bindings grid (Shared tab) intentionally unused; bindings are configured per field settings now.
 
 // Stable component so tab row is not remounted on parent re-render (avoids animate-in re-trigger on add/edit).
@@ -139,6 +140,7 @@ export function TrackerDisplayInline({
   trackerSchemaId,
   projectId,
   onForeignBindingNavUiChange,
+  gridDataBranchName = "main",
 }: TrackerDisplayProps) {
   const effectiveSections = sections ?? [];
   const effectiveGrids = grids ?? [];
@@ -367,29 +369,34 @@ export function TrackerDisplayInline({
   );
 
   return (
-    <TrackerOptionsProvider
-      grids={effectiveGrids}
-      fields={effectiveFields}
-      layoutNodes={effectiveLayoutNodes}
-      sections={effectiveSections}
-      dynamicOptions={dynamicOptions}
-      gridData={gridData}
-      trackerSchemaId={trackerSchemaId ?? undefined}
-      foreignGridDataBySchemaId={foreignGridDataBySchemaId}
-      foreignSchemaBySchemaId={foreignSchemaBySchemaId}
-      onAddEntryToForeignGrid={onAddEntryToForeignGrid}
+    <TrackerDataApiProvider
+      trackerSchemaId={trackerSchemaId}
+      gridDataBranchName={gridDataBranchName}
     >
-      <EditModeProvider
-        editMode={!!editMode}
-        schema={editModeSchema}
-        onSchemaChange={onSchemaChange}
-        undo={undo}
-        canUndo={canUndo}
-        trackerSchemaId={trackerSchemaId}
-        projectId={projectId ?? undefined}
+      <TrackerOptionsProvider
+        grids={effectiveGrids}
+        fields={effectiveFields}
+        layoutNodes={effectiveLayoutNodes}
+        sections={effectiveSections}
+        dynamicOptions={dynamicOptions}
+        gridData={gridData}
+        trackerSchemaId={trackerSchemaId ?? undefined}
+        foreignGridDataBySchemaId={foreignGridDataBySchemaId}
+        foreignSchemaBySchemaId={foreignSchemaBySchemaId}
+        onAddEntryToForeignGrid={onAddEntryToForeignGrid}
       >
-        {content}
-      </EditModeProvider>
-    </TrackerOptionsProvider>
+        <EditModeProvider
+          editMode={!!editMode}
+          schema={editModeSchema}
+          onSchemaChange={onSchemaChange}
+          undo={undo}
+          canUndo={canUndo}
+          trackerSchemaId={trackerSchemaId}
+          projectId={projectId ?? undefined}
+        >
+          {content}
+        </EditModeProvider>
+      </TrackerOptionsProvider>
+    </TrackerDataApiProvider>
   );
 }

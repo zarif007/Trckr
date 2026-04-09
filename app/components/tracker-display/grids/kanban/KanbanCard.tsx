@@ -46,6 +46,8 @@ export interface KanbanCardProps {
   fieldMetadata?: FieldMetadata;
   isOverlay?: boolean;
   onEditRow?: (rowIndex: number) => void;
+  /** When set (e.g. server-row kanban), edit button calls this instead of `onEditRow`. */
+  onEditCard?: () => void;
   onDeleteRow?: () => void;
   styles?: KanbanCardStyles;
 }
@@ -59,17 +61,19 @@ export function KanbanCard({
   fieldMetadata,
   isOverlay = false,
   onEditRow,
+  onEditCard,
   onDeleteRow,
   styles = {},
 }: KanbanCardProps) {
   const rowIndex = card._originalIdx;
+  const rulesRowIndex = typeof rowIndex === "number" ? rowIndex : 0;
   const showEditButton =
-    !isOverlay && onEditRow != null && typeof rowIndex === "number";
+    !isOverlay &&
+    (onEditCard != null ||
+      (onEditRow != null && typeof rowIndex === "number"));
   const showSettingsButton = !isOverlay && onDeleteRow != null;
   const overrides: Record<string, FieldRuleOverride> =
-    typeof rowIndex === "number"
-      ? resolveFieldRulesForRow(fieldRules, gridId, card, rowIndex).overrides
-      : {};
+    resolveFieldRulesForRow(fieldRules, gridId, card, rulesRowIndex).overrides;
 
   const {
     cardPadding = "p-4",
@@ -100,7 +104,11 @@ export function KanbanCard({
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
-              onEditRow?.(rowIndex!);
+              if (onEditCard) {
+                onEditCard();
+              } else if (onEditRow != null && typeof rowIndex === "number") {
+                onEditRow(rowIndex);
+              }
             }}
             aria-label="Edit entry"
           >

@@ -60,6 +60,18 @@ import type {
   FieldCalculationRule,
   FieldValidationRule,
 } from "@/lib/functions/types";
+import { useTrackerDataApi } from "./tracker-data-api-context";
+import { useCanEditLayout } from "./edit-mode";
+import {
+  isGridDataPaginated,
+  effectiveKanbanPageSize,
+} from "@/lib/grid-data-loading";
+import {
+  useKanbanPaginatedColumns,
+  rowPayloadForPatch,
+} from "@/lib/tracker-grid-rows";
+
+const KANBAN_SORT_SEP = "::";
 
 const EMPTY_ROWS: Array<Record<string, unknown>> = [];
 const EMPTY_GROUPS: Array<{ id: string; label: string }> = [];
@@ -110,20 +122,31 @@ function TrackerKanbanGridInner({
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
 }: TrackerKanbanGridProps) {
-  const addable =
-    !readOnly &&
-    (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false &&
-    onAddEntry != null;
-  const editable = !readOnly && grid.config?.isRowEditAble !== false;
-  const deleteable =
-    !readOnly &&
-    (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false &&
-    onDeleteEntries != null;
-  const canDrag = editable && onUpdate != null;
+  const { trackerSchemaId: dataApiTrackerId, gridDataBranchName } =
+    useTrackerDataApi();
+  const canEditLayout = useCanEditLayout();
   const thisGridRows = useMemo(
     () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
     [gridDataForThisGrid, gridData, grid.id],
   );
+  const gridIsPaginatedCapable =
+    isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
+  const paginatedKanbanDisplay = gridIsPaginatedCapable && !canEditLayout;
+  const mutateKanbanViaRowApi =
+    gridIsPaginatedCapable &&
+    (paginatedKanbanDisplay || (canEditLayout && thisGridRows.length === 0));
+
+  const addable =
+    !readOnly &&
+    (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false &&
+    (mutateKanbanViaRowApi || onAddEntry != null);
+  const editable = !readOnly && grid.config?.isRowEditAble !== false;
+  const deleteable =
+    !readOnly &&
+    (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !== false &&
+    (mutateKanbanViaRowApi || onDeleteEntries != null);
+  const canDrag =
+    editable && (paginatedKanbanDisplay || onUpdate != null);
   const fullGridData = useMemo(
     () => ({ ...gridData, [grid.id]: thisGridRows }),
     [gridData, grid.id, thisGridRows],
@@ -139,6 +162,9 @@ function TrackerKanbanGridInner({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
+  const [editCard, setEditCard] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [cardFieldVisibility, setCardFieldVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -169,6 +195,26 @@ function TrackerKanbanGridInner({
   const kanbanFields = kanbanState?.kanbanFields ?? EMPTY_FIELDS;
   const rows = kanbanState?.rows ?? EMPTY_ROWS;
 
+  const kanbanPageSize = effectiveKanbanPageSize(grid);
+  const kanbanCols = useKanbanPaginatedColumns({
+    trackerId: dataApiTrackerId,
+    gridSlug: grid.id,
+    branchName: gridDataBranchName,
+    groupFieldId: groupByFieldId,
+    groupIds: groups.map((g) => g.id),
+    pageSize: kanbanPageSize,
+    enabled:
+      gridIsPaginatedCapable &&
+      Boolean(groupByFieldId) &&
+      groups.length > 0,
+  });
+
+  const gridDataForCards = useMemo(() => {
+    if (!mutateKanbanViaRowApi) return gridDataForKanban;
+    const flat = Object.values(kanbanCols.columns).flatMap((c) => c.rows);
+    return { ...gridDataForKanban, [grid.id]: flat };
+  }, [mutateKanbanViaRowApi, gridDataForKanban, kanbanCols.columns, grid.id]);
+
   // Default: first 5 card fields visible (like data table column visibility)
   const effectiveCardVisibility = useMemo(() => {
     const next: Record<string, boolean> = { ...cardFieldVisibility };
@@ -198,6 +244,17 @@ function TrackerKanbanGridInner({
       string,
       Array<Record<string, unknown> & { _originalIdx: number }>
     >();
+    if (mutateKanbanViaRowApi) {
+      for (const g of groups) {
+        const col = kanbanCols.columns[g.id];
+        const list = (col?.rows ?? []).map((row) => ({
+          ...(row as Record<string, unknown>),
+          _originalIdx: 0,
+        }));
+        map.set(g.id, list);
+      }
+      return map;
+    }
     rows.forEach((row, idx) => {
       const key = String(
         (row as Record<string, unknown>)[groupByFieldId] ?? "",
@@ -211,14 +268,25 @@ function TrackerKanbanGridInner({
       }
     });
     return map;
-  }, [rows, groupByFieldId]);
+  }, [
+    mutateKanbanViaRowApi,
+    groups,
+    kanbanCols.columns,
+    rows,
+    groupByFieldId,
+  ]);
 
   const getCardSortId = useCallback(
     (
       card: Record<string, unknown> & { _originalIdx: number },
       groupId: string,
-    ) => `${String(card.row_id ?? card.id ?? card._originalIdx)}-${groupId}`,
-    [],
+    ) => {
+      if (mutateKanbanViaRowApi) {
+        return `${String(card._rowId ?? "")}${KANBAN_SORT_SEP}${groupId}`;
+      }
+      return `${String(card.row_id ?? card.id ?? card._originalIdx)}-${groupId}`;
+    },
+    [mutateKanbanViaRowApi],
   );
 
   const validGroupIds = useMemo(
@@ -232,6 +300,21 @@ function TrackerKanbanGridInner({
 
   const resolveCardIndex = useCallback(
     (sortId: string): number => {
+      if (mutateKanbanViaRowApi) {
+        const sepAt = sortId.indexOf(KANBAN_SORT_SEP);
+        if (sepAt < 0) return -1;
+        const rowKey = sortId.slice(0, sepAt);
+        let i = 0;
+        for (const g of groups) {
+          for (const r of kanbanCols.columns[g.id]?.rows ?? []) {
+            if (String((r as Record<string, unknown>)._rowId ?? "") === rowKey) {
+              return i;
+            }
+            i += 1;
+          }
+        }
+        return -1;
+      }
       const dashAt = sortId.indexOf("-");
       if (dashAt < 0) return -1;
       const firstPart = sortId.slice(0, dashAt);
@@ -247,14 +330,107 @@ function TrackerKanbanGridInner({
       const idx = parseInt(firstPart, 10);
       return !Number.isNaN(idx) && idx >= 0 && idx < rows.length ? idx : -1;
     },
-    [rows],
+    [mutateKanbanViaRowApi, groups, kanbanCols.columns, rows],
   );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveId(null);
       const { active, over } = event;
-      if (!over || !onUpdate) return;
+      if (!over) return;
+
+      if (mutateKanbanViaRowApi) {
+        const activeStr = String(active.id);
+        const sepAt = activeStr.indexOf(KANBAN_SORT_SEP);
+        if (sepAt < 0) return;
+        const rowId = activeStr.slice(0, sepAt);
+        const fromGroup = activeStr.slice(sepAt + KANBAN_SORT_SEP.length);
+        const fromCol = kanbanCols.columns[fromGroup];
+        const row = fromCol?.rows.find(
+          (r) =>
+            String((r as Record<string, unknown>)._rowId ?? "") === rowId,
+        ) as Record<string, unknown> | undefined;
+        if (!row || !groupByFieldId) return;
+
+        const overId = String(over.id);
+        let nextGroupId = overId;
+        if (overId.includes(KANBAN_SORT_SEP)) {
+          const i = overId.indexOf(KANBAN_SORT_SEP);
+          nextGroupId = overId.slice(i + KANBAN_SORT_SEP.length);
+        } else {
+          const dash = overId.indexOf("-");
+          if (dash >= 0) nextGroupId = overId.slice(dash + 1);
+        }
+        const nextGroupIdTrimmed = nextGroupId.trim();
+        if (!validGroupIds.has(nextGroupIdTrimmed)) return;
+
+        const currentGroup = String(row[groupByFieldId] ?? "").trim();
+        if (currentGroup === nextGroupIdTrimmed) return;
+
+        let merged: Record<string, unknown> = {
+          ...row,
+          [groupByFieldId]: nextGroupIdTrimmed,
+        };
+
+        const groupingField = kanbanFields.find((f) => f.id === groupByFieldId);
+        if (
+          groupingField &&
+          (groupingField.dataType === "options" ||
+            groupingField.dataType === "multiselect")
+        ) {
+          const binding = getBindingForField(
+            grid.id,
+            groupByFieldId,
+            bindings,
+            tabId,
+          );
+          if (binding?.fieldMappings?.length) {
+            const selectFieldPath = `${grid.id}.${groupByFieldId}`;
+            const flatSans = Object.values(kanbanCols.columns)
+              .flatMap((c) => c.rows)
+              .filter(
+                (r) =>
+                  String((r as Record<string, unknown>)._rowId ?? "") !==
+                  rowId,
+              );
+            const tempFull = {
+              ...gridData,
+              [grid.id]: [...flatSans, merged],
+            };
+            const optionRow = findOptionRow(
+              tempFull,
+              binding,
+              nextGroupIdTrimmed,
+              selectFieldPath,
+              foreignGridDataBySchemaId,
+            );
+            if (optionRow) {
+              const updates = applyBindings(
+                binding,
+                optionRow,
+                selectFieldPath,
+              );
+              for (const update of updates) {
+                const { gridId: targetGridId, fieldId: targetFieldId } =
+                  parsePath(update.targetPath);
+                if (targetGridId === grid.id && targetFieldId) {
+                  merged = { ...merged, [targetFieldId]: update.value };
+                }
+              }
+            }
+          }
+        }
+
+        kanbanCols.moveCardLocally(rowId, fromGroup, nextGroupIdTrimmed, merged);
+        void kanbanCols
+          .patchRowOnServer(rowId, rowPayloadForPatch(merged))
+          .catch(() => {
+            kanbanCols.refetchAll();
+          });
+        return;
+      }
+
+      if (!onUpdate) return;
 
       const cardId = active.id as string;
       const overId = String(over.id);
@@ -322,14 +498,17 @@ function TrackerKanbanGridInner({
       }
     },
     [
+      mutateKanbanViaRowApi,
+      kanbanCols,
       groupByFieldId,
+      grid.id,
+      gridData,
       rows,
       resolveCardIndex,
       onUpdate,
       onCrossGridUpdate,
       validGroupIds,
       kanbanFields,
-      grid.id,
       bindings,
       tabId,
       fullGridData,
@@ -337,13 +516,17 @@ function TrackerKanbanGridInner({
     ],
   );
 
+  const bindingSourceGridData = mutateKanbanViaRowApi
+    ? gridDataForCards
+    : fullGridData;
+
   const getBindingUpdates = useCallback(
     (fieldId: string, value: unknown): Record<string, unknown> => {
       const binding = getBindingForField(grid.id, fieldId, bindings, tabId);
       if (!binding?.fieldMappings?.length) return {};
       const selectFieldPath = `${grid.id}.${fieldId}`;
       const optionRow = findOptionRow(
-        fullGridData,
+        bindingSourceGridData,
         binding,
         value,
         selectFieldPath,
@@ -361,7 +544,13 @@ function TrackerKanbanGridInner({
       }
       return result;
     },
-    [grid.id, bindings, tabId, fullGridData, foreignGridDataBySchemaId],
+    [
+      grid.id,
+      bindings,
+      tabId,
+      bindingSourceGridData,
+      foreignGridDataBySchemaId,
+    ],
   );
 
   const handleEditSave = useCallback(
@@ -446,8 +635,44 @@ function TrackerKanbanGridInner({
   const activeCard = useMemo(() => {
     if (!activeId) return null;
     const idx = resolveCardIndex(activeId);
-    return idx >= 0 ? rows[idx] : null;
-  }, [activeId, rows, resolveCardIndex]);
+    if (idx < 0) return null;
+    if (mutateKanbanViaRowApi) {
+      let i = 0;
+      for (const g of groups) {
+        for (const r of kanbanCols.columns[g.id]?.rows ?? []) {
+          if (i === idx) return r as Record<string, unknown>;
+          i += 1;
+        }
+      }
+      return null;
+    }
+    return rows[idx];
+  }, [
+    activeId,
+    rows,
+    resolveCardIndex,
+    mutateKanbanViaRowApi,
+    groups,
+    kanbanCols.columns,
+  ]);
+
+  const handlePaginatedEditSave = useCallback(
+    async (values: Record<string, unknown>) => {
+      if (!editCard) return;
+      const rid = editCard._rowId;
+      if (typeof rid !== "string") return;
+      const merged: Record<string, unknown> = { ...editCard, ...values };
+      try {
+        await kanbanCols.patchRowOnServer(rid, rowPayloadForPatch(merged));
+      } catch {
+        // refetch below
+      } finally {
+        kanbanCols.refetchAll();
+        setEditCard(null);
+      }
+    },
+    [editCard, kanbanCols],
+  );
 
   const entryWays = useMemo(
     () => buildEntryWaysForGrid({ grid, tabId }),
@@ -523,7 +748,7 @@ function TrackerKanbanGridInner({
                 entryWays={entryWays}
                 // For now, Entry Ways are just visible options; clicking does not create rows yet.
                 onSelectEntryWay={() => {}}
-                disabled={!onAddEntry}
+                disabled={!mutateKanbanViaRowApi && !onAddEntry}
               />
             )}
           </div>
@@ -545,11 +770,29 @@ function TrackerKanbanGridInner({
                     }
                   : {}
               }
-              onSave={(values) => {
-                onAddEntry(values);
+              onSave={async (values) => {
+                if (mutateKanbanViaRowApi) {
+                  const gid = String(
+                    values[groupByFieldId] ??
+                      (groups.find((g) => g.id !== "") ?? groups[0])?.id ??
+                      "",
+                  );
+                  try {
+                    const row = await kanbanCols.createRowOnServer(values);
+                    kanbanCols.prependCardLocally(gid, row);
+                  } catch {
+                    kanbanCols.refetchAll();
+                  }
+                  setShowAddDialog(false);
+                  return;
+                }
+                onAddEntry?.(values);
                 setShowAddDialog(false);
               }}
-              onSaveAnother={(values) => onAddEntry(values)}
+              onSaveAnother={(values) => {
+                if (mutateKanbanViaRowApi) return;
+                onAddEntry?.(values);
+              }}
               getBindingUpdates={getBindingUpdates}
               getFieldOverrides={(values, fieldId) => {
                 const { overrides } = resolveFieldRulesForRow(
@@ -564,6 +807,7 @@ function TrackerKanbanGridInner({
               }}
               gridId={grid.id}
               calculations={calculations}
+              gridData={gridDataForCards}
             />
           )}
         </>
@@ -571,17 +815,34 @@ function TrackerKanbanGridInner({
 
       {editable && (
         <EntryFormDialog
-          open={editRowIndex !== null}
-          onOpenChange={(open) => !open && setEditRowIndex(null)}
+          open={mutateKanbanViaRowApi ? editCard !== null : editRowIndex !== null}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditRowIndex(null);
+              setEditCard(null);
+            }
+          }}
           title="Row Details"
           submitLabel="Update Entry"
           fieldMetadata={fieldMetadata}
           fieldOrder={fieldOrder}
-          initialValues={editRowIndex != null ? (rows[editRowIndex] ?? {}) : {}}
-          onSave={handleEditSave}
+          initialValues={
+            mutateKanbanViaRowApi
+              ? { ...(editCard ?? {}) }
+              : editRowIndex != null
+                ? (rows[editRowIndex] ?? {})
+                : {}
+          }
+          onSave={
+            mutateKanbanViaRowApi
+              ? (v) => {
+                  void handlePaginatedEditSave(v);
+                }
+              : handleEditSave
+          }
           getBindingUpdates={getBindingUpdates}
           getFieldOverrides={(values, fieldId) => {
-            const rowIndex = editRowIndex ?? 0;
+            const rowIndex = mutateKanbanViaRowApi ? 0 : (editRowIndex ?? 0);
             const { overrides } = resolveFieldRulesForRow(
               fieldRulesV2,
               grid.id,
@@ -592,6 +853,7 @@ function TrackerKanbanGridInner({
           }}
           gridId={grid.id}
           calculations={calculations}
+          gridData={gridDataForCards}
         />
       )}
 
@@ -621,12 +883,24 @@ function TrackerKanbanGridInner({
                       "bg-background/50",
                     )}
                   >
-                    {cardsInGroup.length}
+                    {mutateKanbanViaRowApi
+                      ? (kanbanCols.columns[group.id]?.total ?? 0)
+                      : cardsInGroup.length}
                   </span>
                 </h3>
               </div>
               <div className="space-y-3 min-h-[100px] flex flex-col">
+                {mutateKanbanViaRowApi &&
+                kanbanCols.columns[group.id]?.loading &&
+                cardsInGroup.length === 0 ? (
+                  <p className="px-2 py-3 text-xs text-muted-foreground">
+                    Loading…
+                  </p>
+                ) : null}
                 {canDrag ? (
+                  mutateKanbanViaRowApi &&
+                  kanbanCols.columns[group.id]?.loading &&
+                  cardsInGroup.length === 0 ? null : (
                   <SortableContext
                     id={group.id}
                     items={cardsInGroup.map((c) => getCardSortId(c, group.id))}
@@ -645,14 +919,44 @@ function TrackerKanbanGridInner({
                               card={card}
                               cardFields={visibleCardFields}
                               gridId={grid.id}
-                              gridData={gridDataForKanban}
+                              gridData={gridDataForCards}
                               fieldRules={fieldRulesV2}
                               fieldMetadata={fieldMetadata}
-                              onEditRow={editable ? setEditRowIndex : undefined}
-                              onDeleteRow={
-                                deleteable && onDeleteEntries
-                                  ? () => onDeleteEntries([card._originalIdx])
+                              onEditRow={
+                                editable && !mutateKanbanViaRowApi
+                                  ? setEditRowIndex
                                   : undefined
+                              }
+                              onEditCard={
+                                editable && mutateKanbanViaRowApi
+                                  ? () =>
+                                      setEditCard({
+                                        ...(card as Record<string, unknown>),
+                                      })
+                                  : undefined
+                              }
+                              onDeleteRow={
+                                mutateKanbanViaRowApi && deleteable
+                                  ? () => {
+                                      const rid = String(
+                                        (card as Record<string, unknown>)
+                                          ._rowId ?? "",
+                                      );
+                                      if (!rid) return;
+                                      void kanbanCols
+                                        .deleteRowOnServer(rid)
+                                        .then(() =>
+                                          kanbanCols.removeCardLocally(
+                                            group.id,
+                                            rid,
+                                          ),
+                                        )
+                                        .catch(() => kanbanCols.refetchAll());
+                                    }
+                                  : deleteable && onDeleteEntries
+                                    ? () =>
+                                        onDeleteEntries([card._originalIdx])
+                                    : undefined
                               }
                               styles={cardStyles}
                             />
@@ -662,6 +966,7 @@ function TrackerKanbanGridInner({
                       </>
                     )}
                   </SortableContext>
+                  )
                 ) : cardsInGroup.length === 0 ? (
                   <div className="text-xs text-muted-foreground/70 px-2 py-2">
                     No entries
@@ -673,13 +978,31 @@ function TrackerKanbanGridInner({
                       card={card}
                       cardFields={visibleCardFields}
                       gridId={grid.id}
-                      gridData={gridDataForKanban}
+                      gridData={gridDataForCards}
                       fieldRules={fieldRulesV2}
                       fieldMetadata={fieldMetadata}
                       styles={cardStyles}
                     />
                   ))
                 )}
+                {paginatedKanbanDisplay &&
+                (kanbanCols.columns[group.id]?.total ?? 0) >
+                  (kanbanCols.columns[group.id]?.rows.length ?? 0) ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground"
+                    disabled={
+                      kanbanCols.columns[group.id]?.loadingMore ?? false
+                    }
+                    onClick={() => void kanbanCols.loadMore(group.id)}
+                  >
+                    {kanbanCols.columns[group.id]?.loadingMore
+                      ? "Loading…"
+                      : "Load more"}
+                  </Button>
+                ) : null}
               </div>
             </div>
           );
@@ -714,7 +1037,7 @@ function TrackerKanbanGridInner({
             }
             cardFields={visibleCardFields}
             gridId={grid.id}
-            gridData={gridDataForKanban}
+            gridData={gridDataForCards}
             fieldRules={fieldRulesV2}
             fieldMetadata={fieldMetadata}
             isOverlay

@@ -51,6 +51,7 @@ function buildSnapshotFromRows(
  *
  * Two modes:
  * - Snapshot mode (default): Returns all rows grouped by gridSlug as a snapshot.
+ * - Optional `omitGridData`: comma-separated grid slugs to exclude from DB load (empty arrays returned for those keys; used with per-grid row APIs).
  * - Instance mode: When `limit` or `offset` are provided, returns paginated
  *   individual rows as instances (used by multi-instance list views).
  */
@@ -68,6 +69,12 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const branchName = searchParams.get("branch") ?? "main";
   const viewMode = searchParams.get("view");
+  const omitGridSlugs = new Set(
+    (searchParams.get("omitGridData") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
 
   const tracker = await prisma.trackerSchema.findFirst({
     where: { id: trackerId, project: { userId: authResult.user.id } },
@@ -124,12 +131,28 @@ export async function GET(
     return jsonOk({ items, total });
   }
 
+  const slugToGridId = new Map(
+    tracker.nodes.map((n: GridIdSlugPair) => [n.slug, n.id]),
+  );
+  const omitGridIds: string[] = [];
+  for (const slug of omitGridSlugs) {
+    const gid = slugToGridId.get(slug);
+    if (gid) omitGridIds.push(gid);
+  }
+
   const rows = await listAllGridRowsForTracker(trackerId, authResult.user.id, {
     branchName,
+    excludeGridIds: omitGridIds.length > 0 ? omitGridIds : undefined,
   });
   if (!rows) return notFound("Tracker not found");
 
   const { data, updatedAt } = buildSnapshotFromRows(rows, gridIdToSlug);
+
+  for (const slug of omitGridSlugs) {
+    if (slugToGridId.has(slug) && !data[slug]) {
+      data[slug] = [];
+    }
+  }
 
   return jsonOk({ data, total: rows.length, updatedAt });
 }

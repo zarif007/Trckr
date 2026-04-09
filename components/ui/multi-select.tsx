@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, ChevronDown, Database } from 'lucide-react'
+import { Check, ChevronDown, Database, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { theme } from '@/lib/theme'
 import {
@@ -16,9 +16,18 @@ import {
  Popover,
  PopoverContent,
 } from '@/components/ui/popover'
+import { useOptionsLoader } from '@/lib/hooks/useOptionsLoader'
+
+interface LazyOptionsConfig {
+ trackerId: string
+ gridId: string
+ labelField: string
+ valueField?: string
+ branchName?: string
+}
 
 interface MultiSelectProps {
- options: (string | { id: string; label: string })[]
+ options?: (string | { id: string; label: string })[]
  value: string[]
  onChange: (value: string[]) => void
  placeholder?: string
@@ -32,10 +41,14 @@ interface MultiSelectProps {
  onAddOptionClick?: () => void
  /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
  optionsSourceLabel?: string
+ /** Lazy loading configuration (mutually exclusive with static options) */
+ lazyOptions?: LazyOptionsConfig
+ /** Pre-selected values to include in lazy loading (always visible even if not in current page) */
+ preSelectedValues?: string[]
 }
 
 export function MultiSelect({
- options,
+ options = [],
  value = [],
  onChange,
  placeholder = '',
@@ -47,13 +60,36 @@ export function MultiSelect({
  'aria-invalid': ariaInvalid = false,
  onAddOptionClick,
  optionsSourceLabel,
+ lazyOptions,
+ preSelectedValues,
 }: MultiSelectProps) {
  const [open, setOpen] = React.useState(autoFocus)
  const [searchValue, setSearchValue] = React.useState('')
  const triggerRef = React.useRef<HTMLDivElement>(null)
+ const scrollContainerRef = React.useRef<HTMLDivElement>(null)
+
+ const optionsLoader = useOptionsLoader({
+ trackerId: lazyOptions?.trackerId ?? "",
+ gridId: lazyOptions?.gridId ?? "",
+ labelField: lazyOptions?.labelField ?? "",
+ valueField: lazyOptions?.valueField,
+ branchName: lazyOptions?.branchName,
+ enabled: Boolean(lazyOptions) && open,
+ preSelectedValues,
+ })
+
+ const displayOptions = React.useMemo(() => {
+ if (lazyOptions) {
+ return optionsLoader.options.map((opt) => ({
+ id: String(opt.value),
+ label: opt.label,
+ }))
+ }
+ return options
+ }, [lazyOptions, optionsLoader.options, options])
 
  const emptyMessage =
- options.length === 0
+ displayOptions.length === 0
  ? optionsSourceLabel
  ? `No data. From table: ${optionsSourceLabel}`
  : 'No data.'
@@ -68,20 +104,48 @@ export function MultiSelect({
 
  const displayText = value.length > 0
  ? value.map(v => {
- const option = options.find(o => (typeof o === 'string' ? o : o.id) === v)
+ const option = displayOptions.find(o => (typeof o === 'string' ? o : o.id) === v)
  return option ? (typeof option === 'string' ? option : option.label) : v
  }).join(', ')
  : placeholder
 
  const isEmpty = value.length === 0
  const filteredOptions = React.useMemo(() => {
+ if (lazyOptions) {
+ return displayOptions
+ }
  const normalizedQuery = searchValue.trim().toLowerCase()
- if (!normalizedQuery) return options
- return options.filter((option) => {
+ if (!normalizedQuery) return displayOptions
+ return displayOptions.filter((option) => {
  const optLabel = typeof option === 'string' ? option : option.label
  return optLabel.toLowerCase().includes(normalizedQuery)
  })
- }, [options, searchValue])
+ }, [lazyOptions, displayOptions, searchValue])
+
+ React.useEffect(() => {
+ if (!lazyOptions || !open) return
+ const container = scrollContainerRef.current
+ if (!container) return
+
+ const handleScroll = () => {
+ const { scrollTop, scrollHeight, clientHeight } = container
+ if (scrollHeight - scrollTop - clientHeight < 100) {
+ if (optionsLoader.hasMore && !optionsLoader.isLoadingMore) {
+ optionsLoader.loadMore()
+ }
+ }
+ }
+
+ container.addEventListener("scroll", handleScroll)
+ return () => container.removeEventListener("scroll", handleScroll)
+ }, [lazyOptions, open, optionsLoader])
+
+ const handleSearchChange = (value: string) => {
+ setSearchValue(value)
+ if (lazyOptions) {
+ optionsLoader.search(value)
+ }
+ }
 
  const triggerClasses = cn(
  theme.patterns.inputBase,
@@ -112,7 +176,7 @@ export function MultiSelect({
  onFocus={() => setOpen(true)}
  onChange={(e) => {
  setOpen(true)
- setSearchValue(e.target.value)
+ handleSearchChange(e.target.value)
  }}
  onKeyDown={(e) => {
  if (e.key === 'Escape') {
@@ -160,10 +224,43 @@ export function MultiSelect({
  }}
  >
  <Command shouldFilter={false}>
- <CommandList>
+ <CommandList ref={scrollContainerRef}>
+ {lazyOptions && optionsLoader.isLoading ? (
+ <div className="space-y-1 p-1">
+ {[...Array(5)].map((_, i) => (
+ <div
+ key={i}
+ className={cn(
+ "h-8 animate-pulse rounded",
+ theme.surface.mutedSubtle
+ )}
+ />
+ ))}
+ </div>
+ ) : null}
+
+ {lazyOptions && optionsLoader.error ? (
+ <div className="p-3 space-y-2">
+ <div className="flex items-center gap-2 text-destructive text-sm">
+ <AlertCircle className="size-4 shrink-0" />
+ <span>Failed to load options</span>
+ </div>
+ <button
+ onClick={optionsLoader.reset}
+ className={cn(
+ "text-xs underline text-muted-foreground hover:text-foreground"
+ )}
+ >
+ Retry
+ </button>
+ </div>
+ ) : null}
+
+ {!lazyOptions || !optionsLoader.isLoading ? (
+ <>
  <CommandEmpty>{emptyMessage}</CommandEmpty>
  <CommandGroup>
- {options.length === 0 ? (
+ {displayOptions.length === 0 && !lazyOptions ? (
  <CommandItem
  value="__no_data__"
  disabled
@@ -220,6 +317,14 @@ export function MultiSelect({
  </CommandItem>
  )}
  </CommandGroup>
+
+ {lazyOptions && optionsLoader.isLoadingMore ? (
+ <div className="p-2 text-center text-sm text-muted-foreground">
+ Loading more...
+ </div>
+ ) : null}
+ </>
+ ) : null}
  </CommandList>
  </Command>
  </PopoverContent>

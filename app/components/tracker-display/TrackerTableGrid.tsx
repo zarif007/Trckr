@@ -54,6 +54,15 @@ import {
 } from "./edit-mode";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { useTrackerDataApi } from "./tracker-data-api-context";
+import {
+  isGridDataPaginated,
+  effectivePaginatedPageSize,
+} from "@/lib/grid-data-loading";
+import {
+  usePaginatedGridData,
+  rowPayloadForPatch,
+} from "@/lib/tracker-grid-rows";
 
 const EMPTY_ROWS: Array<Record<string, unknown>> = [];
 
@@ -113,10 +122,6 @@ function TrackerTableGridInner({
     () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
     [gridDataForThisGrid, gridData, grid.id],
   );
-  const fullGridData = useMemo(
-    () => ({ ...gridData, [grid.id]: thisGridRows }),
-    [gridData, grid.id, thisGridRows],
-  );
   const trackerOptionsFromContext = useTrackerOptionsContext();
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp;
   const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId;
@@ -131,13 +136,50 @@ function TrackerTableGridInner({
     onSchemaChange,
     trackerSchemaId: editTrackerSchemaId,
   } = useEditMode();
+  const { trackerSchemaId: dataApiTrackerId, gridDataBranchName } =
+    useTrackerDataApi();
+  const canEditLayout = editMode && !!schema && !!onSchemaChange;
+  const gridIsPaginatedCapable =
+    isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
+  /** Server-driven table UI (pagination, totals); off in layout edit so TanStack paginates locally. */
+  const paginatedDisplay = gridIsPaginatedCapable && !canEditLayout;
+  /** PATCH/create/delete via row API whenever the visible rows come from that fetch (omitted snapshot). */
+  const mutateRowsViaRowApi =
+    gridIsPaginatedCapable &&
+    (paginatedDisplay || (canEditLayout && thisGridRows.length === 0));
+
+  const pSize = effectivePaginatedPageSize(grid);
+  const pg = usePaginatedGridData({
+    trackerId: dataApiTrackerId,
+    gridSlug: grid.id,
+    branchName: gridDataBranchName,
+    initialPageSize: pSize,
+    enabled: gridIsPaginatedCapable,
+  });
+
+  const rows = useMemo((): Array<Record<string, unknown>> => {
+    if (!isGridDataPaginated(grid)) return thisGridRows;
+    if (paginatedDisplay) return pg.rows as Array<Record<string, unknown>>;
+    if (canEditLayout && thisGridRows.length > 0) return thisGridRows;
+    return pg.rows as Array<Record<string, unknown>>;
+  }, [
+    grid,
+    paginatedDisplay,
+    canEditLayout,
+    thisGridRows,
+    pg.rows,
+  ]);
+
+  const fullGridData = useMemo(
+    () => ({ ...gridData, [grid.id]: rows }),
+    [gridData, grid.id, rows],
+  );
+
   const { remove, move, add, reorder } = useLayoutActions(
     grid.id,
     schema,
     onSchemaChange,
   );
-  const canEditLayout = editMode && !!schema && !!onSchemaChange;
-
   const fieldsById = useMemo(() => {
     const map = new Map<string, TrackerField>();
     fields.forEach((field) => map.set(field.id, field));
@@ -186,7 +228,6 @@ function TrackerTableGridInner({
     [uniqueFieldLayoutNodes, fieldsById],
   );
 
-  const rows = useMemo(() => thisGridRows, [thisGridRows]);
   const runtimeForDynamicOptions = useMemo(
     () => ({
       currentGridId: grid.id,
@@ -551,13 +592,48 @@ function TrackerTableGridInner({
           optionsGridName = gridsById.get(optionsGridId)?.name ?? optionsGridId;
         }
       }
+      let lazyOptions: {
+        trackerId: string;
+        gridId: string;
+        labelField: string;
+        valueField?: string;
+        branchName?: string;
+      } | undefined;
+      let preSelectedValues: string[] | undefined;
+
+      if (binding?.optionsGrid && optionsGridId) {
+        const shouldUseLazyLoading =
+          sourceId || (opts && opts.length > 50);
+
+        if (shouldUseLazyLoading) {
+          const { fieldId: labelFieldId } = parsePath(binding.labelField);
+          const valueFieldId = getValueFieldIdFromBinding(
+            binding,
+            selectFieldPath,
+          );
+          const targetTrackerId = sourceId || trackerContext?.trackerSchemaId;
+
+          if (targetTrackerId && labelFieldId) {
+            lazyOptions = {
+              trackerId: targetTrackerId,
+              gridId: optionsGridId,
+              labelField: labelFieldId,
+              valueField: valueFieldId || undefined,
+              branchName: "main",
+            };
+          }
+        }
+      }
+
       meta[field.id] = {
         name: field.ui.label,
         type: field.dataType,
-        options: opts?.map((o) => ({
-          id: o.id ?? String(o.value ?? ""),
-          label: o.label ?? "",
-        })),
+        options: lazyOptions
+          ? undefined
+          : opts?.map((o) => ({
+              id: o.id ?? String(o.value ?? ""),
+              label: o.label ?? "",
+            })),
         config: field.config,
         validations: validations?.[`${grid.id}.${field.id}`],
         calculation: calculations?.[`${grid.id}.${field.id}`],
@@ -565,6 +641,8 @@ function TrackerTableGridInner({
         onAddOption,
         getBindingUpdatesFromRow,
         optionsGridName,
+        lazyOptions,
+        preSelectedValues,
       };
     });
     return meta;
@@ -590,6 +668,64 @@ function TrackerTableGridInner({
 
   const handleCellUpdate = useCallback(
     (rowIndex: number, columnId: string, value: unknown) => {
+      if (mutateRowsViaRowApi) {
+        const row = rows[rowIndex] as Record<string, unknown> | undefined;
+        const rid = row?._rowId;
+        if (typeof rid !== "string") return;
+        let mergedAccum: Record<string, unknown> = { ...row, [columnId]: value };
+
+        const nextSlice = rows.map((r, i) =>
+          i === rowIndex ? mergedAccum : (r as Record<string, unknown>),
+        );
+        const tempFull: Record<string, Array<Record<string, unknown>>> = {
+          ...(gridData ?? {}),
+          [grid.id]: nextSlice,
+        };
+
+        const field = fieldsById.get(columnId);
+        if (
+          field &&
+          (field.dataType === "options" || field.dataType === "multiselect")
+        ) {
+          const binding = bindingByFieldId.get(columnId);
+          if (binding?.fieldMappings.length) {
+            const selectFieldPath = `${grid.id}.${columnId}`;
+            const optionRow = findOptionRow(
+              tempFull,
+              binding,
+              value,
+              selectFieldPath,
+              foreignGridDataBySchemaId,
+            );
+            if (optionRow) {
+              const updates = applyBindings(
+                binding,
+                optionRow,
+                selectFieldPath,
+              );
+              for (const update of updates) {
+                const { gridId: targetGridId, fieldId: targetFieldId } =
+                  parsePath(update.targetPath);
+                if (targetGridId === grid.id && targetFieldId) {
+                  mergedAccum = {
+                    ...mergedAccum,
+                    [targetFieldId]: update.value,
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        pg.updateRowLocal(String(rid), () => mergedAccum);
+        void pg
+          .patchRowOnServer(String(rid), rowPayloadForPatch(mergedAccum))
+          .catch(() => {
+            pg.refetch();
+          });
+        return;
+      }
+
       if (!onUpdate) return;
 
       onUpdate(rowIndex, columnId, value);
@@ -632,14 +768,48 @@ function TrackerTableGridInner({
       }
     },
     [
+      mutateRowsViaRowApi,
+      rows,
+      pg,
+      grid.id,
+      gridData,
       bindingByFieldId,
       fieldsById,
-      grid.id,
       fullGridData,
       foreignGridDataBySchemaId,
       onCrossGridUpdate,
       onUpdate,
     ],
+  );
+
+  const handlePaginatedAdd = useCallback(
+    async (newRow: Record<string, unknown>) => {
+      try {
+        const created = await pg.createRowOnServer(newRow);
+        pg.prependRowLocal(created);
+      } catch {
+        pg.refetch();
+      }
+    },
+    [pg],
+  );
+
+  const handlePaginatedDelete = useCallback(
+    (indices: number[]) => {
+      const ids = indices
+        .map((i) => String((rows[i] as Record<string, unknown>)?._rowId ?? ""))
+        .filter((s) => s.length > 0);
+      if (ids.length === 0) return;
+      void pg.deleteRowsOnServer(ids).then(
+        () => {
+          pg.removeRowsLocal(ids);
+        },
+        () => {
+          pg.refetch();
+        },
+      );
+    },
+    [pg, rows],
   );
 
   const getBindingUpdates = useCallback(
@@ -744,8 +914,21 @@ function TrackerTableGridInner({
   if (tableFields.length === 0)
     return <div className="p-4 text-red-500">Missing Field Definitions</div>;
 
+  const paginationState =
+    paginatedDisplay
+      ? {
+          pageIndex: pg.pageIndex,
+          pageSize: pg.pageSize,
+        }
+      : undefined;
+
   const tableContent = (
     <>
+      {gridIsPaginatedCapable && pg.error ? (
+        <div className="mb-2 rounded-sm border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {pg.error}
+        </div>
+      ) : null}
       {canEditLayout && (
         <AddColumnOrFieldDialog
           open={addColumnOpen}
@@ -777,8 +960,10 @@ function TrackerTableGridInner({
         hiddenColumns={[...hiddenColumnIds]}
         getFieldOverridesForAdd={getFieldOverridesForAdd}
         onCellUpdate={handleCellUpdate}
-        onAddEntry={onAddEntry}
-        onDeleteEntries={onDeleteEntries}
+        onAddEntry={mutateRowsViaRowApi ? handlePaginatedAdd : onAddEntry}
+        onDeleteEntries={
+          mutateRowsViaRowApi ? handlePaginatedDelete : onDeleteEntries
+        }
         getBindingUpdates={getBindingUpdates}
         config={grid.config}
         gridId={grid.id}
@@ -786,19 +971,50 @@ function TrackerTableGridInner({
         gridData={fullGridData}
         addable={
           !readOnly &&
-          onAddEntry != null &&
+          (mutateRowsViaRowApi || onAddEntry != null) &&
           (grid.config?.isRowAddAble ?? grid.config?.addable ?? true) !== false
         }
         editable={!readOnly && grid.config?.isRowEditAble !== false}
         deletable={
           !readOnly &&
-          onDeleteEntries != null &&
+          (mutateRowsViaRowApi || onDeleteEntries != null) &&
           (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !==
             false
         }
         editLayoutAble={grid.config?.isEditAble !== false}
-        pageSize={grid.config?.pageSize}
-        pageSizeOptions={grid.config?.pageSizeOptions}
+        pageSize={paginatedDisplay ? pg.pageSize : grid.config?.pageSize}
+        pageSizeOptions={
+          grid.config?.pageSizeOptions ??
+          (paginatedDisplay ? [10, 25, 50] : undefined)
+        }
+        manualPagination={paginatedDisplay}
+        pageCount={paginatedDisplay ? pg.pageCount : undefined}
+        pagination={paginationState}
+        onPaginationChange={
+          paginatedDisplay
+            ? (updater) => {
+                const next =
+                  typeof updater === "function"
+                    ? updater({
+                        pageIndex: pg.pageIndex,
+                        pageSize: pg.pageSize,
+                      })
+                    : updater;
+                if (next.pageSize !== pg.pageSize) {
+                  pg.setPageSize(next.pageSize);
+                }
+                if (next.pageIndex !== pg.pageIndex) {
+                  pg.setPageIndex(next.pageIndex);
+                }
+              }
+            : undefined
+        }
+        totalRows={paginatedDisplay ? pg.total : undefined}
+        isLoading={
+          gridIsPaginatedCapable &&
+          pg.loading &&
+          (paginatedDisplay || thisGridRows.length === 0)
+        }
         defaultSort={grid.config?.defaultSort}
         entryWays={entryWays}
       />
