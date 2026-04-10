@@ -117,7 +117,12 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
 
   const saveTrackerData = useCallback(
     async (
-      options: { formStatus?: string | null; data?: GridDataSnapshot } = {},
+      options: {
+        formStatus?: string | null;
+        data?: GridDataSnapshot;
+        /** When true, follow `orchestration.effects.redirect` after a successful save (explicit user actions only). */
+        applyOrchestrationRedirect?: boolean;
+      } = {},
     ) => {
       if (!trackerId) return;
       const rawData = options.data ?? trackerDataRef.current?.() ?? {};
@@ -138,6 +143,20 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
               ? saved.error
               : `Failed to save (${res.status})`;
           throw new Error(msg);
+        }
+        if (options.applyOrchestrationRedirect === true) {
+          const red = (
+            saved as {
+              orchestration?: { effects?: { redirect?: { url?: string } } };
+            }
+          )?.orchestration?.effects?.redirect?.url;
+          if (
+            typeof red === "string" &&
+            red.length > 0 &&
+            typeof window !== "undefined"
+          ) {
+            window.location.assign(red);
+          }
         }
         if (saved?.id && saved?.data) {
           const grids = schemaRef.current?.grids as TrackerGrid[] | undefined;
@@ -334,7 +353,12 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       }
       try {
         await saveTrackerData(
-          persistOnly ? {} : { formStatus: action.statusTag },
+          persistOnly
+            ? { applyOrchestrationRedirect: true }
+            : {
+                formStatus: action.statusTag,
+                applyOrchestrationRedirect: true,
+              },
         );
         toast(action.label, {
           description: persistOnly ? "Saved" : `Status: ${action.statusTag}`,

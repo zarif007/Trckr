@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createGridRow,
   deleteTrackerDataRow,
@@ -46,6 +46,16 @@ export interface UsePaginatedGridDataResult {
   createRowOnServer: (data: Record<string, unknown>) => Promise<PaginatedGridRow>;
 }
 
+const MAX_GRID_MISSING_RETRIES = 20;
+const GRID_MISSING_RETRY_MS = 1600;
+
+function isTransientGridNotFound(status: number, message: string | null): boolean {
+  if (status !== 404 || message == null) return false;
+  return (
+    message === "Grid not found" || message.includes("Grid not found")
+  );
+}
+
 export function usePaginatedGridData(
   options: UsePaginatedGridDataOptions,
 ): UsePaginatedGridDataResult {
@@ -66,6 +76,8 @@ export function usePaginatedGridData(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const gridMissingRetryRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const setPageSize = useCallback((n: number) => {
     setPageSizeState(clampGridRowsLimit(n));
@@ -73,12 +85,17 @@ export function usePaginatedGridData(
   }, []);
 
   const refetch = useCallback(() => {
+    gridMissingRetryRef.current = 0;
     setReloadToken((t) => t + 1);
   }, []);
 
   useEffect(() => {
     setPageSizeState(clampGridRowsLimit(initialPageSize));
   }, [initialPageSize]);
+
+  useEffect(() => {
+    gridMissingRetryRef.current = 0;
+  }, [enabled, trackerId, gridSlug, branchName, pageIndex, pageSize]);
 
   useEffect(() => {
     if (!enabled || !trackerId) {
@@ -110,9 +127,34 @@ export function usePaginatedGridData(
         );
         if (cancelled) return;
         if (!result.ok) {
+          const msg = result.errorMessage ?? null;
+          if (
+            isTransientGridNotFound(result.status, msg) &&
+            gridMissingRetryRef.current < MAX_GRID_MISSING_RETRIES
+          ) {
+            gridMissingRetryRef.current += 1;
+            setRows([]);
+            setTotal(0);
+            setError(null);
+            if (retryTimerRef.current != null) {
+              clearTimeout(retryTimerRef.current);
+            }
+            retryTimerRef.current = setTimeout(() => {
+              retryTimerRef.current = null;
+              if (!cancelled) setReloadToken((t) => t + 1);
+            }, GRID_MISSING_RETRY_MS);
+            return;
+          }
+          if (isTransientGridNotFound(result.status, msg)) {
+            setError(
+              "Grid not found on server — save the tracker schema or refresh the page.",
+            );
+            return;
+          }
           setError(result.errorMessage ?? "Failed to load rows");
           return;
         }
+        gridMissingRetryRef.current = 0;
         setRows(result.rows);
         setTotal(result.total);
       } catch (e) {
@@ -128,6 +170,10 @@ export function usePaginatedGridData(
     return () => {
       cancelled = true;
       ac.abort();
+      if (retryTimerRef.current != null) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
     };
   }, [
     enabled,

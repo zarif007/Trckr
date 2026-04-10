@@ -9,12 +9,18 @@ import type {
   WorkflowExecutionContext,
 } from "@/lib/workflows/types";
 import { prisma, Prisma } from "@/lib/db";
+import { getPrimaryGridSlug } from "@/lib/workflows/resolve-primary-grid";
 
 export async function executeActionNode(
   node: ActionNode,
   context: WorkflowExecutionContext,
 ): Promise<Record<string, unknown>> {
-  const { actionType, trackerSchemaId, gridId } = node.config;
+  const { actionType, trackerSchemaId } = node.config;
+
+  const gridSlug =
+    node.config.gridId != null && node.config.gridId !== ""
+      ? node.config.gridId
+      : await getPrimaryGridSlug(trackerSchemaId);
 
   let mappedData: Record<string, unknown> = {};
   if (
@@ -27,7 +33,7 @@ export async function executeActionNode(
   }
 
   if (actionType === "create_row") {
-    return executeCreateRow(trackerSchemaId, gridId, mappedData);
+    return executeCreateRow(trackerSchemaId, gridSlug, mappedData);
   }
 
   if (actionType === "update_row") {
@@ -36,7 +42,7 @@ export async function executeActionNode(
     }
     return executeUpdateRow(
       trackerSchemaId,
-      gridId,
+      gridSlug,
       mappedData,
       node.config.whereClause,
       context,
@@ -49,7 +55,7 @@ export async function executeActionNode(
     }
     return executeDeleteRow(
       trackerSchemaId,
-      gridId,
+      gridSlug,
       node.config.whereClause,
       context,
     );
@@ -119,8 +125,8 @@ async function executeCreateRow(
   const branchName = "main";
   const newRowId = crypto.randomUUID();
   const rowPayload: Record<string, unknown> = {
-    id: newRowId,
     ...mappedData,
+    id: newRowId,
   };
   const sortOrder = await nextSortOrder(
     trackerSchemaId,

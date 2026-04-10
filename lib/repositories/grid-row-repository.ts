@@ -173,7 +173,11 @@ export async function listGridRows(
 export async function listAllGridRowsForTracker(
   trackerId: string,
   userId: string,
-  options: { branchName?: string; excludeGridIds?: string[] } = {},
+  options: {
+    branchName?: string;
+    excludeGridIds?: string[];
+    limit?: number;
+  } = {},
 ) {
   const tracker = await prisma.trackerSchema.findFirst({
     where: { id: trackerId, project: { userId } },
@@ -191,6 +195,7 @@ export async function listAllGridRowsForTracker(
       ...(exclude.length > 0 ? { gridId: { notIn: exclude } } : {}),
     },
     orderBy: { sortOrder: "asc" },
+    ...(options.limit ? { take: options.limit } : {}),
     include: authorInclude,
   });
 }

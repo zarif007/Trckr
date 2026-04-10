@@ -61,8 +61,8 @@ Record WorkflowRun and WorkflowRunStep in DB
 
 **Auto-trigger**: Workflows execute automatically when tracker data changes
 
-- Hooked into `app/api/trackers/[id]/data/route.ts` POST handler (create/upsert)
-- Hooked into `app/api/trackers/[id]/data/[dataId]/route.ts` PATCH handler (update)
+- Hooked into `app/api/trackers/[id]/data/route.ts` POST (bulk save), `data/[dataId]` PATCH/DELETE, and `grids/[gridSlug]/rows` POST
+- Only **workflow schema version 2** runs from these hooks; V1 workflows stay read-only in the builder until rebuilt
 - Calls `dispatchTrackerEventAfterSave()` after successful data save
 
 **Manual trigger**: Workflows can be triggered manually via API
@@ -315,6 +315,18 @@ vitest run lib/workflows/**/*.test.ts
 ```
 
 End-to-end test scenarios are documented in the main implementation plan.
+
+## Extension catalog (V2 runway)
+
+Registered in `lib/workflows/registries/` for palette labels and future dispatch:
+
+| Triggers (stubs) | Actions (stubs) |
+|------------------|-------------------|
+| `status_transition`, `scheduled`, `webhook`, `related_tracker_change` | `upsert_by_key`, `notification`, `assignment`, `webhook_call`, `approval_gate` |
+
+Core triggers: `row_create`, `row_update`, `row_delete` (+ `field_change` when diff wiring is complete). Core actions: `create_row`, `update_row`, `delete_row`, and the `redirect` node for inline URL effects.
+
+**Scope policy**: `canExecuteWorkflowScoped` in `registries/scope-policy.ts` defaults to allow-all; replace via `setWorkflowScopePolicy` for tracker/module/project guardrails.
 
 ## Future Enhancements
 

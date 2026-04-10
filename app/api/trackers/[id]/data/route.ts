@@ -13,6 +13,8 @@ import {
   createGridRow,
   upsertGridRows,
 } from "@/lib/repositories/grid-row-repository";
+import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
+import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
 import { NodeType } from "@prisma/client";
 
@@ -69,6 +71,10 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const branchName = searchParams.get("branch") ?? "main";
   const viewMode = searchParams.get("view");
+  const preview = searchParams.get("preview") === "true";
+  const previewLimit = preview
+    ? Math.min(parseInt(searchParams.get("limit") ?? "7", 10), 20)
+    : undefined;
   const omitGridSlugs = new Set(
     (searchParams.get("omitGridData") ?? "")
       .split(",")
@@ -143,6 +149,7 @@ export async function GET(
   const rows = await listAllGridRowsForTracker(trackerId, authResult.user.id, {
     branchName,
     excludeGridIds: omitGridIds.length > 0 ? omitGridIds : undefined,
+    limit: previewLimit,
   });
   if (!rows) return notFound("Tracker not found");
 
@@ -210,6 +217,13 @@ export async function POST(
   const statusTag = body.formStatus ?? null;
 
   if (tracker.instance === "MULTI") {
+    const oldGrids = await loadTrackerSnapshotGrids(
+      trackerId,
+      authResult.user.id,
+      gridIdToSlug,
+      branchName,
+    );
+
     let firstRowId: string | null = null;
     const createdRows: Array<{ id: string; gridId: string; data: unknown; sortOrder: number; updatedAt: Date }> = [];
 
@@ -235,14 +249,40 @@ export async function POST(
     }
 
     const { data: responseData, updatedAt } = buildSnapshotFromRows(createdRows, gridIdToSlug);
+    const newGrids = await loadTrackerSnapshotGrids(
+      trackerId,
+      authResult.user.id,
+      gridIdToSlug,
+      branchName,
+    );
+    const orchestration = await dispatchTrackerEventAfterSave(
+      trackerId,
+      { grids: newGrids },
+      { grids: oldGrids },
+      authResult.user.id,
+      false,
+      { interactive: true },
+    );
+
     return jsonOk({
       id: firstRowId ?? trackerId,
       data: responseData,
       label: body.label ?? null,
       updatedAt,
       formStatus: statusTag,
+      orchestration: {
+        effects: orchestration.inlineEffects,
+        continuationScheduled: orchestration.continuationScheduled,
+      },
     });
   }
+
+  const oldGrids = await loadTrackerSnapshotGrids(
+    trackerId,
+    authResult.user.id,
+    gridIdToSlug,
+    branchName,
+  );
 
   for (const [gridSlug, rows] of Object.entries(snapshot)) {
     const gridId = gridSlugToId.get(gridSlug);
@@ -270,11 +310,24 @@ export async function POST(
     gridIdToSlug,
   );
 
+  const orchestration = await dispatchTrackerEventAfterSave(
+    trackerId,
+    { grids: responseData },
+    { grids: oldGrids },
+    authResult.user.id,
+    false,
+    { interactive: true },
+  );
+
   return jsonOk({
     id: trackerId,
     data: responseData,
     label: body.label ?? null,
     updatedAt,
     formStatus: statusTag,
+    orchestration: {
+      effects: orchestration.inlineEffects,
+      continuationScheduled: orchestration.continuationScheduled,
+    },
   });
 }

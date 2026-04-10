@@ -13,7 +13,7 @@ import {
   NodeContextMenu,
 } from "./shared";
 
-export const ConditionNodeUI = memo(function ConditionNodeUI({
+export const RedirectNodeUI = memo(function RedirectNodeUI({
   id,
   data,
 }: {
@@ -21,10 +21,14 @@ export const ConditionNodeUI = memo(function ConditionNodeUI({
   data: WorkflowNodeData;
 }) {
   const nodeData = data.node;
-  const style = NODE_STYLES.condition;
+  const style = NODE_STYLES.redirect;
+  const url =
+    nodeData?.config?.kind === "url"
+      ? String(nodeData.config.value ?? "").slice(0, 48)
+      : "";
 
   return (
-    <div className={cn(NODE_BASE_CLASSES, "relative w-[200px]")}>
+    <div className={cn(NODE_BASE_CLASSES, "w-[200px]")}>
       <div className={cn("h-[3px] w-full", style.accent)} />
       <div className={NODE_HEADER_CLASSES}>
         <span className={cn(NODE_ICON_CLASSES, style.iconBg)}>
@@ -36,8 +40,8 @@ export const ConditionNodeUI = memo(function ConditionNodeUI({
         <NodeContextMenu id={id} data={data} />
       </div>
       <div className={NODE_BODY_CLASSES}>
-        <div className="text-[11px] text-muted-foreground">
-          Branches execution path
+        <div className="text-[11px] text-muted-foreground truncate" title={url}>
+          {url || "Set redirect URL"}
         </div>
       </div>
       <Handle
@@ -49,21 +53,9 @@ export const ConditionNodeUI = memo(function ConditionNodeUI({
       <Handle
         type="source"
         position={Position.Bottom}
-        id="true"
-        className="!h-3.5 !w-3.5 !rounded-full !border-2 !bg-background !border-success/50 hover:!border-success hover:!bg-success/20 transition-all duration-150"
+        id="out"
+        className="!h-3.5 !w-3.5 !rounded-full !border-2 !bg-background !border-muted-foreground/30 hover:!border-primary hover:!bg-primary/20 transition-all duration-150"
       />
-      <div className="absolute bottom-1 right-2 text-[10px] font-medium text-success/70">
-        True
-      </div>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="false"
-        className="!h-3.5 !w-3.5 !rounded-full !border-2 !bg-background !border-destructive/50 hover:!border-destructive hover:!bg-destructive/20 transition-all duration-150"
-      />
-      <div className="absolute bottom-1 left-2 text-[10px] font-medium text-destructive/70">
-        False
-      </div>
     </div>
   );
 });

@@ -641,6 +641,10 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
   );
   // True during all agent phases (manager, master-data, builder) — used for the progress bar.
   const isAgentRunning = isLoading;
+  /** Row API looks up grids in DB; disable while agent runs or schema autosave is persisting new grid nodes. */
+  const disablePaginatedGridRowApi =
+    isAgentRunning ||
+    (allowSchemaAutoSave && schemaSaveStatus === "saving");
   const hasAnyAssistantResponse = messages.some((m) => m.role === "assistant");
   const showStatusPanel =
     Boolean(error) ||
@@ -742,6 +746,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     canEditSchema,
     isStreamingTracker,
     isAgentRunning,
+    disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
     undoable,

@@ -141,6 +141,7 @@ export function TrackerDisplayInline({
   projectId,
   onForeignBindingNavUiChange,
   gridDataBranchName = "main",
+  disablePaginatedGridRowApi = false,
 }: TrackerDisplayProps) {
   const effectiveSections = sections ?? [];
   const effectiveGrids = grids ?? [];
@@ -175,7 +176,7 @@ export function TrackerDisplayInline({
     foreignSourcesSaving,
     foreignPersistError,
     dismissForeignPersistError,
-  } = useForeignBindingSources(bindingSourceIds);
+  } = useForeignBindingSources(bindingSourceIds, gridDataBranchName);
 
   const onForeignBindingNavRef = useRef(onForeignBindingNavUiChange);
   onForeignBindingNavRef.current = onForeignBindingNavUiChange;
@@ -225,18 +226,18 @@ export function TrackerDisplayInline({
     () =>
       editMode
         ? {
-            tabs,
-            sections,
-            grids,
-            fields,
-            formActions,
-            layoutNodes,
-            bindings,
-            validations,
-            calculations,
-            fieldRulesV2,
-            dynamicOptions,
-          }
+          tabs,
+          sections,
+          grids,
+          fields,
+          formActions,
+          layoutNodes,
+          bindings,
+          validations,
+          calculations,
+          fieldRulesV2,
+          dynamicOptions,
+        }
         : undefined,
     [
       editMode,
@@ -370,7 +371,9 @@ export function TrackerDisplayInline({
 
   return (
     <TrackerDataApiProvider
-      trackerSchemaId={trackerSchemaId}
+      trackerSchemaId={
+        disablePaginatedGridRowApi ? undefined : trackerSchemaId
+      }
       gridDataBranchName={gridDataBranchName}
     >
       <TrackerOptionsProvider

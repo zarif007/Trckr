@@ -13,6 +13,10 @@ interface TriggerConfigProps {
   node: TriggerNode;
   availableTrackers: { schemaId: string; name: string }[];
   availableGrids: { gridId: string; label: string }[];
+  /** V2: tracker-wide events; grid selector hidden. */
+  isV2?: boolean;
+  /** Fields on the trigger’s tracker (for optional watch list). */
+  watchFieldOptions?: { fieldId: string; label: string }[];
   onChange: (node: TriggerNode) => void;
 }
 
@@ -20,6 +24,8 @@ export function TriggerConfig({
   node,
   availableTrackers,
   availableGrids,
+  isV2 = false,
+  watchFieldOptions = [],
   onChange,
 }: TriggerConfigProps) {
   const updateConfig = <K extends keyof TriggerNode["config"]>(
@@ -27,6 +33,14 @@ export function TriggerConfig({
     value: TriggerNode["config"][K],
   ) => {
     onChange({ ...node, config: { ...node.config, [key]: value } });
+  };
+
+  const toggleWatchField = (fieldId: string) => {
+    const cur = node.config.watchFields ?? [];
+    const next = cur.includes(fieldId)
+      ? cur.filter((f) => f !== fieldId)
+      : [...cur, fieldId];
+    updateConfig("watchFields", next.length ? next : undefined);
   };
 
   return (
@@ -47,21 +61,30 @@ export function TriggerConfig({
         </select>
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-foreground/70">Grid</label>
-        <select
-          value={node.config.gridId}
-          onChange={(e) => updateConfig("gridId", e.target.value)}
-          className="mt-1 w-full rounded-sm border border-input bg-transparent px-3 py-2 text-sm focus:border-ring focus:outline-none"
-        >
-          <option value="">Select grid...</option>
-          {availableGrids.map((g) => (
-            <option key={g.gridId} value={g.gridId}>
-              {g.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {!isV2 && (
+        <div>
+          <label className="text-xs font-medium text-foreground/70">Grid</label>
+          <select
+            value={node.config.gridId ?? ""}
+            onChange={(e) => updateConfig("gridId", e.target.value)}
+            className="mt-1 w-full rounded-sm border border-input bg-transparent px-3 py-2 text-sm focus:border-ring focus:outline-none"
+          >
+            <option value="">Select grid...</option>
+            {availableGrids.map((g) => (
+              <option key={g.gridId} value={g.gridId}>
+                {g.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {isV2 && (
+        <p className="text-xs text-muted-foreground">
+          V2 listens on all grids for this tracker. Row identity still includes grid
+          context at runtime.
+        </p>
+      )}
 
       <div>
         <label className="text-xs font-medium text-foreground/70">Event</label>
@@ -82,6 +105,32 @@ export function TriggerConfig({
           ))}
         </div>
       </div>
+
+      {(isV2 || node.config.event === "field_change") &&
+        watchFieldOptions.length > 0 && (
+          <div>
+            <label className="text-xs font-medium text-foreground/70">
+              Watch fields (optional)
+            </label>
+            <p className="mt-0.5 text-[11px] text-muted-foreground mb-2">
+              For updates, only run when one of these fields changed.
+            </p>
+            <ul className="max-h-36 space-y-1 overflow-y-auto rounded-sm border border-input p-2">
+              {watchFieldOptions.map((f) => (
+                <li key={f.fieldId}>
+                  <label className="flex cursor-pointer items-center gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      checked={(node.config.watchFields ?? []).includes(f.fieldId)}
+                      onChange={() => toggleWatchField(f.fieldId)}
+                    />
+                    <span>{f.label}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
     </div>
   );
 }

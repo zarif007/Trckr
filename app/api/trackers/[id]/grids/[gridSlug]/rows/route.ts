@@ -12,6 +12,8 @@ import {
   createGridRow,
   listGridRows,
 } from "@/lib/repositories/grid-row-repository";
+import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
+import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
 import { NodeType } from "@prisma/client";
 
@@ -138,6 +140,19 @@ export async function POST(
   const gridNode = tracker.nodes[0];
   if (!gridNode) return notFound("Grid not found");
 
+  const allGridNodes = await prisma.trackerNode.findMany({
+    where: { trackerId, type: NodeType.GRID },
+    select: { id: true, slug: true },
+  });
+  const gridIdToSlug = new Map(allGridNodes.map((n) => [n.id, n.slug]));
+  const branchName = body.branchName ?? "main";
+  const oldGrids = await loadTrackerSnapshotGrids(
+    trackerId,
+    authResult.user.id,
+    gridIdToSlug,
+    branchName,
+  );
+
   const created = await createGridRow({
     trackerId,
     gridId: gridNode.id,
@@ -145,12 +160,31 @@ export async function POST(
     data: body.data as GridRowData,
     schemaVersion: String(tracker.schemaVersion),
     statusTag: body.formStatus ?? null,
-    branchName: body.branchName ?? "main",
+    branchName,
   });
   if (!created) return notFound("Tracker not found");
+
+  const newGrids = await loadTrackerSnapshotGrids(
+    trackerId,
+    authResult.user.id,
+    gridIdToSlug,
+    branchName,
+  );
+  const orchestration = await dispatchTrackerEventAfterSave(
+    trackerId,
+    { grids: newGrids },
+    { grids: oldGrids },
+    authResult.user.id,
+    false,
+    { interactive: true },
+  );
 
   return jsonOk({
     row: rowToClientShape(created, gridNode.slug),
     gridSlug: gridNode.slug,
+    orchestration: {
+      effects: orchestration.inlineEffects,
+      continuationScheduled: orchestration.continuationScheduled,
+    },
   });
 }

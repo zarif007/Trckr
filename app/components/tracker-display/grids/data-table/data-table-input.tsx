@@ -456,12 +456,12 @@ export function DataTableInput({
     case "field_mappings": {
       const mappings: FieldMapping[] = Array.isArray(value)
         ? value.filter(
-            (m): m is FieldMapping =>
-              m &&
-              typeof m === "object" &&
-              typeof (m as FieldMapping).from === "string" &&
-              typeof (m as FieldMapping).to === "string",
-          )
+          (m): m is FieldMapping =>
+            m &&
+            typeof m === "object" &&
+            typeof (m as FieldMapping).from === "string" &&
+            typeof (m as FieldMapping).to === "string",
+        )
         : [];
       const updateAt = (index: number, next: FieldMapping) => {
         const nextList = [...mappings];
@@ -640,9 +640,9 @@ export function DataTableInput({
         const current = Array.isArray(value)
           ? value.map((v) => String(v))
           : String(value ?? "")
-              .split(",")
-              .map((v) => v.trim())
-              .filter(Boolean);
+            .split(",")
+            .map((v) => v.trim())
+            .filter(Boolean);
         return (
           <MultiSelect
             options={options ?? []}

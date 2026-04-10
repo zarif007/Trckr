@@ -8,17 +8,51 @@
  */
 
 import { prisma } from "@/lib/db";
-import type { WorkflowSchema } from "@/lib/workflows/types";
+import type {
+  WorkflowInlineEffects,
+  WorkflowSchema,
+} from "@/lib/workflows/types";
+import { canExecuteWorkflowScoped } from "../registries/scope-policy";
 import { executeWorkflow } from "./engine";
+import { executeWorkflowHybrid } from "./execute-workflow-hybrid";
+import type { ScheduleBackgroundWork } from "./execute-workflow-hybrid";
 
 interface SnapshotData {
   grids?: Record<string, Record<string, unknown>[]>;
   [key: string]: unknown;
 }
 
+export interface DispatchOrchestrationOptions {
+  /** When true, use a short inline timeout and schedule slow runs via `after()`. */
+  interactive?: boolean;
+  inlineTimeoutMs?: number;
+  scheduleBackgroundWork?: ScheduleBackgroundWork;
+}
+
+export interface DispatchOrchestrationResult {
+  inlineEffects: WorkflowInlineEffects;
+  continuationScheduled: boolean;
+}
+
+const emptyDispatchResult: DispatchOrchestrationResult = {
+  inlineEffects: {},
+  continuationScheduled: false,
+};
+
+function mergeInlineEffects(
+  into: WorkflowInlineEffects,
+  next?: WorkflowInlineEffects,
+) {
+  if (!next) return;
+  if (next.redirect && !into.redirect) {
+    into.redirect = next.redirect;
+  }
+}
+
 /**
  * After a tracker data snapshot is saved, find and dispatch matching workflows.
  * Call this from the data save flow (POST/PATCH) AFTER the data is persisted.
+ * Only **version 2** workflows are executed from this path (V1 remains read-only in product).
  */
 export async function dispatchTrackerEventAfterSave(
   trackerSchemaId: string,
@@ -26,30 +60,77 @@ export async function dispatchTrackerEventAfterSave(
   oldData: SnapshotData | null,
   userId: string,
   isCreate: boolean,
-): Promise<void> {
+  options?: DispatchOrchestrationOptions,
+): Promise<DispatchOrchestrationResult> {
   const rowChanges = diffSnapshots(oldData, newData);
 
-  if (rowChanges.length === 0) return;
+  if (rowChanges.length === 0) return emptyDispatchResult;
 
   const workflows = await findMatchingWorkflows(trackerSchemaId);
-  if (workflows.length === 0) return;
+  if (workflows.length === 0) return emptyDispatchResult;
+
+  const aggregate: DispatchOrchestrationResult = {
+    inlineEffects: {},
+    continuationScheduled: false,
+  };
 
   for (const change of rowChanges) {
     const eventType = isCreate ? "row_create" : change.operation;
-    const matchingWorkflows = workflows.filter((wf) =>
-      hasTriggerForEvent(wf, eventType),
+    const matchingWorkflows = workflows.filter(
+      (wf) =>
+        isV2WorkflowRecord(wf) &&
+        hasTriggerForEvent(wf, eventType),
     );
 
     for (const wf of matchingWorkflows) {
-      await dispatchWorkflowForChange(
-        wf.id,
-        wf.schema as unknown as WorkflowSchema,
+      const schema = wf.schema as unknown as WorkflowSchema;
+      const triggerPayload = {
+        event: change.operation,
         trackerSchemaId,
-        change,
+        gridId: change.gridId,
+        rowId: change.rowId,
+        rowData: change.rowData,
+        changedFields: change.changedFields,
+        previousRowData: change.previousRowData,
+      };
+      const allowed = await canExecuteWorkflowScoped({
+        workflowId: wf.id,
+        projectId: wf.projectId,
+        moduleId: wf.moduleId ?? null,
         userId,
-      );
+        trigger: triggerPayload,
+      });
+      if (!allowed) continue;
+
+      try {
+        if (options?.interactive) {
+          const hybrid = await executeWorkflowHybrid(
+            wf.id,
+            schema,
+            triggerPayload,
+            {
+              inlineTimeoutMs: options.inlineTimeoutMs,
+              scheduleBackgroundWork: options.scheduleBackgroundWork,
+            },
+          );
+          if (hybrid.result) {
+            mergeInlineEffects(
+              aggregate.inlineEffects,
+              hybrid.result.inlineEffects,
+            );
+          }
+          aggregate.continuationScheduled ||= hybrid.continuationScheduled;
+        } else {
+          const result = await executeWorkflow(wf.id, schema, triggerPayload);
+          mergeInlineEffects(aggregate.inlineEffects, result.inlineEffects);
+        }
+      } catch {
+        // Execution engine records failures in WorkflowRun / WorkflowRunStep
+      }
     }
   }
+
+  return aggregate;
 }
 
 interface RowChange {
@@ -78,19 +159,21 @@ function diffSnapshots(
     const oldRows = (oldGrids[gridId] as Record<string, unknown>[]) ?? [];
     const newRows = (newGrids[gridId] as Record<string, unknown>[]) ?? [];
 
+    const rowStableId = (row: Record<string, unknown>) =>
+      String(row.id ?? row._rowId ?? "");
+
     const oldById = new Map<string, Record<string, unknown>>();
     for (const row of oldRows) {
-      const id = row.id as string;
+      const id = rowStableId(row);
       if (id) oldById.set(id, row);
     }
 
     const newById = new Map<string, Record<string, unknown>>();
     for (const row of newRows) {
-      const id = row.id as string;
+      const id = rowStableId(row);
       if (id) newById.set(id, row);
     }
 
-    // Added rows
     for (const [id, row] of newById) {
       if (!oldById.has(id)) {
         changes.push({
@@ -102,7 +185,6 @@ function diffSnapshots(
       }
     }
 
-    // Updated rows
     for (const [id, newRow] of newById) {
       const oldRow = oldById.get(id);
       if (oldRow) {
@@ -120,7 +202,6 @@ function diffSnapshots(
       }
     }
 
-    // Deleted rows
     for (const [id, oldRow] of oldById) {
       if (!newById.has(id)) {
         changes.push({
@@ -172,6 +253,14 @@ async function findMatchingWorkflows(trackerSchemaId: string) {
   );
 }
 
+function isV2WorkflowRecord(wf: { schema: unknown }): boolean {
+  return (
+    typeof wf.schema === "object" &&
+    wf.schema !== null &&
+    (wf.schema as { version?: number }).version === 2
+  );
+}
+
 function hasTriggerForEvent(
   wf: { schema: unknown },
   eventType: string,
@@ -183,26 +272,4 @@ function hasTriggerForEvent(
   return nodes.some(
     (n) => n.type === "trigger" && n.config?.event === eventType,
   );
-}
-
-async function dispatchWorkflowForChange(
-  workflowId: string,
-  schema: WorkflowSchema,
-  trackerSchemaId: string,
-  change: RowChange,
-  userId: string,
-): Promise<void> {
-  try {
-    await executeWorkflow(workflowId, schema, {
-      event: change.operation,
-      trackerSchemaId,
-      gridId: change.gridId,
-      rowId: change.rowId,
-      rowData: change.rowData,
-      changedFields: change.changedFields,
-      previousRowData: change.previousRowData,
-    });
-  } catch {
-    // Execution engine records failures in WorkflowRunStep
-  }
 }

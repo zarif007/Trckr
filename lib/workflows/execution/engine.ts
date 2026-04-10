@@ -6,30 +6,30 @@
 
 import { prisma, Prisma } from "@/lib/db";
 import type { WorkflowRunStatus } from "@prisma/client";
-import {
-  executeTriggerNode,
-} from "./node-executors/trigger";
-import {
-  executeConditionNode,
-} from "./node-executors/condition";
-import {
-  executeMapFieldsNode,
-} from "./node-executors/map-fields";
-import {
-  executeActionNode,
-} from "./node-executors/action";
+import { normalizeWorkflowEdges } from "@/lib/workflows/validation";
 import type {
+  WorkflowInlineEffects,
   WorkflowSchema,
   WorkflowNode,
   WorkflowEdge,
   WorkflowTriggerData,
   WorkflowExecutionContext,
 } from "@/lib/workflows/types";
+import { executeTriggerNode } from "./node-executors/trigger";
+import { executeConditionNode } from "./node-executors/condition";
+import { executeMapFieldsNode } from "./node-executors/map-fields";
+import { executeActionNode } from "./node-executors/action";
+import { executeRedirectNode } from "./node-executors/redirect";
+
+export interface WorkflowExecutionHooks {
+  onRunCreated?: (runId: string) => void;
+}
 
 export interface WorkflowExecutionResult {
   success: boolean;
   runId: string;
   error?: string;
+  inlineEffects?: WorkflowInlineEffects;
 }
 
 async function markRunStatus(
@@ -90,8 +90,10 @@ export async function executeWorkflow(
   workflowId: string,
   schema: WorkflowSchema,
   triggerData: WorkflowTriggerData,
+  hooks?: WorkflowExecutionHooks,
 ): Promise<WorkflowExecutionResult> {
-  const { nodes, edges } = schema;
+  const normalized = normalizeWorkflowEdges(schema);
+  const { nodes, edges } = normalized;
 
   const triggerNode = nodes.find(
     (n) => n.type === "trigger",
@@ -109,10 +111,13 @@ export async function executeWorkflow(
     },
   });
 
+  hooks?.onRunCreated?.(run.id);
+
   const context: WorkflowExecutionContext = {
     triggerData,
     mappedData: {},
     nodeData: {},
+    inlineEffects: {},
   };
 
   const adjacencyList = buildAdjacencyList(nodes, edges);
@@ -121,7 +126,12 @@ export async function executeWorkflow(
 
   try {
     executeTriggerNode(triggerNode, triggerData);
-    await createStep(run.id, triggerNode.id, "completed", triggerData as unknown as Record<string, unknown>);
+    await createStep(
+      run.id,
+      triggerNode.id,
+      "completed",
+      triggerData as unknown as Record<string, unknown>,
+    );
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Trigger validation failed";
@@ -147,9 +157,14 @@ export async function executeWorkflow(
       new Set<string>(),
     );
     await markRunStatus(run.id, "completed");
-    return { success: true, runId: run.id };
+    return {
+      success: true,
+      runId: run.id,
+      inlineEffects: context.inlineEffects,
+    };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Workflow execution failed";
+    const message =
+      err instanceof Error ? err.message : "Workflow execution failed";
     await markRunStatus(run.id, "failed", message);
     return { success: false, runId: run.id, error: message };
   }
@@ -176,7 +191,6 @@ async function dfsExecute(
   for (const { edge, node: targetNode } of targets) {
     if (!targetNode) continue;
 
-    // For condition nodes, follow the appropriate branch
     if (node.type === "condition") {
       const branchResult = context._lastConditionResult ?? null;
       delete context._lastConditionResult;
@@ -210,6 +224,9 @@ async function executeNode(
   runId: string,
 ): Promise<void> {
   switch (node.type) {
+    case "trigger": {
+      break;
+    }
     case "condition": {
       const branchResult = await executeConditionNode(node, context);
       context._lastConditionResult = branchResult;
@@ -245,9 +262,22 @@ async function executeNode(
       );
       break;
     }
+    case "redirect": {
+      const out = executeRedirectNode(node, context);
+      await createStep(
+        runId,
+        node.id,
+        "completed",
+        node.config as unknown as Record<string, unknown>,
+        out,
+      );
+      break;
+    }
   }
 }
 
-function conditionStepInput(node: Extract<WorkflowNode, { type: "condition" }>): Record<string, unknown> {
+function conditionStepInput(
+  node: Extract<WorkflowNode, { type: "condition" }>,
+): Record<string, unknown> {
   return { condition: node.config.condition as unknown };
 }

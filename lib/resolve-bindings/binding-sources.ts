@@ -13,7 +13,7 @@ export function collectOptionsSourceSchemaIds(
     if (!entry || typeof entry !== "object") continue;
     const sid =
       "optionsSourceSchemaId" in entry &&
-      typeof entry.optionsSourceSchemaId === "string"
+        typeof entry.optionsSourceSchemaId === "string"
         ? entry.optionsSourceSchemaId.trim()
         : "";
     if (!sid || isSelfBinding(sid) || (self && sid === self)) continue;

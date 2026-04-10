@@ -20,6 +20,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     effectiveDisplaySchema,
     isStreamingTracker,
     isAgentRunning,
+    disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
     undoable,
@@ -63,6 +64,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           setIsChatOpen={setIsChatOpen}
           isStreamingTracker={isStreamingTracker}
           isAgentRunning={isAgentRunning}
+          disablePaginatedGridRowApi={disablePaginatedGridRowApi}
           trackerDataRef={trackerDataRef}
           onGridDataChange={handleGridDataChange}
           handleSchemaChange={

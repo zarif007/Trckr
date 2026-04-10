@@ -248,4 +248,9 @@ export interface TrackerDisplayProps {
    * Used by paginated grids for GET/POST rows and row PATCH consistency.
    */
   gridDataBranchName?: string;
+  /**
+   * When true, paginated table/kanban rows are not fetched from the row API (snapshot / empty local state only).
+   * Use while the agent is updating schema or schema is saving so the DB is not ahead of the streamed client schema.
+   */
+  disablePaginatedGridRowApi?: boolean;
 }

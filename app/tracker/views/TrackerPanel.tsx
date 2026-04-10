@@ -128,6 +128,8 @@ interface TrackerPanelProps {
   onForeignBindingNavUiChange?: (ui: ForeignBindingNavUiState | null) => void;
   ownerScopeSettingsBanner?: OwnerScopeSettingsBanner;
   onImportData?: (data: GridDataSnapshot) => void;
+  /** When true, grid row API is off so preview does not 404 while schema is only on the client. */
+  disablePaginatedGridRowApi?: boolean;
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -166,6 +168,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   onForeignBindingNavUiChange,
   ownerScopeSettingsBanner,
   onImportData,
+  disablePaginatedGridRowApi = false,
 }: TrackerPanelProps) {
   const displayKey = "tracker-display";
   const [debugView, setDebugView] = useState<"structure" | "data" | null>(null);
@@ -598,6 +601,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                   ? (vcCurrentBranch?.branchName ?? "main")
                   : "main"
               }
+              disablePaginatedGridRowApi={disablePaginatedGridRowApi}
             />
           ) : (
             <TrackerDisplay
@@ -628,6 +632,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                   ? (vcCurrentBranch?.branchName ?? "main")
                   : "main"
               }
+              disablePaginatedGridRowApi={disablePaginatedGridRowApi}
             />
           )}
         </TrackerDisplayErrorBoundary>

@@ -1,12 +1,12 @@
 "use client";
 
 import type { ConditionNode } from "@/lib/workflows/types";
-import type { ExprNode } from "@/lib/functions/types";
-import { ExpressionBuilder } from "../expression-builder/expression-builder";
+import type { AvailableField } from "@/app/components/tracker-display/edit-mode/expr/expr-types";
+import { ExprRuleEditor } from "@/app/components/tracker-display/edit-mode/expr/ExprRuleEditor";
 
 interface ConditionConfigProps {
   node: ConditionNode;
-  availableFields: { fieldId: string; label: string; dataType?: string }[];
+  availableFields: AvailableField[];
   onChange: (node: ConditionNode) => void;
 }
 
@@ -15,32 +15,28 @@ export function ConditionConfig({
   availableFields,
   onChange,
 }: ConditionConfigProps) {
-  const handleExpressionChange = (newExpr: ExprNode) => {
-    onChange({
-      ...node,
-      config: {
-        ...node.config,
-        condition: newExpr,
-      },
-    });
-  };
-
   return (
     <div className="space-y-3">
       <div>
         <label className="text-xs font-medium text-foreground/70">
-          Condition Expression
+          Condition (IF)
         </label>
         <p className="mt-0.5 text-xs text-muted-foreground mb-3">
-          Build a condition that evaluates to true or false. Use logical
-          operators (AND, OR, NOT) and comparisons (==, !=, {">"},{"<"}, {">="},
-          {"<="}).
+          Use the same visual expression editor as validations. Connect the True
+          or False handle to downstream nodes.
         </p>
-        <ExpressionBuilder
-          value={node.config.condition}
-          onChange={handleExpressionChange}
+        <ExprRuleEditor
+          expr={node.config.condition}
+          gridId="workflow"
+          fieldId={`condition_${node.id}`}
           availableFields={availableFields}
-          mode="condition"
+          mode="validation"
+          onChange={(condition) =>
+            onChange({
+              ...node,
+              config: { ...node.config, condition },
+            })
+          }
         />
       </div>
     </div>

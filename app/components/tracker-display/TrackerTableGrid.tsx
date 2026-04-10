@@ -534,8 +534,8 @@ function TrackerTableGridInner({
         const optionLayoutNodes =
           sourceId && foreignSlice
             ? [...(foreignSlice.layoutNodes ?? [])]
-                .filter((n) => n.gridId === optionsGridId)
-                .sort((a, b) => a.order - b.order)
+              .filter((n) => n.gridId === optionsGridId)
+              .sort((a, b) => a.order - b.order)
             : optionsGridId
               ? (layoutNodesByGridId.get(optionsGridId) ?? [])
               : [];
@@ -567,18 +567,18 @@ function TrackerTableGridInner({
       const getBindingUpdatesFromRow =
         binding && (canAddLocal || canAddForeign)
           ? (row: Record<string, unknown>) => {
-              if (!binding?.fieldMappings?.length) return {};
-              const selectFieldPathInner = `${grid.id}.${field.id}`;
-              const updates = applyBindings(binding, row, selectFieldPathInner);
-              const result: Record<string, unknown> = {};
-              for (const u of updates) {
-                const { gridId: targetGridId, fieldId: targetFieldId } =
-                  parsePath(u.targetPath);
-                if (targetGridId === grid.id && targetFieldId)
-                  result[targetFieldId] = u.value;
-              }
-              return result;
+            if (!binding?.fieldMappings?.length) return {};
+            const selectFieldPathInner = `${grid.id}.${field.id}`;
+            const updates = applyBindings(binding, row, selectFieldPathInner);
+            const result: Record<string, unknown> = {};
+            for (const u of updates) {
+              const { gridId: targetGridId, fieldId: targetFieldId } =
+                parsePath(u.targetPath);
+              if (targetGridId === grid.id && targetFieldId)
+                result[targetFieldId] = u.value;
             }
+            return result;
+          }
           : undefined;
       if (binding?.optionsGrid && optionsGridId) {
         const foreignSlice = sourceId
@@ -631,9 +631,9 @@ function TrackerTableGridInner({
         options: lazyOptions
           ? undefined
           : opts?.map((o) => ({
-              id: o.id ?? String(o.value ?? ""),
-              label: o.label ?? "",
-            })),
+            id: o.id ?? String(o.value ?? ""),
+            label: o.label ?? "",
+          })),
         config: field.config,
         validations: validations?.[`${grid.id}.${field.id}`],
         calculation: calculations?.[`${grid.id}.${field.id}`],
@@ -846,18 +846,18 @@ function TrackerTableGridInner({
         accessorKey: field.id,
         header: canEditLayout
           ? () => (
-              <SortableColumnHeaderEdit
-                gridId={grid.id}
-                fieldId={field.id}
-                label={field.ui.label}
-                index={index}
-                totalColumns={tableFields.length}
-                onRemove={() => remove(field.id)}
-                onMoveUp={() => move(field.id, "up")}
-                onMoveDown={() => move(field.id, "down")}
-                onSettings={() => setSettingsFieldId(field.id)}
-              />
-            )
+            <SortableColumnHeaderEdit
+              gridId={grid.id}
+              fieldId={field.id}
+              label={field.ui.label}
+              index={index}
+              totalColumns={tableFields.length}
+              onRemove={() => remove(field.id)}
+              onMoveUp={() => move(field.id, "up")}
+              onMoveDown={() => move(field.id, "down")}
+              onSettings={() => setSettingsFieldId(field.id)}
+            />
+          )
           : field.ui.label,
         cell: function Cell({ row }) {
           const value = row.getValue(field.id);
@@ -917,9 +917,9 @@ function TrackerTableGridInner({
   const paginationState =
     paginatedDisplay
       ? {
-          pageIndex: pg.pageIndex,
-          pageSize: pg.pageSize,
-        }
+        pageIndex: pg.pageIndex,
+        pageSize: pg.pageSize,
+      }
       : undefined;
 
   const tableContent = (
@@ -979,7 +979,7 @@ function TrackerTableGridInner({
           !readOnly &&
           (mutateRowsViaRowApi || onDeleteEntries != null) &&
           (grid.config?.isRowDeletable ?? grid.config?.isRowDeleteAble) !==
-            false
+          false
         }
         editLayoutAble={grid.config?.isEditAble !== false}
         pageSize={paginatedDisplay ? pg.pageSize : grid.config?.pageSize}
@@ -993,20 +993,20 @@ function TrackerTableGridInner({
         onPaginationChange={
           paginatedDisplay
             ? (updater) => {
-                const next =
-                  typeof updater === "function"
-                    ? updater({
-                        pageIndex: pg.pageIndex,
-                        pageSize: pg.pageSize,
-                      })
-                    : updater;
-                if (next.pageSize !== pg.pageSize) {
-                  pg.setPageSize(next.pageSize);
-                }
-                if (next.pageIndex !== pg.pageIndex) {
-                  pg.setPageIndex(next.pageIndex);
-                }
+              const next =
+                typeof updater === "function"
+                  ? updater({
+                    pageIndex: pg.pageIndex,
+                    pageSize: pg.pageSize,
+                  })
+                  : updater;
+              if (next.pageSize !== pg.pageSize) {
+                pg.setPageSize(next.pageSize);
               }
+              if (next.pageIndex !== pg.pageIndex) {
+                pg.setPageIndex(next.pageIndex);
+              }
+            }
             : undefined
         }
         totalRows={paginatedDisplay ? pg.total : undefined}

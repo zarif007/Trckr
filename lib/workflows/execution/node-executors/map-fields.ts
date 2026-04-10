@@ -37,8 +37,8 @@ export async function executeMapFieldsNode(
       continue;
     }
 
-    const targetKey = `${mapping.target.gridId}.${mapping.target.fieldId}`;
-    result[targetKey] = value;
+    // Row JSON uses flat field slugs; grid scoping is resolved at action time.
+    result[mapping.target.fieldId] = value;
   }
 
   // Merge into context for downstream nodes

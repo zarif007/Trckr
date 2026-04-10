@@ -21,7 +21,11 @@ export function executeTriggerNode(
     );
   }
 
-  if (triggerData.gridId !== node.config.gridId) {
+  if (
+    node.config.gridId != null &&
+    node.config.gridId !== "" &&
+    triggerData.gridId !== node.config.gridId
+  ) {
     throw new Error(
       `Grid mismatch: expected ${node.config.gridId}, got ${triggerData.gridId}`,
     );

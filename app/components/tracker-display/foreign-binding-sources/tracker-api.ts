@@ -12,8 +12,19 @@ import type {
 
 const trackerUrl = (schemaId: string) =>
   `/api/trackers/${encodeURIComponent(schemaId)}`;
-const trackerDataListUrl = (schemaId: string) =>
-  `/api/trackers/${encodeURIComponent(schemaId)}/data`;
+const trackerDataListUrl = (
+  schemaId: string,
+  options?: { preview?: boolean; branchName?: string },
+) => {
+  const url = `/api/trackers/${encodeURIComponent(schemaId)}/data`;
+  const params = new URLSearchParams();
+  params.set("branch", options?.branchName ?? "main");
+  if (options?.preview) {
+    params.set("preview", "true");
+    params.set("limit", "7");
+  }
+  return `${url}?${params.toString()}`;
+};
 /** POST/PATCH target (no query string). */
 const trackerDataWriteUrl = (schemaId: string) =>
   `/api/trackers/${encodeURIComponent(schemaId)}/data`;
@@ -68,8 +79,9 @@ export type LatestDataRow = {
  */
 export async function fetchLatestDataRow(
   schemaId: string,
+  branchName: string = "main",
 ): Promise<LatestDataRow | null> {
-  const res = await fetch(trackerDataListUrl(schemaId));
+  const res = await fetch(trackerDataListUrl(schemaId, { branchName }));
   if (!res.ok) return null;
   const payload = parseDataPayload(await res.json());
   const gridData: GridDataSnapshot =
@@ -84,13 +96,18 @@ export async function fetchLatestDataRow(
 /**
  * Parallel load of schema + latest data for one foreign binding source.
  * Returns `null` only when the request pair throws (network / parse crash).
+ *
+ * @param schemaId - The tracker schema ID to load
+ * @param preview - If true, only loads first 7 rows (for initial display). Lazy loader will fetch rest on demand.
  */
 export async function loadForeignBindingSource(
   schemaId: string,
+  preview = true,
+  branchName: string = "main",
 ): Promise<ForeignSourceBundle | null> {
   try {
     const [dataRes, schemaRes] = await Promise.all([
-      fetch(trackerDataListUrl(schemaId)),
+      fetch(trackerDataListUrl(schemaId, { preview, branchName })),
       fetch(trackerUrl(schemaId)),
     ]);
 
@@ -137,13 +154,23 @@ async function readErrorMessage(res: Response): Promise<string> {
 
 export type PersistForeignBindingResult =
   | {
-      kind: "saved";
-      serverData?: GridDataSnapshot;
-      newSnapshotId?: string;
-      /** After creating the first row, subsequent saves should PATCH. */
-      nextWriteMode?: ForeignDataPersistMeta["writeMode"];
-    }
+    kind: "saved";
+    serverData?: GridDataSnapshot;
+    newSnapshotId?: string;
+    /** After creating the first row, subsequent saves should PATCH. */
+    nextWriteMode?: ForeignDataPersistMeta["writeMode"];
+  }
   | { kind: "failed"; message: string };
+
+function applyInlineOrchestrationEffects(json: unknown) {
+  if (!json || typeof json !== "object") return;
+  const o = (json as { orchestration?: { effects?: { redirect?: { url?: string } } } })
+    .orchestration;
+  const url = o?.effects?.redirect?.url;
+  if (typeof url === "string" && url.length > 0 && typeof window !== "undefined") {
+    window.location.assign(url);
+  }
+}
 
 /**
  * Writes a full grid snapshot to the foreign tracker’s TrackerData using the same rules as auto-save.
@@ -152,9 +179,10 @@ export async function persistForeignBindingSnapshot(options: {
   sourceSchemaId: string;
   meta: ForeignDataPersistMeta;
   snapshot: GridDataSnapshot;
+  branchName?: string;
 }): Promise<PersistForeignBindingResult> {
-  const { sourceSchemaId, meta, snapshot } = options;
-  const body: Record<string, unknown> = { data: snapshot };
+  const { sourceSchemaId, meta, snapshot, branchName = "main" } = options;
+  const body: Record<string, unknown> = { data: snapshot, branchName };
   if (meta.formStatus !== undefined) {
     body.formStatus = meta.formStatus;
   }
@@ -170,6 +198,7 @@ export async function persistForeignBindingSnapshot(options: {
         return { kind: "failed", message: await readErrorMessage(res) };
       }
       const saved = (await res.json()) as { data?: GridDataSnapshot };
+      applyInlineOrchestrationEffects(saved);
       return {
         kind: "saved",
         serverData:
@@ -192,6 +221,7 @@ export async function persistForeignBindingSnapshot(options: {
         return { kind: "failed", message: await readErrorMessage(res) };
       }
       const saved = (await res.json()) as { data?: GridDataSnapshot };
+      applyInlineOrchestrationEffects(saved);
       return {
         kind: "saved",
         serverData:
@@ -213,6 +243,7 @@ export async function persistForeignBindingSnapshot(options: {
       id?: string;
       data?: GridDataSnapshot;
     };
+    applyInlineOrchestrationEffects(saved);
     return {
       kind: "saved",
       serverData:

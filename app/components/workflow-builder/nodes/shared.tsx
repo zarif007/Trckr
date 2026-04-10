@@ -12,13 +12,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 
-// ─── Consistent style tokens matching ExprFlowBuilder ───
+// ─── Product chrome (matches outline inputs / expr builder frames) ───
 
-export const NODE_BASE_CLASSES =
-  "overflow-hidden rounded-sm border border-border/50 bg-background transition-all duration-150";
-export const NODE_HEADER_CLASSES =
-  "flex items-center gap-2 px-2.5 py-2 text-xs font-semibold border-b border-border/25";
+export const NODE_BASE_CLASSES = cn(
+  "overflow-hidden rounded-sm border bg-background transition-all duration-150",
+  theme.uiChrome.border,
+);
+export const NODE_HEADER_CLASSES = cn(
+  "relative flex items-center gap-2 px-2.5 py-2 text-xs font-semibold border-b",
+  theme.uiChrome.border,
+);
 export const NODE_BODY_CLASSES = "px-2.5 py-2";
 export const NODE_ICON_CLASSES =
   "h-[22px] w-[22px] rounded-sm flex items-center justify-center flex-shrink-0";
@@ -36,7 +41,7 @@ export interface NodeStyle {
   label: string;
 }
 
-import { Database, GitBranch, ArrowLeftRight, Play } from "lucide-react";
+import { Database, GitBranch, ArrowLeftRight, Play, Link2 } from "lucide-react";
 
 export const NODE_STYLES: Record<string, NodeStyle> = {
   trigger: {
@@ -62,6 +67,12 @@ export const NODE_STYLES: Record<string, NodeStyle> = {
     iconBg: "bg-emerald-500/15",
     icon: <Play className="h-3.5 w-3.5 text-emerald-600" />,
     label: "Action",
+  },
+  redirect: {
+    accent: "bg-info",
+    iconBg: theme.status.info.bg,
+    icon: <Link2 className={cn("h-3.5 w-3.5", theme.status.info.text)} />,
+    label: "Redirect",
   },
 };
 
@@ -89,7 +100,10 @@ export function NodeContextMenu({
           <MoreVertical className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-40 p-0" align="end">
+      <PopoverContent
+        className={cn("w-40 p-0", theme.uiChrome.floating)}
+        align="end"
+      >
         <div className="flex flex-col">
           {data.onDuplicate && (
             <button
@@ -107,7 +121,7 @@ export function NodeContextMenu({
           {canDelete && data.onDelete && (
             <>
               {data.onDuplicate && (
-                <div className="border-t border-border/30" />
+                <div className={cn("border-t", theme.uiChrome.border)} />
               )}
               <button
                 type="button"

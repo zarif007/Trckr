@@ -13,7 +13,10 @@ import {
   updateGridRow,
   deleteGridRow,
 } from "@/lib/repositories/grid-row-repository";
+import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
+import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
+import type { WorkflowInlineEffects } from "@/lib/workflows/types";
 import { NodeType } from "@prisma/client";
 
 const patchGridRowBodySchema = z
@@ -124,6 +127,31 @@ export async function PATCH(
 
   const gridSlug = await resolveGridSlug(existingRow.gridId);
 
+  const trackerForSnapshot = await prisma.trackerSchema.findFirst({
+    where: {
+      id: existingRow.trackerId,
+      project: { userId: authResult.user.id },
+    },
+    select: {
+      id: true,
+      nodes: {
+        where: { type: NodeType.GRID },
+        select: { id: true, slug: true },
+      },
+    },
+  });
+  const gridIdToSlug = new Map(
+    (trackerForSnapshot?.nodes ?? []).map((n) => [n.id, n.slug]),
+  );
+  const oldGrids = trackerForSnapshot
+    ? await loadTrackerSnapshotGrids(
+        trackerForSnapshot.id,
+        authResult.user.id,
+        gridIdToSlug,
+        existingRow.branchName,
+      )
+    : {};
+
   const updateBody: {
     data?: GridRowData;
     statusTag?: string | null;
@@ -138,7 +166,38 @@ export async function PATCH(
   const updated = await updateGridRow(rowId, authResult.user.id, updateBody);
   if (!updated) return notFound("Row not found");
 
-  return jsonOk(wrapRowAsSnapshot(updated, gridSlug));
+  let orchestration: {
+    effects: WorkflowInlineEffects;
+    continuationScheduled: boolean;
+  } = {
+    effects: {},
+    continuationScheduled: false,
+  };
+  if (trackerForSnapshot) {
+    const newGrids = await loadTrackerSnapshotGrids(
+      trackerForSnapshot.id,
+      authResult.user.id,
+      gridIdToSlug,
+      updated.branchName,
+    );
+    const orch = await dispatchTrackerEventAfterSave(
+      trackerForSnapshot.id,
+      { grids: newGrids },
+      { grids: oldGrids },
+      authResult.user.id,
+      false,
+      { interactive: true },
+    );
+    orchestration = {
+      effects: orch.inlineEffects,
+      continuationScheduled: orch.continuationScheduled,
+    };
+  }
+
+  return jsonOk({
+    ...wrapRowAsSnapshot(updated, gridSlug),
+    orchestration,
+  });
 }
 
 /**
@@ -156,8 +215,64 @@ export async function DELETE(
   const rowId = requireParam(dataId, "data id");
   if (!rowId) return badRequest("Missing data id");
 
+  const existingRow = await getGridRow(rowId, authResult.user.id);
+  if (!existingRow) return notFound("Row not found");
+
+  const trackerForSnapshot = await prisma.trackerSchema.findFirst({
+    where: {
+      id: existingRow.trackerId,
+      project: { userId: authResult.user.id },
+    },
+    select: {
+      id: true,
+      nodes: {
+        where: { type: NodeType.GRID },
+        select: { id: true, slug: true },
+      },
+    },
+  });
+  const gridIdToSlug = new Map(
+    (trackerForSnapshot?.nodes ?? []).map((n) => [n.id, n.slug]),
+  );
+  const oldGrids = trackerForSnapshot
+    ? await loadTrackerSnapshotGrids(
+        trackerForSnapshot.id,
+        authResult.user.id,
+        gridIdToSlug,
+        existingRow.branchName,
+      )
+    : {};
+
   const deleted = await deleteGridRow(rowId, authResult.user.id);
   if (!deleted) return notFound("Row not found");
 
-  return jsonOk({ deleted: true });
+  let orchestration: {
+    effects: WorkflowInlineEffects;
+    continuationScheduled: boolean;
+  } = {
+    effects: {},
+    continuationScheduled: false,
+  };
+  if (trackerForSnapshot) {
+    const newGrids = await loadTrackerSnapshotGrids(
+      trackerForSnapshot.id,
+      authResult.user.id,
+      gridIdToSlug,
+      existingRow.branchName,
+    );
+    const orch = await dispatchTrackerEventAfterSave(
+      trackerForSnapshot.id,
+      { grids: newGrids },
+      { grids: oldGrids },
+      authResult.user.id,
+      false,
+      { interactive: true },
+    );
+    orchestration = {
+      effects: orch.inlineEffects,
+      continuationScheduled: orch.continuationScheduled,
+    };
+  }
+
+  return jsonOk({ deleted: true, orchestration });
 }

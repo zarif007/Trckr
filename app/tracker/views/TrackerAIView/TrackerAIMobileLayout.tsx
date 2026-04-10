@@ -21,6 +21,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     effectiveDisplaySchema,
     isStreamingTracker,
     isAgentRunning,
+    disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
     undoable,
@@ -79,6 +80,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               setIsChatOpen={setIsChatOpen}
               isStreamingTracker={isStreamingTracker}
               isAgentRunning={isAgentRunning}
+              disablePaginatedGridRowApi={disablePaginatedGridRowApi}
               trackerDataRef={trackerDataRef}
               onGridDataChange={handleGridDataChange}
               handleSchemaChange={

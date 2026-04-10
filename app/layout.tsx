@@ -10,6 +10,7 @@ import {
 import { ThemeProvider } from "next-themes";
 import { TeamProvider } from "@/lib/teams";
 import { AuthProvider } from "./components/AuthProvider";
+import { QueryProvider } from "./components/QueryProvider";
 import NavBarWrapper from "./components/NavBarWrapper";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -69,13 +70,15 @@ export default function RootLayout({
           enableSystem={false}
           storageKey="trckr-theme"
         >
-          <AuthProvider>
-            <TeamProvider>
-              <NavBarWrapper />
-              <main className="max-w-full mx-auto">{children}</main>
-              <Toaster position="top-center" closeButton />
-            </TeamProvider>
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <TeamProvider>
+                <NavBarWrapper />
+                <main className="max-w-full mx-auto">{children}</main>
+                <Toaster position="top-center" closeButton />
+              </TeamProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

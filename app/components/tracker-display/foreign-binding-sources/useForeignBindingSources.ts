@@ -50,6 +50,7 @@ export type ForeignBindingSourcesForOptionsContext = {
  */
 export function useForeignBindingSources(
   bindingSourceSchemaIds: string[],
+  gridDataBranchName: string = "main",
 ): ForeignBindingSourcesForOptionsContext {
   const [foreignGridDataBySchemaId, setForeignGridDataBySchemaId] = useState<
     Record<string, GridDataSnapshot>
@@ -67,6 +68,7 @@ export function useForeignBindingSources(
   const foreignGridDataRef = useRef(foreignGridDataBySchemaId);
   const foreignPersistMetaRef = useRef(foreignPersistMetaBySchemaId);
   const bindingSourceIdsRef = useRef(bindingSourceSchemaIds);
+  const gridDataBranchNameRef = useRef(gridDataBranchName);
 
   const debounceTimersRef = useRef<
     Record<string, ReturnType<typeof setTimeout>>
@@ -82,6 +84,7 @@ export function useForeignBindingSources(
     foreignPersistMetaRef.current = foreignPersistMetaBySchemaId;
   }, [foreignPersistMetaBySchemaId]);
   bindingSourceIdsRef.current = bindingSourceSchemaIds;
+  gridDataBranchNameRef.current = gridDataBranchName;
 
   const beginSave = useCallback(() => {
     setForeignSourcesSavingCount((c) => c + 1);
@@ -104,7 +107,10 @@ export function useForeignBindingSources(
   }, []);
 
   const refetchForeignGridData = useCallback(async (sourceSchemaId: string) => {
-    const row = await fetchLatestDataRow(sourceSchemaId);
+    const row = await fetchLatestDataRow(
+      sourceSchemaId,
+      gridDataBranchNameRef.current,
+    );
     if (!row) return;
     setForeignGridDataBySchemaId((prev) => ({
       ...prev,
@@ -189,6 +195,7 @@ export function useForeignBindingSources(
             sourceSchemaId,
             meta,
             snapshot,
+            branchName: gridDataBranchNameRef.current,
           });
           if (result.kind === "saved") {
             applyPersistSuccess(sourceSchemaId, result);
@@ -272,7 +279,9 @@ export function useForeignBindingSources(
     setForeignSourcesLoading(true);
     (async () => {
       const bundles = await Promise.all(
-        ids.map((id) => loadForeignBindingSource(id)),
+        ids.map((id) =>
+          loadForeignBindingSource(id, true, gridDataBranchName),
+        ),
       );
       if (cancelled) {
         setForeignSourcesLoading(false);
@@ -300,7 +309,7 @@ export function useForeignBindingSources(
     return () => {
       cancelled = true;
     };
-  }, [bindingSourceIdsKey, clearDebounce]);
+  }, [bindingSourceIdsKey, gridDataBranchName, clearDebounce]);
 
   /** Best-effort flush when the host unmounts (e.g. user navigates away). */
   useEffect(() => {
@@ -318,6 +327,7 @@ export function useForeignBindingSources(
           sourceSchemaId,
           meta,
           snapshot,
+          branchName: gridDataBranchNameRef.current,
         });
       }
     };

@@ -44,7 +44,7 @@ export default function NewWorkflowPage() {
           projectId,
           name: trimmedName,
           description: description.trim() || undefined,
-          schema: { version: 1, nodes: [], edges: [] },
+          schema: { version: 2, nodes: [], edges: [] },
         }),
       });
       if (!res.ok) {

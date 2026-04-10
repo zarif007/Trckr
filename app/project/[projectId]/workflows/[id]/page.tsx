@@ -17,6 +17,8 @@ import {
 } from "@/app/dashboard/components/project-area";
 import { useDashboard } from "@/app/dashboard/dashboard-context";
 import type { WorkflowSchema } from "@/lib/workflows/types";
+import { isWorkflowSchemaV2 } from "@/lib/workflows/types";
+import { normalizeWorkflowEdges } from "@/lib/workflows/validation";
 import { WorkflowBuilder } from "@/app/components/workflow-builder/workflow-builder";
 import { WorkflowErrorBoundary } from "@/app/components/workflow-builder/workflow-error-boundary";
 import {
@@ -78,7 +80,11 @@ export default function WorkflowBuilderPage() {
   }
 
   const workflow = workflowQuery.data!;
-  const schema = (workflow.schema as WorkflowSchema) ?? { version: 1, nodes: [], edges: [] };
+  const schemaRaw =
+    (workflow.schema as WorkflowSchema) ?? ({ version: 1, nodes: [], edges: [] } as WorkflowSchema);
+  const schema = isWorkflowSchemaV2(schemaRaw)
+    ? schemaRaw
+    : normalizeWorkflowEdges(schemaRaw);
 
   const availableTrackers: TrackerMetadata[] = project
     ? extractTrackersFromProject(project)
@@ -91,6 +97,7 @@ export default function WorkflowBuilderPage() {
       workflowName={workflow.name}
       initialSchema={schema}
       availableTrackers={availableTrackers}
+      readOnly={!isWorkflowSchemaV2(schemaRaw)}
     />
   );
 }
@@ -112,12 +119,14 @@ function WorkflowBuilderPageContent({
   workflowName,
   initialSchema,
   availableTrackers,
+  readOnly = false,
 }: {
   projectId: string;
   workflowId: string;
   workflowName: string;
   initialSchema: WorkflowSchema;
   availableTrackers: TrackerMetadata[];
+  readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
   const { fetchProjects } = useDashboard();
@@ -210,6 +219,7 @@ function WorkflowBuilderPageContent({
             currentTrackerFields={currentTrackerFields}
             saving={saving}
             saveError={saveError}
+            readOnly={readOnly}
           />
         </WorkflowErrorBoundary>
       </div>
