@@ -35,6 +35,14 @@ export { enableBindingDebug, disableBindingDebug } from "./debug";
 export type { ForeignGridDataBySchemaId } from "./binding-grid-data";
 export { getOptionsGridRowsForBinding } from "./binding-grid-data";
 export { collectOptionsSourceSchemaIds } from "./binding-sources";
+export {
+  localGridSnapshotHasGridSlice,
+  resolveBindingSelectSourceDisplay,
+  usesForeignBindingOptionsSnapshot,
+  type BindingSelectSourceDisplay,
+  type BindingSelectSourceDisplayInput,
+  type ForeignBindingSchemaSliceForDisplay,
+} from "./binding-select-source-display";
 export { parsePath, buildFieldPath, normalizeOptionsGridId } from "./path";
 export { getValueByPath, setValueByPath } from "./grid-data";
 export { getValueFieldIdFromBinding } from "./value-field";

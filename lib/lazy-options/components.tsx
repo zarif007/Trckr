@@ -27,6 +27,9 @@ const { SKELETON_COUNT } = LAZY_OPTIONS_CONSTANTS;
 export function SkeletonLoader() {
   return (
     <div className="space-y-1 p-1">
+      <div className="px-2 py-1.5 text-xs text-muted-foreground font-medium">
+        Loading...
+      </div>
       {[...Array(SKELETON_COUNT)].map((_, i) => (
         <div
           key={i}

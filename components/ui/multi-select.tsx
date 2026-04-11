@@ -169,7 +169,7 @@ export function MultiSelect({
  className
  )
 
- return (
+  return (
  <Popover
  open={open}
  onOpenChange={(nextOpen) => {

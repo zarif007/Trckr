@@ -60,7 +60,9 @@ export function useForeignBindingSources(
   >({});
   const [foreignPersistMetaBySchemaId, setForeignPersistMetaBySchemaId] =
     useState<Record<string, ForeignDataPersistMeta>>({});
-  const [foreignSourcesLoading, setForeignSourcesLoading] = useState(false);
+  const [foreignSourcesLoading, setForeignSourcesLoading] = useState(
+    bindingSourceSchemaIds.length > 0
+  );
   const [foreignSourcesSavingCount, setForeignSourcesSavingCount] = useState(0);
   const [foreignPersistError, setForeignPersistError] =
     useState<ForeignPersistError | null>(null);

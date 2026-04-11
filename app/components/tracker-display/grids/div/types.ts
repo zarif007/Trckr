@@ -72,4 +72,6 @@ export interface DivGridFieldCellProps {
   onDatePickerOpenChange: (open: boolean) => void;
   /** When options are empty, show "No data" and "From table: {optionsSourceLabel}". */
   optionsSourceLabel?: string;
+  /** True while foreign binding sources are loading. */
+  isLoadingOptions?: boolean;
 }

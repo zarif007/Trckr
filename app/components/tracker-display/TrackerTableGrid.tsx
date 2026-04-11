@@ -23,6 +23,7 @@ import {
   applyBindings,
   parsePath,
   getValueFieldIdFromBinding,
+  resolveBindingSelectSourceDisplay,
 } from "@/lib/resolve-bindings";
 import type { OptionsGridFieldDef } from "./grids/data-table/utils";
 import { resolveFieldRulesForRow } from "@/lib/field-rules";
@@ -125,7 +126,6 @@ function TrackerTableGridInner({
   const trackerOptionsFromContext = useTrackerOptionsContext();
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp;
   const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId;
-  const foreignSourcesLoading = trackerContext?.foreignSourcesLoading ?? false;
   const [addColumnOpen, setAddColumnOpen] = useState(false);
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null);
   const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
@@ -505,6 +505,7 @@ function TrackerTableGridInner({
   const fieldMetadata = useMemo<FieldMetadata>(() => {
     const meta: FieldMetadata = {};
     const foreignSchemaById = trackerContext?.foreignSchemaBySchemaId;
+    const foreignDataById = trackerContext?.foreignGridDataBySchemaId;
     const onAddForeign = trackerContext?.onAddEntryToForeignGrid;
     tableFields.forEach((field) => {
       const opts = fieldOptionsMap.get(field.id);
@@ -512,7 +513,6 @@ function TrackerTableGridInner({
       const selectFieldPath = `${grid.id}.${field.id}`;
       let optionsGridFields: OptionsGridFieldDef[] | undefined;
       let onAddOption: ((row: Record<string, unknown>) => string) | undefined;
-      let optionsGridName: string | undefined;
       const sourceId = binding?.optionsSourceSchemaId?.trim();
       const optionsGridId = binding?.optionsGrid?.includes(".")
         ? binding.optionsGrid.split(".").pop()!
@@ -581,18 +581,22 @@ function TrackerTableGridInner({
             return result;
           }
           : undefined;
-      if (binding?.optionsGrid && optionsGridId) {
-        const foreignSlice = sourceId
-          ? foreignSchemaById?.[sourceId]
-          : undefined;
-        if (sourceId) {
-          optionsGridName =
-            foreignSlice?.grids.find((g) => g.id === optionsGridId)?.name ??
-            optionsGridId;
-        } else {
-          optionsGridName = gridsById.get(optionsGridId)?.name ?? optionsGridId;
-        }
-      }
+      const sourceDisplay =
+        binding?.optionsGrid && optionsGridId
+          ? resolveBindingSelectSourceDisplay({
+              optionsSourceSchemaId: sourceId,
+              optionsGridId,
+              currentTrackerSchemaId: trackerContext?.trackerSchemaId,
+              localGridData: fullGridData,
+              isGridInLocalSchema: (gid) => gridsById.has(gid),
+              getLocalOptionsGridDisplayName: (gid) =>
+                gridsById.get(gid)?.name,
+              foreignGridDataBySchemaId: foreignDataById ?? null,
+              foreignSchemaBySchemaId: foreignSchemaById ?? null,
+            })
+          : null;
+      const isLoadingOptions = sourceDisplay?.isLoadingOptions ?? false;
+      const optionsGridName = sourceDisplay?.optionsGridDisplayName;
       let lazyOptions: {
         trackerId: string;
         gridId: string;
@@ -626,10 +630,6 @@ function TrackerTableGridInner({
         }
       }
 
-      const isLoadingOptions = Boolean(
-        sourceId && foreignSourcesLoading && (!opts || opts.length === 0)
-      );
-
       meta[field.id] = {
         name: field.ui.label,
         type: field.dataType,
@@ -662,7 +662,10 @@ function TrackerTableGridInner({
     onAddEntryToGrid,
     gridsById,
     trackerContext?.foreignSchemaBySchemaId,
+    trackerContext?.foreignGridDataBySchemaId,
     trackerContext?.onAddEntryToForeignGrid,
+    trackerContext?.trackerSchemaId,
+    fullGridData,
   ]);
 
   const entryWays = useMemo(

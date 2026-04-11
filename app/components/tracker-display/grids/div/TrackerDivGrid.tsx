@@ -42,6 +42,8 @@ import {
   applyBindings,
   parsePath,
   getValueFieldIdFromBinding,
+  resolveBindingSelectSourceDisplay,
+  usesForeignBindingOptionsSnapshot,
 } from "@/lib/resolve-bindings";
 import {
   applyFieldOverrides,
@@ -385,10 +387,14 @@ function TrackerDivGridInner({
     trackerContext?.foreignSchemaBySchemaId,
     trackerContext?.onAddEntryToForeignGrid,
   ]);
-  const optionsGridNameByFieldId = useMemo(() => {
-    const map = new Map<string, string>();
+  // Track loading state and grid names for fields with foreign bindings
+  const { optionsGridNameByFieldId, isLoadingOptionsByFieldId } = useMemo(() => {
+    const nameMap = new Map<string, string | undefined>();
+    const loadingMap = new Map<string, boolean>();
     const localGrids = trackerContext?.grids;
     const foreignSchemaById = trackerContext?.foreignSchemaBySchemaId;
+    const foreignDataById = trackerContext?.foreignGridDataBySchemaId;
+
     optionFieldIds.forEach((fieldId) => {
       const binding = bindingByFieldId.get(fieldId);
       if (!binding?.optionsGrid) return;
@@ -396,23 +402,43 @@ function TrackerDivGridInner({
         ? binding.optionsGrid.split(".").pop()!
         : binding.optionsGrid;
       if (!optionsGridId) return;
+
       const sourceId = binding.optionsSourceSchemaId?.trim();
-      if (sourceId) {
-        const slice = foreignSchemaById?.[sourceId];
-        const g = slice?.grids.find((gr) => gr.id === optionsGridId);
-        map.set(fieldId, g?.name ?? optionsGridId);
+      if (
+        !localGrids &&
+        !usesForeignBindingOptionsSnapshot(
+          sourceId,
+          trackerContext?.trackerSchemaId,
+        )
+      ) {
         return;
       }
-      if (!localGrids) return;
-      const g = localGrids.find((gr) => gr.id === optionsGridId);
-      map.set(fieldId, g?.name ?? optionsGridId);
+      const display = resolveBindingSelectSourceDisplay({
+        optionsSourceSchemaId: sourceId,
+        optionsGridId,
+        currentTrackerSchemaId: trackerContext?.trackerSchemaId,
+        localGridData: fullGridData,
+        isGridInLocalSchema: (gid) =>
+          Boolean(localGrids?.some((gr) => gr.id === gid)),
+        getLocalOptionsGridDisplayName: (gid) =>
+          localGrids?.find((gr) => gr.id === gid)?.name,
+        foreignGridDataBySchemaId: foreignDataById ?? null,
+        foreignSchemaBySchemaId: foreignSchemaById ?? null,
+      });
+
+      loadingMap.set(fieldId, display.isLoadingOptions);
+      nameMap.set(fieldId, display.optionsGridDisplayName);
     });
-    return map;
+
+    return { optionsGridNameByFieldId: nameMap, isLoadingOptionsByFieldId: loadingMap };
   }, [
     optionFieldIds,
     bindingByFieldId,
     trackerContext?.grids,
     trackerContext?.foreignSchemaBySchemaId,
+    trackerContext?.foreignGridDataBySchemaId,
+    trackerContext?.trackerSchemaId,
+    fullGridData,
   ]);
   const nodesByRow = useMemo(() => {
     const map = new Map<number, TrackerLayoutNode[]>();
@@ -951,6 +977,7 @@ function TrackerDivGridInner({
         datePickerOpen={datePickerOpen}
         onDatePickerOpenChange={setDatePickerOpenStable}
         optionsSourceLabel={optionsGridNameByFieldId.get(field.id)}
+        isLoadingOptions={isLoadingOptionsByFieldId.get(field.id)}
       />
     );
 

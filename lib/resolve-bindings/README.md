@@ -51,6 +51,9 @@ Technical documentation for the **binding resolution engine**: how select/multis
 10. **Initial** (`initial.ts`)  
     `getInitialGridDataFromBindings(bindings)` — build initial gridData with all option grids as empty arrays. Used to seed state when bindings exist but no data yet.
 
+11. **Select source display** (`binding-select-source-display.ts`)  
+    `resolveBindingSelectSourceDisplay` — pure helper for **loading** + **options grid display name** on bound selects (foreign vs local snapshot, self-binding). See [binding-select-source-display.md](./binding-select-source-display.md).
+
 ---
 
 ## How it works
