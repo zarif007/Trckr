@@ -58,6 +58,8 @@ interface DataTableInputProps {
   lazyOptions?: LazyOptionsConfig;
   /** Pre-selected values to always include in lazy loading (even if not in current page). */
   preSelectedValues?: string[];
+  /** True while foreign binding sources are loading. */
+  isLoadingOptions?: boolean;
 }
 
 /** Options passed when onChange is called after adding an option (so dialog can apply auto-populate). */
@@ -84,6 +86,7 @@ export function DataTableInput({
   optionsSourceLabel,
   lazyOptions,
   preSelectedValues,
+  isLoadingOptions = false,
 }: DataTableInputProps) {
   const inlineInputClass = `${FIELD_INNER_INPUT_BASE_CLASS} h-full px-2 w-full rounded-none transition-colors ${DEFAULT_INPUT_FONT_CLASS} font-normal`;
 
@@ -349,7 +352,7 @@ export function DataTableInput({
       return (
         <>
           <SearchableSelect
-            options={lazyOptions ? undefined : selectOptions}
+            options={selectOptions}
             value={selectValue}
             onValueChange={(v) => {
               if (v === ADD_OPTION_VALUE) {
@@ -373,6 +376,7 @@ export function DataTableInput({
             optionsSourceLabel={optionsSourceLabel}
             lazyOptions={lazyOptions}
             preSelectedValues={preSelectedValues}
+            isLoadingOptions={isLoadingOptions}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog
@@ -396,7 +400,7 @@ export function DataTableInput({
         value === "" || value == null ? "__empty__" : String(value);
       return (
         <SearchableSelect
-          options={lazyOptions ? undefined : selectOptions}
+          options={selectOptions}
           value={selectValue}
           onValueChange={(v) => onChange(v === "__empty__" ? "" : v)}
           placeholder=""
@@ -410,6 +414,7 @@ export function DataTableInput({
           optionsSourceLabel={optionsSourceLabel}
           lazyOptions={lazyOptions}
           preSelectedValues={preSelectedValues}
+          isLoadingOptions={isLoadingOptions}
         />
       );
     }
@@ -418,7 +423,7 @@ export function DataTableInput({
       return (
         <>
           <MultiSelect
-            options={lazyOptions ? undefined : (options ?? [])}
+            options={options ?? []}
             value={Array.isArray(value) ? value : []}
             onChange={onChange}
             isInline={!formField}
@@ -436,6 +441,7 @@ export function DataTableInput({
             optionsSourceLabel={optionsSourceLabel}
             lazyOptions={lazyOptions}
             preSelectedValues={preSelectedValues}
+            isLoadingOptions={isLoadingOptions}
           />
           {onAddOption && optionsGridFields && optionsGridFields.length > 0 && (
             <EntryFormDialog

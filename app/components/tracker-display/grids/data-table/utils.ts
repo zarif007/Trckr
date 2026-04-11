@@ -164,6 +164,8 @@ export interface FieldMetadata {
     lazyOptions?: LazyOptionsConfig;
     /** Pre-selected values to always include in lazy loading (even if not in current page). */
     preSelectedValues?: string[];
+    /** True while foreign binding sources are loading. */
+    isLoadingOptions?: boolean;
   };
 }
 

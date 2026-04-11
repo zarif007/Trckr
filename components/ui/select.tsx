@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Database, Plus, AlertCircle } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, Database, Plus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { theme } from "@/lib/theme"
@@ -18,7 +18,12 @@ import {
  Popover,
  PopoverContent,
 } from "@/components/ui/popover"
-import { useOptionsLoader } from "@/lib/hooks/useOptionsLoader"
+import {
+  useUnifiedOptions,
+  SkeletonLoader,
+  ErrorState,
+  type LazyOptionsConfig as LazyConfig,
+} from "@/lib/lazy-options"
 
 function Select({
  ...props
@@ -195,13 +200,8 @@ function SelectScrollDownButton({
 
 type SearchableSelectOption = string | { value: string; label: string }
 
-interface LazyOptionsConfig {
- trackerId: string
- gridId: string
- labelField: string
- valueField?: string
- branchName?: string
-}
+// Re-export LazyOptionsConfig from lib/lazy-options for backward compatibility
+export type LazyOptionsConfig = LazyConfig
 
 interface SearchableSelectProps {
  options?: SearchableSelectOption[]
@@ -223,6 +223,8 @@ interface SearchableSelectProps {
  lazyOptions?: LazyOptionsConfig
  /** Pre-selected values to include in lazy loading (always visible even if not in current page) */
  preSelectedValues?: string[]
+ /** True while foreign binding sources are loading. */
+ isLoadingOptions?: boolean
 }
 
 function SearchableSelect({
@@ -240,31 +242,46 @@ function SearchableSelect({
  optionsSourceLabel,
  lazyOptions,
  preSelectedValues,
+ isLoadingOptions = false,
 }: SearchableSelectProps) {
  const [open, setOpen] = React.useState(false)
  const [searchValue, setSearchValue] = React.useState("")
  const triggerRef = React.useRef<HTMLDivElement>(null)
  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
 
- const optionsLoader = useOptionsLoader({
- trackerId: lazyOptions?.trackerId ?? "",
- gridId: lazyOptions?.gridId ?? "",
- labelField: lazyOptions?.labelField ?? "",
- valueField: lazyOptions?.valueField,
- branchName: lazyOptions?.branchName,
- enabled: Boolean(lazyOptions) && open,
+ const {
+ options: lazyLoadedOptions,
+ isLoading: isLazyLoading,
+ isLoadingMore,
+ error: lazyError,
+ search: lazySearch,
+ loadMore,
+ hasMore,
+ retry,
+ } = useUnifiedOptions({
+ lazyOptions,
+ previewOptions: options && options.length > 0
+   ? options.map(opt => ({
+       id: typeof opt === "string" ? opt : opt.value,
+       label: typeof opt === "string" ? opt : opt.label,
+       value: typeof opt === "string" ? opt : opt.value,
+     }))
+   : [],
  preSelectedValues,
+ enabled: Boolean(lazyOptions) && open,
+ isLoadingPreview: isLoadingOptions,
  })
 
  const displayOptions = React.useMemo(() => {
  if (lazyOptions) {
- return optionsLoader.options.map((opt) => ({
+ // useUnifiedOptions already handles merging preview + lazy data
+ return lazyLoadedOptions.map((opt) => ({
  value: String(opt.value),
  label: opt.label,
  }))
  }
  return options
- }, [lazyOptions, optionsLoader.options, options])
+ }, [lazyOptions, lazyLoadedOptions, options])
 
  const displayEmptyMessage =
  displayOptions.length === 0
@@ -301,20 +318,20 @@ function SearchableSelect({
  const handleScroll = () => {
  const { scrollTop, scrollHeight, clientHeight } = container
  if (scrollHeight - scrollTop - clientHeight < 100) {
- if (optionsLoader.hasMore && !optionsLoader.isLoadingMore) {
- optionsLoader.loadMore()
+ if (hasMore && !isLoadingMore) {
+ loadMore()
  }
  }
  }
 
  container.addEventListener("scroll", handleScroll)
  return () => container.removeEventListener("scroll", handleScroll)
- }, [lazyOptions, open, optionsLoader])
+ }, [lazyOptions, open, hasMore, isLoadingMore, loadMore])
 
  const handleSearchChange = (value: string) => {
  setSearchValue(value)
  if (lazyOptions) {
- optionsLoader.search(value)
+ lazySearch(value)
  }
  }
 
@@ -394,38 +411,15 @@ function SearchableSelect({
  >
  <Command shouldFilter={false}>
  <CommandList ref={scrollContainerRef}>
- {lazyOptions && optionsLoader.isLoading ? (
- <div className="space-y-1 p-1">
- {[...Array(5)].map((_, i) => (
- <div
- key={i}
- className={cn(
- "h-8 animate-pulse rounded",
- theme.surface.mutedSubtle
- )}
- />
- ))}
- </div>
+ {((lazyOptions && (isLazyLoading || (open && displayOptions.length === 0))) || isLoadingOptions) ? (
+ <SkeletonLoader />
  ) : null}
 
- {lazyOptions && optionsLoader.error ? (
- <div className="p-3 space-y-2">
- <div className="flex items-center gap-2 text-destructive text-sm">
- <AlertCircle className="size-4 shrink-0" />
- <span>Failed to load options</span>
- </div>
- <button
- onClick={optionsLoader.reset}
- className={cn(
- "text-xs underline text-muted-foreground hover:text-foreground"
- )}
- >
- Retry
- </button>
- </div>
+ {lazyOptions && lazyError ? (
+ <ErrorState error={lazyError} onRetry={retry} />
  ) : null}
 
- {!lazyOptions || !optionsLoader.isLoading ? (
+ {!(lazyOptions && (isLazyLoading || (open && displayOptions.length === 0))) && !isLoadingOptions ? (
  <>
  <CommandEmpty>{displayEmptyMessage}</CommandEmpty>
  <CommandGroup>
@@ -508,7 +502,7 @@ function SearchableSelect({
  )}
  </CommandGroup>
 
- {lazyOptions && optionsLoader.isLoadingMore ? (
+ {lazyOptions && isLoadingMore ? (
  <div className="p-2 text-center text-sm text-muted-foreground">
  Loading more...
  </div>
@@ -535,4 +529,4 @@ export {
  SelectTrigger,
  SelectValue,
 }
-export type { SearchableSelectOption, SearchableSelectProps, LazyOptionsConfig }
+export type { SearchableSelectOption, SearchableSelectProps }

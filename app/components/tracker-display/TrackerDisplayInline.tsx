@@ -387,6 +387,7 @@ export function TrackerDisplayInline({
         foreignGridDataBySchemaId={foreignGridDataBySchemaId}
         foreignSchemaBySchemaId={foreignSchemaBySchemaId}
         onAddEntryToForeignGrid={onAddEntryToForeignGrid}
+        foreignSourcesLoading={foreignSourcesLoading}
       >
         <EditModeProvider
           editMode={!!editMode}

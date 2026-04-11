@@ -28,6 +28,7 @@ export function TrackerOptionsProvider({
   foreignGridDataBySchemaId,
   foreignSchemaBySchemaId,
   onAddEntryToForeignGrid,
+  foreignSourcesLoading,
   children,
 }: {
   grids: TrackerGrid[];
@@ -47,6 +48,7 @@ export function TrackerOptionsProvider({
     gridId: string,
     row: Record<string, unknown>,
   ) => void;
+  foreignSourcesLoading?: boolean;
   children: React.ReactNode;
 }) {
   const value = useMemo<TrackerContextForOptions>(
@@ -67,6 +69,7 @@ export function TrackerOptionsProvider({
         ? { foreignSchemaBySchemaId }
         : {}),
       ...(onAddEntryToForeignGrid ? { onAddEntryToForeignGrid } : {}),
+      ...(foreignSourcesLoading !== undefined ? { foreignSourcesLoading } : {}),
     }),
     [
       grids,
@@ -79,6 +82,7 @@ export function TrackerOptionsProvider({
       foreignGridDataBySchemaId,
       foreignSchemaBySchemaId,
       onAddEntryToForeignGrid,
+      foreignSourcesLoading,
     ],
   );
   return (

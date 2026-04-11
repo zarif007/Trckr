@@ -69,12 +69,14 @@ export interface DynamicOptionsContext {
   >;
   /** Per foreign tracker: grids, fields, layoutNodes (for add-option UI on bound fields). */
   foreignSchemaBySchemaId?: Record<string, ForeignBindingSourceSchema>;
-  /** Append a row to a grid in another tracker’s in-memory snapshot (fill mode). */
+  /** Append a row to a grid in another tracker's in-memory snapshot (fill mode). */
   onAddEntryToForeignGrid?: (
     sourceSchemaId: string,
     gridId: string,
     row: Record<string, unknown>,
   ) => void;
+  /** True while initial GETs for foreign trackers are in flight. */
+  foreignSourcesLoading?: boolean;
 }
 
 /** Signature of a dynamic options function. */

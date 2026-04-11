@@ -163,6 +163,7 @@ export function DataTableCell<TData>({
               optionsSourceLabel={fieldInfo.optionsGridName}
               lazyOptions={fieldInfo.lazyOptions}
               preSelectedValues={fieldInfo.preSelectedValues}
+              isLoadingOptions={fieldInfo.isLoadingOptions}
               compact
             />
           </div>

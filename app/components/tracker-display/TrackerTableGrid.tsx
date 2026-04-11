@@ -125,6 +125,7 @@ function TrackerTableGridInner({
   const trackerOptionsFromContext = useTrackerOptionsContext();
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp;
   const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId;
+  const foreignSourcesLoading = trackerContext?.foreignSourcesLoading ?? false;
   const [addColumnOpen, setAddColumnOpen] = useState(false);
   const [settingsFieldId, setSettingsFieldId] = useState<string | null>(null);
   const [asyncDynamicFieldOptions, setAsyncDynamicFieldOptions] = useState<
@@ -625,15 +626,17 @@ function TrackerTableGridInner({
         }
       }
 
+      const isLoadingOptions = Boolean(
+        sourceId && foreignSourcesLoading && (!opts || opts.length === 0)
+      );
+
       meta[field.id] = {
         name: field.ui.label,
         type: field.dataType,
-        options: lazyOptions
-          ? undefined
-          : opts?.map((o) => ({
-            id: o.id ?? String(o.value ?? ""),
-            label: o.label ?? "",
-          })),
+        options: opts?.map((o) => ({
+          id: o.id ?? String(o.value ?? ""),
+          label: o.label ?? "",
+        })),
         config: field.config,
         validations: validations?.[`${grid.id}.${field.id}`],
         calculation: calculations?.[`${grid.id}.${field.id}`],
@@ -643,6 +646,7 @@ function TrackerTableGridInner({
         optionsGridName,
         lazyOptions,
         preSelectedValues,
+        isLoadingOptions,
       };
     });
     return meta;
