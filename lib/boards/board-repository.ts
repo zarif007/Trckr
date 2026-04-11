@@ -124,6 +124,39 @@ export async function deleteBoardForUser(boardId: string, userId: string) {
   return true;
 }
 
+/**
+ * Migrate version 1 board definition (grid layout) to version 2 (placeId ordering).
+ * Preserves vertical order by sorting by y-axis, then x-axis.
+ */
+function migrateV1ToV2(def: any): BoardDefinition {
+  if (def.version !== 1 || !Array.isArray(def.elements)) {
+    return parseBoardDefinition(def);
+  }
+
+  const sorted = [...def.elements].sort((a: any, b: any) => {
+    const aLayout = a.layout || { y: 0, x: 0 };
+    const bLayout = b.layout || { y: 0, x: 0 };
+    if (aLayout.y !== bLayout.y) return aLayout.y - bLayout.y;
+    return aLayout.x - bLayout.x;
+  });
+
+  const migrated = sorted.map((el: any, index: number) => {
+    const { layout, ...rest } = el;
+    return { ...rest, placeId: index };
+  });
+
+  return {
+    version: 2,
+    elements: migrated,
+  };
+}
+
 export function boardDefinitionFromRow(definition: unknown): BoardDefinition {
-  return parseBoardDefinition(definition);
+  const parsed = parseBoardDefinition(definition);
+
+  if ((parsed as any).version === 1) {
+    return migrateV1ToV2(parsed);
+  }
+
+  return parsed;
 }

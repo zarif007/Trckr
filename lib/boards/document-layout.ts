@@ -6,27 +6,17 @@ export function cloneBoardDefinition(d: BoardDefinition): BoardDefinition {
 }
 
 /**
- * Next full-width row in the document-ordered stack (12-column model, `w: 12`).
- * Used when appending widgets from the editor so layout stays consistent.
+ * Get the next placeId for a new block (max placeId + 1).
+ * Used when appending blocks from the editor.
  */
-export function nextDocumentSlot(
-  def: BoardDefinition,
-  kind: BoardElement["type"],
-): { x: number; y: number; w: number; h: number } {
-  const bottom = def.elements.reduce(
-    (m, e) => Math.max(m, e.layout.y + e.layout.h),
-    0,
-  );
-  const h = kind === "stat" ? 2 : 5;
-  return { x: 0, y: bottom, w: 12, h };
+export function getNextPlaceId(elements: BoardDefinition["elements"]): number {
+  if (elements.length === 0) return 0;
+  return Math.max(...elements.map((e) => e.placeId)) + 1;
 }
 
-/** Stable order for vertical document UI: top-to-bottom, then left-to-right. */
+/** Stable order for vertical document UI: sorted by placeId. */
 export function sortBoardElementsByDocumentOrder(
   elements: BoardDefinition["elements"],
 ): BoardDefinition["elements"] {
-  return [...elements].sort((a, b) => {
-    if (a.layout.y !== b.layout.y) return a.layout.y - b.layout.y;
-    return a.layout.x - b.layout.x;
-  });
+  return [...elements].sort((a, b) => a.placeId - b.placeId);
 }

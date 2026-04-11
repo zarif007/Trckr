@@ -22,7 +22,7 @@ describe("parseBoardDefinition", () => {
         {
           id: "e1",
           type: "stat",
-          layout: { x: 0, y: 0, w: 4, h: 2 },
+          placeId: 0,
           source: {
             trackerSchemaId: "t1",
             gridId: "g1",
@@ -40,14 +40,14 @@ describe("parseBoardDefinition", () => {
     }
   });
 
-  it("safeParse rejects bad layout", () => {
+  it("safeParse rejects negative placeId", () => {
     const r = safeParseBoardDefinition({
       version: BOARD_DEFINITION_VERSION,
       elements: [
         {
           id: "e1",
           type: "stat",
-          layout: { x: 0, y: 0, w: 20, h: 2 },
+          placeId: -1,
           source: { trackerSchemaId: "t", gridId: "g", fieldIds: [] },
           aggregate: "count",
         },

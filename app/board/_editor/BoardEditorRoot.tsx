@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   BOARD_DEFINITION_VERSION,
-  buildDefaultChartElement,
+  fetchTrackerAssembledSchema,
+  getNextPlaceId,
   buildDefaultStatElement,
   buildDefaultTableElement,
-  fetchTrackerAssembledSchema,
-  nextDocumentSlot,
+  buildDefaultChartElement,
+  buildDefaultTextElement,
   type AssembledSchema,
   type BoardDefinition,
   type BoardElement,
@@ -23,7 +24,7 @@ import {
   useBoardNavBar,
   type BoardNavPersistStatus,
 } from "@/app/board/_hooks/useBoardNavBar";
-import { BoardDocumentStack } from "./BoardDocumentStack";
+import { BoardBlockEditor } from "./BoardBlockEditor";
 import { BoardEditorPanel } from "./BoardEditorPanel";
 
 type BoardMeta = {
@@ -90,7 +91,11 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
 
   const prefetchSchemasForDefinition = useCallback(
     (def: BoardDefinition) => {
-      const ids = new Set(def.elements.map((e) => e.source.trackerSchemaId));
+      const ids = new Set(
+        def.elements
+          .filter((e) => e.type !== "text")
+          .map((e) => (e as Exclude<BoardElement, { type: "text" }>).source.trackerSchemaId)
+      );
       ids.forEach((id) => loadSchema(id));
     },
     [loadSchema],
@@ -252,13 +257,13 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       trackerSchemaId: string,
     ) => {
       mutateDefinition((prev) => {
-        const layout = nextDocumentSlot(prev, kind);
+        const placeId = getNextPlaceId(prev.elements);
         const el =
           kind === "stat"
-            ? buildDefaultStatElement(trackerSchemaId, schema, layout)
+            ? buildDefaultStatElement(trackerSchemaId, schema, placeId)
             : kind === "table"
-              ? buildDefaultTableElement(trackerSchemaId, schema, layout)
-              : buildDefaultChartElement(trackerSchemaId, schema, layout);
+              ? buildDefaultTableElement(trackerSchemaId, schema, placeId)
+              : buildDefaultChartElement(trackerSchemaId, schema, placeId);
         if (!el) return prev;
         return {
           ...prev,
@@ -396,23 +401,22 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
             ) : null
           }
         >
-          <BoardDocumentStack
-            definition={definition}
-            data={data}
-            editMode={editMode}
-            scopedTrackers={scopedTrackers}
-            schemaByTracker={schemaByTracker}
-            onSchemaNeeded={(tid) => void loadSchema(tid)}
-            onUpdateElement={updateElementById}
-            onRemoveElement={removeElementById}
-            onTitleChange={handleTitleChange}
-            onAddStat={handleAddStat}
-            onAddTable={handleAddTable}
-            onAddChart={handleAddChart}
-            addingWidget={addingWidget}
-            isNew={isNew}
-            moduleScoped={Boolean(board.moduleId)}
-          />
+          {editMode ? (
+            <BoardBlockEditor
+              definition={definition}
+              data={data}
+              scopedTrackers={scopedTrackers}
+              schemaByTracker={schemaByTracker}
+              onDefinitionChange={mutateDefinition}
+              onSchemaNeeded={loadSchema}
+            />
+          ) : (
+            <div className="flex flex-col gap-4 p-4">
+              <p className="text-sm text-muted-foreground">
+                View mode will display the rendered blocks here.
+              </p>
+            </div>
+          )}
         </BoardEditorPanel>
       </div>
     </div>

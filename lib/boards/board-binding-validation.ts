@@ -89,6 +89,9 @@ export async function validateBoardElementBindings(
   projectId: string,
   moduleId: string | null,
 ): Promise<BoardBindingValidationResult> {
+  if (element.type === "text") {
+    return { ok: true };
+  }
   const source = element.source;
   const trackerOk = await assertTrackerInScope(
     source.trackerSchemaId,

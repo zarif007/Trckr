@@ -4,17 +4,10 @@ import {
   type AssembledSchema,
 } from "./assembled-tracker-schema";
 
-export type BoardLayoutSlot = {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-};
-
 export function buildDefaultStatElement(
   trackerSchemaId: string,
   schema: AssembledSchema,
-  layout: BoardLayoutSlot,
+  placeId: number,
 ): BoardElement | null {
   const grid = schema.grids?.[0];
   if (!grid) return null;
@@ -23,7 +16,7 @@ export function buildDefaultStatElement(
   return {
     id: crypto.randomUUID(),
     type: "stat",
-    layout,
+    placeId,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -36,7 +29,7 @@ export function buildDefaultStatElement(
 export function buildDefaultTableElement(
   trackerSchemaId: string,
   schema: AssembledSchema,
-  layout: BoardLayoutSlot,
+  placeId: number,
 ): BoardElement | null {
   const grid = schema.grids?.[0];
   if (!grid) return null;
@@ -45,7 +38,7 @@ export function buildDefaultTableElement(
   return {
     id: crypto.randomUUID(),
     type: "table",
-    layout,
+    placeId,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -58,7 +51,7 @@ export function buildDefaultTableElement(
 export function buildDefaultChartElement(
   trackerSchemaId: string,
   schema: AssembledSchema,
-  layout: BoardLayoutSlot,
+  placeId: number,
 ): BoardElement | null {
   const grid = schema.grids?.[0];
   if (!grid) return null;
@@ -70,7 +63,7 @@ export function buildDefaultChartElement(
     id: crypto.randomUUID(),
     type: "chart",
     chartKind: "bar",
-    layout,
+    placeId,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -78,5 +71,14 @@ export function buildDefaultChartElement(
       groupByFieldId: groupBy,
       metricFieldId: metric,
     },
+  };
+}
+
+export function buildDefaultTextElement(placeId: number): BoardElement {
+  return {
+    id: crypto.randomUUID(),
+    type: "text",
+    placeId,
+    content: "",
   };
 }

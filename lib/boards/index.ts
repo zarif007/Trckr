@@ -10,8 +10,11 @@
 export type {
   BoardDefinition,
   BoardElement,
-  BoardLayout,
   StatAggregate,
+  StatElement,
+  TableElement,
+  ChartElement,
+  TextElement,
 } from "./board-definition";
 export {
   BOARD_DEFINITION_VERSION,
@@ -28,16 +31,16 @@ export {
   layoutFieldIdsForGrid,
 } from "./assembled-tracker-schema";
 
-export type { BoardLayoutSlot } from "./default-board-elements";
 export {
   buildDefaultChartElement,
   buildDefaultStatElement,
   buildDefaultTableElement,
+  buildDefaultTextElement,
 } from "./default-board-elements";
 
 export {
   cloneBoardDefinition,
-  nextDocumentSlot,
+  getNextPlaceId,
   sortBoardElementsByDocumentOrder,
 } from "./document-layout";
 

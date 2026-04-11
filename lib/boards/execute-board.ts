@@ -107,6 +107,10 @@ async function executeElement(
   moduleId: string | null,
   userId: string,
 ): Promise<BoardElementPayload> {
+  if (element.type === "text") {
+    return { kind: "stat", value: 0 };
+  }
+
   const bind = await validateBoardElementBindings(element, projectId, moduleId);
   if (!bind.ok) {
     const err = { error: bind.message } as const;

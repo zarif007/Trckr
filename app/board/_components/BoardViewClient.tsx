@@ -13,7 +13,8 @@ import {
   TAB_CONTENT_INNER,
   SECTION_STACK_GAP,
 } from "@/app/components/tracker-display/layout/layout-tokens";
-import { BoardElementBlock } from "@/app/board/_editor/BoardElementBlock";
+import { sortBoardElementsByDocumentOrder } from "@/lib/boards/document-layout";
+import { BoardBlockItem } from "@/app/board/_editor/BoardBlockItem";
 import { useBoardNavBar } from "../_hooks/useBoardNavBar";
 
 type BoardMeta = {
@@ -26,14 +27,6 @@ type BoardMeta = {
   moduleName: string | null;
 };
 
-function sortDocumentOrder(
-  elements: BoardDefinition["elements"],
-): BoardDefinition["elements"] {
-  return [...elements].sort((a, b) => {
-    if (a.layout.y !== b.layout.y) return a.layout.y - b.layout.y;
-    return a.layout.x - b.layout.x;
-  });
-}
 
 export function BoardViewClient({ boardId }: { boardId: string }) {
   const router = useRouter();
@@ -102,7 +95,7 @@ export function BoardViewClient({ boardId }: { boardId: string }) {
     );
   }
 
-  const ordered = sortDocumentOrder(board.definition.elements);
+  const ordered = sortBoardElementsByDocumentOrder(board.definition.elements);
 
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-background pt-12 text-foreground">
@@ -137,17 +130,12 @@ export function BoardViewClient({ boardId }: { boardId: string }) {
           <div className={cn("mx-auto max-w-3xl", TAB_CONTENT_INNER)}>
             <div className={SECTION_STACK_GAP}>
               {ordered.map((el) => (
-                <BoardElementBlock
+                <BoardBlockItem
                   key={el.id}
-                  element={el}
-                  payload={data?.[el.id]}
-                  editMode={false}
-                  scopedTrackers={[]}
-                  schema={null}
-                  onSchemaNeeded={() => {}}
-                  onTitleChange={() => {}}
-                  onUpdate={() => {}}
+                  block={el}
+                  payload={data?.[el.id] ?? null}
                   onRemove={() => {}}
+                  onUpdate={() => {}}
                 />
               ))}
             </div>
