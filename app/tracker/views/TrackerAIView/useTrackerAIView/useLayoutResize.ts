@@ -1,55 +1,59 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useRef, useState, type RefObject } from "react";
+
 import { MIN_LEFT_PX, MIN_RIGHT_PX } from "../types";
 
 export function useLayoutResize(
-  containerRef: React.RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
   isChatOpen: boolean,
   isDesktop: boolean,
 ) {
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
+  const pointerIdRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || !isChatOpen || !isDesktop) return;
-    const clampWidth = () => {
-      const rect = container.getBoundingClientRect();
-      const fallback = Math.round(rect.width * 0.75);
-      setLeftWidth((prev) => {
-        const current = prev ?? fallback;
-        const maxLeft = Math.max(MIN_LEFT_PX, rect.width - MIN_RIGHT_PX);
-        return Math.max(MIN_LEFT_PX, Math.min(current, maxLeft));
-      });
-    };
-    clampWidth();
-    window.addEventListener("resize", clampWidth);
-    return () => window.removeEventListener("resize", clampWidth);
-  }, [containerRef, isChatOpen, isDesktop]);
+  const clampLeft = useCallback((clientX: number, containerWidth: number) => {
+    const maxLeft = Math.max(MIN_LEFT_PX, containerWidth - MIN_RIGHT_PX);
+    return Math.min(Math.max(MIN_LEFT_PX, clientX), maxLeft);
+  }, []);
 
   const handlePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isChatOpen || !isDesktop) return;
       const container = containerRef.current;
       if (!container) return;
+      e.preventDefault();
+      pointerIdRef.current = e.pointerId;
+      e.currentTarget.setPointerCapture(e.pointerId);
+
       const rect = container.getBoundingClientRect();
-      const maxLeft = Math.max(MIN_LEFT_PX, rect.width - MIN_RIGHT_PX);
-      const handleMove = (moveEvent: PointerEvent) => {
-        const next = moveEvent.clientX - rect.left;
-        const clamped = Math.max(MIN_LEFT_PX, Math.min(next, maxLeft));
-        setLeftWidth(clamped);
+      setLeftWidth(clampLeft(e.clientX - rect.left, rect.width));
+
+      const onMove = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerIdRef.current) return;
+        const r = container.getBoundingClientRect();
+        setLeftWidth(clampLeft(ev.clientX - r.left, r.width));
       };
-      const handleUp = () => {
-        document.body.style.cursor = "";
-        window.removeEventListener("pointermove", handleMove);
-        window.removeEventListener("pointerup", handleUp);
+
+      const onUp = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerIdRef.current) return;
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        try {
+          e.currentTarget.releasePointerCapture(ev.pointerId);
+        } catch {
+          /* capture may already be released */
+        }
+        pointerIdRef.current = null;
       };
-      document.body.style.cursor = "col-resize";
-      window.addEventListener("pointermove", handleMove);
-      window.addEventListener("pointerup", handleUp);
+
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     },
-    [containerRef],
+    [isChatOpen, isDesktop, containerRef, clampLeft],
   );
 
-  return { leftWidth, setLeftWidth, handlePointerDown };
+  return { leftWidth, handlePointerDown };
 }

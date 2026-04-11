@@ -49,6 +49,13 @@ export type AnalysisSummary = {
   updatedAt: string;
 };
 
+export type BoardSummary = {
+  id: string;
+  name: string;
+  moduleId: string | null;
+  updatedAt: string;
+};
+
 export type WorkflowSummary = {
   id: string;
   name: string;
@@ -79,6 +86,7 @@ export type Project = {
   trackerSchemas: TrackerSchema[];
   reports: ReportSummary[];
   analyses: AnalysisSummary[];
+  boards: BoardSummary[];
   workflows: WorkflowSummary[];
   modules: Module[];
 };

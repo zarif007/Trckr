@@ -20,6 +20,7 @@ import {
   Folder,
   ChevronRight,
   MoreHorizontal,
+  LayoutDashboard,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -155,6 +156,12 @@ export function ModuleContent({
     [projectForReports?.analyses, moduleId],
   );
 
+  const moduleBoards = useMemo(
+    () =>
+      (projectForReports?.boards ?? []).filter((b) => b.moduleId === moduleId),
+    [projectForReports?.boards, moduleId],
+  );
+
   useEffect(() => {
     if (isError && (error as Error)?.message === "Not found") {
       const base = pathname.startsWith("/project/") ? "/project" : "/dashboard";
@@ -215,6 +222,13 @@ export function ModuleContent({
           body: JSON.stringify({ name: newName }),
         });
         if (!res.ok) throw new Error("Failed to rename analysis");
+      } else if (kind === "board") {
+        const res = await fetch(`/api/boards/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName }),
+        });
+        if (!res.ok) throw new Error("Failed to rename dashboard");
       }
       invalidateModuleAndProjects();
       await fetchProjects();
@@ -259,6 +273,13 @@ export function ModuleContent({
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Failed to delete analysis");
+        invalidateModuleAndProjects();
+        await fetchProjects();
+      } else if (item.kind === "board") {
+        const res = await fetch(`/api/boards/${item.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete dashboard");
         invalidateModuleAndProjects();
         await fetchProjects();
       }
@@ -389,6 +410,31 @@ export function ModuleContent({
                     ...p,
                     analyses: (p.analyses ?? []).map((a) =>
                       a.id === id ? { ...a, name } : a,
+                    ),
+                  },
+            ),
+          );
+        } else if (kind === "board") {
+          queryClient.setQueryData<Project>(
+            dashboardQueryKeys.project(projectId),
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    boards: (prev.boards ?? []).map((b) =>
+                      b.id === id ? { ...b, name } : b,
+                    ),
+                  }
+                : prev,
+          );
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : {
+                    ...p,
+                    boards: (p.boards ?? []).map((b) =>
+                      b.id === id ? { ...b, name } : b,
                     ),
                   },
             ),
@@ -640,6 +686,46 @@ export function ModuleContent({
           );
         };
       }
+      if (item.kind === "board" && projectForReports) {
+        const board = (projectForReports.boards ?? []).find(
+          (b) => b.id === item.id,
+        );
+        if (!board) return;
+        queryClient.setQueryData<Project>(
+          dashboardQueryKeys.project(projectId),
+          (prev) =>
+            prev
+              ? {
+                  ...prev,
+                  boards: (prev.boards ?? []).filter((b) => b.id !== item.id),
+                }
+              : prev,
+        );
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                  ...p,
+                  boards: (p.boards ?? []).filter((b) => b.id !== item.id),
+                },
+          ),
+        );
+        return () => {
+          queryClient.setQueryData<Project>(
+            dashboardQueryKeys.project(projectId),
+            (prev) =>
+              prev ? { ...prev, boards: [...(prev.boards ?? []), board] } : prev,
+          );
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, boards: [...(p.boards ?? []), board] },
+            ),
+          );
+        };
+      }
     },
     [
       mod,
@@ -688,7 +774,8 @@ export function ModuleContent({
     trackerSchemas.length +
     childModules.length +
     moduleReports.length +
-    moduleAnalyses.length;
+    moduleAnalyses.length +
+    moduleBoards.length;
   const isEmpty = totalItems === 0;
 
   const existingFileTypes = new Set(
@@ -753,6 +840,15 @@ export function ModuleContent({
           label: string;
           sublabel: string;
           icon: typeof BarChart2;
+          updatedAt: string;
+          href: string;
+        }
+      | {
+          kind: "board";
+          id: string;
+          label: string;
+          sublabel: string;
+          icon: typeof LayoutDashboard;
           updatedAt: string;
           href: string;
         }
@@ -836,12 +932,22 @@ export function ModuleContent({
       updatedAt: a.updatedAt,
       href: `/analysis/${a.id}`,
     }));
+    const boardRows = moduleBoards.map((b) => ({
+      kind: "board" as const,
+      id: b.id,
+      label: b.name?.trim() || "Untitled dashboard",
+      sublabel: "Dashboard",
+      icon: LayoutDashboard,
+      updatedAt: b.updatedAt,
+      href: `/board/${b.id}`,
+    }));
     return [
       ...rows,
       ...moduleRows,
       ...trackerRows,
       ...reportRows,
       ...analysisRows,
+      ...boardRows,
     ];
   }, [
     pathname,
@@ -852,6 +958,7 @@ export function ModuleContent({
     trackerSchemas,
     moduleReports,
     moduleAnalyses,
+    moduleBoards,
     hasModuleConfigs,
   ]);
 
@@ -870,6 +977,11 @@ export function ModuleContent({
   }, [invalidateModuleAndProjects, fetchProjects]);
 
   const handleAnalysisCreated = useCallback(async () => {
+    invalidateModuleAndProjects();
+    await fetchProjects();
+  }, [invalidateModuleAndProjects, fetchProjects]);
+
+  const handleBoardCreated = useCallback(async () => {
     invalidateModuleAndProjects();
     await fetchProjects();
   }, [invalidateModuleAndProjects, fetchProjects]);
@@ -1013,6 +1125,7 @@ export function ModuleContent({
               onTrackerCreated={handleTrackerCreated}
               onReportCreated={handleReportCreated}
               onAnalysisCreated={handleAnalysisCreated}
+              onBoardCreated={handleBoardCreated}
               availableConfigTypes={availableFileTypes}
               onAddConfig={handleAddConfig}
               addingConfig={addingConfig}
@@ -1026,7 +1139,7 @@ export function ModuleContent({
               <ProjectEmptyStatePanel
                 icon={FileText}
                 title="This module is empty"
-                description="Add trackers, nested modules, or reports from the menu above."
+                description="Add trackers, nested modules, reports, or dashboards from the menu above."
               >
                 <CreateDropdown
                   projectId={projectId}
@@ -1036,6 +1149,7 @@ export function ModuleContent({
                   onTrackerCreated={handleTrackerCreated}
                   onReportCreated={handleReportCreated}
                   onAnalysisCreated={handleAnalysisCreated}
+                  onBoardCreated={handleBoardCreated}
                   availableConfigTypes={availableFileTypes}
                   onAddConfig={handleAddConfig}
                   addingConfig={addingConfig}
@@ -1064,7 +1178,8 @@ export function ModuleContent({
                     row.kind === "module" ||
                     row.kind === "tracker" ||
                     row.kind === "report" ||
-                    row.kind === "analysis";
+                    row.kind === "analysis" ||
+                    row.kind === "board";
                   return (
                     <div
                       key={
@@ -1126,7 +1241,8 @@ export function ModuleContent({
                       </motion.button>
                       {(row.kind === "tracker" ||
                         row.kind === "report" ||
-                        row.kind === "analysis") &&
+                        row.kind === "analysis" ||
+                        row.kind === "board") &&
                         !isRenamingThis && (
                           <button
                             type="button"
@@ -1136,7 +1252,9 @@ export function ModuleContent({
                                 ? "Report actions"
                                 : row.kind === "analysis"
                                   ? "Analysis actions"
-                                  : "Tracker actions"
+                                  : row.kind === "board"
+                                    ? "Dashboard actions"
+                                    : "Tracker actions"
                             }
                             onClick={(e: MouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();

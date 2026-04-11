@@ -24,6 +24,7 @@ model User {
   projects        Project[]
   reports         Report[]
   analyses        Analysis[]
+  boards          Board[]
   sessions        Session[]
   createdGridRows GridRow[]       @relation("GridRowCreator")
 }
@@ -83,6 +84,7 @@ model Project {
   modules        Module[]
   reports        Report[]
   analyses       Analysis[]
+  boards         Board[]
   workflows      Workflow[]
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   trackerSchemas TrackerSchema[]
@@ -103,6 +105,7 @@ model Module {
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
   reports        Report[]
   analyses       Analysis[]
+  boards         Board[]
   trackerSchemas TrackerSchema[]
   workflows      Workflow[]
 
@@ -304,6 +307,24 @@ model AnalysisRunEvent {
 
   @@unique([analysisRunId, seq])
   @@index([analysisRunId])
+}
+
+model Board {
+  id          String   @id @default(cuid())
+  projectId   String
+  moduleId    String?
+  userId      String
+  name        String
+  definition  Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  module      Module?  @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([userId])
+  @@index([moduleId])
 }
 
 model LlmTokenUsage {

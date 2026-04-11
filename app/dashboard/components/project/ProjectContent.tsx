@@ -21,6 +21,7 @@ import {
   ChevronRight,
   MoreHorizontal,
   GitBranch,
+  LayoutDashboard,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -185,6 +186,13 @@ export function ProjectContent({
           body: JSON.stringify({ name: newName }),
         });
         if (!res.ok) throw new Error("Failed to rename analysis");
+      } else if (kind === "board") {
+        const res = await fetch(`/api/boards/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName }),
+        });
+        if (!res.ok) throw new Error("Failed to rename dashboard");
       } else if (kind === "workflow") {
         const res = await fetch(`/api/workflows/${id}`, {
           method: "PATCH",
@@ -237,6 +245,14 @@ export function ProjectContent({
                 ),
               };
             }
+            if (kind === "board") {
+              return {
+                ...prev,
+                boards: (prev.boards ?? []).map((b) =>
+                  b.id === id ? { ...b, name } : b,
+                ),
+              };
+            }
             if (kind === "workflow") {
               return {
                 ...prev,
@@ -279,6 +295,14 @@ export function ProjectContent({
                 ...p,
                 analyses: (p.analyses ?? []).map((a) =>
                   a.id === id ? { ...a, name } : a,
+                ),
+              };
+            }
+            if (kind === "board") {
+              return {
+                ...p,
+                boards: (p.boards ?? []).map((b) =>
+                  b.id === id ? { ...b, name } : b,
                 ),
               };
             }
@@ -346,6 +370,13 @@ export function ProjectContent({
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Failed to delete analysis");
+        invalidateProjectAndProjects();
+        await fetchProjects();
+      } else if (item.kind === "board") {
+        const res = await fetch(`/api/boards/${item.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to delete dashboard");
         invalidateProjectAndProjects();
         await fetchProjects();
       } else if (item.kind === "workflow") {
@@ -557,6 +588,44 @@ export function ProjectContent({
           );
         };
       }
+      if (item.kind === "board" && project) {
+        const board = (project.boards ?? []).find((b) => b.id === item.id);
+        if (!board) return;
+        queryClient.setQueryData<Project>(
+          dashboardQueryKeys.project(projectId),
+          (prev) =>
+            prev
+              ? {
+                  ...prev,
+                  boards: (prev.boards ?? []).filter((b) => b.id !== item.id),
+                }
+              : prev,
+        );
+        setProjects((prev) =>
+          prev.map((p) =>
+            p.id !== projectId
+              ? p
+              : {
+                  ...p,
+                  boards: (p.boards ?? []).filter((b) => b.id !== item.id),
+                },
+          ),
+        );
+        return () => {
+          queryClient.setQueryData<Project>(
+            dashboardQueryKeys.project(projectId),
+            (prev) =>
+              prev ? { ...prev, boards: [...(prev.boards ?? []), board] } : prev,
+          );
+          setProjects((prev) =>
+            prev.map((p) =>
+              p.id !== projectId
+                ? p
+                : { ...p, boards: [...(p.boards ?? []), board] },
+            ),
+          );
+        };
+      }
       if (item.kind === "workflow" && project) {
         const workflow = (project.workflows ?? []).find(
           (w) => w.id === item.id,
@@ -653,6 +722,10 @@ export function ProjectContent({
     () => (project?.workflows ?? []).filter((w) => w.moduleId == null),
     [project?.workflows],
   );
+  const projectLevelBoards = useMemo(
+    () => (project?.boards ?? []).filter((b) => b.moduleId == null),
+    [project?.boards],
+  );
   const hasProjectConfigs = projectSystemFiles.length > 0;
   const totalItems =
     (hasProjectConfigs ? 1 : 0) +
@@ -660,6 +733,7 @@ export function ProjectContent({
     projectLevelTrackers.length +
     projectLevelReports.length +
     projectLevelAnalyses.length +
+    projectLevelBoards.length +
     projectLevelWorkflows.length;
   const isEmpty = totalItems === 0;
 
@@ -716,6 +790,15 @@ export function ProjectContent({
           label: string;
           sublabel: string;
           icon: typeof BarChart2;
+          updatedAt: string;
+          href: string;
+        }
+      | {
+          kind: "board";
+          id: string;
+          label: string;
+          sublabel: string;
+          icon: typeof LayoutDashboard;
           updatedAt: string;
           href: string;
         }
@@ -808,6 +891,15 @@ export function ProjectContent({
       updatedAt: a.updatedAt,
       href: `/analysis/${a.id}`,
     }));
+    const boardRows = projectLevelBoards.map((b) => ({
+      kind: "board" as const,
+      id: b.id,
+      label: b.name?.trim() || "Untitled dashboard",
+      sublabel: "Dashboard",
+      icon: LayoutDashboard,
+      updatedAt: b.updatedAt,
+      href: `/board/${b.id}`,
+    }));
     const workflowRows = projectLevelWorkflows.map((w) => ({
       kind: "workflow" as const,
       id: w.id,
@@ -823,6 +915,7 @@ export function ProjectContent({
       ...trackerRows,
       ...reportRows,
       ...analysisRows,
+      ...boardRows,
       ...workflowRows,
     ];
   }, [
@@ -833,6 +926,7 @@ export function ProjectContent({
     projectLevelTrackers,
     projectLevelReports,
     projectLevelAnalyses,
+    projectLevelBoards,
     projectLevelWorkflows,
     hasProjectConfigs,
   ]);
@@ -852,6 +946,11 @@ export function ProjectContent({
   }, [fetchProjects, invalidateProjectAndProjects]);
 
   const handleAnalysisCreated = useCallback(async () => {
+    await fetchProjects();
+    invalidateProjectAndProjects();
+  }, [fetchProjects, invalidateProjectAndProjects]);
+
+  const handleBoardCreated = useCallback(async () => {
     await fetchProjects();
     invalidateProjectAndProjects();
   }, [fetchProjects, invalidateProjectAndProjects]);
@@ -924,6 +1023,7 @@ export function ProjectContent({
               onTrackerCreated={handleTrackerCreated}
               onReportCreated={handleReportCreated}
               onAnalysisCreated={handleAnalysisCreated}
+              onBoardCreated={handleBoardCreated}
             />
           }
         />
@@ -934,7 +1034,7 @@ export function ProjectContent({
               <ProjectEmptyStatePanel
                 icon={FilePlus}
                 title="This folder is empty"
-                description="Add a tracker, module, or report to get started."
+                description="Add a tracker, module, report, or dashboard to get started."
               >
                 <CreateDropdown
                   projectId={projectId}
@@ -943,6 +1043,7 @@ export function ProjectContent({
                   onTrackerCreated={handleTrackerCreated}
                   onReportCreated={handleReportCreated}
                   onAnalysisCreated={handleAnalysisCreated}
+                  onBoardCreated={handleBoardCreated}
                 />
               </ProjectEmptyStatePanel>
             ) : (
@@ -971,6 +1072,7 @@ export function ProjectContent({
                       row.kind === "tracker" ||
                       row.kind === "report" ||
                       row.kind === "analysis" ||
+                      row.kind === "board" ||
                       row.kind === "workflow";
                     const marqueeId = `${row.kind}:${row.id}`;
                     const isMarqueeSelected =
@@ -1044,6 +1146,7 @@ export function ProjectContent({
                         {(row.kind === "tracker" ||
                           row.kind === "report" ||
                           row.kind === "analysis" ||
+                          row.kind === "board" ||
                           row.kind === "workflow") &&
                           !isRenamingThis && (
                             <button
@@ -1054,9 +1157,11 @@ export function ProjectContent({
                                   ? "Report actions"
                                   : row.kind === "analysis"
                                     ? "Analysis actions"
-                                    : row.kind === "workflow"
-                                      ? "Workflow actions"
-                                      : "Tracker actions"
+                                    : row.kind === "board"
+                                      ? "Dashboard actions"
+                                      : row.kind === "workflow"
+                                        ? "Workflow actions"
+                                        : "Tracker actions"
                               }
                               onClick={(e: MouseEvent<HTMLButtonElement>) => {
                                 e.stopPropagation();

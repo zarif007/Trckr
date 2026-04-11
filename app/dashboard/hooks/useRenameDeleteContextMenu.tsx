@@ -29,6 +29,7 @@ export type ContextMenuRowKind =
   | "project"
   | "report"
   | "analysis"
+  | "board"
   | "workflow";
 
 export type TrackerHrefs = {
@@ -66,6 +67,8 @@ function getDeleteConfirmMessage(item: ContextMenuItem): string {
       return `Delete report "${item.label}"?`;
     case "analysis":
       return `Delete analysis "${item.label}"?`;
+    case "board":
+      return `Delete dashboard "${item.label}"?`;
     default:
       return `Delete "${item.label}"?`;
   }

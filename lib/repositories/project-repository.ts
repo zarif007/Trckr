@@ -32,6 +32,10 @@ export async function listProjectsForUser(userId: string) {
         orderBy: { updatedAt: "desc" },
         select: { id: true, name: true, moduleId: true, updatedAt: true },
       },
+      boards: {
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, name: true, moduleId: true, updatedAt: true },
+      },
       modules: {
         orderBy: { updatedAt: "desc" },
         include: {
@@ -88,6 +92,10 @@ export async function createProjectForUser(userId: string, name: string) {
             orderBy: { updatedAt: "desc" },
             select: { id: true, name: true, moduleId: true, updatedAt: true },
           },
+          boards: {
+            orderBy: { updatedAt: "desc" },
+            select: { id: true, name: true, moduleId: true, updatedAt: true },
+          },
           workflows: {
             orderBy: { updatedAt: "desc" },
             select: {
@@ -134,6 +142,10 @@ export async function findProjectByIdForUser(
         select: { id: true, name: true, moduleId: true, updatedAt: true },
       },
       analyses: {
+        orderBy: { updatedAt: "desc" },
+        select: { id: true, name: true, moduleId: true, updatedAt: true },
+      },
+      boards: {
         orderBy: { updatedAt: "desc" },
         select: { id: true, name: true, moduleId: true, updatedAt: true },
       },

@@ -11,6 +11,7 @@ import {
   FileText,
   BarChart2,
   GitBranch,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Popover,
@@ -22,6 +23,7 @@ import { NewModuleButton } from "./NewModuleButton";
 import { NewTrackerDialog } from "./NewTrackerDialog";
 import { NewReportDialog } from "./NewReportDialog";
 import { NewAnalysisDialog } from "./NewAnalysisDialog";
+import { NewBoardDialog } from "./NewBoardDialog";
 import type { SystemFileType } from "../dashboard-context";
 import { SYSTEM_FILE_LABELS } from "../dashboard-context";
 
@@ -39,6 +41,7 @@ type CreateDropdownProjectProps = CreateDropdownBaseProps & {
   onTrackerCreated?: (trackerId: string) => void;
   onReportCreated?: () => void | Promise<void>;
   onAnalysisCreated?: () => void | Promise<void>;
+  onBoardCreated?: () => void | Promise<void>;
   onWorkflowCreated?: (id: string) => void;
   onAddConfig?: never;
 };
@@ -49,6 +52,7 @@ type CreateDropdownModuleProps = CreateDropdownBaseProps & {
   onTrackerCreated?: (trackerId: string) => void;
   onReportCreated?: () => void | Promise<void>;
   onAnalysisCreated?: () => void | Promise<void>;
+  onBoardCreated?: () => void | Promise<void>;
   onAddConfig?: (type: SystemFileType) => void;
   addingConfig?: boolean;
 };
@@ -84,6 +88,8 @@ export function CreateDropdown(props: CreateDropdownProps) {
     "onReportCreated" in props ? props.onReportCreated : undefined;
   const onAnalysisCreated =
     "onAnalysisCreated" in props ? props.onAnalysisCreated : undefined;
+  const onBoardCreated =
+    "onBoardCreated" in props ? props.onBoardCreated : undefined;
   const onWorkflowCreated =
     "onWorkflowCreated" in props ? props.onWorkflowCreated : undefined;
 
@@ -99,6 +105,7 @@ export function CreateDropdown(props: CreateDropdownProps) {
   const [trackerDialogOpen, setTrackerDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
+  const [boardDialogOpen, setBoardDialogOpen] = useState(false);
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
   const isToolbar = variant === "toolbar";
   const isModule = isModuleProps(props);
@@ -136,6 +143,11 @@ export function CreateDropdown(props: CreateDropdownProps) {
   const handleAnalysisClick = useCallback(() => {
     setOpen(false);
     setAnalysisDialogOpen(true);
+  }, []);
+
+  const handleBoardClick = useCallback(() => {
+    setOpen(false);
+    setBoardDialogOpen(true);
   }, []);
 
   const handleModuleClick = useCallback(() => {
@@ -226,6 +238,16 @@ export function CreateDropdown(props: CreateDropdownProps) {
                 Analysis
               </button>
             )}
+            {!isDashboard && projectId && (
+              <button
+                type="button"
+                onClick={handleBoardClick}
+                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-sm hover:bg-muted/60 transition-colors text-left w-full"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-muted-foreground" />
+                Dashboard
+              </button>
+            )}
             {!isDashboard && (
               <button
                 type="button"
@@ -313,6 +335,17 @@ export function CreateDropdown(props: CreateDropdownProps) {
           onOpenChange={setAnalysisDialogOpen}
           onError={onError}
           onCreated={onAnalysisCreated}
+        />
+      )}
+
+      {!isDashboard && projectId && (
+        <NewBoardDialog
+          projectId={projectId}
+          moduleId={isModule ? props.moduleId : undefined}
+          open={boardDialogOpen}
+          onOpenChange={setBoardDialogOpen}
+          onError={onError}
+          onCreated={onBoardCreated}
         />
       )}
 

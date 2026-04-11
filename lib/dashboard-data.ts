@@ -10,6 +10,7 @@ import type {
   Module,
   ReportSummary,
   AnalysisSummary,
+  BoardSummary,
   WorkflowSummary,
 } from "@/app/dashboard/dashboard-context";
 
@@ -49,6 +50,22 @@ function serializeAnalyses(
     name: a.name,
     moduleId: a.moduleId,
     updatedAt: a.updatedAt.toISOString(),
+  }));
+}
+
+function serializeBoards(
+  boards: {
+    id: string;
+    name: string;
+    moduleId: string | null;
+    updatedAt: Date;
+  }[],
+): BoardSummary[] {
+  return boards.map((b) => ({
+    id: b.id,
+    name: b.name,
+    moduleId: b.moduleId,
+    updatedAt: b.updatedAt.toISOString(),
   }));
 }
 
@@ -138,6 +155,7 @@ function serializeProject(p: ProjectFromDb): Project | null {
     })),
     reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
+    boards: serializeBoards(p.boards ?? []),
     workflows: serializeWorkflows(p.workflows ?? []),
     modules: buildModuleTree(flatModules),
   };
@@ -215,6 +233,7 @@ function serializeProjectFromList(p: ProjectFromList): Project {
     })),
     reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
+    boards: serializeBoards(p.boards ?? []),
     workflows: serializeWorkflows(p.workflows ?? []),
     modules: buildModuleTree(flatModules),
   };
