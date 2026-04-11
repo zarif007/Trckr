@@ -108,14 +108,40 @@ Example — a tracker with Sales Order + Costing grids where Costing selects fro
 requiredMasterData: [] (or external entities only — Sales Order is local, not master data)
 
 Omit requiredMasterData only when no select/multiselect entities need external reference data.
-The server resolves these BEFORE the builder runs for module/project scope, so the builder gets real tracker IDs directly.
+The server resolves these BEFORE the builder runs for module/project scope, so the builder gets real tracker ID's directly.
+
+=== VIEW SUGGESTION GUIDELINES ===
+
+In your builderTodo tasks (especially Phase 3: PRIMARY GRIDS), suggest appropriate views based on field types:
+
+- **Suggest kanban view** when a grid has status/options/multiselect fields suitable for columns:
+  - Task tracking with status field (To Do, In Progress, Done)
+  - Project pipelines with stage field
+  - Any workflow with 2-8 distinct states
+  - builderTodo should mention **groupBy** (field id) for the kanban view config when you suggest a board
+
+- **Suggest calendar view** when a grid has date fields for events/deadlines:
+  - Event planning with event_date field
+  - Task management with due_date field
+  - Appointment scheduling
+  - Deadline tracking
+
+- **Suggest timeline view** when a grid represents time-based projects:
+  - Projects with start_date and end_date (two date fields; builderTodo should call out **dateField** + **endDateField** in view config)
+  - Roadmaps with date ranges
+  - Multi-day events or campaigns
+
+- **Always include table view** as the default for all data grids.
+
+Example builderTodo task:
+{ action: "create", target: "grid", task: "Create tasks_grid with views: table (default), kanban (grouped by status), and calendar (by due_date). Fields: title, status, due_date, priority." }
 
 === OUTPUT SCHEMA ===
 
 Your output is a ManagerSchema with:
 1. **thinking**: 2-3 paragraphs covering domain/workflows, tab architecture/data model, and build strategy
 2. **prd**: { name, description?, keyFeatures[] }
-3. **builderTodo**: [] — detailed 8-phase build plan with explicit tasks
+3. **builderTodo**: [] — detailed 8-phase build plan with explicit tasks (include view suggestions where appropriate)
 4. **requiredMasterData**: [] — (module/project scope only) external master data entities needed
 
 The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
@@ -127,6 +153,7 @@ The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 [ ] Does each tab have a clear purpose and one primary workflow?
 [ ] Is my thinking 2-3 paragraphs covering domain, architecture, and build strategy?
 [ ] Does builderTodo cover all 8 phases with WHAT/WHY tasks (not exact field IDs)?
+[ ] Did I suggest appropriate views (kanban for status, calendar/timeline for dates) where applicable?
 [ ] Is every select/multiselect field assigned a binding task?
 [ ] For module/project scope: did I output requiredMasterData for EXTERNAL entities only (not primary grids of this tracker)?
 [ ] For module/project scope: did I EXCLUDE requiredMasterData entities from Phase 4?

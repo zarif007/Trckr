@@ -49,6 +49,7 @@ import {
   ColumnDropZone,
   useKanbanGroups,
 } from "./grids/kanban";
+import { GridLayoutEditChrome } from "./grids/shared/GridLayoutEditChrome";
 import type {
   TrackerGrid,
   TrackerField,
@@ -69,6 +70,7 @@ import {
 import {
   useKanbanPaginatedColumns,
   rowPayloadForPatch,
+  persistNewKanbanCardViaRowApi,
 } from "@/lib/tracker-grid-rows";
 
 const KANBAN_SORT_SEP = "::";
@@ -102,6 +104,11 @@ export interface TrackerKanbanGridProps {
     value: unknown,
   ) => void;
   trackerContext?: TrackerContextForOptions;
+  activeViewId?: string;
+  /** Increment from parent to open Add column dialog (view toolbar). */
+  openAddColumnRequest?: number;
+  /** Hide in-grid Add column when the view toolbar provides it. */
+  suppressEmbeddedAddColumn?: boolean;
 }
 
 function TrackerKanbanGridInner({
@@ -121,9 +128,15 @@ function TrackerKanbanGridInner({
   onDeleteEntries,
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
+  activeViewId,
+  openAddColumnRequest = 0,
+  suppressEmbeddedAddColumn = false,
 }: TrackerKanbanGridProps) {
-  const { trackerSchemaId: dataApiTrackerId, gridDataBranchName } =
-    useTrackerDataApi();
+  const {
+    trackerSchemaId: dataApiTrackerId,
+    gridDataBranchName,
+    rowBackedPersistLifecycle,
+  } = useTrackerDataApi();
   const canEditLayout = useCanEditLayout();
   const thisGridRows = useMemo(
     () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
@@ -181,6 +194,14 @@ function TrackerKanbanGridInner({
     trackerContext,
   });
 
+  const existingLayoutFieldIds = useMemo(
+    () =>
+      layoutNodes
+        .filter((n) => n.gridId === grid.id)
+        .map((n) => n.fieldId),
+    [layoutNodes, grid.id],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
@@ -207,7 +228,24 @@ function TrackerKanbanGridInner({
       gridIsPaginatedCapable &&
       Boolean(groupByFieldId) &&
       groups.length > 0,
+    persistLifecycle: rowBackedPersistLifecycle ?? undefined,
   });
+
+  const persistKanbanNewCard = useCallback(
+    (values: Record<string, unknown>) => {
+      const gid = String(
+        values[groupByFieldId] ??
+          (groups.find((g) => g.id !== "") ?? groups[0])?.id ??
+          "",
+      );
+      persistNewKanbanCardViaRowApi({
+        kanban: kanbanCols,
+        groupId: gid,
+        values,
+      });
+    },
+    [kanbanCols, groupByFieldId, groups],
+  );
 
   const gridDataForCards = useMemo(() => {
     if (!mutateKanbanViaRowApi) return gridDataForKanban;
@@ -680,12 +718,51 @@ function TrackerKanbanGridInner({
   );
 
   if (!kanbanState) {
-    if (layoutNodes.filter((node) => node.gridId === grid.id).length === 0)
-      return null;
+    const onThisGrid = layoutNodes.filter((node) => node.gridId === grid.id);
     return (
-      <div className="text-muted-foreground text-sm">
-        Kanban view requires a grouping field (check grid config or ensure an
-        options/multiselect field exists)
+      <div className="w-full space-y-4">
+        {canEditLayout ? (
+          <div className="flex justify-end items-center gap-2">
+            <GridLayoutEditChrome
+              gridId={grid.id}
+              viewType="kanban"
+              activeViewId={activeViewId}
+              canEditLayout={canEditLayout}
+              existingLayoutFieldIds={existingLayoutFieldIds}
+              allFields={fields}
+              openAddColumnRequest={openAddColumnRequest}
+              showAddButton={!suppressEmbeddedAddColumn}
+            />
+          </div>
+        ) : null}
+        <div className="text-muted-foreground text-sm">
+          {onThisGrid.length === 0 ? (
+            <>
+              No columns yet.
+              {canEditLayout ? (
+                <>
+                  {" "}
+                  Use <span className="font-medium text-foreground">Add column</span>{" "}
+                  above, then add a{" "}
+                  <span className="font-medium text-foreground">status</span>,{" "}
+                  <span className="font-medium text-foreground">options</span>, or{" "}
+                  <span className="font-medium text-foreground">multiselect</span>{" "}
+                  field for columns.
+                </>
+              ) : null}
+            </>
+          ) : (
+            <>
+              Kanban needs a grouping column on this board: add a{" "}
+              <span className="font-medium text-foreground">status</span>,{" "}
+              <span className="font-medium text-foreground">options</span>, or{" "}
+              <span className="font-medium text-foreground">multiselect</span>{" "}
+              column, or set{" "}
+              <span className="font-medium text-foreground">groupBy</span> in view
+              settings.
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -695,6 +772,18 @@ function TrackerKanbanGridInner({
       {(addable || cardFieldsDisplay.length > 0) && (
         <>
           <div className="flex justify-end items-center gap-2">
+            {canEditLayout ? (
+              <GridLayoutEditChrome
+                gridId={grid.id}
+                viewType="kanban"
+                activeViewId={activeViewId}
+                canEditLayout={canEditLayout}
+                existingLayoutFieldIds={existingLayoutFieldIds}
+                allFields={fields}
+                openAddColumnRequest={openAddColumnRequest}
+                showAddButton={!suppressEmbeddedAddColumn}
+              />
+            ) : null}
             {cardFieldsDisplay.length > 0 && (
               <Dialog>
                 <DialogTrigger asChild>
@@ -770,19 +859,9 @@ function TrackerKanbanGridInner({
                     }
                   : {}
               }
-              onSave={async (values) => {
+              onSave={(values) => {
                 if (mutateKanbanViaRowApi) {
-                  const gid = String(
-                    values[groupByFieldId] ??
-                      (groups.find((g) => g.id !== "") ?? groups[0])?.id ??
-                      "",
-                  );
-                  try {
-                    const row = await kanbanCols.createRowOnServer(values);
-                    kanbanCols.prependCardLocally(gid, row);
-                  } catch {
-                    kanbanCols.refetchAll();
-                  }
+                  persistKanbanNewCard(values);
                   setShowAddDialog(false);
                   return;
                 }
@@ -790,7 +869,10 @@ function TrackerKanbanGridInner({
                 setShowAddDialog(false);
               }}
               onSaveAnother={(values) => {
-                if (mutateKanbanViaRowApi) return;
+                if (mutateKanbanViaRowApi) {
+                  persistKanbanNewCard(values);
+                  return;
+                }
                 onAddEntry?.(values);
               }}
               getBindingUpdates={getBindingUpdates}

@@ -32,10 +32,10 @@ export interface EnsureContainerResult {
  * where a new field can be placed. Auto-creates section and/or div grid when needed.
  *
  * Rules:
- * - Fields go into a form (div grid) only. If the nearest grid is a table or kanban,
- * we create a new div grid in that section instead of adding to the table/kanban.
- * - After a div grid → use that grid.
- * - After a table/kanban or section with no div → create a div grid in that section.
+ * - If the nearest grid is a **data grid** (table, kanban, calendar, timeline), new
+ *   fields attach to that grid (same as using in-grid "Add column").
+ * - If the nearest grid is a **form** (`div`), fields go there.
+ * - After a section with no grid in scope → create a div grid in that section.
  * - No section at all (empty state) → create section + div grid.
  *
  * Returns the updated schema so the caller can apply it in one shot.
@@ -49,7 +49,14 @@ export function getOrCreateSectionAndGridForField(
   const sections = schema.sections ?? [];
   const grids = schema.grids ?? [];
 
-  // Walk backwards from insertion point to find nearest section and (div-only) grid
+  const DATA_GRID_TYPES = new Set([
+    "table",
+    "kanban",
+    "calendar",
+    "timeline",
+  ]);
+
+  // Walk backwards from insertion point to find nearest section and target grid
   let lastSectionId: string | null = null;
   let lastGridId: string | null = null;
 
@@ -65,8 +72,8 @@ export function getOrCreateSectionAndGridForField(
         );
         if (section) {
           lastSectionId = grid.sectionId;
-          // Only use this grid for fields if it's a form (div). Table/kanban get a new form.
-          if (grid.type === "div") {
+          const surfaceType = grid.type ?? "";
+          if (grid.type === "div" || DATA_GRID_TYPES.has(surfaceType)) {
             lastGridId = block.id;
           }
           break;

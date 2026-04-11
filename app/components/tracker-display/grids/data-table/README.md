@@ -7,10 +7,10 @@ Generic **table component** with columns, sorting, pagination, row selection, in
 - **Primitive**: Presentation + table behavior (TanStack Table). No knowledge of “tracker” or “grid”.
 - **Consumers**: `TrackerTableGrid`, `TrackerKanbanGrid`, and `TrackerDivGrid` (via `EntryFormDialog` and shared `FieldMetadata` / `OptionsGridFieldDef` from `utils.ts`).
 
-## Why it lives in `components/ui` (not next to kanban)
+## Why it lives next to other tracker grids
 
-- **data-table** = reusable building block (any feature could use it for tabular CRUD).
-- **kanban** = one **view type** for tracker grid data, under `app/components/tracker-display/kanban/`. Same data can be shown as table, kanban, or form; the view layer lives with the feature.
+- **data-table** = reusable building block (TanStack table + shared entry dialog inputs).
+- **kanban** and other views live under `app/components/tracker-display/grids/` (e.g. `grids/kanban/`). The same row model can be shown as table, kanban, calendar, or timeline; view code stays in this feature tree.
 
 ## Files
 

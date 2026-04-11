@@ -22,6 +22,7 @@ import {
   markFieldsAsInteracted,
   computeValidationSummary,
 } from "@/lib/field-validation";
+import { TimelineDateRangeField } from "../timeline/TimelineDateRangeField";
 
 export interface EntryFormDialogProps {
   open: boolean;
@@ -53,6 +54,14 @@ export interface EntryFormDialogProps {
   calculations?: Record<string, FieldCalculationRule>;
   /** Optional full grid data for accumulate (sum/reduce) rules that reference other grids. */
   gridData?: Record<string, Array<Record<string, unknown>>>;
+  /**
+   * When set, start/end date fields are edited as one range control (timeline grids).
+   * The non-anchor field id is omitted from the field list UI (still validated and saved).
+   */
+  timelineDateRange?: {
+    startFieldId: string;
+    endFieldId: string;
+  };
 }
 
 export function EntryFormDialog({
@@ -71,11 +80,39 @@ export function EntryFormDialog({
   gridId,
   calculations,
   gridData,
+  timelineDateRange,
 }: EntryFormDialogProps) {
   const orderedIds = useMemo(
     () => fieldOrder ?? Object.keys(fieldMetadata),
     [fieldOrder, fieldMetadata],
   );
+
+  const { timelineRangeSkipIds, timelineRangeAnchorId } = useMemo(() => {
+    if (!timelineDateRange) {
+      return {
+        timelineRangeSkipIds: new Set<string>(),
+        timelineRangeAnchorId: null as string | null,
+      };
+    }
+    const { startFieldId, endFieldId } = timelineDateRange;
+    if (
+      !orderedIds.includes(startFieldId) ||
+      !orderedIds.includes(endFieldId)
+    ) {
+      return {
+        timelineRangeSkipIds: new Set<string>(),
+        timelineRangeAnchorId: null,
+      };
+    }
+    const i1 = orderedIds.indexOf(startFieldId);
+    const i2 = orderedIds.indexOf(endFieldId);
+    const anchorId = i1 <= i2 ? startFieldId : endFieldId;
+    const skipped = i1 <= i2 ? endFieldId : startFieldId;
+    return {
+      timelineRangeSkipIds: new Set([skipped]),
+      timelineRangeAnchorId: anchorId,
+    };
+  }, [timelineDateRange, orderedIds]);
   const [formData, setFormData] =
     useState<Record<string, unknown>>(initialValues);
   const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(
@@ -205,7 +242,9 @@ export function EntryFormDialog({
     onOpenChange(false);
   }, [onOpenChange]);
 
-  const fieldCount = orderedIds.filter((id) => fieldMetadata[id]).length;
+  const fieldCount = orderedIds.filter(
+    (id) => fieldMetadata[id] && !timelineRangeSkipIds.has(id),
+  ).length;
 
   return (
     <FormDialog
@@ -222,8 +261,64 @@ export function EntryFormDialog({
     >
       <div className="grid grid-cols-1 gap-4">
         {orderedIds.map((columnId, index) => {
+          if (timelineRangeSkipIds.has(columnId)) return null;
           const fieldInfo = fieldMetadata[columnId];
           if (!fieldInfo) return null;
+
+          if (
+            timelineDateRange &&
+            timelineRangeAnchorId &&
+            columnId === timelineRangeAnchorId
+          ) {
+            const startMeta =
+              fieldMetadata[timelineDateRange.startFieldId] ?? fieldInfo;
+            const endMeta =
+              fieldMetadata[timelineDateRange.endFieldId] ?? fieldInfo;
+            const rangeLabel = `${String(startMeta.name)} – ${String(endMeta.name)}`;
+            return (
+              <div
+                key="__timeline_range__"
+                className="flex flex-col space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-200"
+                style={{
+                  animationDelay: `${index * 30}ms`,
+                  animationFillMode: "both",
+                }}
+              >
+                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  {rangeLabel}
+                </label>
+                <TimelineDateRangeField
+                  startValue={formData[timelineDateRange.startFieldId]}
+                  endValue={formData[timelineDateRange.endFieldId]}
+                  label={rangeLabel}
+                  onRangeChange={({ start, end }) => {
+                    setFormData((prev) => {
+                      const next = {
+                        ...prev,
+                        [timelineDateRange.startFieldId]: start,
+                        [timelineDateRange.endFieldId]: end,
+                      };
+                      const changedKeys = new Set<string>([
+                        timelineDateRange.startFieldId,
+                        timelineDateRange.endFieldId,
+                      ]);
+                      const { row: calculated, updatedFieldIds } =
+                        applyCalculatedValues(next, Array.from(changedKeys));
+                      setTouchedFieldIds((t) => {
+                        const nt = new Set(t);
+                        for (const k of changedKeys) nt.add(k);
+                        for (const id of updatedFieldIds) nt.add(id);
+                        return nt;
+                      });
+                      return calculated;
+                    });
+                  }}
+                  className="h-10 w-full min-w-0 px-3"
+                />
+              </div>
+            );
+          }
+
           const overrides = getFieldOverrides?.(formData, columnId);
           const effectiveConfig = applyFieldOverrides(
             fieldInfo.config as Record<string, unknown> | null | undefined,

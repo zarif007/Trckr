@@ -12,6 +12,8 @@ This module is the **client-side half** of paginated table and kanban data: HTTP
 | `row-utils.ts` | `rowIdFromRow`, `rowPayloadForPatch` (strip `_meta` keys before PATCH). |
 | `hooks/usePaginatedGridData.ts` | Table: one page of rows, page index/size, CRUD via row APIs. |
 | `hooks/useKanbanPaginatedColumns.ts` | Kanban: first page per column in one batched update, then **Load more** per column. |
+| `optimistic-temp-row-id.ts` | `createOptimisticTempRowId()` — client-only `_rowId` until POST returns. |
+| `persistence.ts` | `persistNewTrackerGridRow`, `persistEditedTrackerGridRow`, `persistNewKanbanCardViaRowApi` — shared optimistic / snapshot branching. |
 
 **Not here:** schema flags (`dataLoading.mode`), omitting snapshot grids, or repository SQL — see `lib/grid-data-loading.ts`, `app/tracker/[id]/page.tsx`, `lib/repositories/grid-row-repository.ts`, and `app/api/trackers/[id]/grids/[gridSlug]/rows/route.ts`.
 
@@ -51,6 +53,17 @@ For paginated grids, the tracker page requests:
 
 Those grids arrive with **empty arrays** in the snapshot; **`usePaginatedGridData`** / **`useKanbanPaginatedColumns`** fill them via the grid rows API.
 
+## Optimistic row creates (row API)
+
+When **`dataLoading.mode`** is paginated, new rows are created with **`POST .../grids/[gridSlug]/rows`**. The UI should feel instant:
+
+1. **`persistNewTrackerGridRow`** (table / calendar / timeline): assigns a temp **`_rowId`** via **`createOptimisticTempRowId()`** (prefix `__optimistic_`), **`prependRowLocal`**, then **`createRowOnServer(values)`** (server payload must not include the temp id). On success, **`updateRowLocal(tempId, () => created)`** replaces the placeholder; on failure, **`removeRowsLocal`** + **`refetch`**.
+2. **`persistNewKanbanCardViaRowApi`** (kanban): same idea per column — **`prependCardLocally`**, then on success **`removeCardLocally`** + **`prependCardLocally`** with the server row; on failure **`removeCardLocally`** + **`refetchAll`**.
+
+**`RowBackedPersistLifecycle`**: hooks call **`onMutationStart` / `onMutationSuccess` / `onMutationError`** inside **`createRowOnServer`**, **`patchRowOnServer`**, and **`deleteRowsOnServer`** / **`deleteRowOnServer`** — not on the purely local prepend. That keeps the tracker “data saving” badge aligned with real HTTP work.
+
+**PATCH edits**: use **`persistEditedTrackerGridRow`** so local merge + **`rowPayloadForPatch`** stay consistent with **`TrackerTableGrid`**.
+
 ## Hooks — usage notes
 
 ### `usePaginatedGridData`
@@ -74,6 +87,8 @@ import {
   usePaginatedGridData,
   useKanbanPaginatedColumns,
   rowPayloadForPatch,
+  persistNewTrackerGridRow,
+  persistNewKanbanCardViaRowApi,
 } from "@/lib/tracker-grid-rows";
 ```
 
@@ -86,6 +101,8 @@ Legacy paths still work (thin re-exports):
 
 - `lib/tracker-grid-rows/__tests__/row-utils.test.ts`
 - `lib/tracker-grid-rows/__tests__/limits.test.ts`
+- `lib/tracker-grid-rows/__tests__/persistence.test.ts` — optimistic create/edit + kanban create
+- `lib/tracker-grid-rows/__tests__/optimistic-temp-row-id.test.ts`
 - `lib/__tests__/grid-data-loading.test.ts` — schema / page-size behavior
 
 Run: `npx vitest run lib/tracker-grid-rows/__tests__`

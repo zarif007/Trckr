@@ -103,7 +103,9 @@ function TrackerDivGridInner({
   onCrossGridUpdate,
   onAddEntryToGrid,
   trackerContext: trackerContextProp,
+  openAddColumnRequest: _openAddColumnRequest = 0,
 }: TrackerDivGridProps) {
+  void _openAddColumnRequest;
   const fullGridData = gridDataRef?.current ?? gridData;
   const thisGridRows = useMemo(
     () => gridDataForThisGrid ?? gridData?.[grid.id] ?? EMPTY_ROWS,

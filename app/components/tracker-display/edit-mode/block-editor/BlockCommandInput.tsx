@@ -8,6 +8,8 @@ import {
   FormInput,
   Type,
   Plus,
+  Calendar,
+  GanttChart,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -38,6 +40,8 @@ export interface BlockCommandInputProps {
   onAddTable?: () => void;
   onAddKanban?: () => void;
   onAddForm?: () => void;
+  onAddCalendar?: () => void;
+  onAddTimeline?: () => void;
   onAddField?: () => void;
   className?: string;
   placeholder?: string;
@@ -48,6 +52,8 @@ export function BlockCommandInput({
   onAddTable,
   onAddKanban,
   onAddForm,
+  onAddCalendar,
+  onAddTimeline,
   onAddField,
   className,
   placeholder = "Add block...",
@@ -98,6 +104,26 @@ export function BlockCommandInput({
         onSelect: onAddForm,
       });
     }
+    if (onAddCalendar) {
+      items.push({
+        id: "calendar",
+        label: "Calendar",
+        description: "A calendar view for date-based data",
+        keywords: ["calendar", "date", "schedule", "events", "month"],
+        icon: Calendar,
+        onSelect: onAddCalendar,
+      });
+    }
+    if (onAddTimeline) {
+      items.push({
+        id: "timeline",
+        label: "Timeline",
+        description: "A timeline / Gantt view for time-based data",
+        keywords: ["timeline", "gantt", "time", "schedule", "project"],
+        icon: GanttChart,
+        onSelect: onAddTimeline,
+      });
+    }
     if (onAddField) {
       items.push({
         id: "field",
@@ -109,7 +135,7 @@ export function BlockCommandInput({
       });
     }
     return items;
-  }, [onAddSection, onAddTable, onAddKanban, onAddForm, onAddField]);
+  }, [onAddSection, onAddTable, onAddKanban, onAddForm, onAddCalendar, onAddTimeline, onAddField]);
 
   const filteredCommands = useMemo(() => {
     const s = searchValue.trim().toLowerCase();

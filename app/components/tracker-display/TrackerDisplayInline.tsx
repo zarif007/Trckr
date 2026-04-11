@@ -142,6 +142,7 @@ export function TrackerDisplayInline({
   onForeignBindingNavUiChange,
   gridDataBranchName = "main",
   disablePaginatedGridRowApi = false,
+  rowBackedPersistLifecycle,
 }: TrackerDisplayProps) {
   const effectiveSections = sections ?? [];
   const effectiveGrids = grids ?? [];
@@ -375,6 +376,7 @@ export function TrackerDisplayInline({
         disablePaginatedGridRowApi ? undefined : trackerSchemaId
       }
       gridDataBranchName={gridDataBranchName}
+      rowBackedPersistLifecycle={rowBackedPersistLifecycle}
     >
       <TrackerOptionsProvider
         grids={effectiveGrids}

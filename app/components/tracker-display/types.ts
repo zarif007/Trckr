@@ -1,6 +1,8 @@
 import type { TrackerFieldType } from "@/lib/tracker-field-types";
 export type { TrackerFieldType } from "@/lib/tracker-field-types";
 import type { FieldRulesMap } from "@/lib/field-rules";
+import type { RowBackedPersistLifecycle } from "@/lib/tracker-grid-rows";
+export type { RowBackedPersistLifecycle } from "@/lib/tracker-grid-rows";
 
 /** Tab config: isHidden, etc. */
 export type TrackerTabConfig = {
@@ -253,4 +255,9 @@ export interface TrackerDisplayProps {
    * Use while the agent is updating schema or schema is saving so the DB is not ahead of the streamed client schema.
    */
   disablePaginatedGridRowApi?: boolean;
+  /**
+   * When rows persist via the row HTTP API, notifies the host so the data-mode autosave badge
+   * ("Saving" / "Up to date") can update even though `onGridDataChange` is not invoked.
+   */
+  rowBackedPersistLifecycle?: RowBackedPersistLifecycle | null;
 }

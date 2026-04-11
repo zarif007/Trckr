@@ -1,8 +1,9 @@
 "use client";
 
-import { Table2, LayoutGrid, FormInput } from "lucide-react";
+import { Table2, LayoutGrid, FormInput, Calendar, GanttChart, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TrackerGrid } from "../types";
+import type { GridType } from "../types";
 import {
   InlineEditableName,
   useBlockControls,
@@ -10,25 +11,36 @@ import {
 } from "../layout";
 import { theme } from "@/lib/theme";
 
-/** Grid type badge: small pill showing Table/Kanban/Form. Exported for use in BlockEditor or elsewhere. */
-export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
-  const type = grid.views?.[0]?.type ?? grid.type ?? "table";
-  const map: Record<string, { icon: typeof Table2; label: string }> = {
-    table: { icon: Table2, label: "Table" },
-    kanban: { icon: LayoutGrid, label: "Kanban" },
-    div: { icon: FormInput, label: "Form" },
-  };
-  const info = map[type] ?? map.table;
-  const Icon = info.icon;
+const VIEW_ICONS: Record<GridType, LucideIcon> = {
+  table: Table2,
+  kanban: LayoutGrid,
+  div: FormInput,
+  calendar: Calendar,
+  timeline: GanttChart,
+};
 
-  const colorClasses = {
-    table: "bg-info/10 text-info border border-info/20",
-    kanban: "bg-warning/10 text-warning border border-warning/20",
-    div: "bg-success/10 text-success border border-success/20",
-  };
-  const badgeClass =
-    colorClasses[type as keyof typeof colorClasses] ||
-    "bg-muted/50 text-muted-foreground border border-muted/50";
+const VIEW_LABELS: Record<GridType, string> = {
+  table: "Table",
+  kanban: "Kanban",
+  div: "Form",
+  calendar: "Calendar",
+  timeline: "Timeline",
+};
+
+const VIEW_COLORS: Record<GridType, string> = {
+  table: "bg-info/10 text-info border border-info/20",
+  kanban: "bg-warning/10 text-warning border border-warning/20",
+  div: "bg-success/10 text-success border border-success/20",
+  calendar: "bg-primary/10 text-primary border border-primary/20",
+  timeline: "bg-secondary/10 text-secondary border border-secondary/20",
+};
+
+/** Grid type badge: small pill showing view type. Exported for use in BlockEditor or elsewhere. */
+export function GridTypeBadge({ grid, viewType }: { grid: TrackerGrid; viewType?: GridType }) {
+  const type = viewType ?? grid.views?.[0]?.type ?? grid.type ?? "table";
+  const Icon = VIEW_ICONS[type];
+  const label = VIEW_LABELS[type];
+  const badgeClass = VIEW_COLORS[type];
 
   return (
     <span
@@ -38,7 +50,7 @@ export function GridTypeBadge({ grid }: { grid: TrackerGrid }) {
       )}
     >
       <Icon className="h-3 w-3" />
-      {info.label}
+      {label}
     </span>
   );
 }

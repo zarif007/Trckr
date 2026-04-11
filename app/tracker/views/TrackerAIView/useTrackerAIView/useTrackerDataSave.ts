@@ -14,6 +14,10 @@ import { DRAFT_STATUS_TAG } from "../types";
 import { listPaginatedGridSlugs } from "@/lib/grid-data-loading";
 import type { TrackerGrid } from "@/app/components/tracker-display/types";
 
+/** Keep in sync with `useAutoSaveTrackerData` (snapshot `/data` autosave) in this file. */
+const TRACKER_DATA_AUTOSAVE_DEBOUNCE_MS = 2000;
+const TRACKER_DATA_AUTOSAVE_IDLE_MS = 2000;
+
 function stripPaginatedGridKeysFromSnapshot(
   snapshot: GridDataSnapshot,
   grids: TrackerGrid[] | undefined,
@@ -96,6 +100,13 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     null,
   );
 
+  /** Debounced nav badge for row HTTP API — mirrors snapshot `scheduleSave` timing (debounce + idle). */
+  const rowBackedBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const rowBackedBadgePendingRef = useRef(false);
+  const rowBackedBadgeLastActivityRef = useRef<number | null>(null);
+
   const setSavedWithTimeout = useCallback(() => {
     setDataSaveStatus("saved");
     setDataSaveError(null);
@@ -113,6 +124,80 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       setCurrentFormStatus(status);
     },
     [formStatusRef, setCurrentFormStatus],
+  );
+
+  const flushRowBackedPersistBadge = useCallback(() => {
+    if (!allowAutoSave) {
+      rowBackedBadgePendingRef.current = false;
+      return;
+    }
+    if (!rowBackedBadgePendingRef.current) return;
+
+    const lastAt = rowBackedBadgeLastActivityRef.current;
+    const idleMs = TRACKER_DATA_AUTOSAVE_IDLE_MS;
+    if (idleMs > 0 && lastAt != null) {
+      const idleFor = Date.now() - lastAt;
+      if (idleFor < idleMs) {
+        const wait = Math.max(0, idleMs - idleFor);
+        if (rowBackedBadgeTimerRef.current)
+          clearTimeout(rowBackedBadgeTimerRef.current);
+        rowBackedBadgeTimerRef.current = setTimeout(() => {
+          rowBackedBadgeTimerRef.current = null;
+          void flushRowBackedPersistBadge();
+        }, wait);
+        return;
+      }
+    }
+
+    rowBackedBadgePendingRef.current = false;
+    if (saveStatusResetTimerRef.current) {
+      clearTimeout(saveStatusResetTimerRef.current);
+      saveStatusResetTimerRef.current = null;
+    }
+    setDataSaveError(null);
+    setDataSaveStatus("saving");
+    queueMicrotask(() => {
+      setSavedWithTimeout();
+    });
+  }, [allowAutoSave, setSavedWithTimeout]);
+
+  const scheduleRowBackedPersistBadge = useCallback(() => {
+    if (!allowAutoSave) return;
+    rowBackedBadgePendingRef.current = true;
+    rowBackedBadgeLastActivityRef.current = Date.now();
+    if (rowBackedBadgeTimerRef.current)
+      clearTimeout(rowBackedBadgeTimerRef.current);
+    rowBackedBadgeTimerRef.current = setTimeout(() => {
+      rowBackedBadgeTimerRef.current = null;
+      void flushRowBackedPersistBadge();
+    }, TRACKER_DATA_AUTOSAVE_DEBOUNCE_MS);
+  }, [allowAutoSave, flushRowBackedPersistBadge]);
+
+  const notifyRowBackedMutationStart = useCallback(() => {
+    scheduleRowBackedPersistBadge();
+  }, [scheduleRowBackedPersistBadge]);
+
+  const notifyRowBackedMutationSuccess = useCallback(() => {
+    scheduleRowBackedPersistBadge();
+  }, [scheduleRowBackedPersistBadge]);
+
+  const notifyRowBackedMutationError = useCallback(
+    (message: string) => {
+      if (!allowAutoSave) return;
+      rowBackedBadgePendingRef.current = false;
+      rowBackedBadgeLastActivityRef.current = null;
+      if (rowBackedBadgeTimerRef.current) {
+        clearTimeout(rowBackedBadgeTimerRef.current);
+        rowBackedBadgeTimerRef.current = null;
+      }
+      if (saveStatusResetTimerRef.current) {
+        clearTimeout(saveStatusResetTimerRef.current);
+        saveStatusResetTimerRef.current = null;
+      }
+      setDataSaveStatus("error");
+      setDataSaveError(message.trim() ? message : "Failed to save");
+    },
+    [allowAutoSave],
   );
 
   const saveTrackerData = useCallback(
@@ -268,8 +353,8 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     save: async (data) => {
       await saveTrackerData({ data });
     },
-    debounceMs: 2000,
-    idleMs: 2000,
+    debounceMs: TRACKER_DATA_AUTOSAVE_DEBOUNCE_MS,
+    idleMs: TRACKER_DATA_AUTOSAVE_IDLE_MS,
     onStateChange: (state, error) => {
       if (state === "saving") {
         if (saveStatusResetTimerRef.current)
@@ -389,9 +474,21 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
   );
 
   useEffect(() => {
+    if (allowAutoSave) return;
+    rowBackedBadgePendingRef.current = false;
+    rowBackedBadgeLastActivityRef.current = null;
+    if (rowBackedBadgeTimerRef.current) {
+      clearTimeout(rowBackedBadgeTimerRef.current);
+      rowBackedBadgeTimerRef.current = null;
+    }
+  }, [allowAutoSave]);
+
+  useEffect(() => {
     return () => {
       if (saveStatusResetTimerRef.current)
         clearTimeout(saveStatusResetTimerRef.current);
+      if (rowBackedBadgeTimerRef.current)
+        clearTimeout(rowBackedBadgeTimerRef.current);
     };
   }, []);
 
@@ -407,5 +504,8 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     setFormStatus,
     handleGridDataChange,
     handleFormActionSelect,
+    notifyRowBackedMutationStart,
+    notifyRowBackedMutationSuccess,
+    notifyRowBackedMutationError,
   };
 }

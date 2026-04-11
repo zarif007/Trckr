@@ -47,6 +47,8 @@ export interface TrackerDivGridProps {
   ) => void;
   onAddEntryToGrid?: (gridId: string, newRow: Record<string, unknown>) => void;
   trackerContext?: TrackerContextForOptions;
+  /** Reserved for toolbar parity; div layout has no Add column control here. */
+  openAddColumnRequest?: number;
 }
 
 /** Resolved option shape from resolveFieldOptionsV2 */

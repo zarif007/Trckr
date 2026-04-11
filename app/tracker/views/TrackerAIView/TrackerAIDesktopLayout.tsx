@@ -23,6 +23,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
     disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
+    rowBackedPersistLifecycle,
     undoable,
     trackerName,
     isViewingHistoricalVersion,
@@ -67,6 +68,7 @@ export function TrackerAIDesktopLayout(state: TrackerAIDesktopLayoutProps) {
           disablePaginatedGridRowApi={disablePaginatedGridRowApi}
           trackerDataRef={trackerDataRef}
           onGridDataChange={handleGridDataChange}
+          rowBackedPersistLifecycle={rowBackedPersistLifecycle}
           handleSchemaChange={
             canEditSchema && editMode ? undoable.onSchemaChange : undefined
           }

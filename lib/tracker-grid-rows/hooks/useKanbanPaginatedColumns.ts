@@ -9,7 +9,7 @@ import {
 } from "../client";
 import { KANBAN_GROUP_IDS_KEY_DELIMITER } from "../constants";
 import { clampGridRowsLimit } from "../limits";
-import type { GridRowRecord } from "../types";
+import type { GridRowRecord, RowBackedPersistLifecycle } from "../types";
 
 export type KanbanColumnRow = GridRowRecord;
 
@@ -39,6 +39,7 @@ export interface UseKanbanPaginatedColumnsOptions {
   groupIds: string[];
   pageSize: number;
   enabled: boolean;
+  persistLifecycle?: RowBackedPersistLifecycle | null;
 }
 
 export interface UseKanbanPaginatedColumnsResult {
@@ -79,7 +80,11 @@ export function useKanbanPaginatedColumns(
     groupIds,
     pageSize,
     enabled,
+    persistLifecycle,
   } = options;
+
+  const persistRef = useRef(persistLifecycle);
+  persistRef.current = persistLifecycle;
 
   const pageSizeClamped = clampGridRowsLimit(pageSize);
 
@@ -320,7 +325,16 @@ export function useKanbanPaginatedColumns(
   const patchRowOnServer = useCallback(
     async (rowId: string, data: Record<string, unknown>) => {
       if (!trackerId) throw new Error("Missing tracker id");
-      await patchTrackerDataRow(trackerId as string, rowId, data);
+      persistRef.current?.onMutationStart?.();
+      try {
+        await patchTrackerDataRow(trackerId as string, rowId, data);
+        persistRef.current?.onMutationSuccess?.();
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to update row on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId],
   );
@@ -328,7 +342,16 @@ export function useKanbanPaginatedColumns(
   const deleteRowOnServer = useCallback(
     async (rowId: string) => {
       if (!trackerId) throw new Error("Missing tracker id");
-      await deleteTrackerDataRow(trackerId as string, rowId);
+      persistRef.current?.onMutationStart?.();
+      try {
+        await deleteTrackerDataRow(trackerId as string, rowId);
+        persistRef.current?.onMutationSuccess?.();
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to delete row on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId],
   );
@@ -336,7 +359,22 @@ export function useKanbanPaginatedColumns(
   const createRowOnServer = useCallback(
     async (data: Record<string, unknown>) => {
       if (!trackerId) throw new Error("Missing tracker id");
-      return createGridRow(trackerId as string, gridSlug, branchName, data);
+      persistRef.current?.onMutationStart?.();
+      try {
+        const row = await createGridRow(
+          trackerId as string,
+          gridSlug,
+          branchName,
+          data,
+        );
+        persistRef.current?.onMutationSuccess?.();
+        return row;
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to create row on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId, gridSlug, branchName],
   );

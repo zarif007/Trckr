@@ -17,6 +17,8 @@ import type { FieldRulesMap } from "@/lib/field-rules";
 import { TrackerTableGrid } from "./TrackerTableGrid";
 import { TrackerKanbanGrid } from "./TrackerKanbanGrid";
 import { TrackerDivGrid } from "./grids/div";
+import { TrackerCalendarGrid } from "./grids/calendar";
+import { TrackerTimelineGrid } from "./grids/timeline";
 
 export interface GridViewContentProps {
   tabId: string;
@@ -48,6 +50,12 @@ export interface GridViewContentProps {
   ) => void;
   onAddEntry?: (gridId: string, newRow: Record<string, unknown>) => void;
   onDeleteEntries?: (gridId: string, rowIndices: number[]) => void;
+  /** Increment from parent to open Add column / layout field dialog (edit toolbar). */
+  openAddColumnRequest?: number;
+  /**
+   * When true, hide in-grid "Add column" controls; the view toolbar is the only entry.
+   */
+  suppressEmbeddedAddColumn?: boolean;
 }
 
 /** Renders a single grid view (table, kanban, form/div, or placeholder for calendar/timeline). */
@@ -71,6 +79,8 @@ export function GridViewContent({
   onUpdate,
   onAddEntry,
   onDeleteEntries,
+  openAddColumnRequest = 0,
+  suppressEmbeddedAddColumn = false,
 }: GridViewContentProps) {
   const gridId = grid.id;
   const g = useMemo(
@@ -131,6 +141,8 @@ export function GridViewContent({
           onAddEntry={addEntry}
           onAddEntryToGrid={onAddEntry}
           onDeleteEntries={deleteEntries}
+          openAddColumnRequest={openAddColumnRequest}
+          suppressEmbeddedAddColumn={suppressEmbeddedAddColumn}
         />
       );
     case "kanban":
@@ -153,6 +165,9 @@ export function GridViewContent({
           onCrossGridUpdate={onUpdate}
           onAddEntry={addEntry}
           onDeleteEntries={deleteEntries}
+          activeViewId={view.id}
+          openAddColumnRequest={openAddColumnRequest}
+          suppressEmbeddedAddColumn={suppressEmbeddedAddColumn}
         />
       );
     case "div":
@@ -175,19 +190,60 @@ export function GridViewContent({
           onUpdate={updateCell}
           onCrossGridUpdate={onUpdate}
           onAddEntryToGrid={onAddEntry}
+          openAddColumnRequest={openAddColumnRequest}
         />
       );
     case "calendar":
       return (
-        <div className="p-4 border border-dashed rounded-sm text-muted-foreground">
-          Calendar Grid: {grid.name} (Not implemented)
-        </div>
+        <TrackerCalendarGrid
+          tabId={tabId}
+          grid={g}
+          layoutNodes={gridLayoutNodes}
+          fields={fields}
+          bindings={bindings}
+          validations={validations}
+          calculations={calculations}
+          fieldRulesV2={fieldRulesV2}
+          gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridDataForThisGrid}
+          trackerContext={trackerContext}
+          readOnly={readOnly}
+          onUpdate={updateCell}
+          onCrossGridUpdate={onUpdate}
+          onAddEntry={addEntry}
+          onAddEntryToGrid={onAddEntry}
+          onDeleteEntries={deleteEntries}
+          activeViewId={view.id}
+          openAddColumnRequest={openAddColumnRequest}
+          suppressEmbeddedAddColumn={suppressEmbeddedAddColumn}
+        />
       );
     case "timeline":
       return (
-        <div className="p-4 border border-dashed rounded-sm text-muted-foreground">
-          Timeline Grid: {grid.name} (Not implemented)
-        </div>
+        <TrackerTimelineGrid
+          tabId={tabId}
+          grid={g}
+          layoutNodes={gridLayoutNodes}
+          fields={fields}
+          bindings={bindings}
+          validations={validations}
+          calculations={calculations}
+          fieldRulesV2={fieldRulesV2}
+          gridData={gridData}
+          gridDataRef={gridDataRef}
+          gridDataForThisGrid={gridDataForThisGrid}
+          trackerContext={trackerContext}
+          readOnly={readOnly}
+          onUpdate={updateCell}
+          onCrossGridUpdate={onUpdate}
+          onAddEntry={addEntry}
+          onAddEntryToGrid={onAddEntry}
+          onDeleteEntries={deleteEntries}
+          activeViewId={view.id}
+          openAddColumnRequest={openAddColumnRequest}
+          suppressEmbeddedAddColumn={suppressEmbeddedAddColumn}
+        />
       );
     default:
       return null;

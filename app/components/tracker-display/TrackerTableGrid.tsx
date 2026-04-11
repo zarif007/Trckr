@@ -30,7 +30,7 @@ import { resolveFieldRulesForRow } from "@/lib/field-rules";
 import type { FieldRulesMap, FieldRuleOverride } from "@/lib/field-rules";
 import { useTrackerOptionsContext } from "./tracker-options-context";
 import { buildEntryWaysForGrid } from "./entry-way/entry-way-registry";
-import { useMemo, useCallback, useState, useEffect, memo } from "react";
+import { useMemo, useCallback, useState, useEffect, useRef, memo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -63,6 +63,7 @@ import {
 import {
   usePaginatedGridData,
   rowPayloadForPatch,
+  persistNewTrackerGridRow,
 } from "@/lib/tracker-grid-rows";
 
 const EMPTY_ROWS: Array<Record<string, unknown>> = [];
@@ -97,6 +98,10 @@ interface TrackerTableGridProps {
   ) => void;
   /** For dynamic_select/dynamic_multiselect option resolution (e.g. all_field_paths). */
   trackerContext?: TrackerContextForOptions;
+  /** Increment from parent to open Add column dialog (view toolbar). */
+  openAddColumnRequest?: number;
+  /** Hide in-grid Add column when the view toolbar provides it. */
+  suppressEmbeddedAddColumn?: boolean;
 }
 
 function TrackerTableGridInner({
@@ -118,6 +123,8 @@ function TrackerTableGridInner({
   onDeleteEntries,
   onCrossGridUpdate,
   trackerContext: trackerContextProp,
+  openAddColumnRequest = 0,
+  suppressEmbeddedAddColumn = false,
 }: TrackerTableGridProps) {
   const thisGridRows = useMemo(
     () => gridDataForThisGrid ?? gridData[grid.id] ?? EMPTY_ROWS,
@@ -137,9 +144,20 @@ function TrackerTableGridInner({
     onSchemaChange,
     trackerSchemaId: editTrackerSchemaId,
   } = useEditMode();
-  const { trackerSchemaId: dataApiTrackerId, gridDataBranchName } =
-    useTrackerDataApi();
+  const {
+    trackerSchemaId: dataApiTrackerId,
+    gridDataBranchName,
+    rowBackedPersistLifecycle,
+  } = useTrackerDataApi();
   const canEditLayout = editMode && !!schema && !!onSchemaChange;
+  const lastOpenAddColumnRequestRef = useRef(0);
+  useEffect(() => {
+    if (openAddColumnRequest <= lastOpenAddColumnRequestRef.current) return;
+    lastOpenAddColumnRequestRef.current = openAddColumnRequest;
+    if (canEditLayout) {
+      setAddColumnOpen(true);
+    }
+  }, [openAddColumnRequest, canEditLayout]);
   const gridIsPaginatedCapable =
     isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
   /** Server-driven table UI (pagination, totals); off in layout edit so TanStack paginates locally. */
@@ -156,6 +174,7 @@ function TrackerTableGridInner({
     branchName: gridDataBranchName,
     initialPageSize: pSize,
     enabled: gridIsPaginatedCapable,
+    persistLifecycle: rowBackedPersistLifecycle ?? undefined,
   });
 
   const rows = useMemo((): Array<Record<string, unknown>> => {
@@ -790,13 +809,12 @@ function TrackerTableGridInner({
   );
 
   const handlePaginatedAdd = useCallback(
-    async (newRow: Record<string, unknown>) => {
-      try {
-        const created = await pg.createRowOnServer(newRow);
-        pg.prependRowLocal(created);
-      } catch {
-        pg.refetch();
-      }
+    (newRow: Record<string, unknown>) => {
+      persistNewTrackerGridRow({
+        mutateViaRowApi: true,
+        pg,
+        values: newRow,
+      });
     },
     [pg],
   );
@@ -892,18 +910,26 @@ function TrackerTableGridInner({
   if (uniqueFieldLayoutNodes.length === 0 && canEditLayout) {
     return (
       <div className="space-y-3">
-        <div className="flex h-8 items-center justify-end pb-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setAddColumnOpen(true)}
-            className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
-            aria-label="Add column"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add column
-          </Button>
-        </div>
+        {!suppressEmbeddedAddColumn ? (
+          <div className="flex h-8 items-center justify-end pb-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAddColumnOpen(true)}
+              className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
+              aria-label="Add column"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add column
+            </Button>
+          </div>
+        ) : (
+          <p className="text-center text-xs text-muted-foreground">
+            No columns yet. Use{" "}
+            <span className="font-medium text-foreground">Add column</span> in the
+            toolbar next to Configure.
+          </p>
+        )}
         <div className="p-6 rounded-sm border border-dashed border-border text-muted-foreground text-sm text-center">
           No columns yet. Add a column to get started.
         </div>
@@ -1031,18 +1057,20 @@ function TrackerTableGridInner({
   if (canEditLayout) {
     return (
       <div className="w-full min-w-0 space-y-2">
-        <div className="flex h-8 items-center justify-end pb-2">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setAddColumnOpen(true)}
-            className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
-            aria-label="Add column"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add column
-          </Button>
-        </div>
+        {!suppressEmbeddedAddColumn ? (
+          <div className="flex h-8 items-center justify-end pb-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAddColumnOpen(true)}
+              className="h-7 gap-1.5 px-2 text-xs font-medium text-foreground hover:bg-muted/50 hover:text-foreground"
+              aria-label="Add column"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add column
+            </Button>
+          </div>
+        ) : null}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

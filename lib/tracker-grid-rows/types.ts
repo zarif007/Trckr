@@ -21,3 +21,13 @@ export type TrackerDataPatchErrorJson = {
 
 /** Row shape returned by grid row APIs (includes server id). */
 export type GridRowRecord = Record<string, unknown>;
+
+/**
+ * Optional hooks around row HTTP mutations so the host can show data-mode autosave
+ * feedback when rows persist outside the snapshot engine (paginated grids).
+ */
+export type RowBackedPersistLifecycle = {
+  onMutationStart?: () => void;
+  onMutationSuccess?: () => void;
+  onMutationError?: (message: string) => void;
+};

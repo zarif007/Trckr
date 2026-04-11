@@ -16,6 +16,7 @@ export type {
   GridRowsCreateResponseJson,
   GridRowsListResponseJson,
   TrackerDataPatchErrorJson,
+  RowBackedPersistLifecycle,
 } from "./types";
 export { rowIdFromRow, rowPayloadForPatch } from "./row-utils";
 export {
@@ -40,3 +41,12 @@ export {
   type UseKanbanPaginatedColumnsOptions,
   type UseKanbanPaginatedColumnsResult,
 } from "./hooks/useKanbanPaginatedColumns";
+
+export { createOptimisticTempRowId } from "./optimistic-temp-row-id";
+export {
+  persistNewTrackerGridRow,
+  persistEditedTrackerGridRow,
+  persistNewKanbanCardViaRowApi,
+  type PaginatedRowPersistenceApi,
+  type KanbanCardPersistenceApi,
+} from "./persistence";

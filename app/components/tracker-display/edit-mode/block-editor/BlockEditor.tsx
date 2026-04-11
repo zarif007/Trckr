@@ -28,6 +28,7 @@ import {
   getOrCreateSectionForGrid,
 } from "../ensureContainer";
 import { createNewGridId, getNextGridPlaceId } from "../utils";
+import { defaultViewConfigForNewDataGrid } from "../apply-add-layout-field";
 import { GridBlockContent, GridBlockHeader } from "../../blocks";
 import { SectionBar, InlineEditableName } from "../../layout";
 import {
@@ -269,17 +270,17 @@ export function BlockEditor({
   }, [tab.id, actions]);
 
   const addGridToSection = useCallback(
-    (sectionId: string, type: "table" | "kanban" | "div") => {
+    (sectionId: string, type: "table" | "kanban" | "div" | "calendar" | "timeline") => {
       actions.addGrid(sectionId, type);
     },
     [actions],
   );
 
-  // Add grid (table/kanban/form): create section if none exists.
+  // Add grid (table/kanban/form/calendar/timeline): create section if none exists.
   // When we create a section (nextSchema !== schema), apply section + grid in one update
   // so the second update doesn't overwrite the first (stale closure bug when starting with no data).
   const handleAddGrid = useCallback(
-    (afterBlockIndex: number, type: "table" | "kanban" | "div") => {
+    (afterBlockIndex: number, type: "table" | "kanban" | "div" | "calendar" | "timeline") => {
       if (!schema || !onSchemaChange) return;
       const { sectionId, nextSchema } = getOrCreateSectionForGrid(
         tab.id,
@@ -296,13 +297,28 @@ export function BlockEditor({
           table: "New table",
           div: "New form",
           kanban: "New board",
+          calendar: "New calendar",
+          timeline: "New timeline",
         };
+
+        const seedConfig = defaultViewConfigForNewDataGrid(type, schema.fields);
+        // Create views array for the new grid (modern approach)
+        const views = [
+          {
+            id: `${id}_${type}_view_0`,
+            name: names[type] ?? "New grid",
+            type,
+            config: seedConfig,
+          },
+        ];
+
         const newGrid: TrackerGrid = {
           id,
           name: names[type] ?? "New grid",
           sectionId,
           placeId,
           type,
+          views,
         };
         onSchemaChange({ ...nextSchema, grids: [...grids, newGrid] });
       } else {
@@ -344,6 +360,8 @@ export function BlockEditor({
       onAddTable: () => handleAddGrid(afterBlockIndex, "table"),
       onAddKanban: () => handleAddGrid(afterBlockIndex, "kanban"),
       onAddForm: () => handleAddGrid(afterBlockIndex, "div"),
+      onAddCalendar: () => handleAddGrid(afterBlockIndex, "calendar"),
+      onAddTimeline: () => handleAddGrid(afterBlockIndex, "timeline"),
       onAddField: () => handleAddField(afterBlockIndex),
     }),
     [addSectionAtEnd, handleAddGrid, handleAddField],
@@ -376,6 +394,18 @@ export function BlockEditor({
         onAddForm: props.onAddForm
           ? () => {
               props.onAddForm!();
+              clear();
+            }
+          : undefined,
+        onAddCalendar: props.onAddCalendar
+          ? () => {
+              props.onAddCalendar!();
+              clear();
+            }
+          : undefined,
+        onAddTimeline: props.onAddTimeline
+          ? () => {
+              props.onAddTimeline!();
               clear();
             }
           : undefined,

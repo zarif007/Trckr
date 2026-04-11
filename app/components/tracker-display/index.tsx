@@ -28,6 +28,7 @@ export { GridBlockHeader, GridBlockContent, GridTypeBadge } from "./blocks";
 
 export type {
   ForeignBindingNavUiState,
+  RowBackedPersistLifecycle,
   TrackerDisplayProps,
   TrackerTab,
   TrackerSection,

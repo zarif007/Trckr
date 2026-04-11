@@ -1,22 +1,28 @@
-# Tracker grids
+# Tracker grid views (`grids/`)
 
-All **grid implementations** for the tracker display live here: **table**, **kanban**, and **div** (form). They share the same data model (tracker schema + gridData) and are selected by view type in `GridViewContent`.
+Feature-local **view implementations** for tracker grid data: table, kanban, calendar, timeline, div/form, plus **shared** hooks used by non-table surfaces.
 
-## Layout
+## Module map
 
-| Folder          | Role                                                                                                                                                                                                                                                                             |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **data-table/** | Table grid: columns, rows, sorting, pagination, inline edit, add/delete. Used by `TrackerTableGrid`. Exposes `DataTable`, `EntryFormDialog`, and shared types/utils (`FieldMetadata`, `OptionsGridFieldDef`) used by table, kanban, and div grids.                               |
-| **kanban/**     | Kanban grid: group-by columns, drag-and-drop cards. Used by `TrackerKanbanGrid`. Uses `useKanbanGroups` and shared field metadata from data-table.                                                                                                                               |
-| **div/**        | Form (div) grid: single-row form layout, one field per row. Used by `TrackerDivGrid`. See `div/README.md` for details. Uses `@/components/ui` (Input, Textarea, Checkbox, Calendar, Popover, SearchableSelect, MultiSelect) and `./data-table/entry-form-dialog` for Add option. |
+| Directory     | Purpose                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------- |
+| `data-table/` | TanStack-based table + cells + `EntryFormDialog` primitives (see `data-table/README.md`)        |
+| `kanban/`     | Kanban columns, cards, DnD zones, `useKanbanGroups`                                             |
+| `calendar/`   | Month / week / day calendar over rows (`calendar/README.md`)                                   |
+| `timeline/`   | Swimlane timeline (`timeline/README.md`)                                                      |
+| `shared/`     | Row API vs snapshot + entry form metadata + persistence helpers (`shared/README.md`)           |
+| `div/`        | Form-style “div” grid                                                                            |
 
-## Why they're together
+## Integration
 
-- Table, kanban, and form are the primary grid **views** for tracker data.
-- They share concepts (field metadata, entry form dialog, types) and are only used by tracker-display, so keeping them in one place keeps the feature clear and modular.
+`GridViewContent.tsx` switches on `view.type` and mounts the appropriate tracker wrapper (`TrackerTableGrid`, `TrackerCalendarGrid`, etc.). Each wrapper:
 
-## Imports
+1. Resolves rows via `shared/useTrackerGridRowsFromApi` when it needs table/kanban parity.
+2. Builds `EntryFormDialog` metadata via `shared/useLayoutGridEntryForm` or a richer table-specific builder.
+3. Persists adds/edits via `@/lib/tracker-grid-rows` (`persistNewTrackerGridRow`, `persistNewKanbanCardViaRowApi`, etc.); `shared/grid-entry-persistence` re-exports for convenience.
 
-- **TrackerTableGrid** → `./grids/data-table`, `./grids/data-table/utils`
-- **TrackerKanbanGrid** → `./grids/data-table/entry-form-dialog`, `./grids/kanban`
-- **TrackerDivGrid** → `./grids/div` (lives here); uses `./grids/data-table/utils`, `./grids/data-table/entry-form-dialog`
+## Adding a new grid view
+
+1. Add a folder under `grids/<name>/` with `README.md`, `index.ts`, and a `Tracker*Grid` entry component.
+2. Register the type in schema / `GridViewContent` / builder prompts as needed.
+3. Prefer **pure domain helpers** + **one primary hook** per surface (see `calendar/` and `timeline/`).

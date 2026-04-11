@@ -329,7 +329,23 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     schemaSaveError,
     handleGridDataChange,
     handleFormActionSelect,
+    notifyRowBackedMutationStart,
+    notifyRowBackedMutationSuccess,
+    notifyRowBackedMutationError,
   } = dataSave;
+
+  const rowBackedPersistLifecycle = useMemo(
+    () => ({
+      onMutationStart: notifyRowBackedMutationStart,
+      onMutationSuccess: notifyRowBackedMutationSuccess,
+      onMutationError: notifyRowBackedMutationError,
+    }),
+    [
+      notifyRowBackedMutationStart,
+      notifyRowBackedMutationSuccess,
+      notifyRowBackedMutationError,
+    ],
+  );
 
   const { leftWidth, handlePointerDown } = useLayoutResize(
     containerRef,
@@ -749,6 +765,7 @@ export function useTrackerAIView(props: TrackerEditorViewProps = {}) {
     disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
+    rowBackedPersistLifecycle,
     undoable,
     isViewingHistoricalVersion,
     handleReturnToLatest,

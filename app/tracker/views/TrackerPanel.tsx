@@ -36,7 +36,10 @@ import {
 import { TrackerBranchPanel } from "@/app/components/tracker-page/TrackerBranchPanel";
 import type { BranchRecord } from "@/app/components/tracker-page/TrackerBranchPanel";
 import type { TrackerResponse } from "../hooks/useTrackerChat";
-import type { ForeignBindingNavUiState } from "@/app/components/tracker-display/types";
+import type {
+  ForeignBindingNavUiState,
+  RowBackedPersistLifecycle,
+} from "@/app/components/tracker-display/types";
 import type { OwnerScopeSettingsBanner } from "@/app/tracker/views/TrackerAIView/types";
 import { parseProjectModuleSettings } from "@/lib/master-data-scope";
 import { cn } from "@/lib/utils";
@@ -130,6 +133,7 @@ interface TrackerPanelProps {
   onImportData?: (data: GridDataSnapshot) => void;
   /** When true, grid row API is off so preview does not 404 while schema is only on the client. */
   disablePaginatedGridRowApi?: boolean;
+  rowBackedPersistLifecycle?: RowBackedPersistLifecycle | null;
 }
 
 export const TrackerPanel = memo(function TrackerPanel({
@@ -169,6 +173,7 @@ export const TrackerPanel = memo(function TrackerPanel({
   ownerScopeSettingsBanner,
   onImportData,
   disablePaginatedGridRowApi = false,
+  rowBackedPersistLifecycle,
 }: TrackerPanelProps) {
   const displayKey = "tracker-display";
   const [debugView, setDebugView] = useState<"structure" | "data" | null>(null);
@@ -602,6 +607,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                   : "main"
               }
               disablePaginatedGridRowApi={disablePaginatedGridRowApi}
+              rowBackedPersistLifecycle={rowBackedPersistLifecycle}
             />
           ) : (
             <TrackerDisplay
@@ -633,6 +639,7 @@ export const TrackerPanel = memo(function TrackerPanel({
                   : "main"
               }
               disablePaginatedGridRowApi={disablePaginatedGridRowApi}
+              rowBackedPersistLifecycle={rowBackedPersistLifecycle}
             />
           )}
         </TrackerDisplayErrorBoundary>

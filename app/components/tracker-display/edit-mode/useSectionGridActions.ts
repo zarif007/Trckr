@@ -12,6 +12,7 @@ import {
   getNextSectionPlaceId,
   getNextGridPlaceId,
 } from "./utils";
+import { defaultViewConfigForNewDataGrid } from "./apply-add-layout-field";
 
 /**
  * Hook that returns section and grid mutation actions for block-level editing.
@@ -108,7 +109,7 @@ export function useSectionGridActions(
   const addGrid = useCallback(
     (
       sectionId: string,
-      type: "table" | "div" | "kanban",
+      type: "table" | "div" | "kanban" | "calendar" | "timeline",
       afterPlaceId?: number,
     ) => {
       if (!schema) return;
@@ -120,13 +121,28 @@ export function useSectionGridActions(
         table: "New table",
         div: "New form",
         kanban: "New board",
+        calendar: "New calendar",
+        timeline: "New timeline",
       };
+
+      const seedConfig = defaultViewConfigForNewDataGrid(type, schema.fields);
+      // Create views array for the new grid (modern approach)
+      const views = [
+        {
+          id: `${id}_${type}_view_0`,
+          name: names[type] ?? "New grid",
+          type,
+          config: seedConfig,
+        },
+      ];
+
       const newGrid: TrackerGrid = {
         id,
         name: names[type] ?? "New grid",
         sectionId,
         placeId,
         type,
+        views,
       };
       apply({ grids: [...grids, newGrid] });
     },

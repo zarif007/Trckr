@@ -7,12 +7,8 @@ import type {
   TrackerLayoutNode,
 } from "../types";
 import type { AddColumnOrFieldResult } from "./types";
-import {
-  createNewField,
-  getNextLayoutOrder,
-  getNextRowCol,
-  DIV_GRID_MAX_COLS,
-} from "./utils";
+import { DIV_GRID_MAX_COLS } from "./utils";
+import { applyAddColumnOrFieldToSchema } from "./apply-add-layout-field";
 
 /**
  * Hook that returns layout mutation actions for a single grid.
@@ -74,30 +70,15 @@ export function useLayoutActions(
 
   const add = useCallback(
     (result: AddColumnOrFieldResult) => {
-      if (!schema) return;
-      const currentLayout = schema.layoutNodes ?? [];
-      const currentFields = schema.fields ?? [];
-      const existingIds = new Set(currentFields.map((f) => f.id));
-      const order = getNextLayoutOrder(currentLayout, gridId);
-      const { row, col } = getNextRowCol(currentLayout, gridId);
-      if (result.mode === "new") {
-        const newField = createNewField(
-          result.label,
-          result.dataType,
-          existingIds,
-        );
-        applySchemaChange(
-          [...currentLayout, { gridId, fieldId: newField.id, order, row, col }],
-          [...currentFields, newField],
-        );
-      } else {
-        applySchemaChange([
-          ...currentLayout,
-          { gridId, fieldId: result.fieldId, order, row, col },
-        ]);
-      }
+      if (!schema || !onSchemaChange) return;
+      const { nextSchema } = applyAddColumnOrFieldToSchema(
+        schema,
+        gridId,
+        result,
+      );
+      onSchemaChange(nextSchema);
     },
-    [schema, gridId, applySchemaChange],
+    [schema, gridId, onSchemaChange],
   );
 
   /** Reorder fields in this grid by new order of field ids (e.g. from drag end). */

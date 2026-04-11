@@ -77,7 +77,9 @@ export function useKanbanGroups({
     if (grid.config?.groupBy) return grid.config.groupBy;
     const optionField = kanbanFields.find(
       (field) =>
-        field.dataType === "options" || field.dataType === "multiselect",
+        field.dataType === "status" ||
+        field.dataType === "options" ||
+        field.dataType === "multiselect",
     );
     return optionField?.id ?? null;
   }, [grid.config?.groupBy, kanbanFields]);

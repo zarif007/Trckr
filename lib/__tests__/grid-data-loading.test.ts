@@ -25,10 +25,62 @@ describe("assertSafeJsonPathKey", () => {
 });
 
 describe("isGridDataPaginated / listPaginatedGridSlugs", () => {
-  it("defaults to snapshot when no table/kanban surface", () => {
+  it("defaults to snapshot when no row-backed grid surface", () => {
     const g = { id: "g1", name: "", sectionId: "", placeId: 0 } as TrackerGrid;
     expect(isGridDataPaginated(g)).toBe(false);
     expect(listPaginatedGridSlugs([g])).toEqual([]);
+  });
+
+  it("defaults to snapshot for calendar view when mode omitted", () => {
+    const g: TrackerGrid = {
+      id: "events",
+      name: "Events",
+      sectionId: "s",
+      placeId: 0,
+      views: [{ id: "c1", name: "Calendar", type: "calendar", config: {} }],
+    };
+    expect(getGridDataLoadingMode(g)).toBe("snapshot");
+    expect(isGridDataPaginated(g)).toBe(false);
+    expect(listPaginatedGridSlugs([g])).toEqual([]);
+  });
+
+  it("defaults to snapshot for timeline view when mode omitted", () => {
+    const g: TrackerGrid = {
+      id: "roadmap",
+      name: "Roadmap",
+      sectionId: "s",
+      placeId: 0,
+      views: [{ id: "tl1", name: "Timeline", type: "timeline", config: {} }],
+    };
+    expect(getGridDataLoadingMode(g)).toBe("snapshot");
+    expect(isGridDataPaginated(g)).toBe(false);
+    expect(listPaginatedGridSlugs([g])).toEqual([]);
+  });
+
+  it("keeps calendar and timeline snapshot-backed unless explicitly paginated", () => {
+    const calendar: TrackerGrid = {
+      id: "events",
+      name: "Events",
+      sectionId: "s",
+      placeId: 0,
+      views: [{ id: "c1", name: "Calendar", type: "calendar", config: {} }],
+    };
+    const timeline: TrackerGrid = {
+      id: "roadmap",
+      name: "Roadmap",
+      sectionId: "s",
+      placeId: 0,
+      views: [{ id: "tl1", name: "Timeline", type: "timeline", config: {} }],
+    };
+    const explicitTimeline: TrackerGrid = {
+      ...timeline,
+      id: "roadmap_paginated",
+      config: { dataLoading: { mode: "paginated" } },
+    };
+
+    expect(listPaginatedGridSlugs([calendar, timeline, explicitTimeline])).toEqual(
+      ["roadmap_paginated"],
+    );
   });
 
   it("defaults to paginated for table view when mode omitted", () => {

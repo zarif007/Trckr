@@ -24,6 +24,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
     disablePaginatedGridRowApi,
     trackerDataRef,
     handleGridDataChange,
+    rowBackedPersistLifecycle,
     undoable,
     trackerName,
     isViewingHistoricalVersion,
@@ -83,6 +84,7 @@ export function TrackerAIMobileLayout(state: TrackerAIMobileLayoutProps) {
               disablePaginatedGridRowApi={disablePaginatedGridRowApi}
               trackerDataRef={trackerDataRef}
               onGridDataChange={handleGridDataChange}
+              rowBackedPersistLifecycle={rowBackedPersistLifecycle}
               handleSchemaChange={
                 canEditSchema && editMode ? undoable.onSchemaChange : undefined
               }

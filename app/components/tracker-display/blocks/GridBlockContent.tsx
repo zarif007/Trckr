@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, type RefObject } from "react";
+import { useState, useMemo, useCallback, type RefObject } from "react";
 import type {
   TrackerGrid,
   TrackerField,
   TrackerLayoutNode,
   TrackerBindings,
   GridDataRecord,
+  TrackerGridView,
 } from "../types";
 import type {
   FieldCalculationRule,
@@ -16,6 +17,8 @@ import type { FieldRulesMap } from "@/lib/field-rules";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GridViewContent } from "../GridViewContent";
 import { normalizeGridViews } from "../view-utils";
+import { useEditMode } from "../edit-mode";
+import { ViewManager } from "../edit-mode/ViewManager";
 
 export interface GridBlockContentProps {
   tabId: string;
@@ -70,6 +73,10 @@ export function GridBlockContent({
   onDeleteEntries,
   hideLabel = false,
 }: GridBlockContentProps) {
+  const { editMode, schema, onSchemaChange } = useEditMode();
+  const [activeViewId, setActiveViewId] = useState<string | undefined>();
+  const [openAddColumnRequest, setOpenAddColumnRequest] = useState(0);
+
   const gridLayoutNodes = useMemo(
     () =>
       layoutNodes
@@ -79,7 +86,27 @@ export function GridBlockContent({
   );
   const views = useMemo(() => normalizeGridViews(grid), [grid]);
 
-  if (views.length === 1) {
+  // Handle view changes in edit mode
+  const handleViewsChange = useMemo(() => {
+    if (!editMode || !schema || !onSchemaChange) return undefined;
+
+    return (newViews: TrackerGridView[]) => {
+      const updatedGrids = schema.grids?.map((g) =>
+        g.id === grid.id ? { ...g, views: newViews } : g
+      );
+      onSchemaChange({ ...schema, grids: updatedGrids });
+    };
+  }, [editMode, schema, onSchemaChange, grid.id]);
+
+  // Determine which view to show (for single view or when no active selection)
+  const currentViewId = activeViewId ?? views[0]?.id;
+  const currentView = views.find((v) => v.id === currentViewId) ?? views[0];
+
+  const bumpAddColumn = useCallback(() => {
+    setOpenAddColumnRequest((n) => n + 1);
+  }, []);
+
+  if (views.length === 1 && !handleViewsChange) {
     return (
       <div className="w-full min-w-0 space-y-2.5">
         {!hideLabel && (
@@ -109,11 +136,76 @@ export function GridBlockContent({
           onUpdate={onUpdate}
           onAddEntry={onAddEntry}
           onDeleteEntries={onDeleteEntries}
+          openAddColumnRequest={openAddColumnRequest}
         />
       </div>
     );
   }
 
+  // When in edit mode with view manager, use controlled view switching
+  if (handleViewsChange) {
+    return (
+      <div className="w-full min-w-0 space-y-2.5">
+        {hideLabel ? (
+          <div className="flex w-full min-w-0 justify-end">
+            <ViewManager
+              grid={grid}
+              fields={fields}
+              layoutNodes={layoutNodes}
+              onViewsChange={handleViewsChange}
+              onActiveViewChange={setActiveViewId}
+              activeViewId={currentViewId}
+              onAddColumn={bumpAddColumn}
+              addColumnDisabled={readOnly || !schema}
+            />
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-2 w-full min-w-0">
+            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider shrink min-w-0">
+              {grid.name}
+            </label>
+            <ViewManager
+              grid={grid}
+              fields={fields}
+              layoutNodes={layoutNodes}
+              onViewsChange={handleViewsChange}
+              onActiveViewChange={setActiveViewId}
+              activeViewId={currentViewId}
+              onAddColumn={bumpAddColumn}
+              addColumnDisabled={readOnly || !schema}
+            />
+          </div>
+        )}
+        {currentView && (
+          <GridViewContent
+            tabId={tabId}
+            grid={grid}
+            view={currentView}
+            gridLayoutNodes={gridLayoutNodes}
+            allLayoutNodes={allLayoutNodes}
+            fields={fields}
+            allGrids={allGrids}
+            allFields={allFields}
+            bindings={bindings}
+            validations={validations}
+            calculations={calculations}
+            fieldRulesV2={fieldRulesV2}
+            gridData={gridData}
+            gridDataRef={gridDataRef}
+            gridDataForThisGrid={gridData?.[grid.id] ?? []}
+            readOnly={readOnly}
+            onUpdate={onUpdate}
+            onAddEntry={onAddEntry}
+            onDeleteEntries={onDeleteEntries}
+            openAddColumnRequest={openAddColumnRequest}
+            suppressEmbeddedAddColumn
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Standard tabs for multiple views in view mode
   const defaultTab = views[0]?.id ?? `${grid.id}_view_0`;
   return (
     <div className="w-full min-w-0 space-y-2.5">
@@ -155,6 +247,7 @@ export function GridBlockContent({
                 onUpdate={onUpdate}
                 onAddEntry={onAddEntry}
                 onDeleteEntries={onDeleteEntries}
+                openAddColumnRequest={openAddColumnRequest}
               />
             </TabsContent>
           );

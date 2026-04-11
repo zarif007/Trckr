@@ -9,7 +9,7 @@ import {
 } from "../client";
 import { clampGridRowsLimit } from "../limits";
 import { rowIdFromRow } from "../row-utils";
-import type { GridRowRecord } from "../types";
+import type { GridRowRecord, RowBackedPersistLifecycle } from "../types";
 
 export type PaginatedGridRow = GridRowRecord;
 
@@ -19,6 +19,8 @@ export interface UsePaginatedGridDataOptions {
   branchName: string;
   initialPageSize: number;
   enabled: boolean;
+  /** Optional: drive data-mode autosave badge when rows persist via row HTTP API. */
+  persistLifecycle?: RowBackedPersistLifecycle | null;
 }
 
 export interface UsePaginatedGridDataResult {
@@ -65,7 +67,11 @@ export function usePaginatedGridData(
     branchName,
     initialPageSize,
     enabled,
+    persistLifecycle,
   } = options;
+
+  const persistRef = useRef(persistLifecycle);
+  persistRef.current = persistLifecycle;
 
   const [rows, setRows] = useState<PaginatedGridRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -215,7 +221,16 @@ export function usePaginatedGridData(
   const patchRowOnServer = useCallback(
     async (rowId: string, data: Record<string, unknown>) => {
       if (!trackerId) throw new Error("Missing tracker id");
-      await patchTrackerDataRow(trackerId as string, rowId, data);
+      persistRef.current?.onMutationStart?.();
+      try {
+        await patchTrackerDataRow(trackerId as string, rowId, data);
+        persistRef.current?.onMutationSuccess?.();
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to update row on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId],
   );
@@ -224,7 +239,16 @@ export function usePaginatedGridData(
     async (rowIds: string[]) => {
       if (!trackerId) throw new Error("Missing tracker id");
       const tid = trackerId as string;
-      await Promise.all(rowIds.map((id) => deleteTrackerDataRow(tid, id)));
+      persistRef.current?.onMutationStart?.();
+      try {
+        await Promise.all(rowIds.map((id) => deleteTrackerDataRow(tid, id)));
+        persistRef.current?.onMutationSuccess?.();
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to delete rows on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId],
   );
@@ -232,7 +256,22 @@ export function usePaginatedGridData(
   const createRowOnServer = useCallback(
     async (data: Record<string, unknown>) => {
       if (!trackerId) throw new Error("Missing tracker id");
-      return createGridRow(trackerId as string, gridSlug, branchName, data);
+      persistRef.current?.onMutationStart?.();
+      try {
+        const row = await createGridRow(
+          trackerId as string,
+          gridSlug,
+          branchName,
+          data,
+        );
+        persistRef.current?.onMutationSuccess?.();
+        return row;
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : "Failed to create row on server";
+        persistRef.current?.onMutationError?.(msg);
+        throw e;
+      }
     },
     [trackerId, gridSlug, branchName],
   );

@@ -257,14 +257,66 @@ CONFIG IS REQUIRED: Every tab, section, grid, and field MUST have a "config" obj
 - Each master data grid has ONE dedicated option field per select, with a different id than the select field (e.g. field id "exercise_option" for exercise_options_grid when the select field is "exercise"). That field is both display and stored value. You can add additional fields for auto-populate (e.g., price, category).
 - For EACH select/multiselect field, add an entry to the bindings object with optionsGrid pointing to the master data grid (never to a main data grid).
 
-11. Views (REQUIRED)
-- Each grid MUST have a "views" array that defines all representations of that grid's data.
-- Structure: views: [{ id: "<grid_stem>_table_view", name: "Table", type: "table", config: {} }].
-- View ids: use a unique id per view; naming convention _view suffix (e.g. tasks_kanban_view) to avoid clashing with grid ids (_grid).
-- View-specific config: each view has its own "config" object. For kanban views, config.groupBy is REQUIRED (field id to group columns by). For table/timeline/calendar views, config can be {} or type-specific. For div views, config.layout may be "vertical" | "horizontal".
-- Views share the grid's data and layoutNodes — no extra layoutNodes or bindings for view ids. layoutNodes and bindings always use the primary grid id only.
-- Example: tasks_grid with views: [{ id: "tasks_table_view", name: "Table", type: "table", config: {} }, { id: "tasks_kanban_view", name: "Kanban", type: "kanban", config: { groupBy: "status" } }].
-- Row loading: omit grid.config.dataLoading for normal table/kanban grids — the app loads rows per page / per kanban column from the API. Set dataLoading.mode to "snapshot" only if the user explicitly needs the entire grid in memory at once (rare). Option-list grids (*_options_grid) always stay on snapshot; do not override.
+11. Views (REQUIRED) - INTELLIGENT VIEW SELECTION
+
+The views array defines all representations of a grid's data. Choose views based on the grid's fields and purpose:
+
+**View Type Selection Guidelines:**
+
+- **Table view (type: "table")**: REQUIRED for all data grids. Always include as the first/default view.
+  - Use for: Any grid with multiple rows of data
+  - Config: { pageSize?: number, defaultSort?: { id: string, desc?: boolean } }
+
+- **Kanban view (type: "kanban")**: Add when the grid has a status/options/multiselect field suitable for column grouping.
+  - Use for: Task tracking, project management, pipelines, workflows
+  - Requirements: Grid must have a field with dataType "status", "options", or "multiselect" (2–8 option values ideal for columns).
+  - Config: { groupBy: "<field_id>" } — REQUIRED. Must match a field id that appears on this grid in layoutNodes (same grid id).
+  - Example: A tasks_grid with a "status" field (To Do, In Progress, Done) should get a kanban view.
+
+- **Calendar view (type: "calendar")**: Add when the grid has date fields for scheduling/events.
+  - Use for: Event planning, deadline tracking, schedules, appointments
+  - Requirements: At least one layout field with dataType "date" on this grid.
+  - Config: { dateField: "<date_field_id>", titleField?: "<field_id>", viewType?: "month" | "week" | "day" } — dateField and titleField ids must be fields on this grid (layoutNodes).
+  - Example: An events_grid with "event_date" and "event_name" fields should get a calendar view.
+
+- **Timeline view (type: "timeline")**: Add for time-based project planning with date ranges.
+  - Use for: Project plans, roadmaps, Gantt charts, multi-day events
+  - Requirements: Two distinct fields with dataType "date" on this grid — start and end — OR one date plus explicit endDateField in config once both exist.
+  - Config: { dateField: "<start_date_field_id>", endDateField: "<end_date_field_id>", titleField?: "<field_id>", swimlaneField?: "<field_id>", viewType?: "day" | "week" | "month" | "quarter" } — all ids must be fields on this grid. endDateField is REQUIRED for timeline (range bar).
+  - Example: A projects_grid with "start_date", "end_date", and "project_name" should get a timeline view.
+
+- **Form/Div view (type: "div")**: Use ONLY for single-instance content.
+  - Use for: Profile sections, settings forms, single-record summaries
+  - Config: { layout: "vertical" | "horizontal" }
+  - NEVER use div view for grids with multiple rows of list data
+
+**Multi-View Pattern Examples:**
+
+Tasks grid (status field + due_date field):
+views: [
+  { id: "tasks_table_view", name: "Table", type: "table", config: {} },
+  { id: "tasks_kanban_view", name: "Board", type: "kanban", config: { groupBy: "status" } },
+  { id: "tasks_calendar_view", name: "Calendar", type: "calendar", config: { dateField: "due_date", titleField: "title" } }
+]
+
+Events grid (event_date field):
+views: [
+  { id: "events_table_view", name: "Table", type: "table", config: {} },
+  { id: "events_calendar_view", name: "Calendar", type: "calendar", config: { dateField: "event_date", titleField: "event_name" } }
+]
+
+Projects grid (start_date, end_date fields):
+views: [
+  { id: "projects_table_view", name: "Table", type: "table", config: {} },
+  { id: "projects_timeline_view", name: "Timeline", type: "timeline", config: { dateField: "start_date", endDateField: "end_date", titleField: "project_name" } }
+]
+
+**View Implementation Rules:**
+- View ids: use _view suffix (e.g., tasks_kanban_view) to avoid clashing with grid ids (_grid).
+- Views share the grid's data and layoutNodes — no extra layoutNodes or bindings for view ids.
+- layoutNodes and bindings always use the primary grid id only.
+- **Calendar vs timeline**: Use calendar when a single date anchors each row (e.g. due date). Use timeline when each row has a meaningful start and end date (two date fields). Do not emit timeline without endDateField when the domain needs a range bar.
+- Row loading: omit grid.config.dataLoading for normal table/kanban/calendar/timeline grids — the app loads rows per page from the API. Set dataLoading.mode to "snapshot" only if the user explicitly needs the entire grid in memory at once (rare). Option-list grids (*_options_grid) always stay on snapshot; do not override.
 
 === FIELD RULES (CONDITIONAL FIELD ACTIONS) ===
 
