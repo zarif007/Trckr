@@ -96,6 +96,21 @@ describe("isGridDataPaginated / listPaginatedGridSlugs", () => {
     expect(listPaginatedGridSlugs([g])).toEqual(["tasks"]);
   });
 
+  it("defaults to paginated when table and calendar share one grid (calendar uses row API)", () => {
+    const g: TrackerGrid = {
+      id: "tasks",
+      name: "Tasks",
+      sectionId: "s",
+      placeId: 0,
+      views: [
+        { id: "t1", name: "Table", type: "table", config: {} },
+        { id: "c1", name: "Calendar", type: "calendar", config: {} },
+      ],
+    };
+    expect(isGridDataPaginated(g)).toBe(true);
+    expect(listPaginatedGridSlugs([g])).toEqual(["tasks"]);
+  });
+
   it("defaults to paginated for kanban view when mode omitted", () => {
     const g: TrackerGrid = {
       id: "tasks",

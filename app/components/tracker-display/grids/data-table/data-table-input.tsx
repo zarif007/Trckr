@@ -13,6 +13,10 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import {
+  formatDateFieldCalendarDay,
+  parseDateFieldStoredValue,
+} from "@/lib/date-field-value";
+import {
   FieldType,
   FieldConfig,
   type FieldMetadata,
@@ -264,8 +268,8 @@ export function DataTableInput({
             >
               {value ? (
                 (() => {
-                  const dateValue = new Date(value);
-                  if (Number.isNaN(dateValue.getTime())) return String(value);
+                  const dateValue = parseDateFieldStoredValue(value);
+                  if (!dateValue) return String(value);
                   if (config?.dateFormat === "iso")
                     return format(dateValue, "yyyy-MM-dd");
                   if (config?.dateFormat === "us")
@@ -282,15 +286,11 @@ export function DataTableInput({
           <PopoverContent className="w-auto p-0 z-[60]" align="start">
             <Calendar
               mode="single"
-              selected={value ? new Date(value) : undefined}
+              selected={parseDateFieldStoredValue(value)}
               onSelect={(selected) => {
                 if (isDisabled) return;
                 if (selected instanceof Date) {
-                  const newDate = new Date(selected);
-                  newDate.setMinutes(
-                    newDate.getMinutes() - newDate.getTimezoneOffset(),
-                  );
-                  onChange(newDate.toISOString());
+                  onChange(formatDateFieldCalendarDay(selected));
                 }
               }}
               onCloseRequest={() => setDatePickerOpen(false)}

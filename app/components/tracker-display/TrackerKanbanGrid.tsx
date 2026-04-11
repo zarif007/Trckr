@@ -145,9 +145,7 @@ function TrackerKanbanGridInner({
   const gridIsPaginatedCapable =
     isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
   const paginatedKanbanDisplay = gridIsPaginatedCapable && !canEditLayout;
-  const mutateKanbanViaRowApi =
-    gridIsPaginatedCapable &&
-    (paginatedKanbanDisplay || (canEditLayout && thisGridRows.length === 0));
+  const mutateKanbanViaRowApi = gridIsPaginatedCapable;
 
   const addable =
     !readOnly &&

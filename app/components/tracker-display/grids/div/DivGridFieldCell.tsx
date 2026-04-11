@@ -2,6 +2,10 @@
 
 import { memo, useCallback } from "react";
 import { format } from "date-fns";
+import {
+  formatDateFieldCalendarDay,
+  parseDateFieldStoredValue,
+} from "@/lib/date-field-value";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -190,7 +194,10 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
                 disabled={isDisabled}
               >
                 {value ? (
-                  format(new Date(String(value)), "PPP")
+                  (() => {
+                    const d = parseDateFieldStoredValue(value);
+                    return d ? format(d, "PPP") : String(value);
+                  })()
                 ) : (
                   <span>Pick a date</span>
                 )}
@@ -199,13 +206,14 @@ export const DivGridFieldCell = memo(function DivGridFieldCell({
             <PopoverContent className="w-auto p-0 z-[60]" align="start">
               <Calendar
                 mode="single"
-                selected={value ? new Date(String(value)) : undefined}
+                selected={parseDateFieldStoredValue(value)}
                 onSelect={(selected) => {
                   if (isDisabled) return;
                   if (selected instanceof Date) {
-                    const d = new Date(selected);
-                    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-                    onUpdateWithTouched(fieldId, d.toISOString());
+                    onUpdateWithTouched(
+                      fieldId,
+                      formatDateFieldCalendarDay(selected),
+                    );
                   }
                 }}
                 onCloseRequest={() => onDatePickerOpenChange(false)}

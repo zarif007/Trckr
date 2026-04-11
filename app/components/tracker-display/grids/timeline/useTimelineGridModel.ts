@@ -5,7 +5,6 @@ import type { TimelineView, TimelineItem } from "./types";
 import {
   buildTimeRange,
   buildTimelineItems,
-  buildSwimlanes,
   timeAxisMinWidthPx,
   formatTimelineRangeLabel,
   viewSpanDays,
@@ -16,19 +15,17 @@ export interface UseTimelineGridModelParams {
   dateFieldId: string | undefined;
   endDateFieldId: string | undefined;
   titleFieldId: string | undefined;
-  swimlaneFieldId: string | undefined;
   initialView: TimelineView;
 }
 
 /**
- * Timeline zoom level, visible window, swimlanes, and navigation — pure range math in `timeline-domain`.
+ * Timeline zoom level, visible window, items, and navigation — pure range math in `timeline-domain`.
  */
 export function useTimelineGridModel({
   rows,
   dateFieldId,
   endDateFieldId,
   titleFieldId,
-  swimlaneFieldId,
   initialView,
 }: UseTimelineGridModelParams) {
   const [view, setView] = useState<TimelineView>(initialView);
@@ -48,11 +45,6 @@ export function useTimelineGridModel({
         titleFieldId,
       ),
     [rows, dateFieldId, endDateFieldId, titleFieldId],
-  );
-
-  const swimlanes = useMemo(
-    () => buildSwimlanes(timelineItems, swimlaneFieldId),
-    [timelineItems, swimlaneFieldId],
   );
 
   const dateDisplay = useMemo(
@@ -90,7 +82,6 @@ export function useTimelineGridModel({
     currentDate,
     timeRange,
     timelineItems,
-    swimlanes,
     dateDisplay,
     timeAxisMinWidthPx: timeAxisMinWidthPxValue,
     goToPrevious,

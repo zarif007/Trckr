@@ -4,6 +4,9 @@ export type {
   TrackerTimelineGridProps,
   TimelineItem,
   TimelineView,
+  TimelineSwimlaneLane,
+  PlacedTimelineBar,
+  TimelineCanvasProps,
+  TimelineDragEndPayload,
 } from "./types";
 export { TimelineCanvas } from "./TimelineCanvas";
-export type { TimelineCanvasProps } from "./TimelineCanvas";

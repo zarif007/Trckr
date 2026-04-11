@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TrackerFieldType, TrackerOption } from "./types";
 import { format } from "date-fns";
+import { parseDateFieldStoredValue } from "@/lib/date-field-value";
 
 type DisplayFieldConfig = {
   dateFormat?: "iso" | "us" | "eu" | "long";
@@ -73,8 +74,8 @@ export function TrackerCell({
       return (
         <span>
           {(() => {
-            const dateValue = new Date(String(value));
-            if (Number.isNaN(dateValue.getTime())) return String(value);
+            const dateValue = parseDateFieldStoredValue(value);
+            if (!dateValue) return String(value);
             if (config?.dateFormat === "iso")
               return format(dateValue, "yyyy-MM-dd");
             if (config?.dateFormat === "us")

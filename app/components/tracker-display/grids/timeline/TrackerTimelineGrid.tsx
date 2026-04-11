@@ -7,6 +7,13 @@ import { theme } from "@/lib/theme";
 import { gridContainer, gridHeader } from "@/lib/grid-styles";
 import { Button } from "@/components/ui/button";
 import { resolveFieldRulesForRow } from "@/lib/field-rules";
+import { resolveFieldOptionsV2 } from "@/lib/binding";
+import {
+  getBindingForField,
+  findOptionRow,
+  applyBindings,
+  parsePath,
+} from "@/lib/resolve-bindings";
 import { EntryFormDialog } from "../data-table/entry-form-dialog";
 import { EntryWayButton } from "../../entry-way/EntryWayButton";
 import { buildEntryWaysForGrid } from "../../entry-way/entry-way-registry";
@@ -20,12 +27,28 @@ import {
 import { GridLayoutEditChrome } from "../shared/GridLayoutEditChrome";
 import { useCanEditLayout } from "../../edit-mode";
 import { resolveTimelineFieldIds } from "./timeline-field-ids";
+import {
+  normalizeTimelineDateFieldsForRow,
+  buildTimelineSwimlaneLanes,
+  computePlacedTimelineBars,
+  shiftTimelineStoredDateRangeByDays,
+  timelineSwimlaneKeyFromRow,
+  formatCalendarDayLocal,
+  parseCalendarDayLocal,
+} from "./timeline-domain";
 import { useTimelineGridModel } from "./useTimelineGridModel";
 import { TimelineCanvas } from "./TimelineCanvas";
 import type { TrackerTimelineGridProps } from "./types";
 import type { TimelineView } from "./types";
+import type { TimelineDragEndPayload } from "./types";
 
-export type { TrackerTimelineGridProps, TimelineItem, TimelineView } from "./types";
+export type {
+  TrackerTimelineGridProps,
+  TimelineItem,
+  TimelineView,
+  TimelineSwimlaneLane,
+  PlacedTimelineBar,
+} from "./types";
 
 /**
  * Timeline / Gantt-style view for tracker rows with optional swimlanes.
@@ -44,6 +67,7 @@ export function TrackerTimelineGrid({
   gridDataForThisGrid,
   readOnly = false,
   onUpdate,
+  onCrossGridUpdate,
   onAddEntry,
   trackerContext: trackerContextProp,
   activeViewId,
@@ -66,6 +90,8 @@ export function TrackerTimelineGrid({
   const trackerOptionsFromContext = useTrackerOptionsContext();
   const trackerContextMerged =
     trackerOptionsFromContext ?? trackerContextProp ?? undefined;
+  const foreignGridDataBySchemaId =
+    trackerContextMerged?.foreignGridDataBySchemaId;
   const { gridFields, fieldMetadata, fieldOrder, getBindingUpdates } =
     useLayoutGridEntryForm({
       tabId,
@@ -97,7 +123,6 @@ export function TrackerTimelineGrid({
     setView,
     timeRange,
     timelineItems,
-    swimlanes,
     dateDisplay,
     timeAxisMinWidthPx,
     goToPrevious,
@@ -108,9 +133,71 @@ export function TrackerTimelineGrid({
     dateFieldId,
     endDateFieldId,
     titleFieldId,
-    swimlaneFieldId,
     initialView,
   });
+
+  const swimlaneField = useMemo(
+    () =>
+      swimlaneFieldId ? fields.find((f) => f.id === swimlaneFieldId) : undefined,
+    [fields, swimlaneFieldId],
+  );
+
+  const swimlaneFieldUsesResolvedOptions = useMemo(() => {
+    if (!swimlaneField) return false;
+    const t = swimlaneField.dataType;
+    return (
+      t === "options" ||
+      t === "multiselect" ||
+      t === "status" ||
+      t === "dynamic_select" ||
+      t === "dynamic_multiselect" ||
+      t === "field_mappings"
+    );
+  }, [swimlaneField]);
+
+  const resolvedSwimlaneOptions = useMemo(() => {
+    if (!swimlaneField || !swimlaneFieldUsesResolvedOptions) return [];
+    return (
+      resolveFieldOptionsV2(
+        tabId,
+        grid.id,
+        swimlaneField,
+        bindings,
+        fullGridData,
+        trackerContextMerged ?? undefined,
+      ) ?? []
+    );
+  }, [
+    swimlaneField,
+    swimlaneFieldUsesResolvedOptions,
+    tabId,
+    grid.id,
+    bindings,
+    fullGridData,
+    trackerContextMerged,
+  ]);
+
+  const swimlanes = useMemo(
+    () =>
+      buildTimelineSwimlaneLanes({
+        swimlaneFieldId,
+        resolvedOptions: swimlaneFieldUsesResolvedOptions
+          ? resolvedSwimlaneOptions
+          : [],
+        timelineItems,
+      }),
+    [
+      swimlaneFieldId,
+      swimlaneFieldUsesResolvedOptions,
+      resolvedSwimlaneOptions,
+      timelineItems,
+    ],
+  );
+
+  const placedBars = useMemo(
+    () => computePlacedTimelineBars(timelineItems, swimlaneFieldId, swimlanes),
+    [timelineItems, swimlaneFieldId, swimlanes],
+  );
 
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -125,20 +212,166 @@ export function TrackerTimelineGrid({
     grid.config?.isRowEditAble !== false &&
     (mutateRowsViaRowApi || onUpdate != null);
 
+  const timelineDragEnabled =
+    editable && (mutateRowsViaRowApi || onUpdate != null);
+
+  const handleTimelineBarDragEnd = useCallback(
+    async (payload: TimelineDragEndPayload) => {
+      if (!timelineDragEnabled) return;
+      const { rowIndex, deltaX, trackWidthPx, targetLaneId } = payload;
+      const row = rows[rowIndex] as Record<string, unknown> | undefined;
+      if (!row) return;
+
+      const values: Record<string, unknown> = {};
+
+      if (
+        swimlaneFieldId &&
+        targetLaneId != null &&
+        timelineSwimlaneKeyFromRow(row, swimlaneFieldId) !== targetLaneId
+      ) {
+        values[swimlaneFieldId] = targetLaneId;
+
+        const groupingField = fields.find((f) => f.id === swimlaneFieldId);
+        if (
+          groupingField &&
+          (groupingField.dataType === "options" ||
+            groupingField.dataType === "multiselect")
+        ) {
+          const binding = getBindingForField(
+            grid.id,
+            swimlaneFieldId,
+            bindings,
+            tabId,
+          );
+          if (binding?.fieldMappings?.length) {
+            const selectFieldPath = `${grid.id}.${swimlaneFieldId}`;
+            const previewRows = rows.map((r, i) =>
+              i === rowIndex
+                ? {
+                    ...(r as Record<string, unknown>),
+                    [swimlaneFieldId]: targetLaneId,
+                  }
+                : (r as Record<string, unknown>),
+            );
+            const tempFull = { ...fullGridData, [grid.id]: previewRows };
+            const optionRow = findOptionRow(
+              tempFull,
+              binding,
+              targetLaneId,
+              selectFieldPath,
+              foreignGridDataBySchemaId,
+            );
+            if (optionRow) {
+              const updates = applyBindings(
+                binding,
+                optionRow,
+                selectFieldPath,
+              );
+              for (const update of updates) {
+                const { gridId: targetGridId, fieldId: targetFieldId } =
+                  parsePath(update.targetPath);
+                if (targetGridId && targetFieldId) {
+                  if (onCrossGridUpdate) {
+                    onCrossGridUpdate(
+                      targetGridId,
+                      rowIndex,
+                      targetFieldId,
+                      update.value,
+                    );
+                  } else if (targetGridId === grid.id) {
+                    values[targetFieldId] = update.value;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      let deltaDays = 0;
+      if (
+        dateFieldId &&
+        endDateFieldId &&
+        trackWidthPx > 0 &&
+        Math.abs(deltaX) >= 4
+      ) {
+        const totalMs = timeRange.end.getTime() - timeRange.start.getTime();
+        if (totalMs > 0) {
+          deltaDays = Math.round(
+            (deltaX / trackWidthPx) * (totalMs / 86_400_000),
+          );
+        }
+      }
+      if (deltaDays !== 0 && dateFieldId && endDateFieldId) {
+        const shifted = shiftTimelineStoredDateRangeByDays(
+          row,
+          dateFieldId,
+          endDateFieldId,
+          deltaDays,
+        );
+        if (shifted) Object.assign(values, shifted);
+      }
+
+      if (Object.keys(values).length === 0) return;
+
+      const mergedPreview = { ...row, ...values };
+      const normalized =
+        dateFieldId && endDateFieldId
+          ? normalizeTimelineDateFieldsForRow(
+              mergedPreview,
+              dateFieldId,
+              endDateFieldId,
+            )
+          : mergedPreview;
+
+      const deltaForPersist: Record<string, unknown> = {};
+      for (const key of Object.keys(normalized)) {
+        if (normalized[key] !== row[key]) {
+          deltaForPersist[key] = normalized[key];
+        }
+      }
+      if (Object.keys(deltaForPersist).length === 0) return;
+
+      await persistEditedTrackerGridRow({
+        mutateViaRowApi: mutateRowsViaRowApi,
+        pg,
+        rowIndex,
+        rows,
+        values: deltaForPersist,
+        onSnapshotUpdate: onUpdate,
+      });
+    },
+    [
+      timelineDragEnabled,
+      rows,
+      swimlaneFieldId,
+      fields,
+      bindings,
+      tabId,
+      grid.id,
+      fullGridData,
+      foreignGridDataBySchemaId,
+      onCrossGridUpdate,
+      dateFieldId,
+      endDateFieldId,
+      timeRange.end,
+      timeRange.start,
+      mutateRowsViaRowApi,
+      pg,
+      onUpdate,
+    ],
+  );
+
   const entryWays = useMemo(
     () => buildEntryWaysForGrid({ grid, tabId }),
     [grid, tabId],
   );
 
   const openNewEntryDialog = useCallback(() => {
-    setSelectedDate(new Date());
+    const today = parseCalendarDayLocal(new Date());
+    setSelectedDate(today ?? new Date());
     setShowAddDialog(true);
   }, []);
-
-  const timelineDateRange =
-    dateFieldId && endDateFieldId && dateFieldId !== endDateFieldId
-      ? { startFieldId: dateFieldId, endFieldId: endDateFieldId }
-      : undefined;
 
   const formReadyForAdd =
     gridFields.length > 0 &&
@@ -150,7 +383,9 @@ export function TrackerTimelineGrid({
   const addFormInitialValues = useMemo((): Record<string, unknown> => {
     const v: Record<string, unknown> = {};
     if (dateFieldId && selectedDate) {
-      const day = selectedDate.toISOString().split("T")[0];
+      const localDay = parseCalendarDayLocal(selectedDate);
+      if (!localDay) return v;
+      const day = formatCalendarDayLocal(localDay);
       v[dateFieldId] = day;
       if (endDateFieldId) v[endDateFieldId] = day;
     }
@@ -159,44 +394,76 @@ export function TrackerTimelineGrid({
 
   const handleAddSave = useCallback(
     (values: Record<string, unknown>) => {
+      const normalized =
+        dateFieldId && endDateFieldId
+          ? normalizeTimelineDateFieldsForRow(
+              values,
+              dateFieldId,
+              endDateFieldId,
+            )
+          : values;
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
-        values,
+        values: normalized,
         onSnapshotAdd: onAddEntry,
       });
       setShowAddDialog(false);
       setSelectedDate(null);
     },
-    [mutateRowsViaRowApi, pg, onAddEntry],
+    [mutateRowsViaRowApi, pg, onAddEntry, dateFieldId, endDateFieldId],
   );
 
   const handleAddSaveAnother = useCallback(
     (values: Record<string, unknown>) => {
+      const normalized =
+        dateFieldId && endDateFieldId
+          ? normalizeTimelineDateFieldsForRow(
+              values,
+              dateFieldId,
+              endDateFieldId,
+            )
+          : values;
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
-        values,
+        values: normalized,
         onSnapshotAdd: onAddEntry,
       });
     },
-    [mutateRowsViaRowApi, pg, onAddEntry],
+    [mutateRowsViaRowApi, pg, onAddEntry, dateFieldId, endDateFieldId],
   );
 
   const handleEditSave = useCallback(
     async (values: Record<string, unknown>) => {
       if (editRowIndex == null) return;
+      const normalized =
+        dateFieldId && endDateFieldId
+          ? normalizeTimelineDateFieldsForRow(
+              values,
+              dateFieldId,
+              endDateFieldId,
+            )
+          : values;
       await persistEditedTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
         rowIndex: editRowIndex,
         rows,
-        values,
+        values: normalized,
         onSnapshotUpdate: onUpdate,
       });
       setEditRowIndex(null);
     },
-    [editRowIndex, mutateRowsViaRowApi, pg, rows, onUpdate],
+    [
+      editRowIndex,
+      mutateRowsViaRowApi,
+      pg,
+      rows,
+      onUpdate,
+      dateFieldId,
+      endDateFieldId,
+    ],
   );
 
   const openEdit = useCallback(
@@ -208,7 +475,7 @@ export function TrackerTimelineGrid({
   );
 
   return (
-    <div className={cn(gridContainer, "flex flex-col h-[500px] md:h-[600px]")}>
+    <div className={cn(gridContainer, "flex flex-col w-full min-w-0 h-auto")}>
       {gridIsPaginatedCapable && pg.error ? (
         <div
           className={cn(
@@ -305,7 +572,7 @@ export function TrackerTimelineGrid({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
+      <div className="w-full min-w-0 overflow-x-auto">
         {gridFields.length === 0 && canEditLayout ? (
           <div
             className={cn(
@@ -321,18 +588,22 @@ export function TrackerTimelineGrid({
           </div>
         ) : null}
         <TimelineCanvas
-          items={timelineItems}
+          placedBars={placedBars}
           swimlanes={swimlanes}
           timeRange={timeRange}
           view={view}
           swimlaneFieldId={swimlaneFieldId}
           minContentWidthPx={timeAxisMinWidthPx}
+          mutateViaRowApi={mutateRowsViaRowApi}
+          timelineDragEnabled={timelineDragEnabled}
           timelineClickToAddEnabled={addable && formReadyForAdd}
           onTimelineClick={(date) => {
-            setSelectedDate(date);
+            const localDay = parseCalendarDayLocal(date) ?? date;
+            setSelectedDate(localDay);
             setShowAddDialog(true);
           }}
           onItemClick={openEdit}
+          onBarDragEnd={handleTimelineBarDragEnd}
         />
       </div>
 
@@ -348,7 +619,6 @@ export function TrackerTimelineGrid({
           fieldMetadata={fieldMetadata}
           fieldOrder={fieldOrder}
           initialValues={addFormInitialValues}
-          timelineDateRange={timelineDateRange}
           onSave={handleAddSave}
           onSaveAnother={handleAddSaveAnother}
           getBindingUpdates={getBindingUpdates}
@@ -378,7 +648,6 @@ export function TrackerTimelineGrid({
           mode="edit"
           fieldMetadata={fieldMetadata}
           fieldOrder={fieldOrder}
-          timelineDateRange={timelineDateRange}
           initialValues={
             editRowIndex != null ? { ...(rows[editRowIndex] ?? {}) } : {}
           }

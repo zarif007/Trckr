@@ -9,7 +9,6 @@ import {
   useBlockControls,
   LabelWithBlockControls,
 } from "../layout";
-import { theme } from "@/lib/theme";
 
 const VIEW_ICONS: Record<GridType, LucideIcon> = {
   table: Table2,
@@ -32,7 +31,7 @@ const VIEW_COLORS: Record<GridType, string> = {
   kanban: "bg-warning/10 text-warning border border-warning/20",
   div: "bg-success/10 text-success border border-success/20",
   calendar: "bg-primary/10 text-primary border border-primary/20",
-  timeline: "bg-secondary/10 text-secondary border border-secondary/20",
+  timeline: "bg-chart-2/10 text-chart-2 border border-chart-2/20",
 };
 
 /** Grid type badge: small pill showing view type. Exported for use in BlockEditor or elsewhere. */

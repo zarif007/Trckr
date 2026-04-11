@@ -51,10 +51,10 @@ export function useTrackerGridRowsFromApi({
 
   const gridIsPaginatedCapable =
     isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
+  /** True when not in layout edit — controls server pagination UI (e.g. table pager). */
   const paginatedDisplay = gridIsPaginatedCapable && !canEditLayout;
-  const mutateRowsViaRowApi =
-    gridIsPaginatedCapable &&
-    (paginatedDisplay || (canEditLayout && thisGridRows.length === 0));
+  /** Row HTTP API whenever the grid is paginated-capable (edit preview uses the same rows as main). */
+  const mutateRowsViaRowApi = gridIsPaginatedCapable;
 
   const pSize = effectivePaginatedPageSize(grid);
   const pg = usePaginatedGridData({
@@ -68,10 +68,8 @@ export function useTrackerGridRowsFromApi({
 
   const rows = useMemo((): Array<Record<string, unknown>> => {
     if (!isGridDataPaginated(grid)) return thisGridRows;
-    if (paginatedDisplay) return pg.rows as Array<Record<string, unknown>>;
-    if (canEditLayout && thisGridRows.length > 0) return thisGridRows;
     return pg.rows as Array<Record<string, unknown>>;
-  }, [grid, paginatedDisplay, canEditLayout, thisGridRows, pg.rows]);
+  }, [grid, thisGridRows, pg.rows]);
 
   const fullGridData = useMemo(
     () => ({ ...gridData, [grid.id]: rows }),

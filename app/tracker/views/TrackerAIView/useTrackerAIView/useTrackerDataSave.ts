@@ -100,12 +100,16 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     null,
   );
 
-  /** Debounced nav badge for row HTTP API — mirrors snapshot `scheduleSave` timing (debounce + idle). */
+  /** Row HTTP API mutations in flight (await completion before "Up to date"). */
+  const rowBackedMutationsInFlightRef = useRef(0);
+  /** True after debounce+idle when we set `dataSaveStatus` to "saving" for row API work. */
+  const rowBackedSavingDisplayedRef = useRef(false);
+  /** Waiting to enter "saving" — same debounce+idle rhythm as snapshot `useAutoSaveTrackerData`. */
+  const rowBackedBadgePendingRef = useRef(false);
+  const rowBackedBadgeLastActivityRef = useRef<number | null>(null);
   const rowBackedBadgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
-  const rowBackedBadgePendingRef = useRef(false);
-  const rowBackedBadgeLastActivityRef = useRef<number | null>(null);
 
   const setSavedWithTimeout = useCallback(() => {
     setDataSaveStatus("saved");
@@ -126,7 +130,7 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     [formStatusRef, setCurrentFormStatus],
   );
 
-  const flushRowBackedPersistBadge = useCallback(() => {
+  const flushRowBackedBadgeEnterSaving = useCallback(() => {
     if (!allowAutoSave) {
       rowBackedBadgePendingRef.current = false;
       return;
@@ -143,7 +147,7 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
           clearTimeout(rowBackedBadgeTimerRef.current);
         rowBackedBadgeTimerRef.current = setTimeout(() => {
           rowBackedBadgeTimerRef.current = null;
-          void flushRowBackedPersistBadge();
+          void flushRowBackedBadgeEnterSaving();
         }, wait);
         return;
       }
@@ -155,35 +159,51 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
       saveStatusResetTimerRef.current = null;
     }
     setDataSaveError(null);
-    setDataSaveStatus("saving");
-    queueMicrotask(() => {
+    if (rowBackedMutationsInFlightRef.current > 0) {
+      rowBackedSavingDisplayedRef.current = true;
+      setDataSaveStatus("saving");
+    } else {
       setSavedWithTimeout();
-    });
+    }
   }, [allowAutoSave, setSavedWithTimeout]);
 
-  const scheduleRowBackedPersistBadge = useCallback(() => {
+  const scheduleRowBackedBadgeDebounce = useCallback(() => {
     if (!allowAutoSave) return;
+    if (rowBackedSavingDisplayedRef.current) return;
     rowBackedBadgePendingRef.current = true;
     rowBackedBadgeLastActivityRef.current = Date.now();
     if (rowBackedBadgeTimerRef.current)
       clearTimeout(rowBackedBadgeTimerRef.current);
     rowBackedBadgeTimerRef.current = setTimeout(() => {
       rowBackedBadgeTimerRef.current = null;
-      void flushRowBackedPersistBadge();
+      void flushRowBackedBadgeEnterSaving();
     }, TRACKER_DATA_AUTOSAVE_DEBOUNCE_MS);
-  }, [allowAutoSave, flushRowBackedPersistBadge]);
+  }, [allowAutoSave, flushRowBackedBadgeEnterSaving]);
 
   const notifyRowBackedMutationStart = useCallback(() => {
-    scheduleRowBackedPersistBadge();
-  }, [scheduleRowBackedPersistBadge]);
+    if (!allowAutoSave) return;
+    rowBackedMutationsInFlightRef.current += 1;
+    scheduleRowBackedBadgeDebounce();
+  }, [allowAutoSave, scheduleRowBackedBadgeDebounce]);
 
   const notifyRowBackedMutationSuccess = useCallback(() => {
-    scheduleRowBackedPersistBadge();
-  }, [scheduleRowBackedPersistBadge]);
+    if (!allowAutoSave) return;
+    rowBackedMutationsInFlightRef.current = Math.max(
+      0,
+      rowBackedMutationsInFlightRef.current - 1,
+    );
+    if (rowBackedMutationsInFlightRef.current > 0) return;
+    if (rowBackedSavingDisplayedRef.current) {
+      rowBackedSavingDisplayedRef.current = false;
+      setSavedWithTimeout();
+    }
+  }, [allowAutoSave, setSavedWithTimeout]);
 
   const notifyRowBackedMutationError = useCallback(
     (message: string) => {
       if (!allowAutoSave) return;
+      rowBackedMutationsInFlightRef.current = 0;
+      rowBackedSavingDisplayedRef.current = false;
       rowBackedBadgePendingRef.current = false;
       rowBackedBadgeLastActivityRef.current = null;
       if (rowBackedBadgeTimerRef.current) {
@@ -365,6 +385,7 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
         return;
       }
       if (state === "idle") {
+        if (rowBackedMutationsInFlightRef.current > 0) return;
         setSavedWithTimeout();
         return;
       }
@@ -475,6 +496,8 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
 
   useEffect(() => {
     if (allowAutoSave) return;
+    rowBackedMutationsInFlightRef.current = 0;
+    rowBackedSavingDisplayedRef.current = false;
     rowBackedBadgePendingRef.current = false;
     rowBackedBadgeLastActivityRef.current = null;
     if (rowBackedBadgeTimerRef.current) {
@@ -487,8 +510,10 @@ export function useTrackerDataSave(params: UseTrackerDataSaveParams) {
     return () => {
       if (saveStatusResetTimerRef.current)
         clearTimeout(saveStatusResetTimerRef.current);
-      if (rowBackedBadgeTimerRef.current)
+      if (rowBackedBadgeTimerRef.current) {
         clearTimeout(rowBackedBadgeTimerRef.current);
+        rowBackedBadgeTimerRef.current = null;
+      }
     };
   }, []);
 

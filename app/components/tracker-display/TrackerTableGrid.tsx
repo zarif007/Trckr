@@ -162,10 +162,8 @@ function TrackerTableGridInner({
     isGridDataPaginated(grid) && Boolean(dataApiTrackerId ?? undefined);
   /** Server-driven table UI (pagination, totals); off in layout edit so TanStack paginates locally. */
   const paginatedDisplay = gridIsPaginatedCapable && !canEditLayout;
-  /** PATCH/create/delete via row API whenever the visible rows come from that fetch (omitted snapshot). */
-  const mutateRowsViaRowApi =
-    gridIsPaginatedCapable &&
-    (paginatedDisplay || (canEditLayout && thisGridRows.length === 0));
+  /** Row HTTP API whenever the grid is paginated-capable (edit preview uses the same rows as main). */
+  const mutateRowsViaRowApi = gridIsPaginatedCapable;
 
   const pSize = effectivePaginatedPageSize(grid);
   const pg = usePaginatedGridData({
@@ -179,16 +177,8 @@ function TrackerTableGridInner({
 
   const rows = useMemo((): Array<Record<string, unknown>> => {
     if (!isGridDataPaginated(grid)) return thisGridRows;
-    if (paginatedDisplay) return pg.rows as Array<Record<string, unknown>>;
-    if (canEditLayout && thisGridRows.length > 0) return thisGridRows;
     return pg.rows as Array<Record<string, unknown>>;
-  }, [
-    grid,
-    paginatedDisplay,
-    canEditLayout,
-    thisGridRows,
-    pg.rows,
-  ]);
+  }, [grid, thisGridRows, pg.rows]);
 
   const fullGridData = useMemo(
     () => ({ ...gridData, [grid.id]: rows }),
@@ -1043,11 +1033,7 @@ function TrackerTableGridInner({
             : undefined
         }
         totalRows={paginatedDisplay ? pg.total : undefined}
-        isLoading={
-          gridIsPaginatedCapable &&
-          pg.loading &&
-          (paginatedDisplay || thisGridRows.length === 0)
-        }
+        isLoading={gridIsPaginatedCapable && pg.loading}
         defaultSort={grid.config?.defaultSort}
         entryWays={entryWays}
       />
