@@ -1,10 +1,5 @@
-import { defineConfig } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
-
-export default defineConfig({
-  plugins: [tsconfigPaths()],
-  test: {
-    environment: 'node',
-    include: ['**/*.test.ts'],
-  },
-})
+/**
+ * Default Vitest entry: Node unit tests. Component tests use vitest.ui.config.ts
+ * (see npm run test:run, which runs both configs).
+ */
+export { default } from "./vitest.unit.config";

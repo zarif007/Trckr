@@ -10,6 +10,7 @@ import type { DynamicOptionsDefinitions } from "@/lib/dynamic-options";
 import type { TrackerBindingEntry } from "@/lib/types/tracker-bindings";
 
 export interface TrackerLike {
+  masterDataScope?: unknown;
   tabs?: Array<{
     id: string;
     name?: string;

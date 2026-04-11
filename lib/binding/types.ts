@@ -6,6 +6,7 @@ import type { DynamicOptionsContext } from "@/lib/dynamic-options/types";
 
 /** Tracker schema shape used when building/enriching bindings. */
 export interface TrackerLike {
+  masterDataScope?: unknown;
   tabs?: Array<{
     id: string;
     name?: string;

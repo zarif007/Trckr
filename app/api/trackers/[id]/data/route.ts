@@ -1,4 +1,3 @@
-import { z } from "zod";
 import {
   badRequest,
   jsonOk,
@@ -18,14 +17,7 @@ import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
 import { NodeType } from "@prisma/client";
 
-const saveDataBodySchema = z
-  .object({
-    formStatus: z.string().nullable().optional(),
-    data: z.unknown().optional(),
-    branchName: z.string().optional(),
-    label: z.string().optional(),
-  })
-  .passthrough();
+import { saveDataBodySchema } from "./save-data-body-schema";
 
 type GridIdSlugPair = { id: string; slug: string };
 
