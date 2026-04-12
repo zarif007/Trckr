@@ -22,6 +22,8 @@ import { FieldWrapper } from "../../shared/FieldWrapper";
 import { FIELD_FORM_INPUT_CLASS } from "@/lib/field-input-classes";
 import type { TrackerFieldType } from "../../types";
 import { GROUP_ORDER, sourceEntryId, sourceEntryLabel } from "./constants";
+import { listAllowedTargetDataTypes } from "@/lib/tracker-field-type-conversion";
+import { TRACKER_FIELD_TYPES } from "@/lib/tracker-field-types";
 
 export interface GeneralTabProps {
   gridId: string | null | undefined;
@@ -134,6 +136,9 @@ export function GeneralTab({
   statusOptionsText,
   setStatusOptionsText,
 }: GeneralTabProps) {
+  const disallowedTargetCount =
+    TRACKER_FIELD_TYPES.length - listAllowedTargetDataTypes(dataType).length;
+
   return (
     <div className="space-y-4">
       <Card>
@@ -365,6 +370,13 @@ export function GeneralTab({
                 </SelectContent>
               </Select>
             </FieldWrapper>
+            {disallowedTargetCount > 0 && (
+              <p className="text-[11px] text-muted-foreground max-w-md">
+                Some types are hidden because changing to them would not be
+                compatible with values already stored for this field (for
+                example, text cannot become a number).
+              </p>
+            )}
           </div>
 
           {isNumeric && (

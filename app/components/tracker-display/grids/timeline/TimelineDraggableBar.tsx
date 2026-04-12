@@ -7,6 +7,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
+import { rowAccentStyleFromRow } from "@/lib/tracker-grid-rows";
 import { timelineBarDragId } from "./timeline-domain";
 import {
   TIMELINE_STRIP_LAYOUT,
@@ -43,6 +44,9 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
     data: { rowIndex: item.rowIndex },
   });
 
+  const rowAccentStyle = rowAccentStyleFromRow(
+    item.row as Record<string, unknown>,
+  );
   const style: CSSProperties = {
     ...buildTimelineBarPositionStyle(
       item,
@@ -53,6 +57,7 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
     ),
     transform: CSS.Translate.toString(transform),
     zIndex: isDragging ? 20 : 2,
+    ...rowAccentStyle,
   };
 
   return (
@@ -66,7 +71,7 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
         "border px-2 py-1 text-xs sm:text-sm leading-tight",
         theme.uiChrome.border,
         theme.border.gridChromeHover,
-        "bg-card text-foreground shadow-none",
+        rowAccentStyle ? "text-foreground shadow-none" : "bg-card text-foreground shadow-none",
         /* Do not transition `transform`: dnd-kit updates it every frame; CSS transition fights it and feels janky. */
         isDragging
           ? "z-10 border-primary/50 bg-muted/80 opacity-[0.97] ring-0 transition-none"

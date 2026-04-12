@@ -13,6 +13,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { TrackerCell } from "../../TrackerCell";
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
+import { rowAccentStyleFromRow } from "@/lib/tracker-grid-rows";
 import { resolveFieldRulesForRow } from "@/lib/field-rules";
 import type { FieldRulesMap, FieldRuleOverride } from "@/lib/field-rules";
 import type { TrackerFieldType, TrackerOption } from "../../types";
@@ -83,8 +84,11 @@ export function KanbanCard({
     valueTextColor = "text-foreground",
   } = styles;
 
+  const rowAccentStyle = rowAccentStyleFromRow(card);
+
   return (
     <Card
+      style={rowAccentStyle}
       className={cn(
         "group relative cursor-grab overflow-hidden border bg-card transition-[border-color,box-shadow] duration-200 active:cursor-grabbing",
         isOverlay

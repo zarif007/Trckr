@@ -610,73 +610,76 @@ export async function replaceTrackerSchemaChildren(
     const fieldSlugToDbId = new Map<string, string>();
 
     if (input.nodes !== undefined) {
-      await tx.trackerNode.deleteMany({ where: { trackerId } });
-      if (input.nodes.length) {
+      if (input.nodes.length === 0) {
+        await tx.trackerNode.deleteMany({ where: { trackerId } });
+      } else {
+        const existingNodes = await tx.trackerNode.findMany({
+          where: { trackerId },
+          select: { id: true, slug: true },
+        });
+        for (const row of existingNodes) {
+          slugToDbId.set(row.slug, row.id);
+        }
+        for (const node of input.nodes) {
+          if (!slugToDbId.has(node.slug)) {
+            slugToDbId.set(node.slug, randomUUID());
+          }
+        }
+
+        const desiredSlugs = input.nodes.map((n) => n.slug);
         const tabNodes = input.nodes.filter((n) => n.type === "TAB");
         const sectionNodes = input.nodes.filter((n) => n.type === "SECTION");
         const gridNodes = input.nodes.filter((n) => n.type === "GRID");
+        const existingSlugSet = new Set(existingNodes.map((n) => n.slug));
 
-        // PERFORMANCE: Pre-generate UUIDs for all nodes to enable batch creates
-        for (const node of tabNodes) {
-          slugToDbId.set(node.slug, randomUUID());
-        }
-        for (const node of sectionNodes) {
-          slugToDbId.set(node.slug, randomUUID());
-        }
-        for (const node of gridNodes) {
-          slugToDbId.set(node.slug, randomUUID());
-        }
+        const syncNodeTier = async (
+          tier: typeof tabNodes,
+          parentIdForTier: (node: (typeof tabNodes)[number]) => string | null,
+        ) => {
+          const toCreate = tier.filter((n) => !existingSlugSet.has(n.slug));
+          const toUpdate = tier.filter((n) => existingSlugSet.has(n.slug));
+          for (const node of toUpdate) {
+            const id = slugToDbId.get(node.slug)!;
+            await tx.trackerNode.update({
+              where: { id },
+              data: {
+                type: node.type,
+                name: node.name,
+                placeId: node.placeId,
+                parentId: parentIdForTier(node),
+                config: (node.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+                views: (node.views as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+              },
+            });
+          }
+          if (toCreate.length > 0) {
+            await tx.trackerNode.createMany({
+              data: toCreate.map((node) => ({
+                id: slugToDbId.get(node.slug)!,
+                trackerId,
+                type: node.type,
+                slug: node.slug,
+                name: node.name,
+                placeId: node.placeId,
+                parentId: parentIdForTier(node),
+                config: (node.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+                views: (node.views as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+              })),
+            });
+          }
+        };
 
-        // Batch create tabs (no parent dependencies)
-        if (tabNodes.length > 0) {
-          await tx.trackerNode.createMany({
-            data: tabNodes.map((node) => ({
-              id: slugToDbId.get(node.slug)!,
-              trackerId,
-              type: node.type,
-              slug: node.slug,
-              name: node.name,
-              placeId: node.placeId,
-              parentId: null,
-              config: (node.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-              views: (node.views as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-            })),
-          });
-        }
+        await syncNodeTier(tabNodes, () => null);
+        await syncNodeTier(sectionNodes, (node) =>
+          node.parentId ? slugToDbId.get(node.parentId) ?? null : null,
+        );
+        await syncNodeTier(gridNodes, (node) =>
+          node.parentId ? slugToDbId.get(node.parentId) ?? null : null,
+        );
 
-        // Batch create sections (parent = tab)
-        if (sectionNodes.length > 0) {
-          await tx.trackerNode.createMany({
-            data: sectionNodes.map((node) => ({
-              id: slugToDbId.get(node.slug)!,
-              trackerId,
-              type: node.type,
-              slug: node.slug,
-              name: node.name,
-              placeId: node.placeId,
-              parentId: node.parentId ? slugToDbId.get(node.parentId) ?? null : null,
-              config: (node.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-              views: (node.views as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-            })),
-          });
-        }
-
-        // Batch create grids (parent = section)
-        if (gridNodes.length > 0) {
-          await tx.trackerNode.createMany({
-            data: gridNodes.map((node) => ({
-              id: slugToDbId.get(node.slug)!,
-              trackerId,
-              type: node.type,
-              slug: node.slug,
-              name: node.name,
-              placeId: node.placeId,
-              parentId: node.parentId ? slugToDbId.get(node.parentId) ?? null : null,
-              config: (node.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-              views: (node.views as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-            })),
-          });
-        }
+        await tx.trackerNode.deleteMany({
+          where: { trackerId, slug: { notIn: desiredSlugs } },
+        });
       }
     } else {
       const existingNodes = await tx.trackerNode.findMany({
@@ -689,22 +692,57 @@ export async function replaceTrackerSchemaChildren(
     }
 
     if (input.fields !== undefined) {
-      await tx.trackerField.deleteMany({ where: { trackerId } });
-      if (input.fields.length) {
-        // PERFORMANCE: Pre-generate UUIDs and batch create
+      if (input.fields.length === 0) {
+        await tx.trackerField.deleteMany({ where: { trackerId } });
+      } else {
+        const existingFields = await tx.trackerField.findMany({
+          where: { trackerId },
+          select: { id: true, slug: true },
+        });
+        for (const row of existingFields) {
+          fieldSlugToDbId.set(row.slug, row.id);
+        }
         for (const field of input.fields) {
-          fieldSlugToDbId.set(field.slug, randomUUID());
+          if (!fieldSlugToDbId.has(field.slug)) {
+            fieldSlugToDbId.set(field.slug, randomUUID());
+          }
         }
 
-        await tx.trackerField.createMany({
-          data: input.fields.map((field) => ({
-            id: fieldSlugToDbId.get(field.slug)!,
-            trackerId,
-            slug: field.slug,
-            dataType: field.dataType,
-            ui: field.ui as Prisma.InputJsonValue,
-            config: (field.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
-          })),
+        const desiredFieldSlugs = input.fields.map((f) => f.slug);
+        const existingFieldSlugSet = new Set(existingFields.map((f) => f.slug));
+        const fieldsToCreate = input.fields.filter(
+          (f) => !existingFieldSlugSet.has(f.slug),
+        );
+        const fieldsToUpdate = input.fields.filter((f) =>
+          existingFieldSlugSet.has(f.slug),
+        );
+
+        for (const field of fieldsToUpdate) {
+          const id = fieldSlugToDbId.get(field.slug)!;
+          await tx.trackerField.update({
+            where: { id },
+            data: {
+              dataType: field.dataType,
+              ui: field.ui as Prisma.InputJsonValue,
+              config: (field.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+            },
+          });
+        }
+        if (fieldsToCreate.length > 0) {
+          await tx.trackerField.createMany({
+            data: fieldsToCreate.map((field) => ({
+              id: fieldSlugToDbId.get(field.slug)!,
+              trackerId,
+              slug: field.slug,
+              dataType: field.dataType,
+              ui: field.ui as Prisma.InputJsonValue,
+              config: (field.config as Prisma.InputJsonValue) ?? Prisma.JsonNull,
+            })),
+          });
+        }
+
+        await tx.trackerField.deleteMany({
+          where: { trackerId, slug: { notIn: desiredFieldSlugs } },
         });
       }
     } else {

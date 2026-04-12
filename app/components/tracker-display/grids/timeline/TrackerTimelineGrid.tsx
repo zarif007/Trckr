@@ -14,7 +14,14 @@ import {
   applyBindings,
   parsePath,
 } from "@/lib/resolve-bindings";
-import { EntryFormDialog } from "../data-table/entry-form-dialog";
+import {
+  EntryFormDialog,
+  type EntryFormSavePayload,
+} from "../data-table/entry-form-dialog";
+import {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  parseRowAccentHex,
+} from "@/lib/tracker-grid-rows";
 import { EntryWayButton } from "../../entry-way/EntryWayButton";
 import { buildEntryWaysForGrid } from "../../entry-way/entry-way-registry";
 import { useTrackerOptionsContext } from "../../tracker-options-context";
@@ -25,6 +32,7 @@ import {
   persistEditedTrackerGridRow,
 } from "../shared";
 import { GridLayoutEditChrome } from "../shared/GridLayoutEditChrome";
+import { TimelineGridSkeleton } from "../shared/GridViewDataSkeleton";
 import { useCanEditLayout } from "../../edit-mode";
 import { resolveTimelineFieldIds } from "./timeline-field-ids";
 import {
@@ -387,6 +395,9 @@ export function TrackerTimelineGrid({
     Boolean(dateFieldId) &&
     Boolean(endDateFieldId);
 
+  const showInitialRowsLoading =
+    gridIsPaginatedCapable && pg.loading && rows.length === 0;
+
   const addFormInitialValues = useMemo((): Record<string, unknown> => {
     const v: Record<string, unknown> = {};
     if (dateFieldId && selectedDate) {
@@ -400,19 +411,23 @@ export function TrackerTimelineGrid({
   }, [dateFieldId, endDateFieldId, selectedDate]);
 
   const handleAddSave = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
       const normalized =
         dateFieldId && endDateFieldId
           ? normalizeTimelineDateFieldsForRow(
-              values,
+              payload.values,
               dateFieldId,
               endDateFieldId,
             )
-          : values;
+          : payload.values;
+      const values = { ...normalized };
+      if (payload.rowAccentHex != null)
+        values[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete values[ROW_ACCENT_HEX_CLIENT_KEY];
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
-        values: normalized,
+        values,
         onSnapshotAdd: onAddEntry,
       });
       setShowAddDialog(false);
@@ -422,19 +437,23 @@ export function TrackerTimelineGrid({
   );
 
   const handleAddSaveAnother = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
       const normalized =
         dateFieldId && endDateFieldId
           ? normalizeTimelineDateFieldsForRow(
-              values,
+              payload.values,
               dateFieldId,
               endDateFieldId,
             )
-          : values;
+          : payload.values;
+      const values = { ...normalized };
+      if (payload.rowAccentHex != null)
+        values[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete values[ROW_ACCENT_HEX_CLIENT_KEY];
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
-        values: normalized,
+        values,
         onSnapshotAdd: onAddEntry,
       });
     },
@@ -442,22 +461,26 @@ export function TrackerTimelineGrid({
   );
 
   const handleEditSave = useCallback(
-    async (values: Record<string, unknown>) => {
+    async (payload: EntryFormSavePayload) => {
       if (editRowIndex == null) return;
       const normalized =
         dateFieldId && endDateFieldId
           ? normalizeTimelineDateFieldsForRow(
-              values,
+              payload.values,
               dateFieldId,
               endDateFieldId,
             )
-          : values;
+          : payload.values;
+      const values = {
+        ...normalized,
+        [ROW_ACCENT_HEX_CLIENT_KEY]: payload.rowAccentHex,
+      };
       await persistEditedTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
         rowIndex: editRowIndex,
         rows,
-        values: normalized,
+        values,
         onSnapshotUpdate: onUpdate,
       });
       setEditRowIndex(null);
@@ -627,24 +650,28 @@ export function TrackerTimelineGrid({
           </div>
         ) : null}
         <div className="min-w-0 w-full overflow-x-auto">
-          <TimelineCanvas
-            placedBars={placedBars}
-            swimlanes={swimlanes}
-            timeRange={timeRange}
-            view={view}
-            groupingFieldId={groupingFieldId}
-            minContentWidthPx={timeAxisMinWidthPx}
-            mutateViaRowApi={mutateRowsViaRowApi}
-            timelineDragEnabled={timelineDragEnabled}
-            timelineClickToAddEnabled={addable && formReadyForAdd}
-            onTimelineClick={(date) => {
-              const localDay = parseCalendarDayLocal(date) ?? date;
-              setSelectedDate(localDay);
-              setShowAddDialog(true);
-            }}
-            onItemClick={openEdit}
-            onBarDragEnd={handleTimelineBarDragEnd}
-          />
+          {showInitialRowsLoading && gridFields.length > 0 ? (
+            <TimelineGridSkeleton />
+          ) : (
+            <TimelineCanvas
+              placedBars={placedBars}
+              swimlanes={swimlanes}
+              timeRange={timeRange}
+              view={view}
+              groupingFieldId={groupingFieldId}
+              minContentWidthPx={timeAxisMinWidthPx}
+              mutateViaRowApi={mutateRowsViaRowApi}
+              timelineDragEnabled={timelineDragEnabled}
+              timelineClickToAddEnabled={addable && formReadyForAdd}
+              onTimelineClick={(date) => {
+                const localDay = parseCalendarDayLocal(date) ?? date;
+                setSelectedDate(localDay);
+                setShowAddDialog(true);
+              }}
+              onItemClick={openEdit}
+              onBarDragEnd={handleTimelineBarDragEnd}
+            />
+          )}
         </div>
       </div>
 
@@ -691,6 +718,15 @@ export function TrackerTimelineGrid({
           fieldOrder={fieldOrder}
           initialValues={
             editRowIndex != null ? { ...(rows[editRowIndex] ?? {}) } : {}
+          }
+          initialRowAccentHex={
+            editRowIndex != null
+              ? parseRowAccentHex(
+                  (rows[editRowIndex] as Record<string, unknown> | undefined)?.[
+                    ROW_ACCENT_HEX_CLIENT_KEY
+                  ],
+                )
+              : null
           }
           onSave={handleEditSave}
           getBindingUpdates={getBindingUpdates}

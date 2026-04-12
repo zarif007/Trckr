@@ -4,6 +4,7 @@ import {
   trackerDataRowPath,
 } from "./api-paths";
 import { clampGridRowsLimit, clampGridRowsOffset } from "./limits";
+import type { PatchTrackerDataRowBody } from "./row-accent-hex";
 import type {
   GridDistinctFieldValuesResponseJson,
   GridRowsCreateResponseJson,
@@ -127,21 +128,26 @@ export async function fetchGridDistinctFieldValues(
   };
 }
 
+export type { PatchTrackerDataRowBody } from "./row-accent-hex";
+
 export async function patchTrackerDataRow(
   trackerId: string,
   rowId: string,
-  data: Record<string, unknown>,
+  patchBody: PatchTrackerDataRowBody,
 ): Promise<void> {
+  const payload: Record<string, unknown> = { data: patchBody.data };
+  if (patchBody.rowAccentHex !== undefined)
+    payload.rowAccentHex = patchBody.rowAccentHex;
   const res = await fetch(trackerDataRowPath(trackerId, rowId), {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ data }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as TrackerDataPatchErrorJson | null;
+    const errJson = (await res.json().catch(() => null)) as TrackerDataPatchErrorJson | null;
     throw new Error(
-      typeof body?.error === "string"
-        ? body.error
+      typeof errJson?.error === "string"
+        ? errJson.error
         : `PATCH failed (${res.status})`,
     );
   }

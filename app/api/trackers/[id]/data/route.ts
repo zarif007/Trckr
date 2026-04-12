@@ -22,7 +22,14 @@ import { saveDataBodySchema } from "./save-data-body-schema";
 type GridIdSlugPair = { id: string; slug: string };
 
 function buildSnapshotFromRows(
-  rows: Array<{ id: string; gridId: string; data: unknown; sortOrder: number; updatedAt: Date }>,
+  rows: Array<{
+    id: string;
+    gridId: string;
+    data: unknown;
+    sortOrder: number;
+    rowAccentHex: string | null;
+    updatedAt: Date;
+  }>,
   gridIdToSlug: Map<string, string>,
 ): { data: Record<string, Array<Record<string, unknown>>>; updatedAt: string } {
   const grouped: Record<string, Array<Record<string, unknown>>> = {};
@@ -34,6 +41,7 @@ function buildSnapshotFromRows(
       ...(row.data as Record<string, unknown>),
       _rowId: row.id,
       _sortOrder: row.sortOrder,
+      ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
     });
     if (row.updatedAt > latestUpdatedAt) latestUpdatedAt = row.updatedAt;
   }
@@ -114,6 +122,7 @@ export async function GET(
               ...(row.data as Record<string, unknown>),
               _rowId: row.id,
               _sortOrder: row.sortOrder,
+              ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
             },
           ],
         },
@@ -217,7 +226,14 @@ export async function POST(
     );
 
     let firstRowId: string | null = null;
-    const createdRows: Array<{ id: string; gridId: string; data: unknown; sortOrder: number; updatedAt: Date }> = [];
+    const createdRows: Array<{
+      id: string;
+      gridId: string;
+      data: unknown;
+      sortOrder: number;
+      rowAccentHex: string | null;
+      updatedAt: Date;
+    }> = [];
 
     for (const [gridSlug, rows] of Object.entries(snapshot)) {
       const gridId = gridSlugToId.get(gridSlug);

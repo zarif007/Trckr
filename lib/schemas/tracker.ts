@@ -576,6 +576,8 @@ export interface GridRowRecord {
   schemaVersion: string;
   version: number;
   statusTag: string | null;
+  /** Normalized `#rrggbb` or null. */
+  rowAccentHex: string | null;
   sortOrder: number;
   branchName: string;
   isMerged: boolean;

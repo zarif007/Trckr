@@ -1,0 +1,76 @@
+import { z } from "zod";
+import { rowPayloadForPatch } from "./row-utils";
+
+/** Client row objects carry accent on this key (mirrors DB `rowAccentHex`). */
+export const ROW_ACCENT_HEX_CLIENT_KEY = "_rowAccentHex" as const;
+
+export type PatchTrackerDataRowBody = {
+  data: Record<string, unknown>;
+  rowAccentHex?: string | null;
+};
+
+/**
+ * Builds `{ data, rowAccentHex? }` for PATCH `/api/trackers/.../data/:rowId`.
+ * Omits `rowAccentHex` when the merged row has no `_rowAccentHex` property (no server update).
+ */
+export function buildPatchTrackerRowRequestBody(
+  mergedRow: Record<string, unknown>,
+): PatchTrackerDataRowBody {
+  const data = rowPayloadForPatch(mergedRow);
+  if (!Object.prototype.hasOwnProperty.call(mergedRow, ROW_ACCENT_HEX_CLIENT_KEY)) {
+    return { data };
+  }
+  const raw = mergedRow[ROW_ACCENT_HEX_CLIENT_KEY];
+  if (raw === null) return { data, rowAccentHex: null };
+  return { data, rowAccentHex: parseRowAccentHex(raw) };
+}
+
+const ROW_HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function expandShorthandToSixDigits(hex: string): string {
+  const m = hex.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!m) return hex;
+  const body = m[1]!;
+  if (body.length === 3) {
+    const [a, b, c] = body;
+    return `#${a}${a}${b}${b}${c}${c}`.toLowerCase();
+  }
+  return `#${body.toLowerCase()}`;
+}
+
+/**
+ * Returns normalized `#rrggbb`, or `null` if value is empty / invalid.
+ * Use `undefined` only when the caller should mean "omit" (not passed).
+ */
+export function parseRowAccentHex(value: unknown): string | null {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value !== "string") return null;
+  const t = value.trim();
+  if (!ROW_HEX_RE.test(t)) return null;
+  return expandShorthandToSixDigits(t);
+}
+
+export function isValidRowAccentHex(value: unknown): value is string {
+  return parseRowAccentHex(value) !== null;
+}
+
+/** Zod schema for API bodies: optional clear with null, normalize strings. */
+export const rowAccentHexBodySchema = z
+  .union([
+    z
+      .string()
+      .trim()
+      .regex(ROW_HEX_RE, "Expected #rgb or #rrggbb")
+      .transform((s) => expandShorthandToSixDigits(s)),
+    z.null(),
+  ])
+  .optional();
+
+export function rowAccentStyleFromRow(
+  row: Record<string, unknown> | undefined,
+): { backgroundColor: string } | undefined {
+  const raw = row?.[ROW_ACCENT_HEX_CLIENT_KEY];
+  const hex = parseRowAccentHex(raw);
+  if (!hex) return undefined;
+  return { backgroundColor: hex };
+}

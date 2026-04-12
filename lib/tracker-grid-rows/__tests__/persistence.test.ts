@@ -182,10 +182,9 @@ describe("persistEditedTrackerGridRow", () => {
       unknown
     >;
     expect(updater()).toEqual({ _rowId: "r1", title: "b" });
-    expect(pg.patchRowOnServer).toHaveBeenCalledWith(
-      "r1",
-      expect.objectContaining({ title: "b" }),
-    );
+    expect(pg.patchRowOnServer).toHaveBeenCalledWith("r1", {
+      data: { title: "b" },
+    });
     expect(pg.refetch).not.toHaveBeenCalled();
     await flushMicrotasks();
     expect(pg.refetch).not.toHaveBeenCalled();

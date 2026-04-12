@@ -3,6 +3,11 @@ import { prisma } from "@/lib/db";
 import { assertSafeJsonPathKey } from "@/lib/grid-data-loading";
 import type { GridRowRecord, GridRowData } from "@/lib/schemas/tracker";
 import {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  parseRowAccentHex,
+} from "@/lib/tracker-grid-rows/row-accent-hex";
+import { rowPayloadForPatch } from "@/lib/tracker-grid-rows/row-utils";
+import {
   getCompiledValidator,
   validateRowData,
   type RowValidationResult,
@@ -273,6 +278,8 @@ export async function createGridRow(params: {
   data: GridRowData;
   schemaVersion: string;
   statusTag?: string | null;
+  /** When set, overrides `_rowAccentHex` embedded in `data` (if any). */
+  rowAccentHex?: string | null;
   branchName?: string;
   afterRowId?: string;
 }) {
@@ -324,13 +331,21 @@ export async function createGridRow(params: {
     sortOrder = lastRow ? lastRow.sortOrder + 1 : 1;
   }
 
+  const rawData = { ...(params.data as Record<string, unknown>) };
+  const rowAccentHex =
+    params.rowAccentHex !== undefined
+      ? parseRowAccentHex(params.rowAccentHex)
+      : parseRowAccentHex(rawData[ROW_ACCENT_HEX_CLIENT_KEY]);
+  const persistedData = rowPayloadForPatch(rawData) as GridRowData;
+
   return prisma.gridRow.create({
     data: {
       trackerId: params.trackerId,
       gridId: params.gridId,
-      data: params.data as Prisma.InputJsonValue,
+      data: persistedData as Prisma.InputJsonValue,
       schemaVersion: params.schemaVersion,
       statusTag: params.statusTag ?? null,
+      rowAccentHex,
       sortOrder,
       branchName: params.branchName ?? "main",
       createdBy: params.userId,
@@ -350,6 +365,7 @@ export async function updateGridRow(
     data?: GridRowData;
     statusTag?: string | null;
     sortOrder?: number;
+    rowAccentHex?: string | null;
   },
 ) {
   const row = await prisma.gridRow.findFirst({
@@ -361,12 +377,18 @@ export async function updateGridRow(
   if (!row || row.tracker.project.userId !== userId) return null;
 
   const updateData: Record<string, unknown> = {};
+  let bumpVersion = false;
   if (body.data !== undefined) {
     updateData.data = body.data;
-    updateData.version = row.version + 1;
+    bumpVersion = true;
   }
   if (body.statusTag !== undefined) updateData.statusTag = body.statusTag;
   if (body.sortOrder !== undefined) updateData.sortOrder = body.sortOrder;
+  if (body.rowAccentHex !== undefined) {
+    updateData.rowAccentHex = parseRowAccentHex(body.rowAccentHex);
+    bumpVersion = true;
+  }
+  if (bumpVersion) updateData.version = row.version + 1;
 
   if (Object.keys(updateData).length === 0) return row;
 
@@ -405,7 +427,12 @@ export async function upsertGridRows(params: {
   trackerId: string;
   gridId: string;
   userId: string;
-  rows: Array<{ data: GridRowData; sortOrder: number }>;
+  rows: Array<{
+    /** Snapshot row: field slugs plus optional `_rowId`, `_sortOrder`, `_rowAccentHex`. */
+    data: GridRowData | Record<string, unknown>;
+    sortOrder: number;
+    rowAccentHex?: string | null;
+  }>;
   schemaVersion: string;
   branchName?: string;
   statusTag?: string | null;
@@ -430,16 +457,25 @@ export async function upsertGridRows(params: {
     if (params.rows.length === 0) return [];
 
     await tx.gridRow.createMany({
-      data: params.rows.map((row) => ({
-        trackerId: params.trackerId,
-        gridId: params.gridId,
-        data: row.data as Prisma.InputJsonValue,
-        sortOrder: row.sortOrder,
-        schemaVersion: params.schemaVersion,
-        statusTag: params.statusTag ?? null,
-        branchName,
-        createdBy: params.userId,
-      })),
+      data: params.rows.map((row) => {
+        const raw = { ...(row.data as Record<string, unknown>) };
+        const persistedData = rowPayloadForPatch(raw) as GridRowData;
+        const rowAccentHex =
+          row.rowAccentHex !== undefined
+            ? parseRowAccentHex(row.rowAccentHex)
+            : parseRowAccentHex(raw[ROW_ACCENT_HEX_CLIENT_KEY]);
+        return {
+          trackerId: params.trackerId,
+          gridId: params.gridId,
+          data: persistedData as Prisma.InputJsonValue,
+          sortOrder: row.sortOrder,
+          schemaVersion: params.schemaVersion,
+          statusTag: params.statusTag ?? null,
+          rowAccentHex,
+          branchName,
+          createdBy: params.userId,
+        };
+      }),
     });
 
     return tx.gridRow.findMany({
@@ -511,7 +547,23 @@ export async function moveGridRow(
 // ---------------------------------------------------------------------------
 
 export function toGridRowRecord(
-  row: { id: string; trackerId: string; gridId: string; data: unknown; schemaVersion: string; version: number; statusTag: string | null; sortOrder: number; branchName: string; isMerged: boolean; deletedAt: Date | null; createdBy: string | null; createdAt: Date; updatedAt: Date },
+  row: {
+    id: string;
+    trackerId: string;
+    gridId: string;
+    data: unknown;
+    schemaVersion: string;
+    version: number;
+    statusTag: string | null;
+    rowAccentHex: string | null;
+    sortOrder: number;
+    branchName: string;
+    isMerged: boolean;
+    deletedAt: Date | null;
+    createdBy: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
 ): GridRowRecord {
   return {
     id: row.id,
@@ -521,6 +573,7 @@ export function toGridRowRecord(
     schemaVersion: row.schemaVersion,
     version: row.version,
     statusTag: row.statusTag,
+    rowAccentHex: row.rowAccentHex,
     sortOrder: row.sortOrder,
     branchName: row.branchName,
     isMerged: row.isMerged,

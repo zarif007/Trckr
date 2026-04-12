@@ -58,7 +58,10 @@ import {
   getValidationDisplayState,
   markFieldsAsInteracted,
 } from "@/lib/field-validation";
-import { EntryFormDialog } from "../data-table/entry-form-dialog";
+import {
+  EntryFormDialog,
+  type EntryFormSavePayload,
+} from "../data-table/entry-form-dialog";
 import {
   applyCompiledCalculationsForRow,
   compileCalculationsForGrid,
@@ -747,9 +750,9 @@ function TrackerDivGridInner({
   );
 
   const applyAddOption = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
       if (!addOptionContext) return;
-      const normalized = { ...values };
+      const normalized = { ...payload.values };
       addOptionContext.optionsGridFields.forEach((f) => {
         if (
           normalized[f.id] === "" &&
@@ -1122,6 +1125,7 @@ function TrackerDivGridInner({
           fieldMetadata={addOptionFieldMetadata}
           fieldOrder={addOptionFieldOrder}
           initialValues={initialOptionValues}
+          showRowAccentPicker={false}
           onSave={applyAddOption}
           onSaveAnother={applyAddOption}
           gridId={addOptionContext.optionsGridId}

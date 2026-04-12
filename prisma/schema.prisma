@@ -536,6 +536,8 @@ model GridRow {
   schemaVersion String
   version       Int       @default(1)
   statusTag     String?
+  /// Optional row background accent (#rgb or #rrggbb), not part of field JSON.
+  rowAccentHex  String?
   sortOrder     Float     @default(0)
   branchName    String    @default("main")
   isMerged      Boolean   @default(false)

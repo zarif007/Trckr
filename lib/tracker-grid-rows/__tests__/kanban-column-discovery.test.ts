@@ -7,7 +7,7 @@ import {
 describe("buildKanbanGroupColumnDescriptors", () => {
   const fid = "status";
 
-  it("uses resolved options exclusively when non-empty", () => {
+  it("orders resolved options first then appends values seen in rows or distinct API", () => {
     const { columns, discoveryPending } = buildKanbanGroupColumnDescriptors({
       groupByFieldId: fid,
       resolvedOptions: [
@@ -19,7 +19,7 @@ describe("buildKanbanGroupColumnDescriptors", () => {
       distinctValuesLoading: true,
     });
     expect(discoveryPending).toBe(false);
-    expect(columns.map((c) => c.id)).toEqual(["a", "b", ""]);
+    expect(columns.map((c) => c.id)).toEqual(["a", "b", "ghost", "x", ""]);
   });
 
   it("returns empty columns while distinct loading with no local or server values", () => {

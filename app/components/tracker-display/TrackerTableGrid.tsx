@@ -62,7 +62,8 @@ import {
 } from "@/lib/grid-data-loading";
 import {
   usePaginatedGridData,
-  rowPayloadForPatch,
+  buildPatchTrackerRowRequestBody,
+  persistEditedTrackerGridRow,
   persistNewTrackerGridRow,
 } from "@/lib/tracker-grid-rows";
 
@@ -735,7 +736,10 @@ function TrackerTableGridInner({
 
         pg.updateRowLocal(String(rid), () => mergedAccum);
         void pg
-          .patchRowOnServer(String(rid), rowPayloadForPatch(mergedAccum))
+          .patchRowOnServer(
+            String(rid),
+            buildPatchTrackerRowRequestBody(mergedAccum),
+          )
           .catch(() => {
             pg.refetch();
           });
@@ -809,20 +813,29 @@ function TrackerTableGridInner({
     [pg],
   );
 
+  const handleSaveEditedRow = useCallback(
+    (rowIndex: number, values: Record<string, unknown>) => {
+      void persistEditedTrackerGridRow({
+        mutateViaRowApi: true,
+        pg,
+        rowIndex,
+        rows,
+        values,
+      });
+    },
+    [pg, rows],
+  );
+
   const handlePaginatedDelete = useCallback(
     (indices: number[]) => {
       const ids = indices
         .map((i) => String((rows[i] as Record<string, unknown>)?._rowId ?? ""))
         .filter((s) => s.length > 0);
       if (ids.length === 0) return;
-      void pg.deleteRowsOnServer(ids).then(
-        () => {
-          pg.removeRowsLocal(ids);
-        },
-        () => {
-          pg.refetch();
-        },
-      );
+      pg.removeRowsLocal(ids);
+      void pg.deleteRowsOnServer(ids).catch(() => {
+        pg.refetch();
+      });
     },
     [pg, rows],
   );
@@ -983,6 +996,7 @@ function TrackerTableGridInner({
         hiddenColumns={[...hiddenColumnIds]}
         getFieldOverridesForAdd={getFieldOverridesForAdd}
         onCellUpdate={handleCellUpdate}
+        onSaveEditedRow={mutateRowsViaRowApi ? handleSaveEditedRow : undefined}
         onAddEntry={mutateRowsViaRowApi ? handlePaginatedAdd : onAddEntry}
         onDeleteEntries={
           mutateRowsViaRowApi ? handlePaginatedDelete : onDeleteEntries

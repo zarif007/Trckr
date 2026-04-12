@@ -31,7 +31,7 @@ import {
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
-import { EntryFormDialog } from "./entry-form-dialog";
+import { EntryFormDialog, type EntryFormSavePayload } from "./entry-form-dialog";
 import type { FieldMapping } from "@/lib/types/tracker-bindings";
 
 interface DataTableInputProps {
@@ -152,9 +152,9 @@ export function DataTableInput({
     return initial;
   }, [optionsGridFields]);
 
-  const applyAddOption = (row: Record<string, unknown>) => {
+  const applyAddOption = (payload: EntryFormSavePayload) => {
     if (!onAddOption || !optionsGridFields) return;
-    const normalized = { ...row };
+    const normalized = { ...payload.values };
     optionsGridFields.forEach((f) => {
       if (
         normalized[f.id] === "" &&
@@ -387,6 +387,7 @@ export function DataTableInput({
               fieldMetadata={addOptionFieldMetadata}
               fieldOrder={addOptionFieldOrder}
               initialValues={initialOptionValues}
+              showRowAccentPicker={false}
               onSave={applyAddOption}
               onSaveAnother={applyAddOption}
               mode="add"
@@ -452,6 +453,7 @@ export function DataTableInput({
               fieldMetadata={addOptionFieldMetadata}
               fieldOrder={addOptionFieldOrder}
               initialValues={initialOptionValues}
+              showRowAccentPicker={false}
               onSave={applyAddOption}
               onSaveAnother={applyAddOption}
               mode="add"

@@ -2,6 +2,8 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
+import { rowAccentStyleFromRow } from "@/lib/tracker-grid-rows";
 import type { CalendarCellEvent } from "./types";
 import { parseEventDateTime } from "./calendar-event-utils";
 
@@ -71,7 +73,10 @@ export const DayView = memo(function DayView({
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="h-12 md:h-14 px-1 md:px-2 text-[10px] md:text-xs text-muted-foreground text-right border-b flex items-start justify-end pt-1"
+                className={cn(
+                  "h-12 md:h-14 px-1 md:px-2 text-[10px] md:text-xs text-muted-foreground text-right border-b flex items-start justify-end pt-1",
+                  hour === 23 && "border-b-0",
+                )}
               >
                 {hour === 0
                   ? "12a"
@@ -93,14 +98,21 @@ export const DayView = memo(function DayView({
                   clickDate.setHours(hour);
                   onTimeClick(clickDate);
                 }}
-                className="h-12 md:h-14 border-b cursor-pointer hover:bg-muted/20 transition-colors"
+                className={cn(
+                  "h-12 md:h-14 border-b cursor-pointer hover:bg-muted/20 transition-colors",
+                  hour === 23 && "border-b-0",
+                )}
               />
             ))}
 
             {/* All-day events (no time) - stacked at top */}
             {allDayEvents.length > 0 && (
               <div className="absolute top-2 left-1 md:left-2 right-1 md:right-2 space-y-1 z-10">
-                {allDayEvents.map((event, i) => (
+                {allDayEvents.map((event, i) => {
+                  const accent = rowAccentStyleFromRow(
+                    event.row as Record<string, unknown>,
+                  );
+                  return (
                   <div
                     key={`allday-${i}`}
                     role="button"
@@ -116,10 +128,15 @@ export const DayView = memo(function DayView({
                         onEventClick(event.rowIndex);
                       }
                     }}
+                    style={accent}
                     className={cn(
-                      "text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 rounded-sm truncate",
-                      "bg-primary/10 text-primary border border-primary/20",
-                      "cursor-pointer hover:bg-primary/15",
+                      "text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 rounded-sm truncate border",
+                      accent
+                        ? cn("text-foreground cursor-pointer hover:opacity-95", theme.uiChrome.border)
+                        : cn(
+                            "bg-primary/10 text-primary border-primary/20",
+                            "cursor-pointer hover:bg-primary/15",
+                          ),
                     )}
                   >
                     <span className="text-[10px] md:text-xs opacity-60 mr-1">All day:</span>
@@ -127,14 +144,18 @@ export const DayView = memo(function DayView({
                       ? String((event.row[titleFieldId] as string) ?? "Untitled")
                       : "Event"}
                   </div>
-                ))}
+                );
+                })}
               </div>
             )}
 
             {/* Timed events - positioned by hour/minute */}
             {timedEvents.map((event, i) => {
               if (event.hour === undefined) return null;
-              const { topPx, topMdPx } = calculateEventPosition(event.hour, event.minute);
+              const { topPx } = calculateEventPosition(event.hour, event.minute);
+              const accent = rowAccentStyleFromRow(
+                event.row as Record<string, unknown>,
+              );
 
               return (
                 <div
@@ -154,12 +175,17 @@ export const DayView = memo(function DayView({
                   }}
                   className={cn(
                     "absolute left-1 md:left-2 right-1 md:right-2",
-                    "text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2 rounded-sm truncate",
-                    "bg-primary/10 text-primary border border-primary/20",
-                    "cursor-pointer hover:bg-primary/15 z-[5]",
+                    "text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2 rounded-sm truncate border",
+                    accent
+                      ? cn("text-foreground cursor-pointer hover:opacity-95 z-[5]", theme.uiChrome.border)
+                      : cn(
+                          "bg-primary/10 text-primary border-primary/20",
+                          "cursor-pointer hover:bg-primary/15 z-[5]",
+                        ),
                   )}
                   style={{
                     top: `${topPx}px`,
+                    ...accent,
                   }}
                 >
                   <span className="text-[10px] md:text-xs opacity-60 mr-1">

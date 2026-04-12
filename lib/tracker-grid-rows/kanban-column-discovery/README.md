@@ -4,7 +4,7 @@
 
 **Solution:** Combine up to three sources, in order:
 
-1. **Resolved options** — `resolveFieldOptionsV2` (status, options, multiselect, bindings, inline `config.options`, …). When this list is non-empty, it is the **sole** source of column ids (parity with select UIs).
+1. **Resolved options** — `resolveFieldOptionsV2` (status, options, multiselect, bindings, inline `config.options`, …). When this list is non-empty, columns **start** with that ordered list; any distinct row/server values not in that id set are appended afterward.
 2. **Local row values** — distinct trimmed strings from `row.data[groupByFieldId]` for snapshot or hybrid loads.
 3. **Server distinct values** — `GET .../distinct-field-values?fieldKey=...` runs `SELECT DISTINCT (data->>'fieldKey')` in the repository, using the same `->>` text semantics as `GET .../rows?groupFieldId=&groupValue=` filters.
 

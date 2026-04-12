@@ -2,7 +2,9 @@
 
 import { memo } from "react";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 import { gridBadge } from "@/lib/grid-styles";
+import { rowAccentStyleFromRow } from "@/lib/tracker-grid-rows";
 import { CALENDAR_WEEKDAY_LABELS } from "./constants";
 import type { CalendarCellEvent } from "./types";
 
@@ -40,7 +42,7 @@ export const MonthView = memo(function MonthView({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 flex-1 auto-rows-fr">
+      <div className="grid grid-cols-7 flex-1 auto-rows-fr [&>*:nth-last-child(-n+7)]:border-b-0">
         {days.map(({ date, isCurrentMonth }, index) => {
           const events = getEventsForDate(date);
           const today = isToday(date);
@@ -78,7 +80,11 @@ export const MonthView = memo(function MonthView({
               </div>
 
               <div className="space-y-0.5 md:space-y-1">
-                {events.slice(0, 2).map((event, i) => (
+                {events.slice(0, 2).map((event, i) => {
+                  const accent = rowAccentStyleFromRow(
+                    event.row as Record<string, unknown>,
+                  );
+                  return (
                   <div
                     key={i}
                     role="button"
@@ -94,10 +100,15 @@ export const MonthView = memo(function MonthView({
                         onEventClick(event.rowIndex);
                       }
                     }}
+                    style={accent}
                     className={cn(
-                      "text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded-sm truncate",
-                      "bg-primary/10 text-primary border border-primary/20",
-                      "cursor-pointer hover:bg-primary/15",
+                      "text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded-sm truncate border",
+                      accent
+                        ? cn("text-foreground cursor-pointer hover:opacity-95", theme.uiChrome.border)
+                        : cn(
+                            "bg-primary/10 text-primary border-primary/20",
+                            "cursor-pointer hover:bg-primary/15",
+                          ),
                     )}
                   >
                     {titleFieldId
@@ -106,7 +117,8 @@ export const MonthView = memo(function MonthView({
                         )
                       : "Event"}
                   </div>
-                ))}
+                );
+                })}
                 {events.length > 2 && (
                   <div className="text-[9px] md:text-[10px] text-muted-foreground px-0.5 md:px-1">
                     +{events.length - 2} more

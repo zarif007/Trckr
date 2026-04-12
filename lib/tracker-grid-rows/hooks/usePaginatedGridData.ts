@@ -8,6 +8,7 @@ import {
   patchTrackerDataRow,
 } from "../client";
 import { clampGridRowsLimit } from "../limits";
+import type { PatchTrackerDataRowBody } from "../row-accent-hex";
 import { rowIdFromRow } from "../row-utils";
 import type { GridRowRecord, RowBackedPersistLifecycle } from "../types";
 
@@ -42,7 +43,7 @@ export interface UsePaginatedGridDataResult {
   prependRowLocal: (row: PaginatedGridRow) => void;
   patchRowOnServer: (
     rowId: string,
-    data: Record<string, unknown>,
+    body: PatchTrackerDataRowBody,
   ) => Promise<void>;
   deleteRowsOnServer: (rowIds: string[]) => Promise<void>;
   createRowOnServer: (data: Record<string, unknown>) => Promise<PaginatedGridRow>;
@@ -219,11 +220,11 @@ export function usePaginatedGridData(
   }, []);
 
   const patchRowOnServer = useCallback(
-    async (rowId: string, data: Record<string, unknown>) => {
+    async (rowId: string, body: PatchTrackerDataRowBody) => {
       if (!trackerId) throw new Error("Missing tracker id");
       persistRef.current?.onMutationStart?.();
       try {
-        await patchTrackerDataRow(trackerId as string, rowId, data);
+        await patchTrackerDataRow(trackerId as string, rowId, body);
         persistRef.current?.onMutationSuccess?.();
       } catch (e) {
         const msg =

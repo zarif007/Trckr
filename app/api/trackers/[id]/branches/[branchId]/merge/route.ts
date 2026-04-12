@@ -74,6 +74,7 @@ export async function POST(
         schemaVersion: row.schemaVersion,
         version: row.version + 1,
         statusTag: row.statusTag,
+        rowAccentHex: row.rowAccentHex,
         sortOrder: row.sortOrder,
         branchName: "main",
         isMerged: false,
@@ -110,6 +111,7 @@ export async function POST(
       ...(row.data as Record<string, unknown>),
       _rowId: row.id,
       _sortOrder: row.sortOrder,
+      ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
     });
   }
 

@@ -29,6 +29,14 @@ export type {
 } from "./types";
 export { rowIdFromRow, rowPayloadForPatch } from "./row-utils";
 export {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  buildPatchTrackerRowRequestBody,
+  rowAccentStyleFromRow,
+  parseRowAccentHex,
+  rowAccentHexBodySchema,
+  type PatchTrackerDataRowBody,
+} from "./row-accent-hex";
+export {
   fetchGridRowsList,
   fetchGridDistinctFieldValues,
   createGridRow,

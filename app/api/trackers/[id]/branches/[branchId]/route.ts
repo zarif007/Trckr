@@ -8,6 +8,11 @@ import {
 } from "@/lib/api";
 import { requireAuthenticatedUser } from "@/lib/auth/server";
 import { prisma } from "@/lib/db";
+import {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  parseRowAccentHex,
+} from "@/lib/tracker-grid-rows/row-accent-hex";
+import { rowPayloadForPatch } from "@/lib/tracker-grid-rows/row-utils";
 import { NodeType } from "@prisma/client";
 
 const updateBranchBodySchema = z.object({
@@ -19,7 +24,13 @@ const updateBranchBodySchema = z.object({
 type GridIdSlugPair = { id: string; slug: string };
 
 function groupRowsByGridSlug(
-  rows: Array<{ id: string; gridId: string; data: unknown; sortOrder: number }>,
+  rows: Array<{
+    id: string;
+    gridId: string;
+    data: unknown;
+    sortOrder: number;
+    rowAccentHex: string | null;
+  }>,
   gridIdToSlug: Map<string, string>,
 ): Record<string, Array<Record<string, unknown>>> {
   const grouped: Record<string, Array<Record<string, unknown>>> = {};
@@ -30,6 +41,7 @@ function groupRowsByGridSlug(
       ...(row.data as Record<string, unknown>),
       _rowId: row.id,
       _sortOrder: row.sortOrder,
+      ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
     });
   }
   return grouped;
@@ -146,6 +158,7 @@ export async function PATCH(
         sortOrder: number;
         branchName: string;
         statusTag: string | null;
+        rowAccentHex: string | null;
         createdBy: string;
       }> = [];
 
@@ -153,14 +166,16 @@ export async function PATCH(
         const gridId = gridSlugToId.get(gridSlug);
         if (!gridId || !Array.isArray(rows)) continue;
         for (let i = 0; i < rows.length; i++) {
+          const raw = rows[i] as Record<string, unknown>;
           creates.push({
             trackerId,
             gridId,
-            data: rows[i] as object,
+            data: rowPayloadForPatch(raw) as object,
             schemaVersion: String(tracker.schemaVersion),
             sortOrder: i + 1,
             branchName,
             statusTag,
+            rowAccentHex: parseRowAccentHex(raw[ROW_ACCENT_HEX_CLIENT_KEY]),
             createdBy: authResult.user.id,
           });
         }

@@ -21,6 +21,7 @@ export async function loadTrackerSnapshotGrids(
       ...(row.data as Record<string, unknown>),
       _rowId: row.id,
       _sortOrder: row.sortOrder,
+      ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
     });
   }
   return grouped;

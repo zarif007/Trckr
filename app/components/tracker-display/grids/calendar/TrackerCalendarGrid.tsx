@@ -7,7 +7,14 @@ import { theme } from "@/lib/theme";
 import { gridContainer, gridHeader } from "@/lib/grid-styles";
 import { Button } from "@/components/ui/button";
 import { resolveFieldRulesForRow } from "@/lib/field-rules";
-import { EntryFormDialog } from "../data-table/entry-form-dialog";
+import {
+  EntryFormDialog,
+  type EntryFormSavePayload,
+} from "../data-table/entry-form-dialog";
+import {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  parseRowAccentHex,
+} from "@/lib/tracker-grid-rows";
 import { EntryWayButton } from "../../entry-way/EntryWayButton";
 import { buildEntryWaysForGrid } from "../../entry-way/entry-way-registry";
 import { useTrackerOptionsContext } from "../../tracker-options-context";
@@ -18,6 +25,7 @@ import {
   persistEditedTrackerGridRow,
 } from "../shared";
 import { GridLayoutEditChrome } from "../shared/GridLayoutEditChrome";
+import { CalendarGridSkeleton } from "../shared/GridViewDataSkeleton";
 import { useCanEditLayout } from "../../edit-mode";
 import { resolveCalendarFieldIds } from "./calendar-field-ids";
 import { useCalendarGridModel } from "./useCalendarGridModel";
@@ -140,6 +148,9 @@ export function TrackerCalendarGrid({
     [grid, tabId],
   );
 
+  const showInitialRowsLoading =
+    gridIsPaginatedCapable && pg.loading && rows.length === 0;
+
   const openNewEntryDialog = useCallback(() => {
     setSelectedDate(new Date());
     setShowAddDialog(true);
@@ -164,7 +175,11 @@ export function TrackerCalendarGrid({
   }, [dateFieldId, selectedDate]);
 
   const handleAddSave = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
+      const values = { ...payload.values };
+      if (payload.rowAccentHex != null)
+        values[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete values[ROW_ACCENT_HEX_CLIENT_KEY];
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
@@ -178,7 +193,11 @@ export function TrackerCalendarGrid({
   );
 
   const handleAddSaveAnother = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
+      const values = { ...payload.values };
+      if (payload.rowAccentHex != null)
+        values[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete values[ROW_ACCENT_HEX_CLIENT_KEY];
       persistNewTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
@@ -190,8 +209,12 @@ export function TrackerCalendarGrid({
   );
 
   const handleEditSave = useCallback(
-    async (values: Record<string, unknown>) => {
+    async (payload: EntryFormSavePayload) => {
       if (editRowIndex == null) return;
+      const values = {
+        ...payload.values,
+        [ROW_ACCENT_HEX_CLIENT_KEY]: payload.rowAccentHex,
+      };
       await persistEditedTrackerGridRow({
         mutateViaRowApi: mutateRowsViaRowApi,
         pg,
@@ -325,38 +348,44 @@ export function TrackerCalendarGrid({
           </div>
         ) : null}
         <div className="min-w-[720px] h-full">
-          {view === "month" && (
-            <MonthView
-              days={calendarDays}
-              getEventsForDate={getEventsForDate}
-              onDayClick={handleDayClick}
-              onEventClick={openEdit}
-              isToday={isToday}
-              titleFieldId={titleFieldId}
-            />
-          )}
+          {showInitialRowsLoading && gridFields.length > 0 ? (
+            <CalendarGridSkeleton />
+          ) : (
+            <>
+              {view === "month" && (
+                <MonthView
+                  days={calendarDays}
+                  getEventsForDate={getEventsForDate}
+                  onDayClick={handleDayClick}
+                  onEventClick={openEdit}
+                  isToday={isToday}
+                  titleFieldId={titleFieldId}
+                />
+              )}
 
-          {view === "week" && (
-            <WeekView
-              weekDays={weekDays}
-              getEventsForDate={getEventsForDate}
-              onDayClick={handleDayClick}
-              onEventClick={openEdit}
-              isToday={isToday}
-              titleFieldId={titleFieldId}
-            />
-          )}
+              {view === "week" && (
+                <WeekView
+                  weekDays={weekDays}
+                  getEventsForDate={getEventsForDate}
+                  onDayClick={handleDayClick}
+                  onEventClick={openEdit}
+                  isToday={isToday}
+                  titleFieldId={titleFieldId}
+                />
+              )}
 
-          {view === "day" && (
-            <DayView
-              date={currentDate}
-              getEventsForDate={getEventsForDate}
-              onTimeClick={handleDayClick}
-              onEventClick={openEdit}
-              isToday={isToday}
-              titleFieldId={titleFieldId}
-              dateFieldId={dateFieldId}
-            />
+              {view === "day" && (
+                <DayView
+                  date={currentDate}
+                  getEventsForDate={getEventsForDate}
+                  onTimeClick={handleDayClick}
+                  onEventClick={openEdit}
+                  isToday={isToday}
+                  titleFieldId={titleFieldId}
+                  dateFieldId={dateFieldId}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -404,6 +433,15 @@ export function TrackerCalendarGrid({
           fieldOrder={fieldOrder}
           initialValues={
             editRowIndex != null ? { ...(rows[editRowIndex] ?? {}) } : {}
+          }
+          initialRowAccentHex={
+            editRowIndex != null
+              ? parseRowAccentHex(
+                  (rows[editRowIndex] as Record<string, unknown> | undefined)?.[
+                    ROW_ACCENT_HEX_CLIENT_KEY
+                  ],
+                )
+              : null
           }
           onSave={handleEditSave}
           getBindingUpdates={getBindingUpdates}

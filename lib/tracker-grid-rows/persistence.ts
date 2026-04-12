@@ -1,7 +1,7 @@
 import type { UseKanbanPaginatedColumnsResult } from "./hooks/useKanbanPaginatedColumns";
 import type { UsePaginatedGridDataResult } from "./hooks/usePaginatedGridData";
 import { createOptimisticTempRowId } from "./optimistic-temp-row-id";
-import { rowPayloadForPatch } from "./row-utils";
+import { buildPatchTrackerRowRequestBody } from "./row-accent-hex";
 
 export type PaginatedRowPersistenceApi = Pick<
   UsePaginatedGridDataResult,
@@ -96,7 +96,7 @@ export async function persistEditedTrackerGridRow(args: {
       const merged = { ...row, ...args.values };
       args.pg.updateRowLocal(rid, () => merged as (typeof args.rows)[number]);
       void args.pg
-        .patchRowOnServer(rid, rowPayloadForPatch(merged))
+        .patchRowOnServer(rid, buildPatchTrackerRowRequestBody(merged))
         .catch(() => {
           args.pg.refetch();
         });

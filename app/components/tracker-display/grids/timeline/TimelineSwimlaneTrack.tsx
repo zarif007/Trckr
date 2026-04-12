@@ -74,6 +74,7 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
       <div
         className={cn(
           gridColumnHeader,
+          "border-b-0",
           "w-32 md:w-48 shrink-0 flex flex-row items-center gap-2 border-r py-2.5",
         )}
       >

@@ -16,6 +16,8 @@ import {
 import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
 import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
+import { rowAccentHexBodySchema } from "@/lib/tracker-grid-rows/row-accent-hex";
+import { rowPayloadForPatch } from "@/lib/tracker-grid-rows/row-utils";
 import type { WorkflowInlineEffects } from "@/lib/workflows/types";
 import { NodeType } from "@prisma/client";
 
@@ -24,6 +26,7 @@ const patchGridRowBodySchema = z
     data: z.unknown().optional(),
     formStatus: z.string().nullable().optional(),
     statusTag: z.string().nullable().optional(),
+    rowAccentHex: rowAccentHexBodySchema,
   })
   .passthrough();
 
@@ -42,7 +45,15 @@ function extractRowData(
 }
 
 function wrapRowAsSnapshot(
-  row: { id: string; gridId: string; data: unknown; statusTag: string | null; updatedAt: Date; sortOrder: number },
+  row: {
+    id: string;
+    gridId: string;
+    data: unknown;
+    statusTag: string | null;
+    rowAccentHex: string | null;
+    updatedAt: Date;
+    sortOrder: number;
+  },
   gridSlug: string,
 ): {
   id: string;
@@ -59,6 +70,7 @@ function wrapRowAsSnapshot(
           ...(row.data as Record<string, unknown>),
           _rowId: row.id,
           _sortOrder: row.sortOrder,
+          ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
         },
       ],
     },
@@ -155,13 +167,20 @@ export async function PATCH(
   const updateBody: {
     data?: GridRowData;
     statusTag?: string | null;
+    rowAccentHex?: string | null;
   } = {};
 
   if (body.data !== undefined) {
-    updateBody.data = extractRowData(body.data, gridSlug);
+    const extracted = extractRowData(body.data, gridSlug);
+    updateBody.data = rowPayloadForPatch(
+      extracted as Record<string, unknown>,
+    ) as GridRowData;
   }
   const statusUpdate = body.formStatus ?? body.statusTag;
   if (statusUpdate !== undefined) updateBody.statusTag = statusUpdate;
+  if (body.rowAccentHex !== undefined) {
+    updateBody.rowAccentHex = body.rowAccentHex;
+  }
 
   const updated = await updateGridRow(rowId, authResult.user.id, updateBody);
   if (!updated) return notFound("Row not found");

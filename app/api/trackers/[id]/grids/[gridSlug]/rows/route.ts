@@ -15,12 +15,14 @@ import {
 import { dispatchTrackerEventAfterSave } from "@/lib/workflows/execution/trigger-handler";
 import { loadTrackerSnapshotGrids } from "@/lib/workflows/tracker-snapshot";
 import type { GridRowData } from "@/lib/schemas/tracker";
+import { rowAccentHexBodySchema } from "@/lib/tracker-grid-rows/row-accent-hex";
 import { NodeType } from "@prisma/client";
 
 const postBodySchema = z.object({
   data: z.record(z.string(), z.unknown()),
   branchName: z.string().optional(),
   formStatus: z.string().nullable().optional(),
+  rowAccentHex: rowAccentHexBodySchema,
 });
 
 function rowToClientShape(
@@ -28,6 +30,7 @@ function rowToClientShape(
     id: string;
     data: unknown;
     sortOrder: number;
+    rowAccentHex: string | null;
   },
   gridSlug: string,
 ): Record<string, unknown> {
@@ -36,6 +39,7 @@ function rowToClientShape(
     ...(row.data as Record<string, unknown>),
     _rowId: row.id,
     _sortOrder: row.sortOrder,
+    ...(row.rowAccentHex != null ? { _rowAccentHex: row.rowAccentHex } : {}),
   };
 }
 
@@ -160,6 +164,7 @@ export async function POST(
     data: body.data as GridRowData,
     schemaVersion: String(tracker.schemaVersion),
     statusTag: body.formStatus ?? null,
+    rowAccentHex: body.rowAccentHex,
     branchName,
   });
   if (!created) return notFound("Tracker not found");

@@ -17,6 +17,21 @@ import {
   compileCalculationsForGrid,
 } from "@/lib/field-calculation";
 import type { FieldCalculationRule } from "@/lib/functions/types";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
+import { parseRowAccentHex } from "@/lib/tracker-grid-rows/row-accent-hex";
+
+export type EntryFormSavePayload = {
+  values: Record<string, unknown>;
+  rowAccentHex: string | null;
+};
+
 export interface EntryFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -26,9 +41,13 @@ export interface EntryFormDialogProps {
   /** Field ids in display order. If not provided, uses Object.keys(fieldMetadata). */
   fieldOrder?: string[];
   initialValues: Record<string, unknown>;
-  onSave: (values: Record<string, unknown>) => void;
+  /** Initial row background accent (normalized hex or null). */
+  initialRowAccentHex?: string | null;
+  /** When false, hides the row color control (e.g. embedded forms that are not grid rows). */
+  showRowAccentPicker?: boolean;
+  onSave: (payload: EntryFormSavePayload) => void;
   /** When using "save & add another" (Shift+Enter), called instead of onSave. */
-  onSaveAnother?: (values: Record<string, unknown>) => void;
+  onSaveAnother?: (payload: EntryFormSavePayload) => void;
   /** When a select/multiselect field changes, return extra field updates (e.g. from bindings) to merge into form. */
   getBindingUpdates?: (
     fieldId: string,
@@ -57,6 +76,8 @@ export function EntryFormDialog({
   fieldMetadata,
   fieldOrder,
   initialValues,
+  initialRowAccentHex = null,
+  showRowAccentPicker = true,
   onSave,
   onSaveAnother,
   getBindingUpdates,
@@ -73,6 +94,9 @@ export function EntryFormDialog({
 
   const [formData, setFormData] =
     useState<Record<string, unknown>>(initialValues);
+  const [rowAccentHex, setRowAccentHex] = useState<string | null>(() =>
+    parseRowAccentHex(initialRowAccentHex),
+  );
   const [touchedFieldIds, setTouchedFieldIds] = useState<Set<string>>(
     () => new Set(),
   );
@@ -129,10 +153,11 @@ export function EntryFormDialog({
     if (open && !prevOpenRef.current) {
       const base = initialValues ?? {};
       setFormData(applyCalculatedValues(base, orderedIds).row);
+      setRowAccentHex(parseRowAccentHex(initialRowAccentHex));
       setTouchedFieldIds(new Set());
     }
     prevOpenRef.current = open;
-  }, [open, initialValues, applyCalculatedValues, orderedIds]);
+  }, [open, initialValues, initialRowAccentHex, applyCalculatedValues, orderedIds]);
 
   const validationSummary = useMemo(() => {
     let errorCount = 0;
@@ -174,23 +199,26 @@ export function EntryFormDialog({
 
   const handleSave = useCallback(() => {
     const resolved = applyCalculatedValues(formData, orderedIds).row;
-    onSave(resolved);
+    onSave({ values: resolved, rowAccentHex });
     setFormData({});
     onOpenChange(false);
-  }, [formData, onSave, onOpenChange, applyCalculatedValues, orderedIds]);
+  }, [formData, rowAccentHex, onSave, onOpenChange, applyCalculatedValues, orderedIds]);
 
   const handleSaveAndContinue = useCallback(() => {
     if (!onSaveAnother) return;
     const resolved = applyCalculatedValues(formData, orderedIds).row;
-    onSaveAnother(resolved);
+    onSaveAnother({ values: resolved, rowAccentHex });
     // Reset form for the next entry but keep dialog open
     const base = initialValues ?? {};
     setFormData(applyCalculatedValues(base, orderedIds).row);
+    setRowAccentHex(parseRowAccentHex(initialRowAccentHex));
     setTouchedFieldIds(new Set());
   }, [
     formData,
+    rowAccentHex,
     onSaveAnother,
     initialValues,
+    initialRowAccentHex,
     applyCalculatedValues,
     orderedIds,
   ]);
@@ -202,6 +230,56 @@ export function EntryFormDialog({
 
   const fieldCount = orderedIds.filter((id) => fieldMetadata[id]).length;
 
+  const colorWellValue = rowAccentHex ?? "#cccccc";
+
+  const rowAccentHeader =
+    showRowAccentPicker === true ? (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Row color"
+            className={cn(
+              "h-8 w-8 shrink-0 rounded-full border-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              theme.uiChrome.border,
+            )}
+            style={
+              rowAccentHex
+                ? { backgroundColor: rowAccentHex }
+                : { backgroundColor: "transparent" }
+            }
+          />
+        </PopoverTrigger>
+        <PopoverContent className="w-64 space-y-3" align="end">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted-foreground">Row color</p>
+            <input
+              type="color"
+              aria-label="Pick row color"
+              value={colorWellValue}
+              onChange={(e) => {
+                const next = parseRowAccentHex(e.target.value);
+                setRowAccentHex(next);
+              }}
+              className={cn(
+                "h-10 w-full cursor-pointer rounded-sm p-1",
+                theme.patterns.inputBase,
+              )}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setRowAccentHex(null)}
+          >
+            Clear color
+          </Button>
+        </PopoverContent>
+      </Popover>
+    ) : null;
+
   return (
     <FormDialog
       open={open}
@@ -211,6 +289,7 @@ export function EntryFormDialog({
       fieldCount={fieldCount}
       disableSubmit={validationSummary.hasError}
       mode={mode}
+      headerEnd={rowAccentHeader}
       onSubmit={handleSave}
       onSubmitAndContinue={onSaveAnother ? handleSaveAndContinue : undefined}
       onCancel={handleCancel}

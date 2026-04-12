@@ -9,6 +9,7 @@ import type {
 import type { TrackerBindingEntry } from "@/lib/types/tracker-bindings";
 import { FIELD_TYPE_LABELS, getCreatableFieldTypesWithLabels } from "../utils";
 import type { TrackerFieldType } from "../../types";
+import { listAllowedTargetDataTypes } from "@/lib/tracker-field-type-conversion";
 import {
   buildGridFieldMap,
   buildOptionsGridOptions,
@@ -534,19 +535,27 @@ export function useFieldSettingsState({
   }, [hasCalculation, autoPopulateSources]);
 
   const typeOptions = useMemo(() => {
-    const options = getCreatableFieldTypesWithLabels();
-    if (field && !options.some((o) => o.value === field.dataType)) {
-      return [
+    const all = getCreatableFieldTypesWithLabels();
+    const allowed = new Set(listAllowedTargetDataTypes(dataType));
+    let options = all.filter((o) => allowed.has(o.value));
+
+    const ensureTypeVisible = (t: TrackerFieldType) => {
+      if (options.some((o) => o.value === t)) return;
+      options = [
         {
-          value: field.dataType,
-          label: FIELD_TYPE_LABELS[field.dataType] ?? field.dataType,
+          value: t,
+          label: FIELD_TYPE_LABELS[t] ?? t,
           group: "Other" as const,
         },
         ...options,
       ];
-    }
+    };
+
+    if (field) ensureTypeVisible(field.dataType);
+    ensureTypeVisible(dataType);
+
     return options;
-  }, [field]);
+  }, [field, dataType]);
 
   const groupedTypes = useMemo(
     () =>

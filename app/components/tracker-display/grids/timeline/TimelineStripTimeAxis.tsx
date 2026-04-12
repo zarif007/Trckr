@@ -42,6 +42,7 @@ export const TimelineStripTimeAxis = memo(function TimelineStripTimeAxis({
       <div
         className={cn(
           gridColumnHeader,
+          "border-b-0",
           "w-32 md:w-48 shrink-0 flex items-end border-r py-2.5",
         )}
       >

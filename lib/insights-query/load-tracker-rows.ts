@@ -17,6 +17,7 @@ const gridRowSelect = {
   gridId: true,
   data: true,
   statusTag: true,
+  rowAccentHex: true,
   sortOrder: true,
   branchName: true,
   createdAt: true,
@@ -28,6 +29,7 @@ type GridRowLoadRow = {
   gridId: string;
   data: unknown;
   statusTag: string | null;
+  rowAccentHex: string | null;
   sortOrder: number;
   branchName: string;
   createdAt: Date;
@@ -49,6 +51,7 @@ function buildTrackerDataInputFromGridRows(
         : {}),
       _rowId: r.id,
       _sortOrder: r.sortOrder,
+      ...(r.rowAccentHex != null ? { _rowAccentHex: r.rowAccentHex } : {}),
     });
     bySlug.set(slug, list);
   }

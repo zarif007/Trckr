@@ -89,10 +89,26 @@ export function buildKanbanGroupColumnDescriptors(
 
   const opts = resolvedOptions ?? [];
   if (opts.length > 0) {
-    const columns = opts.map((o) => ({
+    const optionColumns = opts.map((o) => ({
       id: toOptionColumnId(o),
       label: o.label ?? "",
     }));
+    const optionIds = new Set(
+      optionColumns.map((c) => c.id).filter((id) => id.length > 0),
+    );
+
+    const fromRows = distinctTrimmedStrings(
+      rows.map((r) => String((r as Record<string, unknown>)[groupByFieldId] ?? "")),
+    );
+    const fromServer = distinctTrimmedStrings(serverDistinctValues ?? []);
+
+    const extras = distinctTrimmedStrings([...fromRows, ...fromServer]).filter(
+      (id) => id.length > 0 && !optionIds.has(id),
+    );
+
+    const extraColumns = extras.map((id) => ({ id, label: id }));
+    const columns = dedupeColumnIds([...optionColumns, ...extraColumns]);
+
     return {
       columns: dedupeColumnIds(appendUncategorizedIfMissing(columns)),
       discoveryPending: false,

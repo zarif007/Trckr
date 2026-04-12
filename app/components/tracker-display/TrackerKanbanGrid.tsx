@@ -1,18 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback, memo } from "react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Settings2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { theme } from "@/lib/theme";
 import {
   DndContext,
   DragOverlay,
@@ -25,32 +13,25 @@ import {
   DragStartEvent,
   defaultDropAnimationSideEffects,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   getBindingForField,
   findOptionRow,
   applyBindings,
   parsePath,
 } from "@/lib/resolve-bindings";
-import { resolveFieldRulesForRow } from "@/lib/field-rules";
 import type { FieldRulesMap } from "@/lib/field-rules";
-import { EntryFormDialog } from "./grids/data-table/entry-form-dialog";
+import type { EntryFormSavePayload } from "./grids/data-table/entry-form-dialog";
+import { ROW_ACCENT_HEX_CLIENT_KEY } from "@/lib/tracker-grid-rows";
 import { useTrackerOptionsContext } from "./tracker-options-context";
-import { EntryWayButton } from "./entry-way/EntryWayButton";
 import { buildEntryWaysForGrid } from "./entry-way/entry-way-registry";
 import {
   KanbanCard,
-  SortableKanbanCard,
-  DroppableEmptyColumn,
-  ColumnDropZone,
   useKanbanGroups,
   usePaginatedKanbanColumnSources,
 } from "./grids/kanban";
 import { GridLayoutEditChrome } from "./grids/shared/GridLayoutEditChrome";
+import { TrackerKanbanGridContent } from "./tracker-kanban-grid/TrackerKanbanGridContent";
 import type {
   TrackerGrid,
   TrackerField,
@@ -70,7 +51,7 @@ import {
 } from "@/lib/grid-data-loading";
 import {
   useKanbanPaginatedColumns,
-  rowPayloadForPatch,
+  buildPatchTrackerRowRequestBody,
   persistNewKanbanCardViaRowApi,
 } from "@/lib/tracker-grid-rows";
 
@@ -226,7 +207,7 @@ function TrackerKanbanGridInner({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-  const groups = kanbanState?.groups ?? EMPTY_GROUPS;
+  const discoveryKanbanGroups = kanbanState?.groups ?? EMPTY_GROUPS;
   const groupByFieldId = kanbanState?.groupByFieldId ?? "";
   const cardFieldsDisplay = kanbanState?.cardFieldsDisplay ?? [];
   const fieldMetadata = kanbanState?.fieldMetadata ?? {};
@@ -240,17 +221,60 @@ function TrackerKanbanGridInner({
     gridSlug: grid.id,
     branchName: gridDataBranchName,
     groupFieldId: groupByFieldId,
-    groupIds: groups.map((g) => g.id),
+    groupIds: discoveryKanbanGroups.map((g) => g.id),
     pageSize: kanbanPageSize,
     enabled:
       gridIsPaginatedCapable &&
       Boolean(groupByFieldId) &&
-      groups.length > 0,
+      discoveryKanbanGroups.length > 0,
     persistLifecycle: rowBackedPersistLifecycle ?? undefined,
   });
 
+  const groups = useMemo(() => {
+    const byId = new Map<string, { id: string; label: string }>();
+    for (const g of discoveryKanbanGroups) {
+      byId.set(g.id, g);
+    }
+    if (mutateKanbanViaRowApi) {
+      const meta = fieldMetadata[groupByFieldId];
+      const opts = meta?.options;
+      const optionLabelForId = (id: string): string | undefined => {
+        const hit = opts?.find((o) =>
+          typeof o === "string" ? o === id : o.id === id,
+        );
+        if (hit == null) return undefined;
+        return typeof hit === "string" ? hit : hit.label;
+      };
+      for (const colKey of Object.keys(kanbanCols.columns)) {
+        if (byId.has(colKey)) continue;
+        const label =
+          colKey === ""
+            ? "Uncategorized"
+            : (optionLabelForId(colKey) ?? colKey);
+        byId.set(colKey, { id: colKey, label });
+      }
+    }
+    const merged = Array.from(byId.values());
+    merged.sort((a, b) => {
+      const aUnc = a.id === "" ? 1 : 0;
+      const bUnc = b.id === "" ? 1 : 0;
+      return aUnc - bUnc;
+    });
+    return merged;
+  }, [
+    discoveryKanbanGroups,
+    mutateKanbanViaRowApi,
+    kanbanCols.columns,
+    fieldMetadata,
+    groupByFieldId,
+  ]);
+
   const persistKanbanNewCard = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
+      const values = { ...payload.values };
+      if (payload.rowAccentHex != null)
+        values[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete values[ROW_ACCENT_HEX_CLIENT_KEY];
       const gid = String(
         values[groupByFieldId] ??
           (groups.find((g) => g.id !== "") ?? groups[0])?.id ??
@@ -479,7 +503,7 @@ function TrackerKanbanGridInner({
 
         kanbanCols.moveCardLocally(rowId, fromGroup, nextGroupIdTrimmed, merged);
         void kanbanCols
-          .patchRowOnServer(rowId, rowPayloadForPatch(merged))
+          .patchRowOnServer(rowId, buildPatchTrackerRowRequestBody(merged))
           .catch(() => {
             kanbanCols.refetchAll();
           });
@@ -610,8 +634,9 @@ function TrackerKanbanGridInner({
   );
 
   const handleEditSave = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
       if (editRowIndex == null || !onUpdate) return;
+      const { values, rowAccentHex } = payload;
       Object.entries(values).forEach(([columnId, value]) => {
         onUpdate(editRowIndex, columnId, value);
       });
@@ -662,6 +687,7 @@ function TrackerKanbanGridInner({
           }
         }
       });
+      onUpdate(editRowIndex, ROW_ACCENT_HEX_CLIENT_KEY, rowAccentHex);
       setEditRowIndex(null);
     },
     [
@@ -713,13 +739,20 @@ function TrackerKanbanGridInner({
   ]);
 
   const handlePaginatedEditSave = useCallback(
-    async (values: Record<string, unknown>) => {
+    async (payload: EntryFormSavePayload) => {
       if (!editCard) return;
       const rid = editCard._rowId;
       if (typeof rid !== "string") return;
-      const merged: Record<string, unknown> = { ...editCard, ...values };
+      const merged: Record<string, unknown> = {
+        ...editCard,
+        ...payload.values,
+        [ROW_ACCENT_HEX_CLIENT_KEY]: payload.rowAccentHex,
+      };
       try {
-        await kanbanCols.patchRowOnServer(rid, rowPayloadForPatch(merged));
+        await kanbanCols.patchRowOnServer(
+          rid,
+          buildPatchTrackerRowRequestBody(merged),
+        );
       } catch {
         // refetch below
       } finally {
@@ -780,350 +813,52 @@ function TrackerKanbanGridInner({
   }
 
   const content = (
-    <div className="w-full space-y-4">
-      {(addable || cardFieldsDisplay.length > 0) && (
-        <>
-          <div className="flex justify-end items-center gap-2">
-            {canEditLayout ? (
-              <GridLayoutEditChrome
-                gridId={grid.id}
-                viewType="kanban"
-                activeViewId={activeViewId}
-                canEditLayout={canEditLayout}
-                existingLayoutFieldIds={existingLayoutFieldIds}
-                allFields={fields}
-                openAddColumnRequest={openAddColumnRequest}
-                showAddButton={!suppressEmbeddedAddColumn}
-              />
-            ) : null}
-            {cardFieldsDisplay.length > 0 && (
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 p-0 hover:bg-muted text-muted-foreground hover:text-foreground"
-                    aria-label="Card preview fields"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent
-                  className="sm:max-w-[300px]"
-                  onInteractOutside={(e) => e.preventDefault()}
-                >
-                  <DialogHeader>
-                    <DialogTitle>Card preview fields</DialogTitle>
-                  </DialogHeader>
-                  <p className="text-xs text-muted-foreground -mt-2">
-                    Choose which fields to show on cards (up to 5).
-                  </p>
-                  <div className="py-2 max-h-[50vh] overflow-y-auto pr-2 space-y-2">
-                    {cardFieldsDisplay.map((field) => (
-                      <div
-                        key={field.id}
-                        className="flex items-center space-x-2"
-                      >
-                        <Checkbox
-                          id={`card-field-${field.id}`}
-                          checked={effectiveCardVisibility[field.id] ?? false}
-                          onCheckedChange={(checked) =>
-                            toggleCardFieldVisibility(field.id, !!checked)
-                          }
-                        />
-                        <label
-                          htmlFor={`card-field-${field.id}`}
-                          className="text-sm font-medium leading-none cursor-pointer flex-1"
-                        >
-                          {field.label}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-            {addable && (
-              <EntryWayButton
-                onNewEntryClick={() => setShowAddDialog(true)}
-                entryWays={entryWays}
-                // For now, Entry Ways are just visible options; clicking does not create rows yet.
-                onSelectEntryWay={() => {}}
-                disabled={!mutateKanbanViaRowApi && !onAddEntry}
-              />
-            )}
-          </div>
-
-          {addable && (
-            <EntryFormDialog
-              open={showAddDialog}
-              onOpenChange={setShowAddDialog}
-              title="Add New Entry"
-              submitLabel="Add Entry"
-              fieldMetadata={fieldMetadata}
-              fieldOrder={fieldOrder}
-              initialValues={
-                groupByFieldId && groups.length > 0
-                  ? {
-                      [groupByFieldId]:
-                        (groups.find((g) => g.id !== "") ?? groups[0])?.id ??
-                        "",
-                    }
-                  : {}
-              }
-              onSave={(values) => {
-                if (mutateKanbanViaRowApi) {
-                  persistKanbanNewCard(values);
-                  setShowAddDialog(false);
-                  return;
-                }
-                onAddEntry?.(values);
-                setShowAddDialog(false);
-              }}
-              onSaveAnother={(values) => {
-                if (mutateKanbanViaRowApi) {
-                  persistKanbanNewCard(values);
-                  return;
-                }
-                onAddEntry?.(values);
-              }}
-              getBindingUpdates={getBindingUpdates}
-              getFieldOverrides={(values, fieldId) => {
-                const { overrides } = resolveFieldRulesForRow(
-                  fieldRulesV2,
-                  grid.id,
-                  values,
-                  0,
-                );
-                return overrides[fieldId] as
-                  | Record<string, unknown>
-                  | undefined;
-              }}
-              gridId={grid.id}
-              calculations={calculations}
-              gridData={gridDataForCards}
-            />
-          )}
-        </>
-      )}
-
-      {editable && (
-        <EntryFormDialog
-          open={mutateKanbanViaRowApi ? editCard !== null : editRowIndex !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setEditRowIndex(null);
-              setEditCard(null);
-            }
-          }}
-          title="Row Details"
-          submitLabel="Update Entry"
-          fieldMetadata={fieldMetadata}
-          fieldOrder={fieldOrder}
-          initialValues={
-            mutateKanbanViaRowApi
-              ? { ...(editCard ?? {}) }
-              : editRowIndex != null
-                ? (rows[editRowIndex] ?? {})
-                : {}
-          }
-          onSave={
-            mutateKanbanViaRowApi
-              ? (v) => {
-                  void handlePaginatedEditSave(v);
-                }
-              : handleEditSave
-          }
-          getBindingUpdates={getBindingUpdates}
-          getFieldOverrides={(values, fieldId) => {
-            const rowIndex = mutateKanbanViaRowApi ? 0 : (editRowIndex ?? 0);
-            const { overrides } = resolveFieldRulesForRow(
-              fieldRulesV2,
-              grid.id,
-              values,
-              rowIndex,
-            );
-            return overrides[fieldId] as Record<string, unknown> | undefined;
-          }}
-          gridId={grid.id}
-          calculations={calculations}
-          gridData={gridDataForCards}
-        />
-      )}
-
-      {columnDiscoveryError ? (
-        <p
-          className={cn(
-            "mb-2 rounded-sm border px-3 py-2 text-xs text-warning",
-            theme.uiChrome.border,
-            theme.radius.md,
-          )}
-          role="status"
-        >
-          {columnDiscoveryError} — columns may be incomplete until you refresh.
-        </p>
-      ) : null}
-
-      {mutateKanbanViaRowApi &&
-      distinctKanbanGroupValuesLoading &&
-      groups.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          Loading board columns…
-        </p>
-      ) : null}
-
-      <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-        {groups.map((group) => {
-          const cardsInGroup = groupedCards.get(group.id) ?? [];
-
-          return (
-    <div key={group.id} className="shrink-0 w-[320px]">
-              <div
-                className={cn(
-                  "mb-3 border bg-muted/50 px-4 py-3",
-                  theme.radius.md,
-                  theme.border.verySubtle,
-                )}
-              >
-                <h3
-                  className={`${theme.typography.headingXsMono} font-semibold text-foreground text-sm flex items-center justify-between gap-2`}
-                >
-                  <span className="truncate">
-                    {group.label || "Uncategorized"}
-                  </span>
-                  <span
-                    className={cn(
-                      "shrink-0 tabular-nums",
-                      theme.typography.badge,
-                      "bg-background/50",
-                    )}
-                  >
-                    {mutateKanbanViaRowApi
-                      ? (kanbanCols.columns[group.id]?.total ?? 0)
-                      : cardsInGroup.length}
-                  </span>
-                </h3>
-              </div>
-              <div className="space-y-3 min-h-[100px] flex flex-col">
-                {mutateKanbanViaRowApi &&
-                kanbanCols.columns[group.id]?.loading &&
-                cardsInGroup.length === 0 ? (
-                  <p className="px-2 py-3 text-xs text-muted-foreground">
-                    Loading…
-                  </p>
-                ) : null}
-                {canDrag ? (
-                  mutateKanbanViaRowApi &&
-                  kanbanCols.columns[group.id]?.loading &&
-                  cardsInGroup.length === 0 ? null : (
-                  <SortableContext
-                    id={group.id}
-                    items={cardsInGroup.map((c) => getCardSortId(c, group.id))}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {cardsInGroup.length === 0 ? (
-                      <DroppableEmptyColumn id={group.id} />
-                    ) : (
-                      <>
-                        {cardsInGroup.map((card) => {
-                          const sortId = getCardSortId(card, group.id);
-                          return (
-                            <SortableKanbanCard
-                              key={sortId}
-                              id={sortId}
-                              card={card}
-                              cardFields={visibleCardFields}
-                              gridId={grid.id}
-                              gridData={gridDataForCards}
-                              fieldRules={fieldRulesV2}
-                              fieldMetadata={fieldMetadata}
-                              onEditRow={
-                                editable && !mutateKanbanViaRowApi
-                                  ? setEditRowIndex
-                                  : undefined
-                              }
-                              onEditCard={
-                                editable && mutateKanbanViaRowApi
-                                  ? () =>
-                                      setEditCard({
-                                        ...(card as Record<string, unknown>),
-                                      })
-                                  : undefined
-                              }
-                              onDeleteRow={
-                                mutateKanbanViaRowApi && deleteable
-                                  ? () => {
-                                      const rid = String(
-                                        (card as Record<string, unknown>)
-                                          ._rowId ?? "",
-                                      );
-                                      if (!rid) return;
-                                      void kanbanCols
-                                        .deleteRowOnServer(rid)
-                                        .then(() =>
-                                          kanbanCols.removeCardLocally(
-                                            group.id,
-                                            rid,
-                                          ),
-                                        )
-                                        .catch(() => kanbanCols.refetchAll());
-                                    }
-                                  : deleteable && onDeleteEntries
-                                    ? () =>
-                                        onDeleteEntries([card._originalIdx])
-                                    : undefined
-                              }
-                              styles={cardStyles}
-                            />
-                          );
-                        })}
-                        <ColumnDropZone id={group.id} />
-                      </>
-                    )}
-                  </SortableContext>
-                  )
-                ) : cardsInGroup.length === 0 ? (
-                  <div className="text-xs text-muted-foreground/70 px-2 py-2">
-                    No entries
-                  </div>
-                ) : (
-                  cardsInGroup.map((card) => (
-                    <KanbanCard
-                      key={`${group.id}-${card.row_id ?? card.id ?? card._originalIdx ?? "row"}`}
-                      card={card}
-                      cardFields={visibleCardFields}
-                      gridId={grid.id}
-                      gridData={gridDataForCards}
-                      fieldRules={fieldRulesV2}
-                      fieldMetadata={fieldMetadata}
-                      styles={cardStyles}
-                    />
-                  ))
-                )}
-                {paginatedKanbanDisplay &&
-                (kanbanCols.columns[group.id]?.total ?? 0) >
-                  (kanbanCols.columns[group.id]?.rows.length ?? 0) ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-muted-foreground"
-                    disabled={
-                      kanbanCols.columns[group.id]?.loadingMore ?? false
-                    }
-                    onClick={() => void kanbanCols.loadMore(group.id)}
-                  >
-                    {kanbanCols.columns[group.id]?.loadingMore
-                      ? "Loading…"
-                      : "Load more"}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <TrackerKanbanGridContent
+      grid={grid}
+      addable={addable}
+      cardFieldsDisplay={cardFieldsDisplay}
+      canEditLayout={canEditLayout}
+      activeViewId={activeViewId}
+      existingLayoutFieldIds={existingLayoutFieldIds}
+      fields={fields}
+      openAddColumnRequest={openAddColumnRequest}
+      suppressEmbeddedAddColumn={suppressEmbeddedAddColumn}
+      effectiveCardVisibility={effectiveCardVisibility}
+      toggleCardFieldVisibility={toggleCardFieldVisibility}
+      entryWays={entryWays}
+      mutateKanbanViaRowApi={mutateKanbanViaRowApi}
+      onAddEntry={onAddEntry}
+      showAddDialog={showAddDialog}
+      setShowAddDialog={setShowAddDialog}
+      groupByFieldId={groupByFieldId}
+      groups={groups}
+      persistKanbanNewCard={persistKanbanNewCard}
+      getBindingUpdates={getBindingUpdates}
+      fieldRulesV2={fieldRulesV2}
+      calculations={calculations}
+      gridDataForCards={gridDataForCards}
+      fieldMetadata={fieldMetadata}
+      fieldOrder={fieldOrder}
+      editable={editable}
+      editCard={editCard}
+      editRowIndex={editRowIndex}
+      setEditRowIndex={setEditRowIndex}
+      setEditCard={setEditCard}
+      rows={rows}
+      handlePaginatedEditSave={handlePaginatedEditSave}
+      handleEditSave={handleEditSave}
+      columnDiscoveryError={columnDiscoveryError}
+      distinctKanbanGroupValuesLoading={distinctKanbanGroupValuesLoading}
+      groupedCards={groupedCards}
+      kanbanCols={kanbanCols}
+      canDrag={canDrag}
+      getCardSortId={getCardSortId}
+      visibleCardFields={visibleCardFields}
+      deleteable={deleteable}
+      onDeleteEntries={onDeleteEntries}
+      paginatedKanbanDisplay={paginatedKanbanDisplay}
+      cardStyles={cardStyles}
+    />
   );
 
   if (!canDrag) {

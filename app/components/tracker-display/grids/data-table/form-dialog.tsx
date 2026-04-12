@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, Check } from "lucide-react";
 import type React from "react";
+import type { ReactNode } from "react";
 import { useCallback } from "react";
 
 export interface FormDialogProps {
@@ -25,6 +26,8 @@ export interface FormDialogProps {
   disableSubmit?: boolean;
   /** Optional: "add" vs "edit" mode for different accents and icon. */
   mode?: "add" | "edit";
+  /** Optional control rendered in the header row (e.g. row color swatch). */
+  headerEnd?: ReactNode;
   /** Called when the primary action is triggered (button or Enter key). */
   onSubmit: () => void;
   /** Called when the "submit & continue" shortcut is triggered (Shift+Enter). */
@@ -42,6 +45,7 @@ export function FormDialog({
   fieldCount,
   disableSubmit,
   mode = "add",
+  headerEnd,
   onSubmit,
   onSubmitAndContinue,
   onCancel,
@@ -133,9 +137,14 @@ export function FormDialog({
             )}
           />
           <DialogHeader className="space-y-1">
-            <DialogTitle className="text-lg font-semibold tracking-tight">
-              {title}
-            </DialogTitle>
+            <div className="flex flex-row items-start justify-between gap-3">
+              <DialogTitle className="text-lg font-semibold tracking-tight min-w-0 pr-2">
+                {title}
+              </DialogTitle>
+              {headerEnd != null ? (
+                <div className="shrink-0 pt-0.5">{headerEnd}</div>
+              ) : null}
+            </div>
             <Description />
           </DialogHeader>
         </div>

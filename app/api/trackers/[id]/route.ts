@@ -17,6 +17,9 @@ import {
 } from "@/lib/repositories";
 import { trackerSchema as trackerSchemaZod } from "@/lib/schemas/tracker";
 import { decomposeTrackerSchema, assembleTrackerDisplayProps } from "@/lib/tracker-schema";
+import { findDisallowedFieldDataTypeChanges } from "@/lib/tracker-field-type-conversion";
+import { prisma } from "@/lib/db";
+import type { TrackerFieldType } from "@/lib/tracker-field-types";
 
 const patchTrackerBodySchema = z
   .object({
@@ -112,6 +115,30 @@ export async function PATCH(
       : (schema as ReturnType<typeof trackerSchemaZod.parse>);
 
     const decomposed = decomposeTrackerSchema(flatSchema);
+
+    if (decomposed.fields?.length) {
+      const existingRows = await prisma.trackerField.findMany({
+        where: { trackerId },
+        select: { slug: true, dataType: true },
+      });
+      const existingBySlug = new Map(
+        existingRows.map((r) => [
+          r.slug,
+          r.dataType as TrackerFieldType,
+        ]),
+      );
+      const violations = findDisallowedFieldDataTypeChanges({
+        existingBySlug,
+        incomingFields: decomposed.fields,
+      });
+      if (violations.length > 0) {
+        return badRequest(
+          `Disallowed field type change(s): ${violations
+            .map((v) => `${v.slug} (${v.from} → ${v.to})`)
+            .join("; ")}`,
+        );
+      }
+    }
 
     // Validate foreign bindings - prevent access to trackers user doesn't own
     if (decomposed.bindings) {

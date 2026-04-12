@@ -42,7 +42,15 @@ import { theme } from "@/lib/theme";
 import { Settings2, ChevronDown, Trash2 } from "lucide-react";
 import { FieldMetadata, getFieldIcon } from "./utils";
 import { DataTableCell } from "./data-table-cell";
-import { EntryFormDialog } from "./entry-form-dialog";
+import {
+  EntryFormDialog,
+  type EntryFormSavePayload,
+} from "./entry-form-dialog";
+import {
+  ROW_ACCENT_HEX_CLIENT_KEY,
+  parseRowAccentHex,
+  rowAccentStyleFromRow,
+} from "@/lib/tracker-grid-rows";
 import { EntryWayButton } from "../../entry-way/EntryWayButton";
 import type { EntryWayDefinition } from "../../entry-way/entry-way-types";
 import type { FieldCalculationRule } from "@/lib/functions/types";
@@ -77,6 +85,14 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   fieldMetadata?: FieldMetadata;
   onCellUpdate?: (rowIndex: number, columnId: string, value: any) => void;
+  /**
+   * When set (e.g. row HTTP API), Row Details "Done" merges all fields and calls this once
+   * instead of invoking `onCellUpdate` per field (avoids parallel PATCH races).
+   */
+  onSaveEditedRow?: (
+    rowIndex: number,
+    values: Record<string, unknown>,
+  ) => void;
   onAddEntry?: (newRow: Record<string, any>) => void;
   onDeleteEntries?: (rowIndices: number[]) => void;
   config?: any;
@@ -150,6 +166,7 @@ export function DataTable<TData, TValue>({
   data,
   fieldMetadata,
   onCellUpdate,
+  onSaveEditedRow,
   onAddEntry,
   onDeleteEntries,
   getBindingUpdates,
@@ -447,13 +464,24 @@ export function DataTable<TData, TValue>({
 
   const fixedWidth = "44px";
 
-  const handleAddEntry = (values: Record<string, any>) => {
-    onAddEntry?.(values);
+  const mergeRowAccentOntoValues = useCallback(
+    (payload: EntryFormSavePayload): Record<string, unknown> => {
+      const next = { ...payload.values };
+      if (payload.rowAccentHex != null)
+        next[ROW_ACCENT_HEX_CLIENT_KEY] = payload.rowAccentHex;
+      else delete next[ROW_ACCENT_HEX_CLIENT_KEY];
+      return next;
+    },
+    [],
+  );
+
+  const handleAddEntry = (payload: EntryFormSavePayload) => {
+    onAddEntry?.(mergeRowAccentOntoValues(payload));
     setShowAddDialog(false);
   };
 
-  const handleAddEntryAndStayOpen = (values: Record<string, any>) => {
-    onAddEntry?.(values);
+  const handleAddEntryAndStayOpen = (payload: EntryFormSavePayload) => {
+    onAddEntry?.(mergeRowAccentOntoValues(payload));
     // Keep the dialog open for the next entry; EntryFormDialog will reset its form state.
   };
 
@@ -467,21 +495,42 @@ export function DataTable<TData, TValue>({
     setDeleteConfirmOpen(false);
   };
 
-  const rowDetailsRow =
-    rowDetailsOpenForIndex != null
-      ? table.getRowModel().rows[rowDetailsOpenForIndex]
-      : null;
+  /** `row.index` is global in `data`; paginated `getRowModel().rows` is sliced — find by index, not by array position. */
+  const rowDetailsRow = useMemo(() => {
+    if (rowDetailsOpenForIndex == null) return null;
+    return (
+      table
+        .getRowModel()
+        .rows.find((r) => r.index === rowDetailsOpenForIndex) ?? null
+    );
+  }, [rowDetailsOpenForIndex, table]);
 
   const handleEditSave = useCallback(
-    (values: Record<string, unknown>) => {
+    (payload: EntryFormSavePayload) => {
       if (rowDetailsOpenForIndex == null) return;
+      const merged = mergeRowAccentOntoValues(payload);
+      if (onSaveEditedRow) {
+        onSaveEditedRow(rowDetailsOpenForIndex, merged);
+        setRowDetailsOpenForIndex(null);
+        return;
+      }
       const updateData = (table.options.meta as any)?.updateData;
-      Object.entries(values).forEach(([fieldId, val]) =>
+      Object.entries(payload.values).forEach(([fieldId, val]) =>
         updateData?.(rowDetailsOpenForIndex, fieldId, val),
+      );
+      updateData?.(
+        rowDetailsOpenForIndex,
+        ROW_ACCENT_HEX_CLIENT_KEY,
+        payload.rowAccentHex,
       );
       setRowDetailsOpenForIndex(null);
     },
-    [rowDetailsOpenForIndex, table.options.meta],
+    [
+      rowDetailsOpenForIndex,
+      mergeRowAccentOntoValues,
+      onSaveEditedRow,
+      table.options.meta,
+    ],
   );
 
   const addFieldOrder = useMemo(
@@ -606,6 +655,7 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       <EntryFormDialog
+        key={rowDetailsRow?.id ?? "row-details"}
         open={rowDetailsOpenForIndex !== null}
         onOpenChange={(open) => !open && setRowDetailsOpenForIndex(null)}
         title="Row Details"
@@ -616,6 +666,15 @@ export function DataTable<TData, TValue>({
           rowDetailsRow
             ? { ...(rowDetailsRow.original as Record<string, unknown>) }
             : {}
+        }
+        initialRowAccentHex={
+          rowDetailsRow
+            ? parseRowAccentHex(
+                (rowDetailsRow.original as Record<string, unknown>)[
+                  ROW_ACCENT_HEX_CLIENT_KEY
+                ],
+              )
+            : null
         }
         onSave={handleEditSave}
         getBindingUpdates={getBindingUpdates}
@@ -766,13 +825,16 @@ export function DataTable<TData, TValue>({
                 }
                 const rowOverrides = getRowOverrides?.(row.index, rowOriginal);
 
+                const rowAccentStyle = rowAccentStyleFromRow(rowOriginal);
                 return (
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    style={rowAccentStyle}
                     className={cn(
                       "group border-b last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
                       theme.border.gridChrome,
+                      rowAccentStyle ? "hover:opacity-95" : null,
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {

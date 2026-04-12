@@ -8,6 +8,7 @@ import {
   patchTrackerDataRow,
 } from "../client";
 import { KANBAN_GROUP_IDS_KEY_DELIMITER } from "../constants";
+import type { PatchTrackerDataRowBody } from "../row-accent-hex";
 import { clampGridRowsLimit } from "../limits";
 import type { GridRowRecord, RowBackedPersistLifecycle } from "../types";
 
@@ -56,7 +57,7 @@ export interface UseKanbanPaginatedColumnsResult {
   prependCardLocally: (groupId: string, row: KanbanColumnRow) => void;
   patchRowOnServer: (
     rowId: string,
-    data: Record<string, unknown>,
+    body: PatchTrackerDataRowBody,
   ) => Promise<void>;
   deleteRowOnServer: (rowId: string) => Promise<void>;
   createRowOnServer: (data: Record<string, unknown>) => Promise<KanbanColumnRow>;
@@ -98,25 +99,48 @@ export function useKanbanPaginatedColumns(
 
   const groupIdsKey = groupIds.join(KANBAN_GROUP_IDS_KEY_DELIMITER);
 
+  const lastBaseIdentityRef = useRef("");
+
   useEffect(() => {
     if (!enabled || !trackerId) {
+      lastBaseIdentityRef.current = "";
       setColumns({});
       return;
     }
 
-    const ids = groupIdsRef.current;
+    const requestedIds = groupIdsRef.current;
     const ac = new AbortController();
 
-    const loadingState: Record<string, ColumnState> = {};
+    const baseIdentity = `${reloadKey}|${trackerId}|${gridSlug}|${branchName}|${groupFieldId}|${pageSizeClamped}`;
+    const baseChanged = lastBaseIdentityRef.current !== baseIdentity;
+    lastBaseIdentityRef.current = baseIdentity;
+
+    const prev = columnsRef.current;
+    const occupiedLaneIds = Object.keys(prev).filter((k) => {
+      const c = prev[k];
+      return c && (c.rows.length > 0 || c.total > 0);
+    });
+    const ids = Array.from(new Set([...requestedIds, ...occupiedLaneIds]));
+    const next: Record<string, ColumnState> = {};
     for (const gid of ids) {
-      loadingState[gid] = emptyColumn(true);
+      if (!baseChanged && prev[gid] !== undefined) {
+        next[gid] = prev[gid]!;
+      } else {
+        next[gid] = emptyColumn(true);
+      }
     }
-    setColumns(loadingState);
+    setColumns(next);
 
     async function loadFirstPage() {
       const tid = trackerId as string;
+      const toFetch = ids.filter((gid) => {
+        const c = next[gid];
+        return c.loading && c.rows.length === 0;
+      });
+      if (toFetch.length === 0) return;
+
       const results: FirstPageResult[] = await Promise.all(
-        ids.map(async (groupValue): Promise<FirstPageResult> => {
+        toFetch.map(async (groupValue): Promise<FirstPageResult> => {
           try {
             const result = await fetchGridRowsList(
               {
@@ -163,28 +187,23 @@ export function useKanbanPaginatedColumns(
 
       if (ac.signal.aborted) return;
 
-      const byGroup = new Map(results.map((r) => [r.groupValue, r]));
-      const next: Record<string, ColumnState> = {};
-      for (const gid of ids) {
-        const r = byGroup.get(gid);
-        if (!r) {
-          next[gid] = {
-            ...emptyColumn(false),
-            error: "Load failed",
-          };
-        } else if (r.error) {
-          next[gid] = { ...emptyColumn(false), error: r.error };
-        } else {
-          next[gid] = {
-            rows: r.rows,
-            total: r.total,
-            loading: false,
-            loadingMore: false,
-            error: null,
-          };
+      setColumns((prevCols) => {
+        const merged = { ...prevCols };
+        for (const r of results) {
+          if (r.error) {
+            merged[r.groupValue] = { ...emptyColumn(false), error: r.error };
+          } else {
+            merged[r.groupValue] = {
+              rows: r.rows,
+              total: r.total,
+              loading: false,
+              loadingMore: false,
+              error: null,
+            };
+          }
         }
-      }
-      setColumns(next);
+        return merged;
+      });
     }
 
     void loadFirstPage();
@@ -268,11 +287,28 @@ export function useKanbanPaginatedColumns(
     ) => {
       setColumns((prev) => {
         const from = prev[fromGroupId];
-        const to = prev[toGroupId];
-        if (!from || !to) return prev;
+        if (!from) return prev;
         const nextFromRows = from.rows.filter(
           (r) => String(r._rowId ?? "") !== rowId,
         );
+        const to = prev[toGroupId];
+        if (!to) {
+          return {
+            ...prev,
+            [fromGroupId]: {
+              ...from,
+              rows: nextFromRows,
+              total: Math.max(0, from.total - 1),
+            },
+            [toGroupId]: {
+              rows: [patchedRow],
+              total: 1,
+              loading: false,
+              loadingMore: false,
+              error: null,
+            },
+          };
+        }
         const nextToRows = [...to.rows, patchedRow];
         return {
           ...prev,
@@ -310,7 +346,18 @@ export function useKanbanPaginatedColumns(
   const prependCardLocally = useCallback((groupId: string, row: KanbanColumnRow) => {
     setColumns((prev) => {
       const c = prev[groupId];
-      if (!c) return prev;
+      if (!c) {
+        return {
+          ...prev,
+          [groupId]: {
+            rows: [row],
+            total: 1,
+            loading: false,
+            loadingMore: false,
+            error: null,
+          },
+        };
+      }
       return {
         ...prev,
         [groupId]: {
@@ -323,11 +370,11 @@ export function useKanbanPaginatedColumns(
   }, []);
 
   const patchRowOnServer = useCallback(
-    async (rowId: string, data: Record<string, unknown>) => {
+    async (rowId: string, body: PatchTrackerDataRowBody) => {
       if (!trackerId) throw new Error("Missing tracker id");
       persistRef.current?.onMutationStart?.();
       try {
-        await patchTrackerDataRow(trackerId as string, rowId, data);
+        await patchTrackerDataRow(trackerId as string, rowId, body);
         persistRef.current?.onMutationSuccess?.();
       } catch (e) {
         const msg =
