@@ -1,7 +1,17 @@
 "use client";
 
+/**
+ * React hook: Kanban **lane list** + card field metadata from layout + `grid.config.groupBy`.
+ *
+ * Column ids are computed by {@link buildKanbanGroupColumnDescriptors} in
+ * `@/lib/tracker-grid-rows/kanban-column-discovery` so the same rules can be unit-tested
+ * without React. Paginated boards pass server distinct values via
+ * `distinctValuesFromServer` (see {@link usePaginatedKanbanColumnSources}).
+ */
+
 import { useMemo } from "react";
 import { resolveFieldOptionsV2 } from "@/lib/binding";
+import { buildKanbanGroupColumnDescriptors } from "@/lib/tracker-grid-rows";
 import type {
   TrackerGrid,
   TrackerField,
@@ -18,6 +28,34 @@ import type {
 const toOptionId = (o: { id?: string; value?: unknown; label?: string }) =>
   String(o.id ?? o.value ?? o.label ?? "").trim();
 
+/** Visible fields on the grid in layout order (kanban cards + group-by candidates). */
+export function buildKanbanLayoutFields(
+  gridId: string,
+  layoutNodes: TrackerLayoutNode[],
+  fields: TrackerField[],
+): TrackerField[] {
+  const connectedFieldNodes = layoutNodes
+    .filter((n) => n.gridId === gridId)
+    .sort((a, b) => a.order - b.order);
+  return connectedFieldNodes
+    .map((node) => fields.find((f) => f.id === node.fieldId))
+    .filter((f): f is TrackerField => !!f && !f.config?.isHidden);
+}
+
+export function resolveKanbanGroupByFieldId(
+  grid: Pick<TrackerGrid, "config">,
+  kanbanFields: TrackerField[],
+): string | null {
+  if (grid.config?.groupBy) return grid.config.groupBy;
+  const optionField = kanbanFields.find(
+    (field) =>
+      field.dataType === "status" ||
+      field.dataType === "options" ||
+      field.dataType === "multiselect",
+  );
+  return optionField?.id ?? kanbanFields[0]?.id ?? null;
+}
+
 export interface UseKanbanGroupsParams {
   tabId: string;
   grid: TrackerGrid;
@@ -28,6 +66,17 @@ export interface UseKanbanGroupsParams {
   calculations?: Record<string, FieldCalculationRule>;
   gridData: Record<string, Array<Record<string, unknown>>>;
   trackerContext?: TrackerContextForOptions | null;
+  /**
+   * Distinct raw values from `GET .../distinct-field-values` when the snapshot has no rows
+   * to scan (paginated mode). Wired by {@link usePaginatedKanbanColumnSources}.
+   */
+  distinctValuesFromServer?: string[];
+  /**
+   * While true and there are no resolved options and no local values yet, column discovery
+   * is pending — {@link buildKanbanGroupColumnDescriptors} returns an empty list (no false
+   * single “Uncategorized” lane).
+   */
+  distinctGroupValuesLoading?: boolean;
 }
 
 export interface UseKanbanGroupsResult {
@@ -54,35 +103,20 @@ export function useKanbanGroups({
   calculations,
   gridData,
   trackerContext,
+  distinctValuesFromServer = [],
+  distinctGroupValuesLoading = false,
 }: UseKanbanGroupsParams): UseKanbanGroupsResult | null {
-  const connectedFieldNodes = useMemo(
-    () =>
-      layoutNodes
-        .filter((n) => n.gridId === grid.id)
-        .sort((a, b) => a.order - b.order),
-    [layoutNodes, grid.id],
-  );
-
   const kanbanFields = useMemo(
-    () =>
-      connectedFieldNodes
-        .map((node) => fields.find((f) => f.id === node.fieldId))
-        .filter((f): f is TrackerField => !!f && !f.config?.isHidden),
-    [connectedFieldNodes, fields],
+    () => buildKanbanLayoutFields(grid.id, layoutNodes, fields),
+    [layoutNodes, grid.id, fields],
   );
 
   const rows = useMemo(() => gridData[grid.id] ?? [], [gridData, grid.id]);
 
-  const groupByFieldId = useMemo(() => {
-    if (grid.config?.groupBy) return grid.config.groupBy;
-    const optionField = kanbanFields.find(
-      (field) =>
-        field.dataType === "status" ||
-        field.dataType === "options" ||
-        field.dataType === "multiselect",
-    );
-    return optionField?.id ?? null;
-  }, [grid.config?.groupBy, kanbanFields]);
+  const groupByFieldId = useMemo(
+    () => resolveKanbanGroupByFieldId(grid, kanbanFields),
+    [grid, kanbanFields],
+  );
 
   const groupingField = useMemo(() => {
     if (!groupByFieldId) return null;
@@ -105,26 +139,20 @@ export function useKanbanGroups({
 
   const groups = useMemo(() => {
     if (!groupByFieldId) return [];
-    let list: Array<{ id: string; label: string }> = [];
-    if (options?.length) {
-      list = options.map((o) => ({ id: toOptionId(o), label: o.label ?? "" }));
-    } else {
-      const distinctValues = Array.from(
-        new Set(rows.map((r) => String(r[groupByFieldId!] ?? ""))),
-      );
-      list = distinctValues.filter(Boolean).map((v) => ({ id: v, label: v }));
-    }
-    if (list.length === 0) list = [{ id: "", label: "Uncategorized" }];
-    if (!list.some((g) => g.id === "")) {
-      list = [...list, { id: "", label: "Uncategorized" }];
-    }
-    const seen = new Set<string>();
-    return list.filter((g) => {
-      if (seen.has(g.id)) return false;
-      seen.add(g.id);
-      return true;
-    });
-  }, [options, rows, groupByFieldId]);
+    return buildKanbanGroupColumnDescriptors({
+      groupByFieldId,
+      resolvedOptions: options,
+      rows,
+      serverDistinctValues: distinctValuesFromServer,
+      distinctValuesLoading: distinctGroupValuesLoading,
+    }).columns;
+  }, [
+    options,
+    rows,
+    groupByFieldId,
+    distinctValuesFromServer,
+    distinctGroupValuesLoading,
+  ]);
 
   const cardFieldsDisplay = useMemo(
     () =>

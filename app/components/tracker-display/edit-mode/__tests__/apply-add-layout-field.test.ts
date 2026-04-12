@@ -41,6 +41,15 @@ describe("computeDataGridViewPatchAfterFieldAdd", () => {
     );
     expect(patch).toEqual({ groupBy: "st" });
   });
+
+  it("sets groupBy for kanban when first column is string", () => {
+    const patch = computeDataGridViewPatchAfterFieldAdd(
+      "kanban",
+      {},
+      { id: "t1", dataType: "string" },
+    );
+    expect(patch).toEqual({ groupBy: "t1" });
+  });
 });
 
 describe("defaultViewConfigForNewDataGrid", () => {
@@ -49,6 +58,13 @@ describe("defaultViewConfigForNewDataGrid", () => {
       { id: "x", dataType: "status", ui: { label: "S" } },
     ] as TrackerField[]);
     expect(c.groupBy).toBe("x");
+  });
+
+  it("returns groupBy for kanban from first field when no select-like field", () => {
+    const c = defaultViewConfigForNewDataGrid("kanban", [
+      { id: "t", dataType: "string", ui: { label: "Title" } },
+    ] as TrackerField[]);
+    expect(c.groupBy).toBe("t");
   });
 
   it("returns dateField for calendar when a date field exists", () => {

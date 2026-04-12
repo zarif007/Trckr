@@ -12,6 +12,8 @@ This module is the **client-side half** of paginated table and kanban data: HTTP
 | `row-utils.ts` | `rowIdFromRow`, `rowPayloadForPatch` (strip `_meta` keys before PATCH). |
 | `hooks/usePaginatedGridData.ts` | Table: one page of rows, page index/size, CRUD via row APIs. |
 | `hooks/useKanbanPaginatedColumns.ts` | Kanban: first page per column in one batched update, then **Load more** per column. |
+| `hooks/useDistinctGridFieldValues.ts` | React hook: `GET .../distinct-field-values` for one JSON key (abort-safe). |
+| `kanban-column-discovery/` | **Pure** merge of option list + row values + server distincts → Kanban column descriptors (`README.md` inside). |
 | `optimistic-temp-row-id.ts` | `createOptimisticTempRowId()` — client-only `_rowId` until POST returns. |
 | `persistence.ts` | `persistNewTrackerGridRow`, `persistEditedTrackerGridRow`, `persistNewKanbanCardViaRowApi` — shared optimistic / snapshot branching. |
 
@@ -36,6 +38,12 @@ Query:
 - **Kanban filter (optional):** `groupFieldId` + `groupValue` — JSON field filter for that column.
 
 Response JSON: `{ rows, total, gridSlug? }` or `{ error }`.
+
+### `GET /api/trackers/[id]/grids/[gridSlug]/distinct-field-values`
+
+Query: `fieldKey` (JSON key on `row.data`), `branch` (default `main`).
+
+Response: `{ values: string[], gridSlug? }` — distinct non-empty text values for paginated Kanban when the snapshot has no rows. See **`kanban-column-discovery/README.md`** for how the UI merges this with local rows and resolved options.
 
 ### `POST` same path
 
@@ -86,6 +94,8 @@ Preferred public entry:
 import {
   usePaginatedGridData,
   useKanbanPaginatedColumns,
+  useDistinctGridFieldValues,
+  buildKanbanGroupColumnDescriptors,
   rowPayloadForPatch,
   persistNewTrackerGridRow,
   persistNewKanbanCardViaRowApi,
@@ -106,6 +116,8 @@ Legacy paths still work (thin re-exports):
 - `lib/__tests__/grid-data-loading.test.ts` — schema / page-size behavior
 
 Run: `npx vitest run lib/tracker-grid-rows/__tests__`
+
+- `lib/tracker-grid-rows/__tests__/kanban-column-discovery.test.ts` — pure column merge / loading edge cases
 
 ## Extension points
 

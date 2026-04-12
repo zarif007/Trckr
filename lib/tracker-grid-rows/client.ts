@@ -1,6 +1,11 @@
-import { gridRowsListPath, trackerDataRowPath } from "./api-paths";
+import {
+  gridDistinctFieldValuesPath,
+  gridRowsListPath,
+  trackerDataRowPath,
+} from "./api-paths";
 import { clampGridRowsLimit, clampGridRowsOffset } from "./limits";
 import type {
+  GridDistinctFieldValuesResponseJson,
   GridRowsCreateResponseJson,
   GridRowsListResponseJson,
   GridRowRecord,
@@ -67,6 +72,57 @@ export async function fetchGridRowsList(
     status: res.status,
     rows: Array.isArray(payload?.rows) ? payload.rows : [],
     total: typeof payload?.total === "number" ? payload.total : 0,
+    errorMessage: null,
+  };
+}
+
+export type FetchGridDistinctFieldValuesParams = {
+  trackerId: string;
+  gridSlug: string;
+  branchName: string;
+  fieldKey: string;
+};
+
+export async function fetchGridDistinctFieldValues(
+  params: FetchGridDistinctFieldValuesParams,
+  init?: RequestInit,
+): Promise<{
+  ok: boolean;
+  status: number;
+  values: string[];
+  errorMessage: string | null;
+}> {
+  const sp = new URLSearchParams({
+    fieldKey: params.fieldKey,
+    branch: params.branchName,
+  });
+  const url = gridDistinctFieldValuesPath(
+    params.trackerId,
+    params.gridSlug,
+    sp,
+  );
+  const res = await fetch(url, init);
+  const payload = (await res.json().catch(() => null)) as
+    | GridDistinctFieldValuesResponseJson
+    | null;
+
+  if (!res.ok) {
+    const msg =
+      typeof payload?.error === "string"
+        ? payload.error
+        : `Failed to load distinct values (${res.status})`;
+    return {
+      ok: false,
+      status: res.status,
+      values: [],
+      errorMessage: msg,
+    };
+  }
+
+  return {
+    ok: true,
+    status: res.status,
+    values: Array.isArray(payload?.values) ? payload.values : [],
     errorMessage: null,
   };
 }

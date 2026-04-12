@@ -166,6 +166,50 @@ export async function listGridRows(
   return { items, total };
 }
 
+/**
+ * Distinct non-empty string values for one JSON key on row `data` (kanban / grouping).
+ * Uses `->>` so numbers/booleans match the same string form as the row list filter.
+ *
+ * Consumed by `GET .../distinct-field-values` and merged client-side by
+ * `buildKanbanGroupColumnDescriptors` — see `lib/tracker-grid-rows/kanban-column-discovery/README.md`.
+ */
+export async function listDistinctDataValuesForGridField(
+  trackerId: string,
+  gridId: string,
+  userId: string,
+  fieldKey: string,
+  options: { branchName?: string; limit?: number } = {},
+): Promise<{ values: string[] } | null> {
+  const tracker = await prisma.trackerSchema.findFirst({
+    where: { id: trackerId, project: { userId } },
+    select: { id: true },
+  });
+  if (!tracker) return null;
+
+  assertSafeJsonPathKey(fieldKey);
+  const keyLit = Prisma.raw(`'${fieldKey}'`);
+  const branchName = options.branchName ?? "main";
+  const limit = Math.min(Math.max(1, options.limit ?? 500), 500);
+
+  const rows = await prisma.$queryRaw<{ v: string | null }[]>`
+    SELECT DISTINCT (r.data->>${keyLit}) AS v
+    FROM "GridRow" r
+    WHERE r."trackerId" = ${trackerId}
+      AND r."gridId" = ${gridId}
+      AND r."branchName" = ${branchName}
+      AND r."deletedAt" IS NULL
+      AND (r.data->>${keyLit}) IS NOT NULL
+      AND (r.data->>${keyLit}) != ''
+    ORDER BY v ASC
+    LIMIT ${limit}
+  `;
+
+  const values = rows
+    .map((row) => (row.v == null ? "" : String(row.v).trim()))
+    .filter(Boolean);
+  return { values };
+}
+
 // ---------------------------------------------------------------------------
 // List all rows for a tracker (all grids), used for snapshot assembly
 // ---------------------------------------------------------------------------

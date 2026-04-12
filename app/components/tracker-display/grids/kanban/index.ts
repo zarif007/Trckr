@@ -9,8 +9,17 @@ export type {
   DroppableEmptyColumnProps,
   ColumnDropZoneProps,
 } from "./DroppableZone";
-export { useKanbanGroups } from "./useKanbanGroups";
+export {
+  useKanbanGroups,
+  buildKanbanLayoutFields,
+  resolveKanbanGroupByFieldId,
+} from "./useKanbanGroups";
 export type {
   UseKanbanGroupsParams,
   UseKanbanGroupsResult,
 } from "./useKanbanGroups";
+export {
+  usePaginatedKanbanColumnSources,
+  type UsePaginatedKanbanColumnSourcesParams,
+  type UsePaginatedKanbanColumnSourcesResult,
+} from "./usePaginatedKanbanColumnSources";

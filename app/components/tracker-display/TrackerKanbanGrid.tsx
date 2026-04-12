@@ -48,6 +48,7 @@ import {
   DroppableEmptyColumn,
   ColumnDropZone,
   useKanbanGroups,
+  usePaginatedKanbanColumnSources,
 } from "./grids/kanban";
 import { GridLayoutEditChrome } from "./grids/shared/GridLayoutEditChrome";
 import type {
@@ -170,6 +171,23 @@ function TrackerKanbanGridInner({
   const trackerContext = trackerOptionsFromContext ?? trackerContextProp;
   const foreignGridDataBySchemaId = trackerContext?.foreignGridDataBySchemaId;
 
+  const {
+    distinctValuesFromServer: distinctKanbanGroupValues,
+    distinctGroupValuesLoading: distinctKanbanGroupValuesLoading,
+    columnDiscoveryError,
+  } = usePaginatedKanbanColumnSources({
+    tabId,
+    grid,
+    layoutNodes,
+    fields,
+    bindings,
+    gridDataForKanban,
+    trackerContext,
+    gridIsPaginatedCapable,
+    trackerId: dataApiTrackerId,
+    branchName: gridDataBranchName ?? "main",
+  });
+
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editRowIndex, setEditRowIndex] = useState<number | null>(null);
@@ -190,6 +208,8 @@ function TrackerKanbanGridInner({
     calculations,
     gridData: gridDataForKanban,
     trackerContext,
+    distinctValuesFromServer: distinctKanbanGroupValues,
+    distinctGroupValuesLoading: distinctKanbanGroupValuesLoading,
   });
 
   const existingLayoutFieldIds = useMemo(
@@ -741,23 +761,17 @@ function TrackerKanbanGridInner({
                 <>
                   {" "}
                   Use <span className="font-medium text-foreground">Add column</span>{" "}
-                  above, then add a{" "}
-                  <span className="font-medium text-foreground">status</span>,{" "}
-                  <span className="font-medium text-foreground">options</span>, or{" "}
-                  <span className="font-medium text-foreground">multiselect</span>{" "}
-                  field for columns.
+                  above, then pick a{" "}
+                  <span className="font-medium text-foreground">group by</span> column in
+                  Configure view (any column on this grid can define board columns).
                 </>
               ) : null}
             </>
           ) : (
             <>
-              Kanban needs a grouping column on this board: add a{" "}
-              <span className="font-medium text-foreground">status</span>,{" "}
-              <span className="font-medium text-foreground">options</span>, or{" "}
-              <span className="font-medium text-foreground">multiselect</span>{" "}
-              column, or set{" "}
-              <span className="font-medium text-foreground">groupBy</span> in view
-              settings.
+              Kanban needs a grouping column: add columns to this grid, then set{" "}
+              <span className="font-medium text-foreground">groupBy</span> in Configure
+              view (any column on the grid can be used).
             </>
           )}
         </div>
@@ -936,6 +950,27 @@ function TrackerKanbanGridInner({
           gridData={gridDataForCards}
         />
       )}
+
+      {columnDiscoveryError ? (
+        <p
+          className={cn(
+            "mb-2 rounded-sm border px-3 py-2 text-xs text-warning",
+            theme.uiChrome.border,
+            theme.radius.md,
+          )}
+          role="status"
+        >
+          {columnDiscoveryError} — columns may be incomplete until you refresh.
+        </p>
+      ) : null}
+
+      {mutateKanbanViaRowApi &&
+      distinctKanbanGroupValuesLoading &&
+      groups.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">
+          Loading board columns…
+        </p>
+      ) : null}
 
       <div className="flex gap-4 overflow-x-auto pb-4 items-start">
         {groups.map((group) => {

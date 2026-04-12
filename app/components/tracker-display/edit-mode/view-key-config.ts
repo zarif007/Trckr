@@ -91,12 +91,5 @@ export function computeViewKeyWarning(params: {
   if (!fld) {
     return "Kanban group-by field must be a column on this grid. Use Add column or change the key in Configure view.";
   }
-  if (
-    fld.dataType !== "status" &&
-    fld.dataType !== "options" &&
-    fld.dataType !== "multiselect"
-  ) {
-    return "Kanban group-by must be a status, options, or multiselect field.";
-  }
   return null;
 }

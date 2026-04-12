@@ -15,13 +15,14 @@ export function defaultViewConfigForNewDataGrid(
 ): Record<string, unknown> {
   const f = fields ?? [];
   if (type === "kanban") {
-    const gf = f.find(
+    const prefer = f.find(
       (x) =>
         x.dataType === "status" ||
         x.dataType === "options" ||
         x.dataType === "multiselect",
     );
-    return gf ? { groupBy: gf.id } : {};
+    const pick = prefer ?? f[0];
+    return pick ? { groupBy: pick.id } : {};
   }
   if (type === "calendar") {
     const df = f.find((x) => x.dataType === "date");
@@ -127,12 +128,7 @@ export function computeDataGridViewPatchAfterFieldAdd(
   const patch: Record<string, unknown> = {};
 
   if (viewType === "kanban") {
-    if (
-      !c.groupBy &&
-      (addedField.dataType === "status" ||
-        addedField.dataType === "options" ||
-        addedField.dataType === "multiselect")
-    ) {
+    if (!c.groupBy) {
       patch.groupBy = addedField.id;
     }
     return patch;

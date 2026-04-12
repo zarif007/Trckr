@@ -11,6 +11,15 @@ export function gridRowsListPath(
   return `/api/trackers/${encodeURIComponent(trackerId)}/grids/${encodeURIComponent(gridSlug)}/rows${q ? `?${q}` : ""}`;
 }
 
+export function gridDistinctFieldValuesPath(
+  trackerId: string,
+  gridSlug: string,
+  searchParams: URLSearchParams,
+): string {
+  const q = searchParams.toString();
+  return `/api/trackers/${encodeURIComponent(trackerId)}/grids/${encodeURIComponent(gridSlug)}/distinct-field-values${q ? `?${q}` : ""}`;
+}
+
 export function trackerDataRowPath(trackerId: string, rowId: string): string {
   return `/api/trackers/${encodeURIComponent(trackerId)}/data/${encodeURIComponent(rowId)}`;
 }

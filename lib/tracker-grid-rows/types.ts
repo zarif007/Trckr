@@ -9,6 +9,13 @@ export type GridRowsListResponseJson = {
   gridSlug?: string;
 };
 
+/** GET `/api/trackers/[id]/grids/[gridSlug]/distinct-field-values` */
+export type GridDistinctFieldValuesResponseJson = {
+  values?: string[];
+  error?: string;
+  gridSlug?: string;
+};
+
 export type GridRowsCreateResponseJson = {
   row?: Record<string, unknown>;
   error?: string;

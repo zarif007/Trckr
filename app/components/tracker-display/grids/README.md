@@ -7,7 +7,7 @@ Feature-local **view implementations** for tracker grid data: table, kanban, cal
 | Directory     | Purpose                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------- |
 | `data-table/` | TanStack-based table + cells + `EntryFormDialog` primitives (see `data-table/README.md`)        |
-| `kanban/`     | Kanban columns, cards, DnD zones, `useKanbanGroups`                                             |
+| `kanban/`     | Kanban columns, cards, DnD zones, `useKanbanGroups`, `usePaginatedKanbanColumnSources` (column discovery); pure merge lives in `lib/tracker-grid-rows/kanban-column-discovery` |
 | `calendar/`   | Month / week / day calendar over rows (`calendar/README.md`)                                   |
 | `timeline/`   | Swimlane timeline (`timeline/README.md`)                                                      |
 | `shared/`     | Row API vs snapshot + entry form metadata + persistence helpers (`shared/README.md`)           |

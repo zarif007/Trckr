@@ -212,14 +212,20 @@ export function ViewManager({
 
     // Add view-specific default config
     if (newViewType === "kanban") {
-      const groupField = fields.find(
+      const ordered = layoutNodes
+        .filter((n) => n.gridId === grid.id)
+        .sort((a, b) => a.order - b.order)
+        .map((n) => fields.find((f) => f.id === n.fieldId))
+        .filter((f): f is TrackerField => !!f && !f.config?.isHidden);
+      const preferred = ordered.find(
         (f) =>
           f.dataType === "status" ||
           f.dataType === "options" ||
           f.dataType === "multiselect",
       );
-      if (groupField) {
-        newView.config = { groupBy: groupField.id };
+      const pick = preferred ?? ordered[0];
+      if (pick) {
+        newView.config = { groupBy: pick.id };
       }
     } else if (newViewType === "calendar") {
       const dateField = fields.find((f) => f.dataType === "date");
@@ -242,7 +248,7 @@ export function ViewManager({
     setShowAddDialog(false);
     setNewViewName("");
     setNewViewType("table");
-  }, [grid.id, views, newViewType, newViewName, fields, onViewsChange]);
+  }, [grid.id, views, newViewType, newViewName, fields, layoutNodes, onViewsChange]);
 
   // Remove a view
   const handleRemoveView = useCallback(
@@ -442,7 +448,7 @@ export function ViewManager({
                 {newViewType === "table" &&
                   "Spreadsheet-style columns and sorting."}
                 {newViewType === "kanban" &&
-                  "Columns from a status or select field."}
+                  "Columns from the field you group by (options-backed or distinct values in rows)."}
                 {newViewType === "calendar" &&
                   "Month, week, or day by a single date field."}
                 {newViewType === "timeline" &&
@@ -656,9 +662,9 @@ function ViewConfigDialog({
           {view.type === "kanban" && (
             <ConfigSection
               title="Board columns"
-              description="Each lane matches one value of the field you group by."
+              description="Each column matches one value of the field you group by (fixed options when the field has them, otherwise values seen in rows plus Unassigned)."
             >
-              {laneGroupingFieldCandidates.length > 0 ? (
+              {fieldsOnGrid.length > 0 ? (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">
                     Group by
@@ -666,7 +672,7 @@ function ViewConfigDialog({
                   <Select
                     value={pickSelectValue(
                       config?.groupBy as string | undefined,
-                      laneGroupingFieldIds,
+                      fieldIdsOnGrid,
                     )}
                     onValueChange={(value) =>
                       setConfig((c) => ({
@@ -682,7 +688,7 @@ function ViewConfigDialog({
                       <SelectItem value={SELECT_NONE}>
                         <span className="text-muted-foreground">Choose column</span>
                       </SelectItem>
-                      {laneGroupingFieldCandidates.map((field) => (
+                      {fieldsOnGrid.map((field) => (
                         <SelectItem key={field.id} value={field.id}>
                           {field.ui.label}
                         </SelectItem>
@@ -692,11 +698,9 @@ function ViewConfigDialog({
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Add a column suitable for grouping (for example{" "}
-                  <span className="font-medium text-foreground">status</span>,{" "}
-                  <span className="font-medium text-foreground">options</span>, or{" "}
-                  <span className="font-medium text-foreground">short text</span>
-                  ), then choose it here.
+                  Add at least one column to this grid with{" "}
+                  <span className="font-medium text-foreground">Add column</span>, then
+                  choose it here.
                 </p>
               )}
             </ConfigSection>
