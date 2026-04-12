@@ -30,6 +30,8 @@ export interface TimelineSwimlaneTrackProps {
   stackDepth: number;
   setPrimaryTrackRef: (el: HTMLDivElement | null) => void;
   dropPreviewLeftPct: number | null;
+  /** Hide per-lane empty hint when a full-strip empty state is shown above. */
+  hideLaneEmptyHint?: boolean;
 }
 
 /**
@@ -51,6 +53,7 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
   stackDepth,
   setPrimaryTrackRef,
   dropPreviewLeftPct,
+  hideLaneEmptyHint = false,
 }: TimelineSwimlaneTrackProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: timelineLaneDropId(lane.id),
@@ -71,10 +74,10 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
       <div
         className={cn(
           gridColumnHeader,
-          "w-28 md:w-44 shrink-0 flex flex-row items-center gap-1.5 py-2",
+          "w-32 md:w-48 shrink-0 flex flex-row items-center gap-2 border-r py-2.5",
         )}
       >
-        <span className="text-xs md:text-sm font-medium text-foreground truncate">
+        <span className="truncate text-xs font-semibold text-foreground md:text-sm">
           {lane.label}
         </span>
         <span
@@ -91,12 +94,13 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
         ref={setRefs}
         data-timeline-track="1"
         className={cn(
-          "flex-1 relative min-w-0 bg-background transition-colors",
+          "relative min-w-0 flex-1 bg-background transition-colors",
           theme.uiChrome.border,
           "border-l",
-          timelineClickToAddEnabled && "cursor-pointer",
-          laneIndex % 2 === 1 && "bg-muted/[0.14]",
-          isOver && dragEnabled && "bg-primary/[0.09]",
+          timelineClickToAddEnabled &&
+            "cursor-pointer hover:bg-muted/40 focus-visible:outline-none",
+          laneIndex % 2 === 1 && "bg-muted/25",
+          isOver && dragEnabled && "bg-primary/10",
         )}
         style={{ height: trackHeight }}
         onClick={onTrackClick}
@@ -110,7 +114,7 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
               className={cn(
                 "absolute top-0 h-full border-l pointer-events-none",
                 theme.uiChrome.border,
-                isWeekend ? "bg-muted/[0.18]" : "",
+                isWeekend ? "bg-muted/30" : "",
               )}
               style={{ left: `${left}%` }}
             />
@@ -141,16 +145,17 @@ export const TimelineSwimlaneTrack = memo(function TimelineSwimlaneTrack({
           />
         ))}
 
-        {placedInLane.length === 0 && (
+        {placedInLane.length === 0 && !hideLaneEmptyHint ? (
           <div
             className={cn(
-              "absolute inset-x-0 bottom-1 flex items-center justify-center pointer-events-none",
-              "text-[10px] md:text-xs text-muted-foreground",
+              "pointer-events-none absolute inset-x-0 bottom-2 flex items-center justify-center",
+              "rounded-sm border border-dashed px-2 py-1.5 text-[10px] text-muted-foreground md:text-xs",
+              theme.uiChrome.border,
             )}
           >
-            {timelineClickToAddEnabled ? "Click to add" : "No entries"}
+            {timelineClickToAddEnabled ? "Click empty space to add" : "No entries"}
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

@@ -8,6 +8,7 @@ import { buildCellEventsForDate } from "./calendar-event-utils";
 export interface UseCalendarGridModelParams {
   rows: Array<Record<string, unknown>>;
   dateFieldId: string | undefined;
+  durationFieldId?: string | undefined;
   initialView: CalendarView;
 }
 
@@ -18,6 +19,7 @@ export interface UseCalendarGridModelParams {
 export function useCalendarGridModel({
   rows,
   dateFieldId,
+  durationFieldId,
   initialView,
 }: UseCalendarGridModelParams) {
   const [view, setView] = useState<CalendarView>(initialView);
@@ -33,8 +35,8 @@ export function useCalendarGridModel({
   );
 
   const getEventsForDate = useCallback(
-    (date: Date) => buildCellEventsForDate(rows, date, dateFieldId),
-    [rows, dateFieldId],
+    (date: Date) => buildCellEventsForDate(rows, date, dateFieldId, durationFieldId),
+    [rows, dateFieldId, durationFieldId],
   );
 
   const isToday = useCallback((date: Date) => {

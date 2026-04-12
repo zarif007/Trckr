@@ -82,7 +82,7 @@ export const gridViewSchema = z
       "View type; use type-specific config (e.g. groupBy for kanban).",
     ),
     config: gridConfigSchema.describe(
-      "Per-view options: table (pageSize, defaultSort); kanban (groupBy); calendar (dateField, titleField, viewType); timeline (dateField, endDateField, titleField, swimlaneField, viewType); div (layout). Key field ids must exist on the grid layoutNodes.",
+      "Per-view options: table (pageSize, defaultSort); kanban (groupBy); calendar (dateField, titleField, viewType); timeline (dateField, endDateField, titleField, groupingField, viewType; swimlaneField is legacy alias for groupingField); div (layout). Key field ids must exist on the grid layoutNodes.",
     ),
   })
   .passthrough();

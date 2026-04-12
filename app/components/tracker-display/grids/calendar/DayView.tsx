@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { cn } from "@/lib/utils";
 import type { CalendarCellEvent } from "./types";
+import { parseEventDateTime } from "./calendar-event-utils";
 
 export interface DayViewProps {
   date: Date;
@@ -11,9 +12,13 @@ export interface DayViewProps {
   onEventClick: (rowIndex: number) => void;
   isToday: (date: Date) => boolean;
   titleFieldId?: string;
+  dateFieldId?: string;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const HOUR_HEIGHT_PX = 48; // h-12 = 48px on mobile
+const HOUR_HEIGHT_MD_PX = 56; // md:h-14 = 56px on desktop
 
 export const DayView = memo(function DayView({
   date,
@@ -22,9 +27,34 @@ export const DayView = memo(function DayView({
   onEventClick,
   isToday,
   titleFieldId,
+  dateFieldId,
 }: DayViewProps) {
   const events = getEventsForDate(date);
   const today = isToday(date);
+
+  // Parse time information for events
+  const eventsWithTime = events.map((event) => {
+    if (!dateFieldId) return { ...event, hour: undefined, minute: undefined };
+
+    const timeInfo = parseEventDateTime(event.row, dateFieldId);
+    return {
+      ...event,
+      hour: timeInfo?.hour,
+      minute: timeInfo?.minute,
+    };
+  });
+
+  // Separate all-day events (no time) from timed events
+  const allDayEvents = eventsWithTime.filter(e => e.hour === undefined);
+  const timedEvents = eventsWithTime.filter(e => e.hour !== undefined);
+
+  // Calculate position for timed event
+  const calculateEventPosition = (hour: number, minute: number = 0) => {
+    const totalMinutes = hour * 60 + minute;
+    const topPx = (totalMinutes / 60) * HOUR_HEIGHT_PX;
+    const topMdPx = (totalMinutes / 60) * HOUR_HEIGHT_MD_PX;
+    return { topPx, topMdPx };
+  };
 
   return (
     <div className="h-full flex flex-col min-w-[280px]">
@@ -67,11 +97,12 @@ export const DayView = memo(function DayView({
               />
             ))}
 
-            {events.length > 0 && (
-              <div className="absolute top-2 left-1 md:left-2 right-1 md:right-2 space-y-1">
-                {events.map((event, i) => (
+            {/* All-day events (no time) - stacked at top */}
+            {allDayEvents.length > 0 && (
+              <div className="absolute top-2 left-1 md:left-2 right-1 md:right-2 space-y-1 z-10">
+                {allDayEvents.map((event, i) => (
                   <div
-                    key={i}
+                    key={`allday-${i}`}
                     role="button"
                     tabIndex={0}
                     onClick={(e) => {
@@ -86,20 +117,60 @@ export const DayView = memo(function DayView({
                       }
                     }}
                     className={cn(
-                      "text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2 rounded-sm truncate",
+                      "text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 rounded-sm truncate",
                       "bg-primary/10 text-primary border border-primary/20",
                       "cursor-pointer hover:bg-primary/15",
                     )}
                   >
+                    <span className="text-[10px] md:text-xs opacity-60 mr-1">All day:</span>
                     {titleFieldId
-                      ? String(
-                          (event.row[titleFieldId] as string) ?? "Untitled",
-                        )
+                      ? String((event.row[titleFieldId] as string) ?? "Untitled")
                       : "Event"}
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Timed events - positioned by hour/minute */}
+            {timedEvents.map((event, i) => {
+              if (event.hour === undefined) return null;
+              const { topPx, topMdPx } = calculateEventPosition(event.hour, event.minute);
+
+              return (
+                <div
+                  key={`timed-${i}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEventClick(event.rowIndex);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEventClick(event.rowIndex);
+                    }
+                  }}
+                  className={cn(
+                    "absolute left-1 md:left-2 right-1 md:right-2",
+                    "text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2 rounded-sm truncate",
+                    "bg-primary/10 text-primary border border-primary/20",
+                    "cursor-pointer hover:bg-primary/15 z-[5]",
+                  )}
+                  style={{
+                    top: `${topPx}px`,
+                  }}
+                >
+                  <span className="text-[10px] md:text-xs opacity-60 mr-1">
+                    {event.hour.toString().padStart(2, '0')}:{(event.minute ?? 0).toString().padStart(2, '0')}
+                  </span>
+                  {titleFieldId
+                    ? String((event.row[titleFieldId] as string) ?? "Untitled")
+                    : "Event"}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

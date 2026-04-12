@@ -11,7 +11,7 @@ import {
 import type { TimelineView } from "./types";
 
 export interface TimelineStripTimeAxisProps {
-  swimlaneFieldId?: string;
+  groupingFieldId?: string;
   timeMarkers: Date[];
   labelStep: number;
   rangeStart: Date;
@@ -23,7 +23,7 @@ export interface TimelineStripTimeAxisProps {
  * Sticky row: corner label + proportional day ticks with sparse labels for dense ranges.
  */
 export const TimelineStripTimeAxis = memo(function TimelineStripTimeAxis({
-  swimlaneFieldId,
+  groupingFieldId,
   timeMarkers,
   labelStep,
   rangeStart,
@@ -35,24 +35,24 @@ export const TimelineStripTimeAxis = memo(function TimelineStripTimeAxis({
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 flex shrink-0 bg-background",
+        "sticky top-0 z-10 flex shrink-0 bg-muted/30",
         gridRow,
       )}
     >
       <div
         className={cn(
           gridColumnHeader,
-          "w-28 md:w-44 shrink-0 flex items-end py-2",
+          "w-32 md:w-48 shrink-0 flex items-end border-r py-2.5",
         )}
       >
-        <span className="text-[10px] md:text-xs font-medium text-muted-foreground">
-          {swimlaneFieldId ? "Group" : "Items"}
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground md:text-[11px]">
+          {groupingFieldId ? "Lanes" : "All items"}
         </span>
       </div>
 
       <div
         className={cn(
-          "flex-1 relative min-w-0 border-l bg-muted/40",
+          "relative min-w-0 flex-1 border-l bg-muted/35",
           theme.uiChrome.border,
         )}
         style={{ height: axisHeaderHeight }}
@@ -74,10 +74,10 @@ export const TimelineStripTimeAxis = memo(function TimelineStripTimeAxis({
               {showLabel ? (
                 <span
                   className={cn(
-                    "absolute top-2 left-1 max-w-[6rem] truncate text-xs sm:text-sm font-medium leading-tight",
+                    "absolute left-1 top-2.5 max-w-[6.5rem] truncate text-xs font-semibold leading-tight sm:max-w-[7rem] sm:text-sm",
                     isWeekend
-                      ? "text-muted-foreground/75"
-                      : "text-muted-foreground",
+                      ? "text-muted-foreground/80"
+                      : "text-foreground/90",
                   )}
                 >
                   {view === "day"

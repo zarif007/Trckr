@@ -19,6 +19,14 @@ export type CalendarView = "month" | "week" | "day";
 export type CalendarCellEvent = {
   row: Record<string, unknown>;
   rowIndex: number;
+  /** Hour (0-23) if time information is available */
+  hour?: number;
+  /** Minute (0-59) if time information is available */
+  minute?: number;
+  /** Duration in days (for multi-day events) */
+  duration?: number;
+  /** End date (calculated from start date + duration) */
+  endDate?: Date;
 };
 
 export interface TrackerCalendarGridProps {

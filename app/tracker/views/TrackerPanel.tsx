@@ -533,9 +533,8 @@ export const TrackerPanel = memo(function TrackerPanel({
       </Dialog>
 
       <div
-        className={`h-full overflow-y-auto ${
-          hideChatToggle ? "px-0 pt-12 pb-1" : "px-2 pt-14 pb-2"
-        }`}
+        className={`h-full overflow-y-auto ${hideChatToggle ? "px-0 pt-12 pb-1" : "px-2 pt-14 pb-2"
+          }`}
       >
         {ownerScopeSettingsBanner && (
           <OwnerScopeSettingsReadout banner={ownerScopeSettingsBanner} />

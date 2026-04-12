@@ -46,7 +46,7 @@ export const TimelineCanvas = memo(function TimelineCanvas({
   swimlanes,
   timeRange,
   view,
-  swimlaneFieldId,
+  groupingFieldId,
   minContentWidthPx,
   timelineClickToAddEnabled,
   mutateViaRowApi,
@@ -155,16 +155,17 @@ export const TimelineCanvas = memo(function TimelineCanvas({
   }, []);
 
   const { minCanvasWidthFloorPx, barHeightPx } = TIMELINE_STRIP_LAYOUT;
+  const globalStripEmpty = placedBars.length === 0;
 
   const inner = (
     <div
-      className="flex flex-col w-full min-w-0"
+      className="flex min-w-0 w-full flex-col overflow-hidden bg-card"
       style={{
         minWidth: Math.max(minContentWidthPx, minCanvasWidthFloorPx),
       }}
     >
       <TimelineStripTimeAxis
-        swimlaneFieldId={swimlaneFieldId}
+        groupingFieldId={groupingFieldId}
         timeMarkers={timeMarkers}
         labelStep={labelStep}
         rangeStart={start}
@@ -172,7 +173,13 @@ export const TimelineCanvas = memo(function TimelineCanvas({
         view={view}
       />
 
-      <div className="relative w-full bg-muted/15">
+      <div
+        className={cn(
+          "relative w-full bg-muted/20",
+          globalStripEmpty &&
+            "min-h-[200px] sm:min-h-[240px] md:min-h-[280px]",
+        )}
+      >
         {swimlanes.map((lane, laneIndex) => {
           const placedInLane = placedByLane.get(lane.id) ?? [];
           const stackDepth = maxStackByLane.get(lane.id) ?? 1;
@@ -193,11 +200,12 @@ export const TimelineCanvas = memo(function TimelineCanvas({
               stackDepth={stackDepth}
               setPrimaryTrackRef={setPrimaryTrackRef}
               dropPreviewLeftPct={dropPreviewLeftPct}
+              hideLaneEmptyHint={globalStripEmpty}
             />
           );
         })}
 
-        {placedBars.length === 0 && (
+        {globalStripEmpty && (
           <TimelineStripEmptyState
             timelineClickToAddEnabled={timelineClickToAddEnabled}
           />

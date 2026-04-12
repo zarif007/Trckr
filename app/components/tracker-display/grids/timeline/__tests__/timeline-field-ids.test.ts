@@ -49,4 +49,120 @@ describe("resolveTimelineFieldIds", () => {
     expect(dateFieldId).toBe("d2");
     expect(endDateFieldId).toBe("d1");
   });
+
+  it("prefers groupingField over legacy swimlaneField", () => {
+    const layoutNodes: TrackerLayoutNode[] = [
+      { gridId: "g1", fieldId: "start", order: 0 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "end", order: 1 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "title", order: 2 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "status", order: 3 } as TrackerLayoutNode,
+    ];
+    const fields = [
+      field("start", "date", "Start"),
+      field("end", "date", "End"),
+      field("title", "text", "Name"),
+      field("status", "options", "Status"),
+    ];
+    const { groupingFieldId } = resolveTimelineFieldIds(
+      layoutNodes,
+      {
+        dateField: "start",
+        endDateField: "end",
+        groupingField: "status",
+        swimlaneField: "title",
+      },
+      fields,
+    );
+    expect(groupingFieldId).toBe("status");
+  });
+
+  it("accepts legacy swimlaneField when groupingField is absent", () => {
+    const layoutNodes: TrackerLayoutNode[] = [
+      { gridId: "g1", fieldId: "start", order: 0 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "end", order: 1 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "title", order: 2 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "status", order: 3 } as TrackerLayoutNode,
+    ];
+    const fields = [
+      field("start", "date", "Start"),
+      field("end", "date", "End"),
+      field("title", "text", "Name"),
+      field("status", "options", "Status"),
+    ];
+    const { groupingFieldId } = resolveTimelineFieldIds(
+      layoutNodes,
+      { dateField: "start", endDateField: "end", swimlaneField: "status" },
+      fields,
+    );
+    expect(groupingFieldId).toBe("status");
+  });
+
+  it("rejects grouping when id is start or end date column", () => {
+    const layoutNodes: TrackerLayoutNode[] = [
+      { gridId: "g1", fieldId: "start", order: 0 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "end", order: 1 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "title", order: 2 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "status", order: 3 } as TrackerLayoutNode,
+    ];
+    const fields = [
+      field("start", "date", "Start"),
+      field("end", "date", "End"),
+      field("title", "text", "Name"),
+      field("status", "options", "Status"),
+    ];
+    expect(
+      resolveTimelineFieldIds(
+        layoutNodes,
+        { dateField: "start", endDateField: "end", groupingField: "start" },
+        fields,
+      ).groupingFieldId,
+    ).toBeUndefined();
+    expect(
+      resolveTimelineFieldIds(
+        layoutNodes,
+        { dateField: "start", endDateField: "end", groupingField: "end" },
+        fields,
+      ).groupingFieldId,
+    ).toBeUndefined();
+  });
+
+  it("allows grouping on the inferred title column (same field may title bars and lanes)", () => {
+    const layoutNodes: TrackerLayoutNode[] = [
+      { gridId: "g1", fieldId: "start", order: 0 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "end", order: 1 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "title", order: 2 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "status", order: 3 } as TrackerLayoutNode,
+    ];
+    const fields = [
+      field("start", "date", "Start"),
+      field("end", "date", "End"),
+      field("title", "text", "Name"),
+      field("status", "options", "Status"),
+    ];
+    expect(
+      resolveTimelineFieldIds(
+        layoutNodes,
+        { dateField: "start", endDateField: "end", groupingField: "title" },
+        fields,
+      ).groupingFieldId,
+    ).toBe("title");
+  });
+
+  it("rejects grouping field id not on grid layout", () => {
+    const layoutNodes: TrackerLayoutNode[] = [
+      { gridId: "g1", fieldId: "start", order: 0 } as TrackerLayoutNode,
+      { gridId: "g1", fieldId: "end", order: 1 } as TrackerLayoutNode,
+    ];
+    const fields = [
+      field("start", "date", "Start"),
+      field("end", "date", "End"),
+      field("ghost", "options", "Ghost"),
+    ];
+    const { groupingFieldId } = resolveTimelineFieldIds(
+      layoutNodes,
+      { dateField: "start", endDateField: "end", groupingField: "ghost" },
+      fields,
+    );
+    expect(groupingFieldId).toBeUndefined();
+  });
 });

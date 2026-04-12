@@ -14,7 +14,8 @@ export function resolveTimelineFieldIds(
   dateFieldId: string | undefined;
   endDateFieldId: string | undefined;
   titleFieldId: string | undefined;
-  swimlaneFieldId: string | undefined;
+  /** Lane grouping column: `config.groupingField` or legacy `config.swimlaneField`. */
+  groupingFieldId: string | undefined;
 } {
   const fieldById = new Map(fields.map((f) => [f.id, f]));
 
@@ -61,7 +62,23 @@ export function resolveTimelineFieldIds(
             !rangeIds.has(id) && fieldById.get(id)?.dataType !== "date",
         );
 
-  const swimlaneFieldId = config?.swimlaneField as string | undefined;
+  const configuredGrouping =
+    (config?.groupingField as string | undefined) ??
+    (config?.swimlaneField as string | undefined);
 
-  return { dateFieldId, endDateFieldId, titleFieldId, swimlaneFieldId };
+  /** Only the date range columns are invalid for swimlanes — not the title column. */
+  const excludedFromGrouping = new Set(
+    [dateFieldId, endDateFieldId].filter(
+      (id): id is string => typeof id === "string" && id.length > 0,
+    ),
+  );
+
+  const groupingFieldId =
+    configuredGrouping &&
+    orderedLayoutFieldIds.includes(configuredGrouping) &&
+    !excludedFromGrouping.has(configuredGrouping)
+      ? configuredGrouping
+      : undefined;
+
+  return { dateFieldId, endDateFieldId, titleFieldId, groupingFieldId };
 }

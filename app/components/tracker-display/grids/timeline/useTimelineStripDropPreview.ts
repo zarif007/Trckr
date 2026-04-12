@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   localDayStartFromTimelineMs,
   timelineInstantLeftPercent,
@@ -38,12 +38,36 @@ export function useTimelineStripDropPreview({
   const [dropPreview, setDropPreview] = useState<TimelineDropPreviewState | null>(
     null,
   );
+  const rafRef = useRef<number>(0);
+  const pendingRef = useRef<TimelineDropPreviewState | null>(null);
 
   useEffect(() => {
     if (!activeBarId || !timelineDragEnabled) {
+      if (rafRef.current !== 0) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      pendingRef.current = null;
       setDropPreview(null);
       return;
     }
+
+    const flush = () => {
+      rafRef.current = 0;
+      const next = pendingRef.current;
+      if (!next) return;
+      setDropPreview((prev) => {
+        if (
+          prev &&
+          prev.day.getTime() === next.day.getTime() &&
+          prev.clientX === next.clientX &&
+          prev.clientY === next.clientY
+        ) {
+          return prev;
+        }
+        return next;
+      });
+    };
 
     const onPointerMove = (ev: PointerEvent) => {
       const stack = document.elementsFromPoint(ev.clientX, ev.clientY);
@@ -52,6 +76,11 @@ export function useTimelineStripDropPreview({
           n instanceof HTMLElement && n.matches(TRACK_SELECTOR),
       );
       if (!track) {
+        pendingRef.current = null;
+        if (rafRef.current !== 0) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = 0;
+        }
         setDropPreview(null);
         return;
       }
@@ -60,21 +89,34 @@ export function useTimelineStripDropPreview({
       const p = rect.width > 0 ? x / rect.width : 0;
       const totalMs = rangeEnd.getTime() - rangeStart.getTime();
       if (totalMs <= 0) {
+        pendingRef.current = null;
+        if (rafRef.current !== 0) {
+          cancelAnimationFrame(rafRef.current);
+          rafRef.current = 0;
+        }
         setDropPreview(null);
         return;
       }
       const ms = rangeStart.getTime() + p * totalMs;
       const day = localDayStartFromTimelineMs(ms);
-      setDropPreview({
+      pendingRef.current = {
         day,
         clientX: ev.clientX,
         clientY: ev.clientY,
-      });
+      };
+      if (rafRef.current === 0) {
+        rafRef.current = requestAnimationFrame(flush);
+      }
     };
 
-    window.addEventListener("pointermove", onPointerMove, true);
+    window.addEventListener("pointermove", onPointerMove, { capture: true });
     return () => {
-      window.removeEventListener("pointermove", onPointerMove, true);
+      window.removeEventListener("pointermove", onPointerMove, { capture: true });
+      if (rafRef.current !== 0) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      pendingRef.current = null;
       setDropPreview(null);
     };
   }, [activeBarId, timelineDragEnabled, rangeStart, rangeEnd]);

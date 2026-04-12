@@ -95,7 +95,7 @@ function timelineTestItem(
 describe("buildTimelineSwimlaneLanes", () => {
   it("uses a single lane when no swimlane field", () => {
     const lanes = buildTimelineSwimlaneLanes({
-      swimlaneFieldId: undefined,
+      groupingFieldId: undefined,
       resolvedOptions: [],
       timelineItems: [],
     });
@@ -104,7 +104,7 @@ describe("buildTimelineSwimlaneLanes", () => {
 
   it("includes all resolved options plus Unassigned and unknown row keys", () => {
     const lanes = buildTimelineSwimlaneLanes({
-      swimlaneFieldId: "status",
+      groupingFieldId: "status",
       resolvedOptions: [
         { id: "a", label: "Alpha" },
         { id: "b", label: "Beta" },
@@ -147,7 +147,7 @@ describe("computePlacedTimelineBars", () => {
       timelineTestItem(1, {}, "2024-06-02", "2024-06-03", "B"),
     ];
     const lanes = buildTimelineSwimlaneLanes({
-      swimlaneFieldId: undefined,
+      groupingFieldId: undefined,
       resolvedOptions: [],
       timelineItems: items,
     });

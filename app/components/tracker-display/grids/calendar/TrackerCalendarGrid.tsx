@@ -90,7 +90,7 @@ export function TrackerCalendarGrid({
   );
 
   const config = grid.config ?? {};
-  const { dateFieldId, titleFieldId } = resolveCalendarFieldIds(
+  const { dateFieldId, titleFieldId, durationFieldId } = resolveCalendarFieldIds(
     layoutNodes,
     config,
   );
@@ -113,6 +113,7 @@ export function TrackerCalendarGrid({
   } = useCalendarGridModel({
     rows,
     dateFieldId,
+    durationFieldId,
     initialView,
   });
 
@@ -354,6 +355,7 @@ export function TrackerCalendarGrid({
               onEventClick={openEdit}
               isToday={isToday}
               titleFieldId={titleFieldId}
+              dateFieldId={dateFieldId}
             />
           )}
         </div>

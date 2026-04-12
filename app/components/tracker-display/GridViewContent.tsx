@@ -84,7 +84,10 @@ export function GridViewContent({
 }: GridViewContentProps) {
   const gridId = grid.id;
   const g = useMemo(
-    () => ({ ...grid, config: view.config ?? {} }),
+    () => ({
+      ...grid,
+      config: { ...(grid.config ?? {}), ...(view.config ?? {}) },
+    }),
     [grid, view.config],
   );
   const trackerContext = useMemo(

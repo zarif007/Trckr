@@ -325,7 +325,7 @@ export function TrackerDisplayInline({
     ) : null;
 
   const content = (
-    <div className="w-full min-w-0 space-y-4 px-2 py-3 md:px-3 md:py-4 rounded-sm bg-card border border-border/20">
+    <div className="w-full min-w-0 space-y-4 px-2 py-3 md:px-3 md:py-4 bg-card">
       <Tabs
         value={activeTabId}
         onValueChange={handleTabChange}

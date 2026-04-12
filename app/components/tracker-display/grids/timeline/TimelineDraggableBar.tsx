@@ -66,10 +66,12 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
         "border px-2 py-1 text-xs sm:text-sm leading-tight",
         theme.uiChrome.border,
         theme.border.gridChromeHover,
-        "bg-card text-foreground shadow-none transition-[border-color,background-color]",
+        "bg-card text-foreground shadow-none",
+        /* Do not transition `transform`: dnd-kit updates it every frame; CSS transition fights it and feels janky. */
+        isDragging
+          ? "z-10 border-primary/50 bg-muted/80 opacity-[0.97] ring-0 transition-none"
+          : "transition-colors duration-100 hover:bg-muted/30",
         dragEnabled ? "cursor-default" : "cursor-pointer",
-        isDragging &&
-          "z-10 border-primary/50 bg-muted/80 opacity-[0.97] ring-0 shadow-none",
       )}
     >
       {dragEnabled ? (

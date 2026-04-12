@@ -269,10 +269,10 @@ export function buildTimelineItems(
  */
 export function timelineSwimlaneKeyFromRow(
   row: Record<string, unknown>,
-  swimlaneFieldId: string | undefined,
+  groupingFieldId: string | undefined,
 ): string {
-  if (!swimlaneFieldId) return TIMELINE_ALL_LANE_ID;
-  return String(row[swimlaneFieldId] ?? "").trim();
+  if (!groupingFieldId) return TIMELINE_ALL_LANE_ID;
+  return String(row[groupingFieldId] ?? "").trim();
 }
 
 /**
@@ -280,18 +280,18 @@ export function timelineSwimlaneKeyFromRow(
  * otherwise distinct values from rows. Always includes an empty-id "Unassigned" lane when using options.
  */
 export function buildTimelineSwimlaneLanes(params: {
-  swimlaneFieldId: string | undefined;
+  groupingFieldId: string | undefined;
   resolvedOptions: Array<{ id?: string; value?: unknown; label?: string }>;
   timelineItems: TimelineItem[];
 }): TimelineSwimlaneLane[] {
-  const { swimlaneFieldId, resolvedOptions, timelineItems } = params;
-  if (!swimlaneFieldId) {
+  const { groupingFieldId, resolvedOptions, timelineItems } = params;
+  if (!groupingFieldId) {
     return [{ id: TIMELINE_ALL_LANE_ID, label: "All items" }];
   }
 
   const itemKeys = new Set(
     timelineItems.map((t) =>
-      timelineSwimlaneKeyFromRow(t.row, swimlaneFieldId),
+      timelineSwimlaneKeyFromRow(t.row, groupingFieldId),
     ),
   );
 
@@ -378,7 +378,7 @@ export function assignStackLanesForItems(
  */
 export function computePlacedTimelineBars(
   timelineItems: TimelineItem[],
-  swimlaneFieldId: string | undefined,
+  groupingFieldId: string | undefined,
   lanes: TimelineSwimlaneLane[],
 ): PlacedTimelineBar[] {
   const laneIds = new Set(lanes.map((l) => l.id));
@@ -388,9 +388,9 @@ export function computePlacedTimelineBars(
   }
 
   for (const item of timelineItems) {
-    let key = timelineSwimlaneKeyFromRow(item.row, swimlaneFieldId);
+    let key = timelineSwimlaneKeyFromRow(item.row, groupingFieldId);
     if (!laneIds.has(key)) {
-      key = swimlaneFieldId ? "" : TIMELINE_ALL_LANE_ID;
+      key = groupingFieldId ? "" : TIMELINE_ALL_LANE_ID;
       if (!laneIds.has(key)) key = lanes[0]?.id ?? key;
     }
     const list = byLane.get(key);
@@ -410,9 +410,9 @@ export function computePlacedTimelineBars(
   }
 
   return timelineItems.map((item) => {
-    let key = timelineSwimlaneKeyFromRow(item.row, swimlaneFieldId);
+    let key = timelineSwimlaneKeyFromRow(item.row, groupingFieldId);
     if (!laneIds.has(key)) {
-      key = swimlaneFieldId ? "" : TIMELINE_ALL_LANE_ID;
+      key = groupingFieldId ? "" : TIMELINE_ALL_LANE_ID;
       if (!laneIds.has(key)) key = lanes[0]?.id ?? key;
     }
     const stack = stackByRow.get(item.rowIndex) ?? {

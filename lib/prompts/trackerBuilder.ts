@@ -267,9 +267,9 @@ The views array defines all representations of a grid's data. Choose views based
   - Use for: Any grid with multiple rows of data
   - Config: { pageSize?: number, defaultSort?: { id: string, desc?: boolean } }
 
-- **Kanban view (type: "kanban")**: Add when the grid has a status/options/multiselect field suitable for column grouping.
+- **Kanban view (type: "kanban")**: Add when the grid has a field suitable for column grouping (options-backed columns, or short text / number / etc. for distinct-value columns).
   - Use for: Task tracking, project management, pipelines, workflows
-  - Requirements: Grid must have a field with dataType "status", "options", or "multiselect" (2–8 option values ideal for columns).
+  - Requirements: groupBy must be a field on this grid (layoutNodes). Prefer status/options/multiselect when you have a fixed set of stages; string/number work when columns are inferred from row values.
   - Config: { groupBy: "<field_id>" } — REQUIRED. Must match a field id that appears on this grid in layoutNodes (same grid id).
   - Example: A tasks_grid with a "status" field (To Do, In Progress, Done) should get a kanban view.
 
@@ -282,7 +282,7 @@ The views array defines all representations of a grid's data. Choose views based
 - **Timeline view (type: "timeline")**: Add for time-based project planning with date ranges.
   - Use for: Project plans, roadmaps, Gantt charts, multi-day events
   - Requirements: Two distinct fields with dataType "date" on this grid — start and end — OR one date plus explicit endDateField in config once both exist.
-  - Config: { dateField: "<start_date_field_id>", endDateField: "<end_date_field_id>", titleField?: "<field_id>", swimlaneField?: "<field_id>", viewType?: "day" | "week" | "month" | "quarter" } — all ids must be fields on this grid. endDateField is REQUIRED for timeline (range bar).
+  - Config: { dateField: "<start_date_field_id>", endDateField: "<end_date_field_id>", titleField?: "<field_id>", groupingField?: "<field_id>", viewType?: "day" | "week" | "month" | "quarter" } — all ids must be fields on this grid. endDateField is REQUIRED for timeline (range bar). groupingField splits rows into swimlanes (optional); swimlaneField is a legacy alias for groupingField.
   - Example: A projects_grid with "start_date", "end_date", and "project_name" should get a timeline view.
 
 - **Form/Div view (type: "div")**: Use ONLY for single-instance content.

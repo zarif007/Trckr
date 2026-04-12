@@ -86,7 +86,7 @@ export interface TimelineCanvasProps {
   swimlanes: TimelineSwimlaneLane[];
   timeRange: { start: Date; end: Date; days: number };
   view: TimelineView;
-  swimlaneFieldId?: string;
+  groupingFieldId?: string;
   minContentWidthPx: number;
   timelineClickToAddEnabled: boolean;
   mutateViaRowApi: boolean;

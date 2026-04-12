@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
 import { gridContainer, gridHeader } from "@/lib/grid-styles";
@@ -114,7 +114,7 @@ export function TrackerTimelineGrid({
   );
 
   const config = grid.config ?? {};
-  const { dateFieldId, endDateFieldId, titleFieldId, swimlaneFieldId } =
+  const { dateFieldId, endDateFieldId, titleFieldId, groupingFieldId } =
     resolveTimelineFieldIds(layoutNodes, config, fields);
 
   const initialView = (config.viewType as TimelineView) ?? "week";
@@ -138,8 +138,8 @@ export function TrackerTimelineGrid({
 
   const swimlaneField = useMemo(
     () =>
-      swimlaneFieldId ? fields.find((f) => f.id === swimlaneFieldId) : undefined,
-    [fields, swimlaneFieldId],
+      groupingFieldId ? fields.find((f) => f.id === groupingFieldId) : undefined,
+    [fields, groupingFieldId],
   );
 
   const swimlaneFieldUsesResolvedOptions = useMemo(() => {
@@ -180,14 +180,14 @@ export function TrackerTimelineGrid({
   const swimlanes = useMemo(
     () =>
       buildTimelineSwimlaneLanes({
-        swimlaneFieldId,
+        groupingFieldId,
         resolvedOptions: swimlaneFieldUsesResolvedOptions
           ? resolvedSwimlaneOptions
           : [],
         timelineItems,
       }),
     [
-      swimlaneFieldId,
+      groupingFieldId,
       swimlaneFieldUsesResolvedOptions,
       resolvedSwimlaneOptions,
       timelineItems,
@@ -195,8 +195,8 @@ export function TrackerTimelineGrid({
   );
 
   const placedBars = useMemo(
-    () => computePlacedTimelineBars(timelineItems, swimlaneFieldId, swimlanes),
-    [timelineItems, swimlaneFieldId, swimlanes],
+    () => computePlacedTimelineBars(timelineItems, groupingFieldId, swimlanes),
+    [timelineItems, groupingFieldId, swimlanes],
   );
 
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -225,31 +225,31 @@ export function TrackerTimelineGrid({
       const values: Record<string, unknown> = {};
 
       if (
-        swimlaneFieldId &&
+        groupingFieldId &&
         targetLaneId != null &&
-        timelineSwimlaneKeyFromRow(row, swimlaneFieldId) !== targetLaneId
+        timelineSwimlaneKeyFromRow(row, groupingFieldId) !== targetLaneId
       ) {
-        values[swimlaneFieldId] = targetLaneId;
+        values[groupingFieldId] = targetLaneId;
 
-        const groupingField = fields.find((f) => f.id === swimlaneFieldId);
+        const groupingFieldMeta = fields.find((f) => f.id === groupingFieldId);
         if (
-          groupingField &&
-          (groupingField.dataType === "options" ||
-            groupingField.dataType === "multiselect")
+          groupingFieldMeta &&
+          (groupingFieldMeta.dataType === "options" ||
+            groupingFieldMeta.dataType === "multiselect")
         ) {
           const binding = getBindingForField(
             grid.id,
-            swimlaneFieldId,
+            groupingFieldId,
             bindings,
             tabId,
           );
           if (binding?.fieldMappings?.length) {
-            const selectFieldPath = `${grid.id}.${swimlaneFieldId}`;
+            const selectFieldPath = `${grid.id}.${groupingFieldId}`;
             const previewRows = rows.map((r, i) =>
               i === rowIndex
                 ? {
                     ...(r as Record<string, unknown>),
-                    [swimlaneFieldId]: targetLaneId,
+                    [groupingFieldId]: targetLaneId,
                   }
                 : (r as Record<string, unknown>),
             );
@@ -344,7 +344,7 @@ export function TrackerTimelineGrid({
     [
       timelineDragEnabled,
       rows,
-      swimlaneFieldId,
+      groupingFieldId,
       fields,
       bindings,
       tabId,
@@ -379,6 +379,13 @@ export function TrackerTimelineGrid({
     Boolean(endDateFieldId) &&
     gridFields.some((f) => f.id === dateFieldId) &&
     gridFields.some((f) => f.id === endDateFieldId);
+
+  const showTimelineGroupingWarning =
+    canEditLayout &&
+    !groupingFieldId &&
+    gridFields.length > 0 &&
+    Boolean(dateFieldId) &&
+    Boolean(endDateFieldId);
 
   const addFormInitialValues = useMemo((): Record<string, unknown> => {
     const v: Record<string, unknown> = {};
@@ -475,7 +482,12 @@ export function TrackerTimelineGrid({
   );
 
   return (
-    <div className={cn(gridContainer, "flex flex-col w-full min-w-0 h-auto")}>
+    <div
+      className={cn(
+        gridContainer,
+        "flex flex-col w-full min-w-0 h-auto min-h-0 overflow-hidden",
+      )}
+    >
       {gridIsPaginatedCapable && pg.error ? (
         <div
           className={cn(
@@ -572,7 +584,34 @@ export function TrackerTimelineGrid({
         </div>
       </div>
 
-      <div className="w-full min-w-0 overflow-x-auto">
+      <div className="flex w-full min-w-0 flex-col gap-2">
+        {showTimelineGroupingWarning ? (
+          <div
+            className={cn(
+              "flex shrink-0 gap-3 rounded-sm border px-3 py-3 sm:px-4",
+              theme.radius.md,
+              "border-warning/25 bg-warning/5",
+            )}
+            role="status"
+          >
+            <AlertTriangle
+              className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+              aria-hidden
+            />
+            <div className="min-w-0 space-y-1">
+              <p className="text-xs font-medium leading-snug text-foreground">
+                All rows are in one lane until you set a group column
+              </p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
+                While editing layout, open{" "}
+                <span className="font-semibold text-foreground">Configure</span>{" "}
+                for this timeline view, then choose{" "}
+                <span className="font-medium text-foreground">Group by column</span>{" "}
+                under Grouping (status, options, text, or similar fields).
+              </p>
+            </div>
+          </div>
+        ) : null}
         {gridFields.length === 0 && canEditLayout ? (
           <div
             className={cn(
@@ -587,24 +626,26 @@ export function TrackerTimelineGrid({
             fields (start and end) for the timeline range.
           </div>
         ) : null}
-        <TimelineCanvas
-          placedBars={placedBars}
-          swimlanes={swimlanes}
-          timeRange={timeRange}
-          view={view}
-          swimlaneFieldId={swimlaneFieldId}
-          minContentWidthPx={timeAxisMinWidthPx}
-          mutateViaRowApi={mutateRowsViaRowApi}
-          timelineDragEnabled={timelineDragEnabled}
-          timelineClickToAddEnabled={addable && formReadyForAdd}
-          onTimelineClick={(date) => {
-            const localDay = parseCalendarDayLocal(date) ?? date;
-            setSelectedDate(localDay);
-            setShowAddDialog(true);
-          }}
-          onItemClick={openEdit}
-          onBarDragEnd={handleTimelineBarDragEnd}
-        />
+        <div className="min-w-0 w-full overflow-x-auto">
+          <TimelineCanvas
+            placedBars={placedBars}
+            swimlanes={swimlanes}
+            timeRange={timeRange}
+            view={view}
+            groupingFieldId={groupingFieldId}
+            minContentWidthPx={timeAxisMinWidthPx}
+            mutateViaRowApi={mutateRowsViaRowApi}
+            timelineDragEnabled={timelineDragEnabled}
+            timelineClickToAddEnabled={addable && formReadyForAdd}
+            onTimelineClick={(date) => {
+              const localDay = parseCalendarDayLocal(date) ?? date;
+              setSelectedDate(localDay);
+              setShowAddDialog(true);
+            }}
+            onItemClick={openEdit}
+            onBarDragEnd={handleTimelineBarDragEnd}
+          />
+        </div>
       </div>
 
       {addable && formReadyForAdd && (

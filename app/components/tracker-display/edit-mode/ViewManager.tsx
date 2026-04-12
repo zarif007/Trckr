@@ -43,9 +43,34 @@ import { computeViewKeyWarning } from "./view-key-config";
 
 /**
  * Radix Select requires every `SelectItem` to have a non-empty `value`. Optional
- * keys (end date, swimlane, etc.) use this sentinel instead of `""`.
+ * keys (end date, timeline grouping, etc.) use this sentinel instead of `""`.
  */
 const SELECT_NONE = "__view_config_none__";
+
+/**
+ * Kanban **group by** and Timeline **group by column**: fields whose values map
+ * to lanes (option-backed lists, or distinct values from rows — same runtime
+ * idea as `useKanbanGroups` when options are empty).
+ */
+const LANE_GROUPING_FIELD_DATA_TYPES = new Set<TrackerField["dataType"]>([
+  "status",
+  "options",
+  "multiselect",
+  "dynamic_select",
+  "dynamic_multiselect",
+  "field_mappings",
+  "string",
+  "text",
+  "number",
+  "boolean",
+  "link",
+  "email",
+  "phone",
+  "url",
+  "currency",
+  "percentage",
+  "rating",
+]);
 
 function pickSelectValue(
   raw: string | undefined,
@@ -531,13 +556,10 @@ function ViewConfigDialog({
     return fields.filter((f) => ids.has(f.id));
   }, [layoutNodes, gridId, fields]);
 
-  const groupByCandidates = useMemo(
+  const laneGroupingFieldCandidates = useMemo(
     () =>
-      fieldsOnGrid.filter(
-        (f) =>
-          f.dataType === "status" ||
-          f.dataType === "options" ||
-          f.dataType === "multiselect",
+      fieldsOnGrid.filter((f) =>
+        LANE_GROUPING_FIELD_DATA_TYPES.has(f.dataType),
       ),
     [fieldsOnGrid],
   );
@@ -547,19 +569,9 @@ function ViewConfigDialog({
     [fieldsOnGrid],
   );
 
-  const swimlaneCandidates = useMemo(
-    () =>
-      fieldsOnGrid.filter((f) =>
-        ["status", "options", "multiselect", "text", "number"].includes(
-          f.dataType,
-        ),
-      ),
-    [fieldsOnGrid],
-  );
-
-  const groupByIds = useMemo(
-    () => new Set(groupByCandidates.map((f) => f.id)),
-    [groupByCandidates],
+  const laneGroupingFieldIds = useMemo(
+    () => new Set(laneGroupingFieldCandidates.map((f) => f.id)),
+    [laneGroupingFieldCandidates],
   );
   const dateIds = useMemo(
     () => new Set(dateCandidates.map((f) => f.id)),
@@ -569,11 +581,6 @@ function ViewConfigDialog({
     () => new Set(fieldsOnGrid.map((f) => f.id)),
     [fieldsOnGrid],
   );
-  const swimlaneIds = useMemo(
-    () => new Set(swimlaneCandidates.map((f) => f.id)),
-    [swimlaneCandidates],
-  );
-
   const startFieldId = useMemo(() => {
     const raw = config?.dateField as string | undefined;
     if (raw && dateIds.has(raw)) return raw;
@@ -603,7 +610,18 @@ function ViewConfigDialog({
 
   const handleSave = () => {
     if (view.type === "timeline" && !timelineConfigValid) return;
-    onSave(config);
+    if (view.type === "timeline") {
+      const c = { ...(config || {}) } as Record<string, unknown>;
+      const legacySwim = c.swimlaneField as string | undefined;
+      const grp = c.groupingField as string | undefined;
+      if ((typeof grp !== "string" || grp.length === 0) && legacySwim) {
+        c.groupingField = legacySwim;
+      }
+      delete c.swimlaneField;
+      onSave(c as TrackerGridView["config"]);
+    } else {
+      onSave(config);
+    }
     onOpenChange(false);
   };
 
@@ -628,6 +646,9 @@ function ViewConfigDialog({
             Keys use columns on this grid only. Add fields with{" "}
             <span className="font-medium text-foreground">Add column</span> next to
             Configure, then map them here.
+            {view.type === "timeline"
+              ? " Timeline views also support optional lane grouping under Grouping."
+              : null}
           </DialogDescription>
         </DialogHeader>
 
@@ -637,7 +658,7 @@ function ViewConfigDialog({
               title="Board columns"
               description="Each lane matches one value of the field you group by."
             >
-              {groupByCandidates.length > 0 ? (
+              {laneGroupingFieldCandidates.length > 0 ? (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground">
                     Group by
@@ -645,7 +666,7 @@ function ViewConfigDialog({
                   <Select
                     value={pickSelectValue(
                       config?.groupBy as string | undefined,
-                      groupByIds,
+                      laneGroupingFieldIds,
                     )}
                     onValueChange={(value) =>
                       setConfig((c) => ({
@@ -661,7 +682,7 @@ function ViewConfigDialog({
                       <SelectItem value={SELECT_NONE}>
                         <span className="text-muted-foreground">Choose column</span>
                       </SelectItem>
-                      {groupByCandidates.map((field) => (
+                      {laneGroupingFieldCandidates.map((field) => (
                         <SelectItem key={field.id} value={field.id}>
                           {field.ui.label}
                         </SelectItem>
@@ -671,8 +692,11 @@ function ViewConfigDialog({
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Add a status, options, or multiselect column to this grid, then choose
-                  it here.
+                  Add a column suitable for grouping (for example{" "}
+                  <span className="font-medium text-foreground">status</span>,{" "}
+                  <span className="font-medium text-foreground">options</span>, or{" "}
+                  <span className="font-medium text-foreground">short text</span>
+                  ), then choose it here.
                 </p>
               )}
             </ConfigSection>
@@ -886,42 +910,66 @@ function ViewConfigDialog({
             </ConfigSection>
           )}
 
-          {view.type === "timeline" && swimlaneCandidates.length > 0 && (
+          {view.type === "timeline" && (
             <ConfigSection
-              title="Swimlanes"
-              description="Optional: stack rows into lanes by another column."
+              title="Grouping"
+              description="Choose which column splits the timeline into horizontal lanes. Leave unset to keep every row in one All items lane."
             >
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Lane column
+                  Group by column
                 </label>
                 <Select
+                  disabled={laneGroupingFieldCandidates.length === 0}
                   value={pickSelectValue(
-                    config?.swimlaneField as string | undefined,
-                    swimlaneIds,
+                    (config?.groupingField as string | undefined) ??
+                      (config?.swimlaneField as string | undefined),
+                    laneGroupingFieldIds,
                   )}
                   onValueChange={(value) =>
-                    setConfig((c) => ({
-                      ...c,
-                      swimlaneField:
-                        value === SELECT_NONE ? undefined : value,
-                    }))
+                    setConfig((c) => {
+                      const next = {
+                        ...(c ?? {}),
+                      } as NonNullable<TrackerGridView["config"]>;
+                      const rec = next as Record<string, unknown>;
+                      delete rec.swimlaneField;
+                      if (value === SELECT_NONE) {
+                        delete rec.groupingField;
+                      } else {
+                        rec.groupingField = value;
+                      }
+                      return next;
+                    })
                   }
                 >
-                  <SelectTrigger className={cn("w-full", theme.uiChrome.border)}>
-                    <SelectValue placeholder="Single lane" />
+                  <SelectTrigger
+                    className={cn("w-full", theme.uiChrome.border)}
+                  >
+                    <SelectValue placeholder="All items (single lane)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value={SELECT_NONE}>
-                      <span className="text-muted-foreground">No swimlanes</span>
+                      <span className="text-muted-foreground">
+                        All items (no grouping)
+                      </span>
                     </SelectItem>
-                    {swimlaneCandidates.map((field) => (
+                    {laneGroupingFieldCandidates.map((field) => (
                       <SelectItem key={field.id} value={field.id}>
                         {field.ui.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {laneGroupingFieldCandidates.length === 0 ? (
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Add a column suitable for grouping (for example{" "}
+                    <span className="font-medium text-foreground">status</span>,{" "}
+                    <span className="font-medium text-foreground">options</span>,{" "}
+                    <span className="font-medium text-foreground">short text</span>
+                    , or <span className="font-medium text-foreground">number</span>
+                    ) on this grid to enable lane choices here.
+                  </p>
+                ) : null}
               </div>
             </ConfigSection>
           )}
