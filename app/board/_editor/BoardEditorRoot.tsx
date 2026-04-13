@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Loader2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -25,9 +25,11 @@ import {
   useBoardNavBar,
   type BoardNavPersistStatus,
 } from "@/app/board/_hooks/useBoardNavBar";
+import { BoardDefinitionGrid } from "@/app/board/_components/BoardDefinitionGrid";
 import { BoardGridEditor } from "./grid-layout/BoardGridEditor";
 import { BoardEditModeProvider } from "./context/BoardEditModeContext";
 import { BoardEditorPanel } from "./BoardEditorPanel";
+import type { BoardBindingsContext } from "./board-editor-bindings";
 
 type BoardMeta = {
   id: string;
@@ -52,8 +54,6 @@ function trackersInScope(
 
 export function BoardEditClient({ boardId }: { boardId: string }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isNew = searchParams.get("new") === "true";
 
   const [board, setBoard] = useState<BoardMeta | null>(null);
   const {
@@ -79,10 +79,6 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
     useState<BoardNavPersistStatus>("idle");
   const persistOk = useRef(false);
   const saveGeneration = useRef(0);
-  const [addingWidget, setAddingWidget] = useState<
-    null | "stat" | "table" | "chart"
-  >(null);
-
   const loadSchema = useCallback((trackerId: string) => {
     if (schemaFetchStarted.current.has(trackerId)) return;
     schemaFetchStarted.current.add(trackerId);
@@ -245,6 +241,15 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
     [projectTrackers, board?.moduleId],
   );
 
+  const bindingContext = useMemo<BoardBindingsContext>(
+    () => ({
+      scopedTrackers,
+      schemaByTracker,
+      onSchemaNeeded: loadSchema,
+    }),
+    [scopedTrackers, schemaByTracker, loadSchema],
+  );
+
   /** Warm default tracker schema so Stat/Table/Chart append without waiting on the network. */
   useEffect(() => {
     const tid = scopedTrackers[0]?.id;
@@ -290,14 +295,12 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       appendWidget("stat", cached, tid);
       return;
     }
-    setAddingWidget("stat");
     void fetchTrackerAssembledSchema(tid)
       .then((s) => {
         setSchemaByTracker((prev) => ({ ...prev, [tid]: s }));
         if (!s?.grids?.length) return;
         appendWidget("stat", s, tid);
-      })
-      .finally(() => setAddingWidget(null));
+      });
   }, [scopedTrackers, schemaByTracker, appendWidget]);
 
   const handleAddTable = useCallback(() => {
@@ -308,14 +311,12 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       appendWidget("table", cached, tid);
       return;
     }
-    setAddingWidget("table");
     void fetchTrackerAssembledSchema(tid)
       .then((s) => {
         setSchemaByTracker((prev) => ({ ...prev, [tid]: s }));
         if (!s?.grids?.length) return;
         appendWidget("table", s, tid);
-      })
-      .finally(() => setAddingWidget(null));
+      });
   }, [scopedTrackers, schemaByTracker, appendWidget]);
 
   const handleAddChart = useCallback(() => {
@@ -326,14 +327,12 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       appendWidget("chart", cached, tid);
       return;
     }
-    setAddingWidget("chart");
     void fetchTrackerAssembledSchema(tid)
       .then((s) => {
         setSchemaByTracker((prev) => ({ ...prev, [tid]: s }));
         if (!s?.grids?.length) return;
         appendWidget("chart", s, tid);
-      })
-      .finally(() => setAddingWidget(null));
+      });
   }, [scopedTrackers, schemaByTracker, appendWidget]);
 
   const handleAddText = useCallback(() => {
@@ -352,33 +351,6 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       };
     });
   }, [mutateDefinition]);
-
-  const updateElementById = useCallback(
-    (id: string, updater: (el: BoardElement) => BoardElement) => {
-      mutateDefinition((prev) => ({
-        ...prev,
-        elements: prev.elements.map((e) => (e.id === id ? updater(e) : e)),
-      }));
-    },
-    [mutateDefinition],
-  );
-
-  const removeElementById = useCallback(
-    (id: string) => {
-      mutateDefinition((prev) => ({
-        ...prev,
-        elements: prev.elements.filter((e) => e.id !== id),
-      }));
-    },
-    [mutateDefinition],
-  );
-
-  const handleTitleChange = useCallback(
-    (id: string, title: string | undefined) => {
-      updateElementById(id, (e) => ({ ...e, title }));
-    },
-    [updateElementById],
-  );
 
   if (loading && !board) {
     return (
@@ -437,6 +409,7 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
                 definition={definition}
                 data={data}
                 onDefinitionChange={mutateDefinition}
+                bindingContext={bindingContext}
                 onAddStat={handleAddStat}
                 onAddTable={handleAddTable}
                 onAddChart={handleAddChart}
@@ -444,10 +417,12 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
               />
             </BoardEditModeProvider>
           ) : (
-            <div className="flex flex-col gap-4 p-4">
-              <p className="text-sm text-muted-foreground">
-                View mode will display the rendered blocks here.
-              </p>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5 sm:py-4">
+              <BoardDefinitionGrid
+                elements={definition.elements}
+                data={data}
+                emptyMessage="Switch to Edit and use the command bar to add widgets."
+              />
             </div>
           )}
         </BoardEditorPanel>

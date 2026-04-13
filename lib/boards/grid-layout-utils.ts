@@ -8,6 +8,29 @@ export const BOARD_GRID_MAX_COLS = 12;
  *
  * Widgets are grouped by row number, then sorted by column within each row.
  */
+/**
+ * Assign sequential `col` per row from array order (packed left, 1–12 grid).
+ * Clamps each widget's span so the row does not exceed {@link BOARD_GRID_MAX_COLS}.
+ */
+export function packRowColumnPositions(rows: BoardElement[][]): BoardElement[][] {
+  return rows.map((row) => {
+    let col = 0;
+    return row.map((widget) => {
+      let colSpan = Math.min(
+        Math.max(widget.colSpan ?? 6, 1),
+        BOARD_GRID_MAX_COLS,
+      );
+      const remaining = BOARD_GRID_MAX_COLS - col;
+      if (colSpan > remaining) {
+        colSpan = Math.max(1, remaining);
+      }
+      const next = { ...widget, col, colSpan };
+      col += colSpan;
+      return next;
+    });
+  });
+}
+
 export function buildRowsFromWidgets(
   widgets: BoardElement[],
 ): BoardElement[][] {
@@ -49,10 +72,11 @@ export function rebuildWidgetsFromRows(
   rows: BoardElement[][],
   existingById: Map<string, BoardElement>,
 ): BoardElement[] {
+  const packedRows = packRowColumnPositions(rows);
   const result: BoardElement[] = [];
   let placeId = 0;
 
-  rows.forEach((rowWidgets, rowIndex) => {
+  packedRows.forEach((rowWidgets, rowIndex) => {
     rowWidgets.forEach((widget) => {
       const existing = existingById.get(widget.id) ?? widget;
       result.push({

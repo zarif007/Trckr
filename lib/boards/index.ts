@@ -38,6 +38,8 @@ export {
   buildDefaultTextElement,
 } from "./default-board-elements";
 
+export { snapBoardElementToSchema } from "./snap-board-element-to-schema";
+
 export {
   cloneBoardDefinition,
   getNextPlaceId,

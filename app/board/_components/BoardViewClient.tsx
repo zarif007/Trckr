@@ -9,13 +9,8 @@ import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
 import type { BoardDefinition } from "@/lib/boards/board-definition";
 import type { BoardElementPayload } from "@/lib/boards/execute-board";
-import {
-  TAB_CONTENT_INNER,
-  SECTION_STACK_GAP,
-} from "@/app/components/tracker-display/layout/layout-tokens";
-import { sortBoardElementsByDocumentOrder } from "@/lib/boards/document-layout";
-import { BoardBlockItem } from "@/app/board/_editor/BoardBlockItem";
 import { useBoardNavBar } from "../_hooks/useBoardNavBar";
+import { BoardDefinitionGrid } from "./BoardDefinitionGrid";
 
 type BoardMeta = {
   id: string;
@@ -26,7 +21,6 @@ type BoardMeta = {
   projectName: string | null;
   moduleName: string | null;
 };
-
 
 export function BoardViewClient({ boardId }: { boardId: string }) {
   const router = useRouter();
@@ -95,21 +89,20 @@ export function BoardViewClient({ boardId }: { boardId: string }) {
     );
   }
 
-  const ordered = sortBoardElementsByDocumentOrder(board.definition.elements);
-
   return (
     <div className="flex h-screen min-h-0 flex-col overflow-hidden bg-background pt-12 text-foreground">
-      <div className="flex min-h-0 flex-1 flex-col pt-2 sm:pt-3">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div
           className={cn(
-            "mx-3 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-2 sm:mx-4",
+            "flex shrink-0 flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-5",
+            "border-b",
             theme.uiChrome.border,
           )}
         >
           <div className="min-w-0 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Live view</span>
+            <span className="font-medium text-foreground">{board.name}</span>
             {board.projectName ? (
-              <span className="text-muted-foreground">
+              <span>
                 {" "}
                 · {board.projectName}
                 {board.moduleName ? ` / ${board.moduleName}` : ""}
@@ -126,37 +119,23 @@ export function BoardViewClient({ boardId }: { boardId: string }) {
           </Button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-3 sm:px-4 sm:py-4">
-          <div className={cn("mx-auto max-w-3xl", TAB_CONTENT_INNER)}>
-            <div className={SECTION_STACK_GAP}>
-              {ordered.map((el) => (
-                <BoardBlockItem
-                  key={el.id}
-                  block={el}
-                  payload={data?.[el.id] ?? null}
-                  onRemove={() => {}}
-                  onUpdate={() => {}}
-                />
-              ))}
-            </div>
-            {ordered.length === 0 && (
-              <div
-                className={cn(
-                  "mt-6 rounded-sm border border-dashed p-8 text-center text-sm text-muted-foreground",
-                  theme.uiChrome.border,
-                )}
-              >
-                No blocks yet.{" "}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <BoardDefinitionGrid
+            elements={board.definition.elements}
+            data={data}
+            emptyMessage={
+              <span>
+                No widgets yet.{" "}
                 <Link
                   href={`/board/${boardId}/edit`}
                   className="text-foreground underline-offset-2 hover:underline"
                 >
-                  Add blocks in the editor
+                  Add widgets in the editor
                 </Link>
                 .
-              </div>
-            )}
-          </div>
+              </span>
+            }
+          />
         </div>
       </div>
     </div>

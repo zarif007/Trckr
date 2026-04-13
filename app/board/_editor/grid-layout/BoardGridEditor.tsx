@@ -30,10 +30,11 @@ import {
   getDropPlacementByPointer,
   type DropPlacement,
 } from "@/lib/boards/board-drag-utils";
-import { useBoardEditMode } from "../context/BoardEditModeContext";
 import { BoardWidgetCell } from "./BoardWidgetCell";
 import { BoardBlockCommandInput } from "../BoardBlockCommandInput";
+import type { BoardBindingsContext } from "../board-editor-bindings";
 import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
 
 interface DropIndicator {
   overId: string;
@@ -44,6 +45,7 @@ export interface BoardGridEditorProps {
   definition: BoardDefinition;
   data: Record<string, BoardElementPayload> | null;
   onDefinitionChange: (updater: (prev: BoardDefinition) => BoardDefinition) => void;
+  bindingContext: BoardBindingsContext;
   onAddStat?: () => void;
   onAddTable?: () => void;
   onAddChart?: () => void;
@@ -58,18 +60,18 @@ export function BoardGridEditor({
   definition,
   data,
   onDefinitionChange,
+  bindingContext,
   onAddStat,
   onAddTable,
   onAddChart,
   onAddText,
 }: BoardGridEditorProps) {
-  const { editMode } = useBoardEditMode();
-
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const dropIndicatorRef = useRef<DropIndicator | null>(null);
   dropIndicatorRef.current = dropIndicator;
   const lastOverIdRef = useRef<string | null>(null);
+  const lastPointerRef = useRef<{ x: number; y: number } | null>(null);
 
   // Build row structure
   const widgetsByRow = useMemo(() => {
@@ -96,12 +98,16 @@ export function BoardGridEditor({
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveDragId(String(event.active.id));
     lastOverIdRef.current = String(event.active.id);
+    lastPointerRef.current = null;
     setDropIndicator(null);
   }, []);
 
   const handleDragMove = useCallback((event: DragMoveEvent) => {
     const { active, over } = event;
     if (over?.id) lastOverIdRef.current = String(over.id);
+
+    const p = getPointerCoordinates(event);
+    if (p) lastPointerRef.current = p;
 
     const overId = over?.id ? String(over.id) : lastOverIdRef.current;
     if (!overId || String(active.id) === overId) {
@@ -110,7 +116,7 @@ export function BoardGridEditor({
     }
 
     const zone = parseDropZoneId(overId);
-    const pointer = getPointerCoordinates(event);
+    const pointer = p ?? lastPointerRef.current;
     const prevPlacement = dropIndicatorRef.current?.placement ?? null;
     const placement = zone?.placement ??
       getDropPlacementByPointer(event.over?.rect ?? null, pointer, prevPlacement);
@@ -131,23 +137,38 @@ export function BoardGridEditor({
   }, []);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveDragId(null);
-    setDropIndicator(null);
+    const hintSnapshot = dropIndicatorRef.current;
 
     const { active, over } = event;
-    const overId = over?.id ? String(over.id) : lastOverIdRef.current;
+    const rawOverId = over?.id ? String(over.id) : lastOverIdRef.current;
     lastOverIdRef.current = null;
 
-    if (!overId || active.id === overId) return;
-
     const activeId = String(active.id);
-    const zone = parseDropZoneId(overId);
-    const overWidgetId = zone?.widgetId ?? overId;
+    if (!rawOverId || activeId === rawOverId) {
+      setActiveDragId(null);
+      setDropIndicator(null);
+      return;
+    }
 
-    const pointer = getPointerCoordinates(event);
-    const prevPlacement = dropIndicatorRef.current?.placement ?? null;
-    const placement = zone?.placement ??
-      getDropPlacementByPointer(event.over?.rect ?? null, pointer, prevPlacement);
+    const zone = parseDropZoneId(rawOverId);
+
+    const pointer =
+      getPointerCoordinates(event) ?? lastPointerRef.current;
+    const hintPlacement = hintSnapshot?.placement ?? null;
+    const placement: DropPlacement | null =
+      zone?.placement ??
+      hintPlacement ??
+      getDropPlacementByPointer(
+        event.over?.rect ?? null,
+        pointer,
+        hintPlacement,
+      );
+
+    const overWidgetId =
+      zone?.widgetId ?? hintSnapshot?.overId ?? rawOverId;
+
+    setActiveDragId(null);
+    setDropIndicator(null);
 
     if (!placement) return;
 
@@ -193,6 +214,7 @@ export function BoardGridEditor({
     setActiveDragId(null);
     setDropIndicator(null);
     lastOverIdRef.current = null;
+    lastPointerRef.current = null;
   }, []);
 
   const handleRemoveWidget = useCallback((widgetId: string) => {
@@ -231,9 +253,14 @@ export function BoardGridEditor({
       onDragCancel={handleDragCancel}
     >
       <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
-        <div className="flex flex-col gap-4 min-w-0">
+        <div className="flex min-w-0 flex-col gap-3 px-1 sm:px-0">
           {widgetsByRow.length === 0 && (
-            <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-sm">
+            <div
+              className={cn(
+                "flex h-40 items-center justify-center rounded-sm border border-dashed",
+                theme.uiChrome.border,
+              )}
+            >
               <p className="text-sm text-muted-foreground">
                 No widgets yet. Use the command below to add one.
               </p>
@@ -243,7 +270,7 @@ export function BoardGridEditor({
           {widgetsByRow.map((rowWidgets, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
-              className={cn("grid grid-cols-12 gap-4 min-w-0")}
+              className={cn("grid min-w-0 grid-cols-12 gap-3")}
             >
               {rowWidgets.map((widget) => (
                 <BoardWidgetCell
@@ -258,6 +285,8 @@ export function BoardGridEditor({
                   isDragging={activeDragId === widget.id}
                   onRemove={() => handleRemoveWidget(widget.id)}
                   onUpdate={(updater) => handleUpdateWidget(widget.id, updater)}
+                  bindingContext={bindingContext}
+                  layoutDragActive={activeDragId !== null}
                 />
               ))}
             </div>
@@ -278,7 +307,12 @@ export function BoardGridEditor({
 
       <DragOverlay>
         {activeWidget ? (
-          <div className="flex flex-col w-full min-w-0 rounded-sm border bg-background p-3 opacity-80">
+          <div
+            className={cn(
+              "flex min-w-[10rem] max-w-sm flex-col rounded-sm border bg-background px-3 py-2 opacity-90",
+              theme.uiChrome.border,
+            )}
+          >
             <span className="text-sm font-medium">
               {activeWidget.title ?? activeWidget.type}
             </span>

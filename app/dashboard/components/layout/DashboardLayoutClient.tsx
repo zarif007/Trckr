@@ -896,7 +896,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <div className="fixed inset-0 bg-background flex flex-col items-center justify-center gap-6 px-4">
         <div
           className={cn(
-            "w-16 h-16 bg-muted/50 flex items-center justify-center border border-border/50",
+            "w-16 h-16 bg-muted/50 flex items-center justify-center border",
+            theme.uiChrome.border,
             theme.radius.md,
           )}
         >
@@ -937,7 +938,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                   "px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground select-none";
                 return (
                   <>
-                    <div className="px-3 pb-2 pt-1.5 border-b border-border/60">
+                    <div
+                      className={cn(
+                        "border-b px-3 pb-2 pt-1.5",
+                        theme.uiChrome.border,
+                      )}
+                    >
                       <div className="flex items-center gap-2">
                         <Table2 className="h-4 w-4 text-muted-foreground" />
                         <div className="flex flex-col min-w-0">
@@ -1009,7 +1015,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               })()
             ) : (
               <>
-                <div className="px-3 pb-2 pt-1.5 border-b border-border/60">
+                <div
+                  className={cn(
+                    "border-b px-3 pb-2 pt-1.5",
+                    theme.uiChrome.border,
+                  )}
+                >
                   <div className="flex items-center gap-2 group">
                     <span className="relative inline-flex h-5 w-5 items-center justify-center text-muted-foreground">
                       {sidebarContextMenu.item.kind === "project" ? (
@@ -1065,7 +1076,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
       <button
         type="button"
         onClick={() => setMobileSidebarOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-sm border border-border/60 bg-background/90 text-muted-foreground backdrop-blur transition-colors hover:text-foreground hover:bg-background"
+        className={cn(
+          "md:hidden fixed left-3 top-3 z-40 inline-flex h-9 w-9 items-center justify-center rounded-sm border bg-background/90 text-muted-foreground backdrop-blur transition-colors hover:bg-background hover:text-foreground",
+          theme.uiChrome.border,
+        )}
         aria-label="Open sidebar"
       >
         <Menu className="h-4 w-4" />
@@ -1087,7 +1101,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         />
         <aside
           className={cn(
-            "absolute left-0 top-0 h-full w-[min(88vw,340px)] border-r border-border/60 bg-background transition-transform duration-200",
+            "absolute left-0 top-0 h-full w-[min(88vw,340px)] border-r bg-background transition-transform duration-200",
+            theme.uiChrome.border,
             mobileSidebarOpen ? "translate-x-0" : "-translate-x-full",
           )}
           role="dialog"
@@ -1095,11 +1110,17 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           aria-label="Sidebar navigation"
         >
           <div className="flex h-full flex-col min-h-0 min-w-0">
-            <div className="flex items-center gap-3 border-b border-border/50 px-3 py-2.5 bg-muted/10">
+            <div
+              className={cn(
+                "flex items-center gap-3 border-b bg-muted/10 px-3 py-2.5",
+                theme.uiChrome.border,
+              )}
+            >
               <Link
                 href="/"
                 className={cn(
-                  "flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/40 bg-background/80 hover:bg-muted/50 hover:text-foreground ",
+                  "flex h-9 w-9 shrink-0 items-center justify-center border bg-background/80 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
+                  theme.uiChrome.border,
                   theme.radius.md,
                 )}
                 aria-label="Trckr home"
@@ -1249,7 +1270,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
             </div>
-            <div className="border-t border-border/50 p-2 bg-background/50">
+            <div
+              className={cn(
+                "border-t bg-background/50 p-2",
+                theme.uiChrome.border,
+              )}
+            >
               <div
                 className={cn(
                   "flex items-center gap-2 px-2 py-2 bg-muted/30",
@@ -1278,15 +1304,22 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           <>
             <aside
               className={cn(
-                "flex-shrink-0 w-12 border-r border-border/50 flex flex-col bg-muted/20 transition-[width] duration-200",
+                "flex w-12 shrink-0 flex-col border-r bg-muted/20 transition-[width] duration-200",
+                theme.uiChrome.border,
               )}
             >
-              <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                <div className="flex-shrink-0 flex flex-col items-center gap-1.5 px-1 py-2 border-b border-border/40">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <div
+                  className={cn(
+                    "flex shrink-0 flex-col items-center gap-1.5 border-b px-1 py-2",
+                    theme.uiChrome.border,
+                  )}
+                >
                   <Link
                     href="/"
                     className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/35 bg-background/70 hover:bg-muted/50 hover:text-foreground",
+                      "flex h-9 w-9 shrink-0 items-center justify-center border bg-background/70 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
+                      theme.uiChrome.border,
                       theme.radius.md,
                     )}
                     aria-label="Trckr home"
@@ -1429,7 +1462,8 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
               </div>
               <div
                 className={cn(
-                  "border-t border-border/50 p-2 bg-background/50",
+                  "border-t bg-background/50 p-2",
+                  theme.uiChrome.border,
                   sidebarCollapsed && "flex flex-col items-center gap-1",
                 )}
               >
@@ -1499,14 +1533,25 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                 maxSize="30"
                 className="flex flex-col min-h-0"
               >
-                <aside className="h-full w-full flex flex-col border-r border-border/50 bg-muted/20 min-w-0 overflow-hidden">
-                  <div className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden">
-                    <div className="flex-shrink-0 border-b border-border/40 bg-muted/10 px-2 py-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
+                <aside
+                  className={cn(
+                    "flex h-full min-w-0 w-full flex-col overflow-hidden border-r bg-muted/20",
+                    theme.uiChrome.border,
+                  )}
+                >
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div
+                      className={cn(
+                        "flex shrink-0 border-b bg-muted/10 px-2 py-2",
+                        theme.uiChrome.border,
+                      )}
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
                         <Link
                           href="/"
                           className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center text-muted-foreground transition-colors border border-border/40 bg-background/80 hover:bg-muted/50 hover:text-foreground ",
+                            "flex h-9 w-9 shrink-0 items-center justify-center border bg-background/80 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground",
+                            theme.uiChrome.border,
                             theme.radius.md,
                           )}
                           aria-label="Trckr home"
@@ -1649,7 +1694,12 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
                       </div>
                     </div>
                   </div>
-                  <div className="border-t border-border/50 p-2 bg-background/50">
+                  <div
+                    className={cn(
+                      "border-t bg-background/50 p-2",
+                      theme.uiChrome.border,
+                    )}
+                  >
                     <div
                       className={cn(
                         "flex items-center gap-2 px-2 py-1.5 bg-muted/30",

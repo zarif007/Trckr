@@ -65,7 +65,7 @@ export function BoardBlockItem({
               theme.uiChrome.border,
             )}
           >
-            <BoardBlockHeader block={block} onUpdate={onUpdate} onRemove={onRemove} />
+            <BoardBlockHeader block={block} onUpdate={onUpdate} />
             <BoardBlockContent block={block} payload={payload} onUpdate={onUpdate} />
           </div>
         </div>

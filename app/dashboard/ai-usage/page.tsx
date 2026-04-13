@@ -4,6 +4,21 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import type { LlmUsageDashboardRow } from "@/lib/llm-usage";
 import { getLlmUsageDashboard } from "@/lib/llm-usage";
+import { cn } from "@/lib/utils";
+import { theme } from "@/lib/theme";
+
+const cardSectionClass = cn(
+  theme.radius.md,
+  "border bg-card p-6",
+  theme.uiChrome.border,
+);
+
+const tableHeadRowClass = cn(
+  "border-b text-left text-muted-foreground",
+  theme.uiChrome.border,
+);
+
+const tableRowClass = cn("border-b", theme.uiChrome.border, "last:border-b-0");
 
 function formatTokens(n: number): string {
   return n.toLocaleString();
@@ -46,7 +61,7 @@ export default async function DashboardAiUsagePage() {
         </p>
       </div>
 
-      <section className="rounded-sm border border-border/60 bg-card p-6 ">
+      <section className={cardSectionClass}>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Your account total
         </h2>
@@ -72,7 +87,7 @@ export default async function DashboardAiUsagePage() {
         </dl>
       </section>
 
-      <section className="rounded-sm border border-border/60 bg-card p-6 ">
+      <section className={cardSectionClass}>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           By project
         </h2>
@@ -84,7 +99,7 @@ export default async function DashboardAiUsagePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/50 text-left text-muted-foreground">
+                <tr className={tableHeadRowClass}>
                   <th className="pb-2 pr-4 font-medium">Project</th>
                   <th className="pb-2 pr-4 font-medium tabular-nums">Total</th>
                   <th className="pb-2 pr-4 font-medium tabular-nums">Input</th>
@@ -93,10 +108,7 @@ export default async function DashboardAiUsagePage() {
               </thead>
               <tbody>
                 {data.byProject.map((row) => (
-                  <tr
-                    key={row.projectId}
-                    className="border-b border-border/30 last:border-0"
-                  >
+                  <tr key={row.projectId} className={tableRowClass}>
                     <td className="py-2 pr-4">
                       <Link
                         href={`/project/${row.projectId}`}
@@ -122,7 +134,7 @@ export default async function DashboardAiUsagePage() {
         )}
       </section>
 
-      <section className="rounded-sm border border-border/60 bg-card p-6 ">
+      <section className={cardSectionClass}>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           By tracker
         </h2>
@@ -134,7 +146,7 @@ export default async function DashboardAiUsagePage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/50 text-left text-muted-foreground">
+                <tr className={tableHeadRowClass}>
                   <th className="pb-2 pr-4 font-medium">Tracker / breakdown</th>
                   <th className="pb-2 pr-4 font-medium tabular-nums">Total</th>
                   <th className="pb-2 pr-4 font-medium tabular-nums">Input</th>
@@ -153,10 +165,7 @@ export default async function DashboardAiUsagePage() {
 
                   if (!showNestedBreakdown) {
                     return (
-                      <tr
-                        key={row.trackerSchemaId}
-                        className="border-b border-border/30 last:border-0"
-                      >
+                      <tr key={row.trackerSchemaId} className={tableRowClass}>
                         <td className="py-2 pr-4">
                           <Link
                             href={`/tracker/${row.trackerSchemaId}`}
@@ -180,7 +189,7 @@ export default async function DashboardAiUsagePage() {
 
                   return (
                     <Fragment key={row.trackerSchemaId}>
-                      <tr className="border-b border-border/30">
+                      <tr className={tableRowClass}>
                         <td className="py-2 pr-4">
                           <Link
                             href={`/tracker/${row.trackerSchemaId}`}
@@ -200,7 +209,12 @@ export default async function DashboardAiUsagePage() {
                         </td>
                       </tr>
                       {hasTokens(row.otherOnTracker) ? (
-                        <tr className="border-b border-border/20 bg-muted/20">
+                        <tr
+                          className={cn(
+                            "border-b bg-muted/20",
+                            theme.uiChrome.border,
+                          )}
+                        >
                           <td className="py-1.5 pr-4 pl-6 text-muted-foreground">
                             Other AI (this tracker)
                           </td>
@@ -217,7 +231,12 @@ export default async function DashboardAiUsagePage() {
                       ) : null}
                       {row.reportDetails.length > 0 ? (
                         <>
-                          <tr className="border-b border-border/20 bg-muted/10">
+                          <tr
+                            className={cn(
+                              "border-b bg-muted/10",
+                              theme.uiChrome.border,
+                            )}
+                          >
                             <td className="py-1.5 pr-4 pl-6 font-medium text-muted-foreground">
                               Reports
                             </td>
@@ -234,7 +253,7 @@ export default async function DashboardAiUsagePage() {
                           {row.reportDetails.map((detail, i) => (
                             <tr
                               key={`${row.trackerSchemaId}-r-${detail.reportId ?? `legacy-${i}`}`}
-                              className="border-b border-border/15 last:border-0"
+                              className={tableRowClass}
                             >
                               <td className="py-1.5 pr-4 pl-10">
                                 <div className="font-medium text-foreground">

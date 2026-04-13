@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutList, TrendingUp, Table2, BarChart3, Type } from "lucide-react";
+import { TrendingUp, Table2, BarChart3, Type } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import type { BoardElement } from "@/lib/boards/board-definition";
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
-import { SECTION_BAR_CLASS } from "@/app/components/tracker-display/layout";
 import {
   InlineEditableName,
   LabelWithBlockControls,
@@ -19,6 +18,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { BoardBlockSettings } from "./BoardBlockSettings";
+import type { BoardBindingsContext } from "./board-editor-bindings";
 
 const TYPE_LABELS: Record<BoardElement["type"], string> = {
   stat: "Stat",
@@ -41,8 +41,8 @@ function TypeBadge({ type }: { type: BoardElement["type"] }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium",
-        "bg-muted/60 text-muted-foreground",
+        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium",
+        "bg-muted/40 text-muted-foreground",
       )}
     >
       <Icon className="h-3 w-3" />
@@ -51,21 +51,45 @@ function TypeBadge({ type }: { type: BoardElement["type"] }) {
   );
 }
 
+const BOARD_BAR_CLASS = cn(
+  "flex w-full items-center gap-2 border-b px-2 py-1.5 text-sm",
+  theme.uiChrome.border,
+);
+
 export interface BoardBlockHeaderProps {
   block: BoardElement;
   onUpdate: (updater: (el: BoardElement) => BoardElement) => void;
-  onRemove: () => void;
+  /** When set, stat/table/chart blocks get data-source settings. */
+  bindingContext?: BoardBindingsContext | null;
+  /** View / preview: static title, no controls or settings. */
+  readOnly?: boolean;
 }
 
 export function BoardBlockHeader({
   block,
   onUpdate,
-  onRemove,
+  bindingContext = null,
+  readOnly = false,
 }: BoardBlockHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const controls = useBlockControls();
   const fallback = TYPE_LABELS[block.type];
   const displayTitle = block.title?.trim() || fallback;
+  const showSettingsControl =
+    block.type === "text" || Boolean(bindingContext);
+
+  if (readOnly) {
+    return (
+      <div className={BOARD_BAR_CLASS}>
+        <span className="min-w-0 truncate text-sm font-medium text-foreground">
+          {displayTitle}
+        </span>
+        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+          {fallback}
+        </span>
+      </div>
+    );
+  }
 
   const labelContent = (
     <span className="flex items-center gap-2">
@@ -86,18 +110,16 @@ export function BoardBlockHeader({
   return (
     <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
       <PopoverAnchor asChild>
-        <div className={SECTION_BAR_CLASS}>
-          <LayoutList
-            className="h-4 w-4 shrink-0 text-muted-foreground"
-            aria-hidden
-          />
+        <div className={BOARD_BAR_CLASS}>
           {controls ? (
             <LabelWithBlockControls
               isSortable={controls.isSortable}
               label={labelContent}
               onRemove={controls.onRemove}
               dragHandleProps={controls.dragHandleProps}
-              onSettings={() => setSettingsOpen(true)}
+              onSettings={
+                showSettingsControl ? () => setSettingsOpen(true) : undefined
+              }
             />
           ) : (
             labelContent
@@ -107,13 +129,13 @@ export function BoardBlockHeader({
 
       <PopoverContent
         align="end"
-        className={cn("w-96", theme.patterns.floatingChrome)}
+        className={cn("w-96 p-0", theme.patterns.floatingChrome)}
         sideOffset={4}
       >
         <BoardBlockSettings
           block={block}
           onChange={onUpdate}
-          onClose={() => setSettingsOpen(false)}
+          bindings={bindingContext ?? undefined}
         />
       </PopoverContent>
     </Popover>

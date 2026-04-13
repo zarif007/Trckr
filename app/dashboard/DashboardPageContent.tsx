@@ -1,20 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  FolderOpen,
-  Loader2,
-  X,
-  FolderPlus,
-  ExternalLink,
-  LayoutGrid,
-  List,
-  LayoutList,
-  Table2,
-  Sparkles,
-} from "lucide-react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { FolderPlus, Loader2, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,32 +16,37 @@ import {
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
 import { useDashboard, collectTrackersFromModules } from "./dashboard-context";
+import type { Project, TrackerSchema } from "./dashboard-context";
+import type { DashboardView } from "./dashboard-view";
 import { DashboardHomeSkeleton } from "./components/skeleton/DashboardPageSkeleton";
-import { CreateDropdown } from "./components/CreateDropdown";
 import { MarqueeSelectionOverlay } from "./components/MarqueeSelectionOverlay";
 import { useMarqueeSelection } from "./hooks/useMarqueeSelection";
+import { DashboardHomeHeader } from "./components/home/DashboardHomeHeader";
+import { DashboardSummaryMetrics } from "./components/home/DashboardSummaryMetrics";
+import { DashboardProjectGrid } from "./components/home/DashboardProjectGrid";
+import { DashboardProjectList } from "./components/home/DashboardProjectList";
+import { DashboardRecentsSection } from "./components/home/DashboardRecentsSection";
 
-export type DashboardView = "all" | "projects" | "recents";
+export type { DashboardView } from "./dashboard-view";
 
-const DASH_GRID_ICON_SHELL =
-  "relative w-14 h-14 rounded-sm bg-muted/45 border border-border/40 flex items-center justify-center transition-all duration-200 group-hover:border-primary/35 group-hover:bg-primary/8 group-hover:";
-const DASH_GRID_ICON =
-  "h-7 w-7 text-foreground/75 transition-all duration-200 group-hover:text-primary";
-const DASH_LIST_ICON_SHELL =
-  "w-11 h-11 rounded-sm bg-muted/45 border border-border/40 flex items-center justify-center flex-shrink-0 transition-colors group-hover:border-primary/35 group-hover:bg-primary/8";
-const DASH_LIST_ICON =
-  "h-5 w-5 text-foreground/75 transition-colors group-hover:text-primary";
-
-const DASH_LIST_ROW =
-  "flex items-center gap-3 px-3 py-2.5 rounded-sm border border-border/35 bg-background/50 hover:border-border/50 hover:bg-muted/40 hover:cursor-pointer transition-all duration-150 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background";
-
-const MARQUEE_SELECTED =
-  "ring-2 ring-primary/30 ring-offset-2 ring-offset-background border-primary/40";
-
-function getTrackerDisplayName(name: string | null, isList: boolean): string {
-  if (!name) return isList ? "Untitled list" : "Untitled tracker";
-  if (isList && name.endsWith(".list")) return name.slice(0, -5);
-  return name;
+function workspaceLastUpdatedLabel(
+  projects: Project[],
+  trackers: TrackerSchema[],
+): string | null {
+  const times: number[] = [];
+  for (const p of projects) {
+    times.push(new Date(p.updatedAt).getTime());
+  }
+  for (const t of trackers) {
+    times.push(new Date(t.updatedAt).getTime());
+  }
+  if (times.length === 0) return null;
+  const d = new Date(Math.max(...times));
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 export function DashboardPageContent({
@@ -62,7 +54,6 @@ export function DashboardPageContent({
 }: {
   view?: DashboardView;
 }) {
-  const router = useRouter();
   const { projects, projectsLoading, fetchProjects } = useDashboard();
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -137,368 +128,129 @@ export function DashboardPageContent({
     )
     .slice(0, 5);
 
+  const lastActivityLabel = useMemo(() => {
+    const trackers = projects.flatMap((p) => [
+      ...(p.trackerSchemas ?? []).filter((t) => t.type === "GENERAL"),
+      ...collectTrackersFromModules(p.modules ?? []),
+    ]);
+    const deduped = [...new Map(trackers.map((t) => [t.id, t])).values()];
+    return workspaceLastUpdatedLabel(projects, deduped);
+  }, [projects]);
+
   if (projectsLoading) {
     return <DashboardHomeSkeleton />;
   }
 
+  const showProjects = view === "all" || view === "projects";
+  const showRecentsSidebar =
+    view === "all" && recentTrackers.length > 0 && showProjects;
+
   return (
     <>
-      <main className="flex-1 flex flex-col min-w-0 min-h-0 bg-background">
-        <div className="h-10 flex-shrink-0 border-b border-border/50 flex items-center justify-between px-3 gap-3 bg-background/80 backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            {view !== "recents" && (
-              <div
-                className="flex rounded-sm border border-border/45 bg-muted/25 p-0.5 "
-                role="group"
-                aria-label="Layout"
-              >
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={cn(
-                    "rounded-sm px-1.5 py-1 transition-all",
-                    viewMode === "grid"
-                      ? "bg-background text-foreground "
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "rounded-sm px-1.5 py-1 transition-all",
-                    viewMode === "list"
-                      ? "bg-background text-foreground "
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <List className="h-3.5 w-3.5" />
-                </button>
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col bg-background">
+        <DashboardHomeHeader
+          view={view}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onError={setError}
+          onCreateProjectClick={
+            view !== "recents" ? handleOpenCreateProject : undefined
+          }
+        />
+
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+            <DashboardSummaryMetrics
+              projectCount={projects.length}
+              trackerCount={totalTrackers}
+              lastUpdatedLabel={lastActivityLabel}
+            />
+
+            {view === "recents" ? (
+              <div className="mt-8">
+                <DashboardRecentsSection
+                  variant="page"
+                  trackers={recentTrackers}
+                  selectedIds={recentsMarquee.selectedIds}
+                  rootProps={recentsMarquee.rootProps}
+                />
               </div>
+            ) : showRecentsSidebar ? (
+              <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_minmax(260px,320px)] lg:items-start">
+                <section className="min-w-0">
+                  <h2 className="mb-3 text-sm font-semibold tracking-tight">
+                    Projects
+                  </h2>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
+                    className="relative"
+                    {...projectsMarquee.rootProps}
+                  >
+                    {viewMode === "grid" ? (
+                      <DashboardProjectGrid
+                        projects={projects}
+                        selectedIds={projectsMarquee.selectedIds}
+                        creating={creating}
+                        onNewProject={handleOpenCreateProject}
+                      />
+                    ) : (
+                      <DashboardProjectList
+                        projects={projects}
+                        selectedIds={projectsMarquee.selectedIds}
+                        creating={creating}
+                        onNewProject={handleOpenCreateProject}
+                      />
+                    )}
+                  </motion.div>
+                </section>
+                <aside className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <DashboardRecentsSection
+                      variant="sidebar"
+                      trackers={recentTrackers}
+                      selectedIds={recentsMarquee.selectedIds}
+                      rootProps={recentsMarquee.rootProps}
+                    />
+                  </motion.div>
+                </aside>
+              </div>
+            ) : (
+              <section className="mt-8 min-w-0">
+                <h2 className="mb-3 text-sm font-semibold tracking-tight">
+                  Projects
+                </h2>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                  className={cn("relative", view === "projects" && "h-full")}
+                  {...projectsMarquee.rootProps}
+                >
+                  {viewMode === "grid" ? (
+                    <DashboardProjectGrid
+                      projects={projects}
+                      selectedIds={projectsMarquee.selectedIds}
+                      creating={creating}
+                      onNewProject={handleOpenCreateProject}
+                    />
+                  ) : (
+                    <DashboardProjectList
+                      projects={projects}
+                      selectedIds={projectsMarquee.selectedIds}
+                      creating={creating}
+                      onNewProject={handleOpenCreateProject}
+                    />
+                  )}
+                </motion.div>
+              </section>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/ai-project"
-              className="group relative rounded-sm"
-            >
-              <span className="absolute -inset-0.5 rounded-sm ai-gradient-border opacity-80 group-hover:opacity-100 transition-opacity" />
-              <span className="relative h-7 px-2.5 rounded-sm bg-background/90 border border-border/40 flex items-center gap-1.5 text-[11px] font-semibold text-foreground/90 group-hover:text-foreground transition-colors">
-                <Sparkles className="h-3.5 w-3.5 text-foreground/80 group-hover:text-foreground" />
-                AI Project (Alpha)
-              </span>
-            </Link>
-            <CreateDropdown
-              variant="toolbar"
-              onError={setError}
-              onCreateProjectClick={
-                view !== "recents" ? handleOpenCreateProject : undefined
-              }
-            />
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto px-3 sm:px-4 py-6">
-          {(view === "all" || view === "projects") && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className={cn(
-                "relative",
-                view === "projects" && "h-full",
-                viewMode === "grid"
-                  ? "grid w-full grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-4 content-start"
-                  : "flex flex-col gap-1",
-              )}
-              {...projectsMarquee.rootProps}
-            >
-              {viewMode === "grid" ? (
-                <>
-                  {projects.map((project) => {
-                    const projectTrackerCount = (
-                      project.trackerSchemas ?? []
-                    ).filter((t) => t.type === "GENERAL").length;
-                    const pid = `project:${project.id}`;
-                    const isSelected = projectsMarquee.selectedIds.has(pid);
-                    return (
-                      <Link
-                        key={project.id}
-                        href={`/project/${project.id}`}
-                        data-marquee-selectable
-                        data-marquee-id={pid}
-                        aria-selected={isSelected}
-                        role="option"
-                        className={cn(
-                          "min-w-0 w-full",
-                          isSelected && MARQUEE_SELECTED,
-                        )}
-                      >
-                        <motion.div
-                          whileTap={{ scale: 0.98 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 35,
-                          }}
-                          className="flex flex-col items-center gap-2 p-3 rounded-sm border border-border/40 bg-background/60 hover:border-primary/35 hover:bg-primary/[0.06] cursor-pointer transition-[border-color,box-shadow,background-color] duration-150 group hover:"
-                        >
-                          <div className={DASH_GRID_ICON_SHELL}>
-                            <FolderOpen className={DASH_GRID_ICON} />
-                            {projectTrackerCount > 0 && (
-                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-sm min-w-[1rem] h-4 px-1 flex items-center justify-center">
-                                {projectTrackerCount}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs font-semibold text-center truncate w-full">
-                            {project.name || "Untitled"}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
-                            {projectTrackerCount} trackers
-                          </span>
-                        </motion.div>
-                      </Link>
-                    );
-                  })}
-                  <motion.div
-                    whileTap={{ scale: 0.98 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                    data-marquee-ignore
-                    className="min-w-0 w-full flex flex-col items-center gap-2 p-3 rounded-sm border border-dashed border-border/50 bg-muted/25 hover:border-primary/40 hover:bg-primary/[0.06] cursor-pointer transition-[border-color,box-shadow,background-color] duration-150 hover:"
-                    onClick={handleOpenCreateProject}
-                  >
-                    <div className="w-14 h-14 rounded-sm border border-dashed border-border/50 bg-muted/25 flex items-center justify-center">
-                      {creating ? (
-                        <Loader2 className="h-7 w-7 animate-spin text-primary/60" />
-                      ) : (
-                        <FolderPlus className="h-7 w-7 text-muted-foreground/70" />
-                      )}
-                    </div>
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      New Project
-                    </span>
-                  </motion.div>
-                </>
-              ) : (
-                <>
-                  {projects.map((project) => {
-                    const projectTrackerCount = (
-                      project.trackerSchemas ?? []
-                    ).filter((t) => t.type === "GENERAL").length;
-                    const pid = `project:${project.id}`;
-                    const isSelected = projectsMarquee.selectedIds.has(pid);
-                    return (
-                      <Link
-                        key={project.id}
-                        href={`/project/${project.id}`}
-                        data-marquee-selectable
-                        data-marquee-id={pid}
-                        aria-selected={isSelected}
-                        role="option"
-                        className={cn(
-                          DASH_LIST_ROW,
-                          isSelected && MARQUEE_SELECTED,
-                        )}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium truncate block">
-                            {project.name || "Untitled project"}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground">
-                            {projectTrackerCount} trackers
-                          </span>
-                        </div>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {new Date(project.updatedAt).toLocaleDateString(
-                            undefined,
-                            {
-                              month: "short",
-                              day: "numeric",
-                            },
-                          )}
-                        </span>
-                        <div className={DASH_LIST_ICON_SHELL}>
-                          <FolderOpen className={DASH_LIST_ICON} />
-                        </div>
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    data-marquee-ignore
-                    onClick={handleOpenCreateProject}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-sm border border-dashed border-border/50 bg-muted/15 hover:bg-muted/30 hover:border-primary/35 hover:transition-all duration-150 text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  >
-                    <div className="w-11 h-11 rounded-sm border border-dashed border-border/45 bg-muted/25 flex items-center justify-center flex-shrink-0">
-                      {creating ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <FolderPlus className="h-5 w-5" />
-                      )}
-                    </div>
-                    <span className="text-sm font-medium">New Project</span>
-                  </button>
-                </>
-              )}
-            </motion.div>
-          )}
-          {view === "all" && recentTrackers.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className="pt-4 mt-4"
-            >
-              <div className="rounded-sm border border-border/40 bg-muted/10 p-3 sm:p-4 ">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/85 mb-3 px-0.5">
-                  Recent trackers
-                </h2>
-                <div
-                  className="relative flex flex-col gap-1.5"
-                  {...recentsMarquee.rootProps}
-                >
-                  {recentTrackers.map((tracker) => {
-                    const isListView = tracker.listForSchemaId != null;
-                    const TrackerIcon = isListView ? LayoutList : Table2;
-                    const href = tracker.listForSchemaId
-                      ? `/tracker-list/${tracker.id}`
-                      : `/tracker/${tracker.id}`;
-                    const tid = `tracker:${tracker.id}`;
-                    const isSelected = recentsMarquee.selectedIds.has(tid);
-                    return (
-                      <Link
-                        key={tracker.id}
-                        href={href}
-                        data-marquee-selectable
-                        data-marquee-id={tid}
-                        aria-selected={isSelected}
-                        role="option"
-                        className={cn(
-                          DASH_LIST_ROW,
-                          isSelected && MARQUEE_SELECTED,
-                        )}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-semibold truncate block">
-                            {getTrackerDisplayName(
-                              tracker.name,
-                              tracker.listForSchemaId != null,
-                            )}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground tabular-nums">
-                            Updated{" "}
-                            {new Date(tracker.updatedAt).toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                              },
-                            )}
-                          </span>
-                        </div>
-                        <div
-                          className={`${DASH_LIST_ICON_SHELL} ${isListView ? "border-primary/35 bg-primary/8" : ""}`}
-                        >
-                          <TrackerIcon
-                            className={`${DASH_LIST_ICON} ${isListView ? "text-primary/80" : ""}`}
-                          />
-                        </div>
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          )}
-          {view === "recents" && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              <div className="rounded-sm border border-border/40 bg-muted/10 p-3 sm:p-4 h-full min-h-[8rem] flex flex-col">
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/85 mb-3 px-0.5">
-                  Recent trackers
-                </h2>
-                {recentTrackers.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center rounded-sm border border-dashed border-border/45 bg-background/40 py-10 px-4 text-center">
-                    <Table2
-                      className="h-8 w-8 text-muted-foreground/35 mb-2"
-                      aria-hidden
-                    />
-                    <p className="text-sm font-medium text-muted-foreground">
-                      No trackers yet
-                    </p>
-                    <p className="text-xs text-muted-foreground/80 mt-1 max-w-[220px]">
-                      Open a project and create a tracker to see it here.
-                    </p>
-                  </div>
-                ) : (
-                  <div
-                    className="relative flex flex-col gap-1.5"
-                    {...recentsMarquee.rootProps}
-                  >
-                    {recentTrackers.map((tracker) => {
-                      const isListView = tracker.listForSchemaId != null;
-                      const TrackerIcon = isListView ? LayoutList : Table2;
-                      const href = tracker.listForSchemaId
-                        ? `/tracker-list/${tracker.id}`
-                        : `/tracker/${tracker.id}`;
-                      const tid = `tracker:${tracker.id}`;
-                      const isSelected = recentsMarquee.selectedIds.has(tid);
-                      return (
-                        <Link
-                          key={tracker.id}
-                          href={href}
-                          data-marquee-selectable
-                          data-marquee-id={tid}
-                          aria-selected={isSelected}
-                          role="option"
-                          className={cn(
-                            DASH_LIST_ROW,
-                            isSelected && MARQUEE_SELECTED,
-                          )}
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-semibold truncate block">
-                              {getTrackerDisplayName(
-                                tracker.name,
-                                tracker.listForSchemaId != null,
-                              )}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground tabular-nums">
-                              Updated{" "}
-                              {new Date(tracker.updatedAt).toLocaleDateString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                },
-                              )}
-                            </span>
-                          </div>
-                          <div
-                            className={`${DASH_LIST_ICON_SHELL} ${isListView ? "border-primary/35 bg-primary/8" : ""}`}
-                          >
-                            <TrackerIcon
-                              className={`${DASH_LIST_ICON} ${isListView ? "text-primary/80" : ""}`}
-                            />
-                          </div>
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
         </div>
       </main>
 
@@ -509,7 +261,12 @@ export function DashboardPageContent({
         <MarqueeSelectionOverlay rect={recentsMarquee.dragRect} />
       )}
 
-      <div className="h-6 flex-shrink-0 border-t border-border/50 flex items-center justify-between px-3 text-[10px] text-muted-foreground bg-muted/20">
+      <div
+        className={cn(
+          "flex h-7 shrink-0 items-center justify-between border-t bg-muted/20 px-4 text-[10px] text-muted-foreground sm:px-6",
+          theme.uiChrome.border,
+        )}
+      >
         <span>
           {projects.length} projects · {totalTrackers} trackers
         </span>
@@ -528,11 +285,11 @@ export function DashboardPageContent({
           className={cn(
             "gap-0 overflow-hidden bg-background/95 p-0 backdrop-blur-sm sm:max-w-[380px]",
             theme.radius.md,
-            theme.border.subtle,
+            theme.patterns.floatingChrome,
           )}
         >
           <div className="flex flex-col">
-            <div className="flex items-center gap-4 pt-6 pl-6 pr-12 pb-4">
+            <div className="flex items-center gap-4 pb-4 pl-6 pr-12 pt-6">
               <div
                 className={cn(
                   "flex h-11 w-11 shrink-0 items-center justify-center border border-primary/10 bg-primary/10 text-primary",
@@ -541,7 +298,7 @@ export function DashboardPageContent({
               >
                 <FolderPlus className="h-5 w-5" />
               </div>
-              <DialogHeader className="p-0 gap-1 text-left min-w-0">
+              <DialogHeader className="min-w-0 gap-1 p-0 text-left">
                 <DialogTitle className="text-base font-semibold tracking-tight">
                   New project
                 </DialogTitle>
@@ -550,7 +307,7 @@ export function DashboardPageContent({
                 </DialogDescription>
               </DialogHeader>
             </div>
-            <div className="px-6 pb-6 space-y-2">
+            <div className="space-y-2 px-6 pb-6">
               <label
                 htmlFor="create-project-name"
                 className="text-xs font-medium text-muted-foreground"
@@ -589,7 +346,7 @@ export function DashboardPageContent({
               <Button
                 type="button"
                 size="sm"
-                className="rounded-sm min-w-[72px]"
+                className="min-w-[72px] rounded-sm"
                 onClick={() => handleCreateProject()}
                 disabled={creating}
               >
@@ -609,7 +366,7 @@ export function DashboardPageContent({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className={cn(
-            "fixed right-6 bottom-10 z-50 flex items-center gap-2 border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive ",
+            "fixed bottom-10 right-6 z-50 flex items-center gap-2 border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-xs font-medium text-destructive",
             theme.radius.md,
           )}
         >

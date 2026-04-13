@@ -11,6 +11,7 @@ import { BlockControlsProvider } from "@/app/components/tracker-display/layout";
 import { WidgetDropZones } from "./WidgetDropZones";
 import { BoardBlockHeader } from "../BoardBlockHeader";
 import { BoardBlockContent } from "../BoardBlockContent";
+import type { BoardBindingsContext } from "../board-editor-bindings";
 
 interface BoardWidgetCellProps {
   widget: BoardElement;
@@ -19,6 +20,9 @@ interface BoardWidgetCellProps {
   isDragging: boolean;
   onRemove: () => void;
   onUpdate: (updater: (el: BoardElement) => BoardElement) => void;
+  bindingContext: BoardBindingsContext;
+  /** True while any board widget is being dragged (enables drop targets). */
+  layoutDragActive: boolean;
 }
 
 /**
@@ -32,6 +36,8 @@ export function BoardWidgetCell({
   isDragging: isDraggingProp,
   onRemove,
   onUpdate,
+  bindingContext,
+  layoutDragActive,
 }: BoardWidgetCellProps) {
   const {
     attributes,
@@ -56,7 +62,7 @@ export function BoardWidgetCell({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "relative min-w-0 min-h-[200px]",
+        "relative min-h-0 min-w-0",
         isDragging && "opacity-40",
       )}
     >
@@ -71,17 +77,21 @@ export function BoardWidgetCell({
       >
         <div
           className={cn(
-            "h-full flex flex-col rounded-sm border bg-background",
+            "relative z-0 flex h-full min-h-0 flex-col rounded-sm border bg-background",
             theme.uiChrome.border,
           )}
         >
-          <BoardBlockHeader block={widget} onUpdate={onUpdate} onRemove={onRemove} />
+          <BoardBlockHeader
+            block={widget}
+            onUpdate={onUpdate}
+            bindingContext={bindingContext}
+          />
           <BoardBlockContent block={widget} payload={payload} onUpdate={onUpdate} />
         </div>
       </BlockControlsProvider>
 
       {/* Drop zones for drag-and-drop */}
-      <WidgetDropZones widgetId={widget.id} enabled />
+      <WidgetDropZones widgetId={widget.id} enabled={layoutDragActive} />
 
       {/* Drop indicator lines */}
       {dropIndicator === "left" && (

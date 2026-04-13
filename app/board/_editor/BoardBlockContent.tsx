@@ -11,14 +11,31 @@ export interface BoardBlockContentProps {
   block: BoardElement;
   payload: BoardElementPayload | null;
   onUpdate: (updater: (el: BoardElement) => BoardElement) => void;
+  /** View / preview: text from definition only; no inline editors. */
+  readOnly?: boolean;
 }
 
 export function BoardBlockContent({
   block,
   payload,
   onUpdate,
+  readOnly = false,
 }: BoardBlockContentProps) {
   if (block.type === "text") {
+    if (readOnly) {
+      const text = (block as TextElement).content?.trim() ?? "";
+      return (
+        <div className="min-h-0 flex-1 px-2 pb-3 pt-1 sm:px-3">
+          {text.length > 0 ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+              {text}
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground">No text.</p>
+          )}
+        </div>
+      );
+    }
     return (
       <div className="px-2 pb-3 pt-1 sm:px-3">
         <BoardBlockTextEditor

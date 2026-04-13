@@ -24,24 +24,17 @@ export function BoardEditorPanel({
   return (
     <section
       className={cn(
-        "relative h-full min-h-0 w-full overflow-hidden bg-background/40 backdrop-blur-sm border-l transition-shadow duration-300",
+        "relative h-full min-h-0 w-full overflow-hidden bg-background",
         theme.radius.md,
-        theme.uiChrome.border,
       )}
     >
       <div
         className={cn(
-          "absolute right-1 top-3 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1 rounded-sm border p-0.5 backdrop-blur-md sm:right-3",
+          "absolute right-1 top-3 z-20 flex max-w-[calc(100%-0.5rem)] flex-wrap items-center justify-end gap-1.5 rounded-sm border p-1 sm:right-3",
           theme.patterns.floatingChrome,
         )}
       >
-        <div
-          className={cn(
-            "inline-flex shrink-0 items-center rounded-sm border p-0.5",
-            theme.uiChrome.border,
-            "bg-muted/20",
-          )}
-        >
+        <div className="inline-flex shrink-0 items-center gap-0.5 rounded-sm p-0.5">
           <button
             type="button"
             onClick={() => setEditMode(false)}
