@@ -17,6 +17,7 @@ import {
   compileCalculationsForGrid,
 } from "@/lib/field-calculation";
 import type { FieldCalculationRule } from "@/lib/functions/types";
+import { Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -26,6 +27,24 @@ import {
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
 import { parseRowAccentHex } from "@/lib/tracker-grid-rows/row-accent-hex";
+
+/** Preset row highlights — tap to apply without opening the OS color sheet. */
+const ROW_HIGHLIGHT_PRESETS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#14b8a6",
+  "#0ea5e9",
+  "#6366f1",
+  "#a855f7",
+  "#ec4899",
+  "#78716c",
+] as const;
+
+function rowHighlightFieldBackground(hex: string): string {
+  return `color-mix(in srgb, ${hex} 70%, transparent)`;
+}
 
 export type EntryFormSavePayload = {
   values: Record<string, unknown>;
@@ -238,44 +257,121 @@ export function EntryFormDialog({
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label="Row color"
+            aria-label="Row highlight color"
             className={cn(
-              "h-8 w-8 shrink-0 rounded-full border-2 transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              theme.uiChrome.border,
+              "relative h-9 w-9 shrink-0 rounded-full border-2 transition-[transform,colors,opacity] duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              "active:scale-[0.97]",
+              rowAccentHex ? theme.uiChrome.border : cn("border-dashed", theme.uiChrome.border),
+              !rowAccentHex && "bg-muted/30 hover:bg-muted/45",
             )}
-            style={
-              rowAccentHex
-                ? { backgroundColor: rowAccentHex }
-                : { backgroundColor: "transparent" }
-            }
-          />
-        </PopoverTrigger>
-        <PopoverContent className="w-64 space-y-3" align="end">
-          <div className="space-y-1.5">
-            <p className="text-xs font-medium text-muted-foreground">Row color</p>
-            <input
-              type="color"
-              aria-label="Pick row color"
-              value={colorWellValue}
-              onChange={(e) => {
-                const next = parseRowAccentHex(e.target.value);
-                setRowAccentHex(next);
-              }}
-              className={cn(
-                "h-10 w-full cursor-pointer rounded-sm p-1",
-                theme.patterns.inputBase,
-              )}
-            />
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => setRowAccentHex(null)}
+            style={rowAccentHex ? { backgroundColor: rowAccentHex } : undefined}
           >
-            Clear color
-          </Button>
+            {!rowAccentHex && (
+              <Palette
+                className="pointer-events-none absolute inset-0 m-auto h-4 w-4 text-muted-foreground/60"
+                aria-hidden
+              />
+            )}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[18.5rem] space-y-4 p-3" align="end">
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-foreground">Row highlight</p>
+              <p className="text-[11px] leading-snug text-muted-foreground">
+                A soft tint and accent stripe in the table and kanban; stronger tint on calendar and
+                timeline chips.
+              </p>
+            </div>
+
+            <div
+              className={cn(
+                "relative overflow-hidden rounded-sm border-2 transition-[border-color,background-color] duration-150",
+                !rowAccentHex && cn("bg-muted/25", theme.uiChrome.border),
+              )}
+              style={
+                rowAccentHex
+                  ? {
+                      borderColor: rowAccentHex,
+                      backgroundColor: rowHighlightFieldBackground(rowAccentHex),
+                    }
+                  : undefined
+              }
+            >
+              <input
+                type="color"
+                aria-label="Pick row highlight color"
+                value={colorWellValue}
+                onChange={(e) => {
+                  const next = parseRowAccentHex(e.target.value);
+                  setRowAccentHex(next);
+                }}
+                className="absolute inset-0 z-[1] h-full min-h-[3.5rem] w-full cursor-pointer opacity-0"
+              />
+              <div className="pointer-events-none relative z-0 flex min-h-[3.5rem] flex-col items-center justify-center gap-1.5 px-3 py-3">
+                {rowAccentHex ? (
+                  <>
+                    <span
+                      className="font-mono text-xs font-semibold uppercase tracking-wider"
+                      style={{ color: rowAccentHex }}
+                    >
+                      {rowAccentHex}
+                    </span>
+                    <span
+                      className="text-[10px] font-medium opacity-80"
+                      style={{ color: rowAccentHex }}
+                    >
+                      Tap again to fine-tune
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-center text-[11px] leading-snug text-muted-foreground">
+                    Tap for the system picker, or choose a swatch below
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Quick picks
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ROW_HIGHLIGHT_PRESETS.map((preset) => {
+                  const active = rowAccentHex === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      aria-label={`Set highlight to ${preset}`}
+                      aria-pressed={active}
+                      onClick={() => setRowAccentHex(preset)}
+                      className={cn(
+                        "h-8 w-8 shrink-0 rounded-sm border-2 transition-[transform,filter] duration-150",
+                        "hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        theme.uiChrome.border,
+                        active &&
+                          "outline outline-2 outline-offset-2 outline-foreground",
+                      )}
+                      style={{ backgroundColor: preset }}
+                    />
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          <div className={cn("space-y-2 border-t pt-3", theme.uiChrome.border)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn("w-full", theme.patterns.outlineButton)}
+              onClick={() => setRowAccentHex(null)}
+            >
+              Clear highlight
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     ) : null;

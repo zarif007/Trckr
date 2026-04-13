@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useId } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -33,13 +33,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { theme } from "@/lib/theme";
-import { Settings2, ChevronDown, Trash2 } from "lucide-react";
+import {
+  Settings2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+} from "lucide-react";
 import { FieldMetadata, getFieldIcon } from "./utils";
 import { DataTableCell } from "./data-table-cell";
 import {
@@ -195,6 +208,7 @@ export function DataTable<TData, TValue>({
   showRowDetails = true,
   entryWays = [],
 }: DataTableProps<TData, TValue>) {
+  const pageSizeSelectLabelId = useId();
   const pageSize = pageSizeProp ?? 10;
   const [tableData, setTableData] = useState<TData[]>(data);
   const [sorting, setSorting] = useState<SortingState>(() =>
@@ -546,6 +560,17 @@ export function DataTable<TData, TValue>({
 
   const hasActions = addable || deletable;
 
+  const filteredRowCount = table.getFilteredRowModel().rows.length;
+  const { pageIndex: footerPageIndex, pageSize: footerPageSize } =
+    paginationState;
+  const resolvedPageCount = Math.max(1, table.getPageCount());
+  const footerRangeStart =
+    filteredRowCount === 0 ? 0 : footerPageIndex * footerPageSize + 1;
+  const footerRangeEnd = Math.min(
+    (footerPageIndex + 1) * footerPageSize,
+    filteredRowCount,
+  );
+
   return (
     <div className="w-full">
       {hasActions && (
@@ -834,7 +859,9 @@ export function DataTable<TData, TValue>({
                     className={cn(
                       "group border-b last:border-0 transition-colors duration-150 hover:bg-muted/10 dark:hover:bg-muted/8",
                       theme.border.gridChrome,
-                      rowAccentStyle ? "hover:opacity-95" : null,
+                      rowAccentStyle
+                        ? "hover:brightness-[1.02] dark:hover:brightness-[1.03]"
+                        : null,
                     )}
                   >
                     {row.getVisibleCells().map((cell) => {
@@ -885,67 +912,81 @@ export function DataTable<TData, TValue>({
         </Table>
         <div
           className={cn(
-            "flex flex-wrap items-center justify-between gap-3 px-3 py-2 border-t",
+            "flex items-center justify-between gap-2 border-t px-3 py-1.5",
             theme.border.gridChrome,
           )}
         >
-          <p className="text-xs text-muted-foreground tabular-nums">
-            {table.getFilteredRowModel().rows.length === 0
-              ? "0 rows"
+          <p
+            className={cn(
+              theme.typography.captionMuted,
+              "min-w-0 shrink truncate tabular-nums",
+            )}
+          >
+            {filteredRowCount === 0
+              ? "—"
               : manualPagination
-                ? `Page ${table.getState().pagination.pageIndex + 1} of ${Math.max(1, table.getPageCount())}` +
-                  (totalRowsProp != null ? ` · ${totalRowsProp} total` : "")
-                : `${table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}–${Math.min(
-                    (table.getState().pagination.pageIndex + 1) *
-                      table.getState().pagination.pageSize,
-                    table.getFilteredRowModel().rows.length,
-                  )} of ${table.getFilteredRowModel().rows.length}`}
+                ? `${footerPageIndex + 1}/${resolvedPageCount}` +
+                  (totalRowsProp != null
+                    ? ` · ${totalRowsProp.toLocaleString()}`
+                    : "")
+                : `${footerRangeStart.toLocaleString()}–${footerRangeEnd.toLocaleString()}/${filteredRowCount.toLocaleString()}`}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-0.5">
             {effectivePageSizeOptions.length > 0 ? (
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="sr-only">Rows per page</span>
-                <span aria-hidden>Per page</span>
-                <select
-                  className={cn(
-                    "h-8 rounded-sm border bg-background px-2 text-xs",
-                    theme.uiChrome.border,
-                    theme.uiChrome.hover,
-                  )}
+              <>
+                <span className="sr-only" id={pageSizeSelectLabelId}>
+                  Rows per page
+                </span>
+                <Select
                   value={String(table.getState().pagination.pageSize)}
                   disabled={isLoading}
-                  onChange={(e) => {
-                    const next = Number(e.target.value);
+                  onValueChange={(value) => {
+                    const next = parseInt(value, 10);
                     if (!Number.isNaN(next)) table.setPageSize(next);
                   }}
                 >
-                  {effectivePageSizeOptions.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger
+                    size="sm"
+                    aria-labelledby={pageSizeSelectLabelId}
+                    className={cn(
+                      "h-7 min-w-0 rounded-sm border-0 bg-transparent px-1.5 text-xs shadow-none hover:bg-muted/50",
+                      "focus-visible:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/45",
+                      "data-[size=sm]:h-7 data-[size=sm]:min-h-7",
+                    )}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {effectivePageSizeOptions.map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
             ) : null}
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-xs"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage() || isLoading}
+              aria-label="Previous page"
             >
-              Previous
+              <ChevronLeft className="size-4" aria-hidden />
             </Button>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 px-2 text-xs"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground hover:text-foreground"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage() || isLoading}
+              aria-label="Next page"
             >
-              Next
+              <ChevronRight className="size-4" aria-hidden />
             </Button>
           </div>
         </div>

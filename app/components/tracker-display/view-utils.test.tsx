@@ -1,6 +1,26 @@
 import { describe, expect, it } from "vitest";
-import type { TrackerGrid } from "./types";
-import { normalizeGridViews } from "./view-utils";
+import type { GridType, TrackerGrid } from "./types";
+import { normalizeGridType, normalizeGridViews } from "./view-utils";
+
+describe("normalizeGridType", () => {
+  it("preserves known view types", () => {
+    expect(normalizeGridType("kanban")).toBe("kanban");
+    expect(normalizeGridType("div")).toBe("div");
+    expect(normalizeGridType("timeline")).toBe("timeline");
+  });
+
+  it("maps invalid strings (e.g. AI hallucinations) to table", () => {
+    expect(normalizeGridType("form")).toBe("table");
+    expect(normalizeGridType("board")).toBe("table");
+    expect(normalizeGridType("")).toBe("table");
+  });
+
+  it("maps non-strings to table", () => {
+    expect(normalizeGridType(undefined)).toBe("table");
+    expect(normalizeGridType(null)).toBe("table");
+    expect(normalizeGridType(1)).toBe("table");
+  });
+});
 
 describe("normalizeGridViews", () => {
   it("uses explicit views when present", () => {
@@ -47,5 +67,25 @@ describe("normalizeGridViews", () => {
     };
     const views = normalizeGridViews(grid);
     expect(views[0]?.type).toBe("table");
+  });
+
+  it("coerces invalid view.type to table", () => {
+    const grid = {
+      id: "g4",
+      name: "Y",
+      sectionId: "s1",
+      placeId: 4,
+      views: [
+        {
+          id: "v_bad",
+          type: "form" as unknown as GridType,
+          name: "Form",
+          config: {},
+        },
+      ],
+    } satisfies TrackerGrid;
+    const views = normalizeGridViews(grid);
+    expect(views[0]?.type).toBe("table");
+    expect(views[0]?.name).toBe("Form");
   });
 });

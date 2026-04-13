@@ -3,6 +3,7 @@ import {
   ROW_ACCENT_HEX_CLIENT_KEY,
   buildPatchTrackerRowRequestBody,
   parseRowAccentHex,
+  rowAccentStyleFromRow,
 } from "../row-accent-hex";
 
 describe("parseRowAccentHex", () => {
@@ -50,5 +51,37 @@ describe("buildPatchTrackerRowRequestBody", () => {
       data: {},
       rowAccentHex: null,
     });
+  });
+});
+
+describe("rowAccentStyleFromRow", () => {
+  it("returns undefined when accent missing or invalid", () => {
+    expect(rowAccentStyleFromRow(undefined)).toBeUndefined();
+    expect(rowAccentStyleFromRow({})).toBeUndefined();
+    expect(
+      rowAccentStyleFromRow({ [ROW_ACCENT_HEX_CLIENT_KEY]: "#gg0000" }),
+    ).toBeUndefined();
+  });
+
+  it("strip: color-mix fill and left bar", () => {
+    const style = rowAccentStyleFromRow(
+      { [ROW_ACCENT_HEX_CLIENT_KEY]: "#336699" },
+      "strip",
+    );
+    expect(style?.backgroundColor).toContain("#336699");
+    expect(style?.backgroundColor).toContain("color-mix");
+    expect(style?.borderLeftWidth).toBe(3);
+    expect(style?.borderLeftStyle).toBe("solid");
+    expect(style?.borderLeftColor).toBe("#336699");
+  });
+
+  it("chip: tint and border blend without left bar", () => {
+    const style = rowAccentStyleFromRow(
+      { [ROW_ACCENT_HEX_CLIENT_KEY]: "#abc" },
+      "chip",
+    );
+    expect(style?.backgroundColor).toContain("color-mix");
+    expect(style?.borderColor).toContain("color-mix");
+    expect(style?.borderLeftWidth).toBeUndefined();
   });
 });

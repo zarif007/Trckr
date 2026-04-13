@@ -4,6 +4,7 @@ import { Table2, LayoutGrid, FormInput, Calendar, GanttChart, type LucideIcon } 
 import { cn } from "@/lib/utils";
 import type { TrackerGrid } from "../types";
 import type { GridType } from "../types";
+import { normalizeGridType } from "../view-utils";
 import {
   InlineEditableName,
   useBlockControls,
@@ -36,7 +37,7 @@ const VIEW_COLORS: Record<GridType, string> = {
 
 /** Grid type badge: small pill showing view type. Exported for use in BlockEditor or elsewhere. */
 export function GridTypeBadge({ grid, viewType }: { grid: TrackerGrid; viewType?: GridType }) {
-  const type = viewType ?? grid.views?.[0]?.type ?? grid.type ?? "table";
+  const type = normalizeGridType(viewType ?? grid.views?.[0]?.type ?? grid.type ?? "table");
   const Icon = VIEW_ICONS[type];
   const label = VIEW_LABELS[type];
   const badgeClass = VIEW_COLORS[type];

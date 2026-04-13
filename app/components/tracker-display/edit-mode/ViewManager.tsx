@@ -39,6 +39,7 @@ import type {
   TrackerLayoutNode,
 } from "../types";
 import type { GridType } from "../types";
+import { normalizeGridType } from "../view-utils";
 import { computeViewKeyWarning } from "./view-key-config";
 
 /**
@@ -162,14 +163,18 @@ export function ViewManager({
   // Get current views
   const views = useMemo(() => {
     if (grid.views && grid.views.length > 0) {
-      return grid.views.map((v, i) => ({
-        ...v,
-        id: v.id || `${grid.id}_${v.type}_view_${i}`,
-        name: v.name || VIEW_LABELS[v.type],
-      }));
+      return grid.views.map((v, i) => {
+        const type = normalizeGridType(v.type);
+        return {
+          ...v,
+          type,
+          id: v.id || `${grid.id}_${type}_view_${i}`,
+          name: v.name || VIEW_LABELS[type],
+        };
+      });
     }
     // Fallback to single view from type
-    const type = grid.type || "table";
+    const type = normalizeGridType(grid.type || "table");
     return [
       {
         id: `${grid.id}_${type}_view_0`,

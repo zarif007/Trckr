@@ -3,6 +3,7 @@ import {
   layoutFieldIdsForGrid,
   type AssembledSchema,
 } from "./assembled-tracker-schema";
+import { calculateNextWidgetPosition } from "./calculate-widget-position";
 
 export function buildDefaultStatElement(
   trackerSchemaId: string,
@@ -17,6 +18,10 @@ export function buildDefaultStatElement(
     id: crypto.randomUUID(),
     type: "stat",
     placeId,
+    row: 0,
+    col: 0,
+    colSpan: 6,
+    rowSpan: 1,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -39,6 +44,10 @@ export function buildDefaultTableElement(
     id: crypto.randomUUID(),
     type: "table",
     placeId,
+    row: 0,
+    col: 0,
+    colSpan: 12,
+    rowSpan: 1,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -64,6 +73,10 @@ export function buildDefaultChartElement(
     type: "chart",
     chartKind: "bar",
     placeId,
+    row: 0,
+    col: 0,
+    colSpan: 6,
+    rowSpan: 1,
     source: {
       trackerSchemaId,
       gridId: grid.id,
@@ -79,6 +92,10 @@ export function buildDefaultTextElement(placeId: number): BoardElement {
     id: crypto.randomUUID(),
     type: "text",
     placeId,
+    row: 0,
+    col: 0,
+    colSpan: 12,
+    rowSpan: 1,
     content: "",
   };
 }

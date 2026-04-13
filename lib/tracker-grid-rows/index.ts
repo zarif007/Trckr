@@ -35,6 +35,7 @@ export {
   parseRowAccentHex,
   rowAccentHexBodySchema,
   type PatchTrackerDataRowBody,
+  type RowAccentVisualKind,
 } from "./row-accent-hex";
 export {
   fetchGridRowsList,

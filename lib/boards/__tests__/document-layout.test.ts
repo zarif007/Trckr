@@ -12,6 +12,10 @@ function statAt(placeId: number, id = "a"): BoardElement {
     id,
     type: "stat",
     placeId,
+    row: 0,
+    col: 0,
+    colSpan: 6,
+    rowSpan: 1,
     source: {
       trackerSchemaId: "t1",
       gridId: "g1",

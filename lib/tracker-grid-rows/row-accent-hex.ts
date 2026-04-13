@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { z } from "zod";
 import { rowPayloadForPatch } from "./row-utils";
 
@@ -66,11 +67,42 @@ export const rowAccentHexBodySchema = z
   ])
   .optional();
 
+/** Wide rows/cards: soft fill + strong left stripe. Narrow chips: stronger tint + blended border. */
+export type RowAccentVisualKind = "strip" | "chip";
+
+function rowAccentTintBackground(hex: string, tintPercent: number): string {
+  return `color-mix(in srgb, ${hex} ${tintPercent}%, hsl(var(--card)))`;
+}
+
+function rowAccentBorderBlend(hex: string, accentPercent: number): string {
+  return `color-mix(in srgb, ${hex} ${accentPercent}%, hsl(var(--border)))`;
+}
+
+/**
+ * Inline styles for a validated row accent. Invalid / missing accent returns `undefined`.
+ *
+ * - `strip` (default): subtle `color-mix` fill + 3px left bar (table, kanban).
+ * - `chip`: stronger tint + blended border color (calendar pills, timeline bars).
+ */
 export function rowAccentStyleFromRow(
   row: Record<string, unknown> | undefined,
-): { backgroundColor: string } | undefined {
+  kind: RowAccentVisualKind = "strip",
+): CSSProperties | undefined {
   const raw = row?.[ROW_ACCENT_HEX_CLIENT_KEY];
   const hex = parseRowAccentHex(raw);
   if (!hex) return undefined;
-  return { backgroundColor: hex };
+
+  if (kind === "chip") {
+    return {
+      backgroundColor: rowAccentTintBackground(hex, 38),
+      borderColor: rowAccentBorderBlend(hex, 50),
+    };
+  }
+
+  return {
+    backgroundColor: rowAccentTintBackground(hex, 17),
+    borderLeftWidth: 3,
+    borderLeftStyle: "solid",
+    borderLeftColor: hex,
+  };
 }

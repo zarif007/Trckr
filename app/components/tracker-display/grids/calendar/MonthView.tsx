@@ -83,6 +83,7 @@ export const MonthView = memo(function MonthView({
                 {events.slice(0, 2).map((event, i) => {
                   const accent = rowAccentStyleFromRow(
                     event.row as Record<string, unknown>,
+                    "chip",
                   );
                   return (
                   <div
@@ -104,7 +105,10 @@ export const MonthView = memo(function MonthView({
                     className={cn(
                       "text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 rounded-sm truncate border",
                       accent
-                        ? cn("text-foreground cursor-pointer hover:opacity-95", theme.uiChrome.border)
+                        ? cn(
+                            "text-foreground cursor-pointer hover:brightness-[1.03]",
+                            theme.uiChrome.border,
+                          )
                         : cn(
                             "bg-primary/10 text-primary border-primary/20",
                             "cursor-pointer hover:bg-primary/15",

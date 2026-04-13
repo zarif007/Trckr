@@ -11,6 +11,7 @@ import {
   safeParseBoardDefinition,
   type BoardDefinition,
 } from "./board-definition";
+import { migrateBoardDefinitionV2toV3 } from "./board-migration";
 
 export type CreateBoardInput = {
   userId: string;
@@ -125,10 +126,11 @@ export async function deleteBoardForUser(boardId: string, userId: string) {
 }
 
 /**
- * Migrate version 1 board definition (grid layout) to version 2 (placeId ordering).
+ * Migrate version 1 board definition (old grid layout) to version 3 (new grid layout).
  * Preserves vertical order by sorting by y-axis, then x-axis.
+ * Then applies v2→v3 migration for grid positioning.
  */
-function migrateV1ToV2(def: any): BoardDefinition {
+function migrateV1ToV3(def: any): BoardDefinition {
   if (def.version !== 1 || !Array.isArray(def.elements)) {
     return parseBoardDefinition(def);
   }
@@ -145,17 +147,25 @@ function migrateV1ToV2(def: any): BoardDefinition {
     return { ...rest, placeId: index };
   });
 
-  return {
-    version: 2,
+  const v2Format = {
+    version: 2 as const,
     elements: migrated,
   };
+
+  // Apply v2→v3 migration
+  return migrateBoardDefinitionV2toV3(v2Format);
 }
 
 export function boardDefinitionFromRow(definition: unknown): BoardDefinition {
   const parsed = parseBoardDefinition(definition);
 
   if ((parsed as any).version === 1) {
-    return migrateV1ToV2(parsed);
+    return migrateV1ToV3(parsed);
+  }
+
+  // Auto-migrate v2 → v3 (linear ordering → grid layout)
+  if ((parsed as any).version === 2) {
+    return migrateBoardDefinitionV2toV3(parsed as any);
   }
 
   return parsed;

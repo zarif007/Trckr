@@ -94,6 +94,8 @@ export function KanbanCard({
         isOverlay
           ? theme.border.gridChromeSoft
           : cn(theme.border.gridChrome, theme.border.gridChromeHover),
+        rowAccentStyle &&
+          "hover:brightness-[1.02] dark:hover:brightness-[1.03]",
         cardPadding,
         fontWeight,
         theme.radius.md,

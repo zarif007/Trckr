@@ -111,6 +111,7 @@ export const DayView = memo(function DayView({
                 {allDayEvents.map((event, i) => {
                   const accent = rowAccentStyleFromRow(
                     event.row as Record<string, unknown>,
+                    "chip",
                   );
                   return (
                   <div
@@ -132,7 +133,10 @@ export const DayView = memo(function DayView({
                     className={cn(
                       "text-xs md:text-sm px-2 md:px-3 py-1 md:py-1.5 rounded-sm truncate border",
                       accent
-                        ? cn("text-foreground cursor-pointer hover:opacity-95", theme.uiChrome.border)
+                        ? cn(
+                            "text-foreground cursor-pointer hover:brightness-[1.03]",
+                            theme.uiChrome.border,
+                          )
                         : cn(
                             "bg-primary/10 text-primary border-primary/20",
                             "cursor-pointer hover:bg-primary/15",
@@ -155,6 +159,7 @@ export const DayView = memo(function DayView({
               const { topPx } = calculateEventPosition(event.hour, event.minute);
               const accent = rowAccentStyleFromRow(
                 event.row as Record<string, unknown>,
+                "chip",
               );
 
               return (
@@ -177,7 +182,10 @@ export const DayView = memo(function DayView({
                     "absolute left-1 md:left-2 right-1 md:right-2",
                     "text-xs md:text-sm px-2 md:px-3 py-1.5 md:py-2 rounded-sm truncate border",
                     accent
-                      ? cn("text-foreground cursor-pointer hover:opacity-95 z-[5]", theme.uiChrome.border)
+                      ? cn(
+                          "text-foreground cursor-pointer hover:brightness-[1.03] z-[5]",
+                          theme.uiChrome.border,
+                        )
                       : cn(
                           "bg-primary/10 text-primary border-primary/20",
                           "cursor-pointer hover:bg-primary/15 z-[5]",

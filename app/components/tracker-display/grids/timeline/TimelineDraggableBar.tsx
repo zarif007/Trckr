@@ -46,6 +46,7 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
 
   const rowAccentStyle = rowAccentStyleFromRow(
     item.row as Record<string, unknown>,
+    "chip",
   );
   const style: CSSProperties = {
     ...buildTimelineBarPositionStyle(
@@ -75,7 +76,9 @@ export const TimelineDraggableBar = memo(function TimelineDraggableBar({
         /* Do not transition `transform`: dnd-kit updates it every frame; CSS transition fights it and feels janky. */
         isDragging
           ? "z-10 border-primary/50 bg-muted/80 opacity-[0.97] ring-0 transition-none"
-          : "transition-colors duration-100 hover:bg-muted/30",
+          : rowAccentStyle
+            ? "transition-[filter] duration-100 hover:brightness-[1.03]"
+            : "transition-colors duration-100 hover:bg-muted/30",
         dragEnabled ? "cursor-default" : "cursor-pointer",
       )}
     >

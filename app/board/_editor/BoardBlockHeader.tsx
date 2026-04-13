@@ -11,6 +11,7 @@ import { SECTION_BAR_CLASS } from "@/app/components/tracker-display/layout";
 import {
   InlineEditableName,
   LabelWithBlockControls,
+  useBlockControls,
 } from "@/app/components/tracker-display/layout";
 import {
   Popover,
@@ -62,8 +63,25 @@ export function BoardBlockHeader({
   onRemove,
 }: BoardBlockHeaderProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const controls = useBlockControls();
   const fallback = TYPE_LABELS[block.type];
   const displayTitle = block.title?.trim() || fallback;
+
+  const labelContent = (
+    <span className="flex items-center gap-2">
+      <TypeBadge type={block.type} />
+      <InlineEditableName
+        value={displayTitle}
+        onChange={(name) => {
+          const t = name.trim();
+          onUpdate((el) => ({
+            ...el,
+            title: t === fallback ? undefined : t,
+          }));
+        }}
+      />
+    </span>
+  );
 
   return (
     <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -73,26 +91,17 @@ export function BoardBlockHeader({
             className="h-4 w-4 shrink-0 text-muted-foreground"
             aria-hidden
           />
-          <LabelWithBlockControls
-            isSortable={true}
-            label={
-              <span className="flex items-center gap-2">
-                <TypeBadge type={block.type} />
-                <InlineEditableName
-                  value={displayTitle}
-                  onChange={(name) => {
-                    const t = name.trim();
-                    onUpdate((el) => ({
-                      ...el,
-                      title: t === fallback ? undefined : t,
-                    }));
-                  }}
-                />
-              </span>
-            }
-            onRemove={onRemove}
-            onSettings={() => setSettingsOpen(true)}
-          />
+          {controls ? (
+            <LabelWithBlockControls
+              isSortable={controls.isSortable}
+              label={labelContent}
+              onRemove={controls.onRemove}
+              dragHandleProps={controls.dragHandleProps}
+              onSettings={() => setSettingsOpen(true)}
+            />
+          ) : (
+            labelContent
+          )}
         </div>
       </PopoverAnchor>
 

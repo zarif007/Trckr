@@ -18,13 +18,15 @@ import {
   type BoardElement,
   useUndoableBoardDefinition,
 } from "@/lib/boards";
+import { calculateNextWidgetPosition } from "@/lib/boards/calculate-widget-position";
 import type { BoardElementPayload } from "@/lib/boards/execute-board";
 import type { TrackerSchema } from "@/app/dashboard/dashboard-context";
 import {
   useBoardNavBar,
   type BoardNavPersistStatus,
 } from "@/app/board/_hooks/useBoardNavBar";
-import { BoardBlockEditor } from "./BoardBlockEditor";
+import { BoardGridEditor } from "./grid-layout/BoardGridEditor";
+import { BoardEditModeProvider } from "./context/BoardEditModeContext";
 import { BoardEditorPanel } from "./BoardEditorPanel";
 
 type BoardMeta = {
@@ -265,10 +267,15 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
               ? buildDefaultTableElement(trackerSchemaId, schema, placeId)
               : buildDefaultChartElement(trackerSchemaId, schema, placeId);
         if (!el) return prev;
+
+        // Calculate proper position for new widget
+        const position = calculateNextWidgetPosition(prev.elements, el.colSpan ?? 6);
+        const positionedEl = { ...el, ...position };
+
         return {
           ...prev,
           version: BOARD_DEFINITION_VERSION,
-          elements: [...prev.elements, el],
+          elements: [...prev.elements, positionedEl],
         };
       });
     },
@@ -328,6 +335,23 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
       })
       .finally(() => setAddingWidget(null));
   }, [scopedTrackers, schemaByTracker, appendWidget]);
+
+  const handleAddText = useCallback(() => {
+    mutateDefinition((prev) => {
+      const placeId = getNextPlaceId(prev.elements);
+      const el = buildDefaultTextElement(placeId);
+
+      // Calculate proper position for new widget
+      const position = calculateNextWidgetPosition(prev.elements, el.colSpan ?? 12);
+      const positionedEl = { ...el, ...position };
+
+      return {
+        ...prev,
+        version: BOARD_DEFINITION_VERSION,
+        elements: [...prev.elements, positionedEl],
+      };
+    });
+  }, [mutateDefinition]);
 
   const updateElementById = useCallback(
     (id: string, updater: (el: BoardElement) => BoardElement) => {
@@ -402,14 +426,23 @@ export function BoardEditClient({ boardId }: { boardId: string }) {
           }
         >
           {editMode ? (
-            <BoardBlockEditor
+            <BoardEditModeProvider
+              editMode={editMode}
               definition={definition}
-              data={data}
-              scopedTrackers={scopedTrackers}
-              schemaByTracker={schemaByTracker}
-              onDefinitionChange={mutateDefinition}
-              onSchemaNeeded={loadSchema}
-            />
+              onDefinitionChange={(def) => mutateDefinition(() => def)}
+              undo={undo}
+              canUndo={canUndo}
+            >
+              <BoardGridEditor
+                definition={definition}
+                data={data}
+                onDefinitionChange={mutateDefinition}
+                onAddStat={handleAddStat}
+                onAddTable={handleAddTable}
+                onAddChart={handleAddChart}
+                onAddText={handleAddText}
+              />
+            </BoardEditModeProvider>
           ) : (
             <div className="flex flex-col gap-4 p-4">
               <p className="text-sm text-muted-foreground">

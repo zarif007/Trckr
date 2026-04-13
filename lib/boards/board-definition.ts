@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BOARD_DEFINITION_VERSION = 2 as const;
+export const BOARD_DEFINITION_VERSION = 3 as const;
 
 const boardSourceSchema = z.object({
   trackerSchemaId: z.string().min(1),
@@ -8,22 +8,27 @@ const boardSourceSchema = z.object({
   fieldIds: z.array(z.string()).default([]),
 });
 
+// Layout positioning for grid-based widget placement
+const boardElementLayoutSchema = z.object({
+  id: z.string().min(1),
+  placeId: z.number().int().min(0),
+  title: z.string().max(200).optional(),
+  row: z.number().int().min(0).default(0),
+  col: z.number().int().min(0).max(11).default(0),
+  colSpan: z.number().int().min(1).max(12).default(6),
+  rowSpan: z.number().int().min(1).default(1),
+});
+
 const statAggregateSchema = z.enum(["count", "sum", "avg"]);
 
-const statElementSchema = z.object({
-  id: z.string().min(1),
+const statElementSchema = boardElementLayoutSchema.extend({
   type: z.literal("stat"),
-  title: z.string().max(200).optional(),
-  placeId: z.number().int().min(0),
   source: boardSourceSchema,
   aggregate: statAggregateSchema,
 });
 
-const tableElementSchema = z.object({
-  id: z.string().min(1),
+const tableElementSchema = boardElementLayoutSchema.extend({
   type: z.literal("table"),
-  title: z.string().max(200).optional(),
-  placeId: z.number().int().min(0),
   source: boardSourceSchema,
   /** Max rows to return (capped server-side). */
   maxRows: z.number().int().min(1).max(100).optional(),
@@ -31,11 +36,8 @@ const tableElementSchema = z.object({
 
 const chartKindSchema = z.enum(["bar", "line"]);
 
-const chartElementSchema = z.object({
-  id: z.string().min(1),
+const chartElementSchema = boardElementLayoutSchema.extend({
   type: z.literal("chart"),
-  title: z.string().max(200).optional(),
-  placeId: z.number().int().min(0),
   source: boardSourceSchema.extend({
     /** Category axis: field id present on each row. */
     groupByFieldId: z.string().min(1),
@@ -45,11 +47,8 @@ const chartElementSchema = z.object({
   chartKind: chartKindSchema.default("bar"),
 });
 
-const textElementSchema = z.object({
-  id: z.string().min(1),
+const textElementSchema = boardElementLayoutSchema.extend({
   type: z.literal("text"),
-  title: z.string().max(200).optional(),
-  placeId: z.number().int().min(0),
   content: z.string().max(10000).default(""),
 });
 
