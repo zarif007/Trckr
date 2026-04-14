@@ -1,8 +1,7 @@
 /**
- * Orchestrates the three-phase agent pipeline: Manager → Master Data → Builder.
+ * Orchestrates the multi-agent build-tracker pipeline: Manager → Master Data → Builder → Postprocess.
  *
- * Writes phase markers and agent events to a stream controller, allowing the frontend
- * to track progress and show incremental schema previews in real time.
+ * Writes phase markers and agent events to a stream controller (NDJSON). See README in this folder.
  */
 
 import type { LanguageModelUsage } from "ai";
@@ -10,11 +9,17 @@ import type { LanguageModelUsage } from "ai";
 import type { RequestLogContext } from "@/lib/api";
 import { logAiError, logAiStage } from "@/lib/ai";
 import { encodeEvent, type AgentStreamEvent } from "@/lib/agent/events";
+import type { BuilderOutput } from "@/lib/agent/builder-schema";
+
 import type { PromptInputs } from "./prompts";
 import { runManagerAgent } from "./manager-agent";
 import { runMasterDataAgent } from "./master-data-agent";
 import { runBuilderAgent } from "./builder-agent";
-import { postProcessBuilderOutput } from "./postprocess";
+import { runPostprocessWithBuilderRepairs } from "./postprocess-repair-loop";
+import {
+  shouldUsePhasedBuilder,
+  runPhasedBuilderAgent,
+} from "./phased-builder";
 
 export interface OrchestrateOptions {
   logContext?: RequestLogContext;
@@ -31,12 +36,11 @@ export interface OrchestrateOptions {
  * Run the full Manager → Master Data → Builder pipeline, writing NDJSON events to the stream.
  *
  * Phases:
- * 1. Manager generates a structured plan and declares required master data entities
- * 2. Master Data Agent pre-creates/finds master data trackers in the right folder (skipped when
- * masterDataScope is "tracker" or no master data is needed)
- * 3. Builder streams the tracker schema using the manager plan + resolved master data IDs
+ * 1. Manager — structured plan + optional `buildManifest`
+ * 2. Master Data — pre-resolve external trackers (module/project scope only)
+ * 3. Builder — single-pass or phased (large greenfield plans); then postprocess with repair loop
  *
- * Errors bubble up to the caller; the route handler writes an `error` event and closes the stream.
+ * Errors bubble to the caller; the route handler writes an `error` event and closes the stream.
  */
 export async function orchestrateBuildTracker(
   inputs: PromptInputs,
@@ -49,7 +53,6 @@ export async function orchestrateBuildTracker(
     controller.enqueue(encoder.encode(encodeEvent(event)));
   };
 
-  // ─── Phase 1: Manager ───────────────────────────────────────────────────────
   write({ t: "phase", phase: "manager" });
   if (opts.logContext)
     logAiStage(opts.logContext, "manager-start", "Starting manager agent.");
@@ -59,9 +62,7 @@ export async function orchestrateBuildTracker(
     onLlmUsage: opts.onManagerLlmUsage,
   });
 
-  // ─── Phase 2: Master Data Agent ─────────────────────────────────────────────
   const requiredMasterData = manager.requiredMasterData ?? [];
-
   const effectiveScope = opts.masterDataScope?.trim();
   const needsMasterData =
     requiredMasterData.length > 0 &&
@@ -71,9 +72,6 @@ export async function orchestrateBuildTracker(
 
   let builderInputs: PromptInputs = inputs;
 
-  // Tracker scope: all bindings are intra-tracker (__self__ placeholders resolved
-  // in postprocess via buildBindingsFromSchema + enrichBindingsFromSchema).
-  // The builder sees the full local grid structure directly — no external resolution needed.
   if (needsMasterData) {
     write({ t: "phase", phase: "master-data" });
     try {
@@ -98,19 +96,37 @@ export async function orchestrateBuildTracker(
     } catch (err) {
       if (opts.logContext)
         logAiError(opts.logContext, "master-data-agent-failed", err);
-      // Non-fatal — builder falls back to PATH B (placeholder approach)
     }
   }
 
-  // ─── Phase 3: Builder ───────────────────────────────────────────────────────
   write({ t: "phase", phase: "builder" });
   if (opts.logContext)
     logAiStage(opts.logContext, "builder-start", "Starting builder agent.");
 
-  const builderOutput = await runBuilderAgent(builderInputs, manager, write, {
-    logContext: opts.logContext,
-    onLlmUsage: opts.onBuilderLlmUsage,
-  });
+  let builderOutput: BuilderOutput;
+  if (shouldUsePhasedBuilder(manager, builderInputs)) {
+    if (opts.logContext) {
+      logAiStage(
+        opts.logContext,
+        "builder-phased",
+        "Using phased builder (skeleton + patch) for large plan.",
+      );
+    }
+    builderOutput = await runPhasedBuilderAgent(
+      builderInputs,
+      manager,
+      write,
+      {
+        logContext: opts.logContext,
+        onLlmUsage: opts.onBuilderLlmUsage,
+      },
+    );
+  } else {
+    builderOutput = await runBuilderAgent(builderInputs, manager, write, {
+      logContext: opts.logContext,
+      onLlmUsage: opts.onBuilderLlmUsage,
+    });
+  }
 
   if (!opts.userId) {
     write({ t: "builder_finish", output: builderOutput });
@@ -118,12 +134,18 @@ export async function orchestrateBuildTracker(
   }
 
   const scopeForPost = effectiveScope ?? "tracker";
-  const postProcessed = await postProcessBuilderOutput(builderOutput, {
+  const postProcessed = await runPostprocessWithBuilderRepairs({
+    builderInputs,
+    manager,
+    initialOutput: builderOutput,
+    baseTracker: opts.currentTracker ?? null,
     masterDataScope: scopeForPost,
     userId: opts.userId,
     projectId: opts.projectId ?? null,
     moduleId: opts.moduleId ?? null,
-    baseTracker: opts.currentTracker ?? null,
+    write,
+    logContext: opts.logContext,
+    onBuilderLlmUsage: opts.onBuilderLlmUsage,
   });
 
   write({

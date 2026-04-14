@@ -24,13 +24,22 @@ import {
   buildBuilderUserPrompt,
   buildBuilderFallbackPrompts,
 } from "./prompts";
-import { BUILDER_MAX_TOKENS, MAX_FALLBACK_ATTEMPTS } from "./constants";
+import {
+  BUILDER_MAX_TOKENS,
+  MAX_FALLBACK_ATTEMPTS,
+  clampBuilderMaxOutputTokens,
+} from "./constants";
 
 const LOG_PREFIX = "[agent/builder]";
 
 export interface RunBuilderAgentOptions {
   logContext?: RequestLogContext;
   onLlmUsage?: (usage: LanguageModelUsage) => void;
+  /** Full user message replacement (repair passes, phased builder). */
+  overrideUserPrompt?: string;
+  /** Skip streaming; use generateObject only (repair / phase calls). */
+  preferGenerateObject?: boolean;
+  maxOutputTokens?: number;
 }
 
 function hasValidOutput(output: BuilderOutput | undefined): boolean {
@@ -51,65 +60,73 @@ export async function runBuilderAgent(
   opts: RunBuilderAgentOptions = {},
 ): Promise<BuilderOutput> {
   const system = getBuilderSystemPrompt();
-  const prompt = buildBuilderUserPrompt(inputs, manager);
+  const prompt = opts.overrideUserPrompt ?? buildBuilderUserPrompt(inputs, manager);
+  const maxOut = clampBuilderMaxOutputTokens(opts.maxOutputTokens);
 
   // ─── Try streaming first ────────────────────────────────────────────────────
-  try {
-    let finishUsage: LanguageModelUsage | undefined;
-    let finishObject: BuilderOutput | undefined;
-    let lastPartial: Partial<BuilderOutput> | undefined;
+  if (!opts.preferGenerateObject) {
+    try {
+      let finishUsage: LanguageModelUsage | undefined;
+      let finishObject: BuilderOutput | undefined;
+      let lastPartial: Partial<BuilderOutput> | undefined;
 
-    const streamResult = streamObject({
-      model: deepseek("deepseek-chat"),
-      system,
-      prompt,
-      schema: builderOutputSchema,
-      maxOutputTokens: BUILDER_MAX_TOKENS,
-      // onFinish is the most reliable way to get final object + usage from streamObject
-      onFinish: ({ object, usage }) => {
-        finishObject = object as BuilderOutput | undefined;
-        finishUsage = usage;
-      },
-      experimental_repairText: repairStructuredJsonText,
-    });
+      const streamResult = streamObject({
+        model: deepseek("deepseek-chat"),
+        system,
+        prompt,
+        schema: builderOutputSchema,
+        maxOutputTokens: maxOut,
+        // onFinish is the most reliable way to get final object + usage from streamObject
+        onFinish: ({ object, usage }) => {
+          finishObject = object as BuilderOutput | undefined;
+          finishUsage = usage;
+        },
+        experimental_repairText: repairStructuredJsonText,
+      });
 
-    for await (const partial of streamResult.partialObjectStream) {
-      lastPartial = partial as Partial<BuilderOutput>;
-      write({ t: "builder_partial", partial: lastPartial });
-    }
+      for await (const partial of streamResult.partialObjectStream) {
+        lastPartial = partial as Partial<BuilderOutput>;
+        write({ t: "builder_partial", partial: lastPartial });
+      }
 
-    if (finishUsage) {
-      opts.onLlmUsage?.(finishUsage);
-    }
-    if (opts.logContext) {
-      logAiStage(
-        opts.logContext,
-        "builder-stream-complete",
-        "Builder stream finished.",
-      );
-    }
+      if (finishUsage) {
+        opts.onLlmUsage?.(finishUsage);
+      }
+      if (opts.logContext) {
+        logAiStage(
+          opts.logContext,
+          "builder-stream-complete",
+          "Builder stream finished.",
+        );
+      }
 
-    const output = finishObject ?? (lastPartial as BuilderOutput | undefined);
-    if (!hasValidOutput(output)) {
-      throw new Error(
-        "Builder produced no tracker or trackerPatch after streaming.",
-      );
-    }
-    return output as BuilderOutput;
-  } catch (error) {
-    if (opts.logContext) {
-      logAiError(opts.logContext, "builder-stream-failed", error);
-    } else {
-      console.warn(
-        `${LOG_PREFIX} Streaming failed, falling back to generateObject:`,
-        error instanceof Error ? error.message : String(error),
-      );
+      const output = finishObject ?? (lastPartial as BuilderOutput | undefined);
+      if (!hasValidOutput(output)) {
+        throw new Error(
+          "Builder produced no tracker or trackerPatch after streaming.",
+        );
+      }
+      return output as BuilderOutput;
+    } catch (error) {
+      if (opts.logContext) {
+        logAiError(opts.logContext, "builder-stream-failed", error);
+      } else {
+        console.warn(
+          `${LOG_PREFIX} Streaming failed, falling back to generateObject:`,
+          error instanceof Error ? error.message : String(error),
+        );
+      }
     }
   }
 
   // ─── Fallback: generateObject attempts ─────────────────────────────────────
   const provider = getDefaultAiProvider();
-  const fallbackPrompts = buildBuilderFallbackPrompts(inputs, manager);
+  const fallbackPrompts = opts.overrideUserPrompt
+    ? [
+        opts.overrideUserPrompt,
+        ...buildBuilderFallbackPrompts(inputs, manager).slice(1),
+      ]
+    : buildBuilderFallbackPrompts(inputs, manager);
   let lastError: unknown = null;
 
   for (let i = 0; i < MAX_FALLBACK_ATTEMPTS; i++) {
@@ -119,7 +136,7 @@ export async function runBuilderAgent(
         system,
         prompt: fallbackPrompt,
         schema: builderOutputSchema,
-        maxOutputTokens: BUILDER_MAX_TOKENS,
+        maxOutputTokens: maxOut,
       });
       opts.onLlmUsage?.(usage);
       if (hasValidOutput(object)) {

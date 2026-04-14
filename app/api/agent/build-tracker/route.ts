@@ -6,6 +6,8 @@
  *
  * Request body: same shape as /api/generate-tracker
  * Response: NDJSON stream of AgentStreamEvent objects (one per line)
+ *
+ * @see ./README.md for pipeline layout, module map, and operational limits (e.g. max_tokens).
  */
 
 import { badRequest, createRequestLogContext, jsonError } from "@/lib/api";

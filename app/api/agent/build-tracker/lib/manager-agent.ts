@@ -18,7 +18,10 @@ import { managerSchema, type ManagerSchema } from "@/lib/schemas/multi-agent";
 import type { AgentStreamEvent } from "@/lib/agent/events";
 import type { PromptInputs } from "./prompts";
 import { getManagerSystemPrompt, buildManagerUserPrompt } from "./prompts";
-import { MANAGER_MAX_TOKENS } from "./constants";
+import {
+  MANAGER_MAX_TOKENS,
+  MANAGER_MAX_TOKENS_LARGE_CONTEXT,
+} from "./constants";
 
 const LOG_PREFIX = "[agent/manager]";
 
@@ -40,6 +43,14 @@ export async function runManagerAgent(
 ): Promise<ManagerSchema> {
   const system = getManagerSystemPrompt();
   const prompt = buildManagerUserPrompt(inputs);
+  const contextChars =
+    (inputs.query?.length ?? 0) +
+    (inputs.conversationContext?.length ?? 0) +
+    (inputs.currentStateBlock?.length ?? 0);
+  const maxTokens =
+    contextChars > 4500
+      ? MANAGER_MAX_TOKENS_LARGE_CONTEXT
+      : MANAGER_MAX_TOKENS;
 
   // ─── Try streaming first ─────────────────────────────────────────────────
   try {
@@ -51,7 +62,7 @@ export async function runManagerAgent(
       system,
       prompt,
       schema: managerSchema,
-      maxOutputTokens: MANAGER_MAX_TOKENS,
+      maxOutputTokens: maxTokens,
       onFinish: ({ object, usage }) => {
         finishObject = object as ManagerSchema | undefined;
         finishUsage = usage;
@@ -98,7 +109,7 @@ export async function runManagerAgent(
       system,
       prompt,
       schema: managerSchema,
-      maxOutputTokens: MANAGER_MAX_TOKENS,
+      maxOutputTokens: maxTokens,
     });
     opts.onLlmUsage?.(usage);
     if (opts.logContext) {
@@ -127,7 +138,7 @@ export async function runManagerAgent(
     system,
     prompt: minimalPrompt,
     schema: managerSchema,
-    maxOutputTokens: MANAGER_MAX_TOKENS,
+    maxOutputTokens: maxTokens,
   });
   opts.onLlmUsage?.(usage);
   if (opts.logContext) {

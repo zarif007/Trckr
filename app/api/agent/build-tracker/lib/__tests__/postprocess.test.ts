@@ -412,7 +412,7 @@ describe("postProcessBuilderOutput", () => {
       expect(result.output.tracker).toBeDefined();
     });
 
-    it("throws when binding has unresolved placeholder sourceId", async () => {
+    it("strips bindings with unresolved placeholder sourceId", async () => {
       const tracker = createMinimalTracker({
         bindings: {
           "tasks_grid.status": {
@@ -423,20 +423,26 @@ describe("postProcessBuilderOutput", () => {
         },
       });
 
-      await expect(
-        postProcessBuilderOutput(
-          { tracker },
-          {
-            masterDataScope: "tracker",
-            userId: "user-1",
-            projectId: null,
-            moduleId: null,
-          },
-        ),
-      ).rejects.toThrow("Binding integrity check failed");
+      const result = await postProcessBuilderOutput(
+        { tracker },
+        {
+          masterDataScope: "tracker",
+          userId: "user-1",
+          projectId: null,
+          moduleId: null,
+        },
+      );
+
+      const stripped = result.toolCalls.filter((tc) =>
+        tc.id.startsWith("binding-stripped-"),
+      );
+      expect(stripped.length).toBeGreaterThan(0);
+      expect(
+        (result.output.tracker as Record<string, unknown>).bindings,
+      ).not.toHaveProperty("tasks_grid.status");
     });
 
-    it("throws when binding sourceId is empty and optionsGrid does not exist", async () => {
+    it("strips bindings when sourceId is empty and optionsGrid does not exist", async () => {
       const tracker = createMinimalTracker({
         bindings: {
           "tasks_grid.status": {
@@ -446,17 +452,20 @@ describe("postProcessBuilderOutput", () => {
         },
       });
 
-      await expect(
-        postProcessBuilderOutput(
-          { tracker },
-          {
-            masterDataScope: "tracker",
-            userId: "user-1",
-            projectId: null,
-            moduleId: null,
-          },
-        ),
-      ).rejects.toThrow("Binding integrity check failed");
+      const result = await postProcessBuilderOutput(
+        { tracker },
+        {
+          masterDataScope: "tracker",
+          userId: "user-1",
+          projectId: null,
+          moduleId: null,
+        },
+      );
+
+      const stripped = result.toolCalls.filter((tc) =>
+        tc.id.startsWith("binding-stripped-"),
+      );
+      expect(stripped.length).toBeGreaterThan(0);
     });
   });
 
@@ -497,7 +506,7 @@ describe("postProcessBuilderOutput", () => {
             moduleId: null,
           },
         ),
-      ).rejects.toThrow("Schema validation failed");
+      ).rejects.toThrow(/Schema validation failed/);
     });
   });
 

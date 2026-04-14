@@ -87,6 +87,25 @@ export const managerSchema = z
       .describe(
         "All master data entities this tracker needs for select/multiselect fields (all scopes). Server pre-resolves these for module/project scope before the builder runs.",
       ),
+    /** Machine-oriented checklist for the builder and completeness checks (optional but recommended for large builds). */
+    buildManifest: z
+      .object({
+        tabIds: z
+          .array(z.string())
+          .optional()
+          .describe("Every tab id the builder must create"),
+        gridIds: z
+          .array(z.string())
+          .optional()
+          .describe("Every primary grid id the builder must create"),
+        selectFieldPaths: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'Binding paths like "tasks_grid.status" for each select/multiselect',
+          ),
+      })
+      .optional(),
   })
   .passthrough();
 

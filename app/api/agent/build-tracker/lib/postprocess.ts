@@ -62,7 +62,7 @@ function ensureDefaultTab(
   return [{ id: "overview_tab", name: "Overview", placeId: 0, config: {} }];
 }
 
-function repairTrackerStructure(
+export function repairTrackerStructure(
   tracker: Record<string, unknown>,
 ): Record<string, unknown> {
   const tabs = Array.isArray(tracker.tabs) ? [...tracker.tabs] : [];
@@ -573,7 +573,43 @@ function validateBindingIntegrity(tracker: TrackerLike): {
   return { errors, warnings };
 }
 
-function materializeTracker(
+function stripBindingsFromIntegrityErrors(
+  tracker: Record<string, unknown>,
+  errors: string[],
+): {
+  tracker: Record<string, unknown>;
+  removedPaths: string[];
+  stripToolCalls: ToolCallEntry[];
+} {
+  const bindingPathRegex = /^Binding "([^"]+)"/;
+  const bindings = isPlainObject(tracker.bindings)
+    ? { ...(tracker.bindings as Record<string, unknown>) }
+    : {};
+  const removedPaths: string[] = [];
+  const stripToolCalls: ToolCallEntry[] = [];
+  let i = 0;
+  for (const err of errors) {
+    const m = err.match(bindingPathRegex);
+    const path = m?.[1];
+    if (!path || !(path in bindings)) continue;
+    delete bindings[path];
+    removedPaths.push(path);
+    stripToolCalls.push({
+      id: `binding-stripped-${i++}`,
+      fieldPath: path,
+      purpose: "binding",
+      description: `Removed invalid binding: ${err}`,
+      status: "done",
+    });
+  }
+  return {
+    tracker: { ...tracker, bindings },
+    removedPaths,
+    stripToolCalls,
+  };
+}
+
+export function materializeBuilderTracker(
   output: BuilderOutput,
   baseTracker?: Record<string, unknown> | null,
 ): Record<string, unknown> | null {
@@ -599,7 +635,7 @@ export async function postProcessBuilderOutput(
       ? "tracker"
       : rawScope ?? "tracker";
   const baseTracker = options.baseTracker ?? null;
-  const materialized = materializeTracker(output, baseTracker);
+  const materialized = materializeBuilderTracker(output, baseTracker);
   if (!materialized) {
     throw new Error("Builder produced no tracker or trackerPatch.");
   }
@@ -656,9 +692,18 @@ export async function postProcessBuilderOutput(
   const exprResult = await resolveExprIntentsServer(tracker as TrackerLike);
   tracker = sanitizeTracker(exprResult.tracker as Record<string, unknown>);
 
-  // Validate binding integrity: catch unresolved placeholders and broken references
-  // before they reach the user
-  const bindingIntegrity = validateBindingIntegrity(tracker as TrackerLike);
+  const bindingStripToolCalls: ToolCallEntry[] = [];
+  let bindingIntegrity = validateBindingIntegrity(tracker as TrackerLike);
+  for (let round = 0; round < 6 && bindingIntegrity.errors.length > 0; round++) {
+    const stripped = stripBindingsFromIntegrityErrors(
+      tracker,
+      bindingIntegrity.errors,
+    );
+    if (stripped.removedPaths.length === 0) break;
+    tracker = stripped.tracker;
+    bindingStripToolCalls.push(...stripped.stripToolCalls);
+    bindingIntegrity = validateBindingIntegrity(tracker as TrackerLike);
+  }
   if (bindingIntegrity.errors.length > 0) {
     throw new Error(
       `Binding integrity check failed: ${bindingIntegrity.errors.join("; ")}`,
@@ -667,12 +712,15 @@ export async function postProcessBuilderOutput(
 
   const validation = validateTracker(tracker as TrackerLike);
   if (!validation.valid) {
-    throw new Error("Schema validation failed.");
+    throw new Error(
+      `Schema validation failed: ${validation.errors.join("; ")}`,
+    );
   }
 
   const toolCalls: ToolCallEntry[] = [
     ...masterDataToolCalls,
     ...bindingToolCalls,
+    ...bindingStripToolCalls,
     ...exprResult.toolCalls,
   ];
 

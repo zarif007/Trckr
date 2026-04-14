@@ -5,6 +5,8 @@ import {
   buildManagerUserPrompt,
   buildBuilderUserPrompt,
   buildBuilderFallbackPrompts,
+  buildBuilderRepairUserPrompt,
+  buildManagerManifestText,
   type PromptInputs,
 } from "../prompts";
 import type { ManagerSchema } from "@/lib/schemas/multi-agent";
@@ -43,7 +45,7 @@ describe("prompt building", () => {
       const prompt = getManagerSystemPrompt();
 
       expect(prompt).toContain("Manager");
-      expect(prompt).toContain("token budget");
+      expect(prompt).toMatch(/budget|output/i);
       expect(prompt).toBeTypeOf("string");
       expect(prompt.length).toBeGreaterThan(0);
     });
@@ -53,7 +55,7 @@ describe("prompt building", () => {
 
       expect(prompt).toContain("BUILDER PHILOSOPHY");
       expect(prompt).toContain("builderTodo");
-      expect(prompt).toContain("token budget");
+      expect(prompt).toMatch(/budget|output/i);
       expect(prompt).toBeTypeOf("string");
       expect(prompt.length).toBeGreaterThan(0);
     });
@@ -167,46 +169,101 @@ describe("prompt building", () => {
 
       expect(result).not.toContain("Pre-Resolved Master Data");
     });
+
+    it("includes build manifest when buildManifest is present", () => {
+      const manager = createManager({
+        buildManifest: {
+          tabIds: ["overview_tab", "orders_tab"],
+          gridIds: ["tasks_grid"],
+        },
+      });
+      const result = buildBuilderUserPrompt(createPromptInputs(), manager);
+
+      expect(result).toContain("Build manifest (checklist)");
+      expect(result).toContain("orders_tab");
+    });
+  });
+
+  describe("buildBuilderRepairUserPrompt", () => {
+    it("includes server errors and stable prefix", () => {
+      const inputs = createPromptInputs({
+        resolvedMasterData: [
+          {
+            key: "customer",
+            name: "Customer",
+            trackerId: "t-1",
+            gridId: "g-1",
+            labelFieldId: "name",
+          },
+        ],
+      });
+      const manager = createManager();
+      const prompt = buildBuilderRepairUserPrompt(inputs, manager, {
+        serverErrors: "Binding integrity check failed: example",
+        completenessGaps: ["Missing grid foo"],
+      });
+
+      expect(prompt).toContain("SERVER VALIDATION FAILED");
+      expect(prompt).toContain("Binding integrity check failed");
+      expect(prompt).toContain("Completeness gaps");
+      expect(prompt).toContain("Pre-Resolved Master Data");
+      expect(prompt).toContain("Manager Plan");
+    });
+  });
+
+  describe("buildManagerManifestText", () => {
+    it("includes buildManifest ids when set", () => {
+      const manager = createManager({
+        buildManifest: { tabIds: ["a_tab"], gridIds: ["b_grid"] },
+      });
+      const text = buildManagerManifestText(manager);
+      expect(text).toContain("a_tab");
+      expect(text).toContain("b_grid");
+    });
   });
 
   describe("buildBuilderFallbackPrompts", () => {
-    it("returns 3 fallback prompts", () => {
+    it("returns 4 fallback prompts", () => {
       const inputs = createPromptInputs();
       const manager = createManager();
       const prompts = buildBuilderFallbackPrompts(inputs, manager);
 
-      expect(prompts).toHaveLength(3);
+      expect(prompts).toHaveLength(4);
       prompts.forEach((p) => {
         expect(typeof p).toBe("string");
         expect(p.length).toBeGreaterThan(0);
       });
     });
 
-    it("first fallback includes manager plan context", () => {
+    it("every fallback includes manager plan context", () => {
       const inputs = createPromptInputs();
       const manager = createManager();
-      const [first] = buildBuilderFallbackPrompts(inputs, manager);
+      const prompts = buildBuilderFallbackPrompts(inputs, manager);
 
-      expect(first).toContain("Manager");
+      for (const p of prompts) {
+        expect(p).toContain("Manager");
+      }
     });
 
-    it("second fallback reduces context to scope and state", () => {
+    it("every fallback keeps pre-resolved master data when present", () => {
       const inputs = createPromptInputs({
-        currentStateBlock: "Current Tracker State: {...}",
+        resolvedMasterData: [
+          {
+            key: "status",
+            name: "Status",
+            trackerId: "md-tracker-1",
+            gridId: "md_grid_1",
+            labelFieldId: "status_name",
+          },
+        ],
       });
       const manager = createManager();
-      const [, second] = buildBuilderFallbackPrompts(inputs, manager);
+      const prompts = buildBuilderFallbackPrompts(inputs, manager);
 
-      expect(second).toContain("Current Tracker State");
-      expect(second).not.toContain("Manager");
-    });
-
-    it("third fallback is completely minimal", () => {
-      const inputs = createPromptInputs();
-      const manager = createManager();
-      const [, , third] = buildBuilderFallbackPrompts(inputs, manager);
-
-      expect(third).toContain("minimal valid tracker JSON");
+      for (const p of prompts) {
+        expect(p).toContain("Pre-Resolved Master Data");
+        expect(p).toContain("md-tracker-1");
+      }
     });
 
     it("fallbacks include state hint in patch mode", () => {
@@ -217,7 +274,7 @@ describe("prompt building", () => {
       const manager = createManager();
       const prompts = buildBuilderFallbackPrompts(inputs, manager);
 
-      prompts.slice(0, 2).forEach((p) => {
+      prompts.forEach((p) => {
         expect(p).toContain("Current Tracker State");
       });
     });

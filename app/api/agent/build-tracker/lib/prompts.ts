@@ -36,7 +36,7 @@ export function getManagerSystemPrompt(): string {
 
 Your structured output (thinking, prd, builderTodo) will be passed directly to the Builder Agent.
 Keep your thinking brief (2–4 sentences). Do not include a "summary" field in your response.
-OUTPUT LIMIT: ~2K token budget — be concise and focused.`.trim();
+OUTPUT LIMIT: stay within the model output budget — keep thinking brief; prioritize a complete builderTodo and buildManifest for large trackers.`.trim();
 }
 
 /**
@@ -117,8 +117,8 @@ GREENFIELD (no "Current Tracker State (JSON)" in this request):
 - Do NOT emit an empty overview_tab while placing all main content on another tab.
 - For multi-tab requests, give every tab at least one section.
 
-OUTPUT LIMIT: You have a strict ~8K token budget. Always output valid, complete JSON: close every brace and bracket.
-If the tracker would be very large, output a complete but minimal tracker (fewer optional fields); the user can ask to add more.`.trim();
+OUTPUT LIMIT: You have a finite output budget (~8K tokens max). Always output valid, complete JSON: close every brace and bracket.
+If the tracker would be very large, keep configs lean but do NOT drop tabs, grids, fields, or bindings required by the Manager plan.`.trim();
 }
 
 // ─── User Prompts ──────────────────────────────────────────────────────────────
@@ -182,39 +182,129 @@ export function buildBuilderUserPrompt(
     ? formatResolvedMasterData(resolvedMasterData)
     : "";
 
-  return `${prefix}${mdBlock}${managerBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`;
+  const manifestBlock =
+    manager.buildManifest != null || (manager.builderTodo?.length ?? 0) >= 10
+      ? `\n${buildManagerManifestText(manager)}`
+      : "";
+
+  return `${prefix}${mdBlock}${managerBlock}${manifestBlock}\n\nUser Request: ${query}\n\nImplement the tracker schema according to the Manager's plan above.${stateTail}`;
 }
 
 /**
- * Fallback prompts for generateObject when builder streaming fails.
- * Each is progressively simpler to maximize chance of valid JSON.
+ * Compact checklist derived from the manager output (for retries and completeness).
  */
-export function buildBuilderFallbackPrompts(
+export function buildManagerManifestText(manager: ManagerSchema): string {
+  const lines: string[] = ["=== Build manifest (checklist) ==="];
+  const m = manager.buildManifest;
+  if (m?.tabIds?.length) {
+    lines.push(`Required tab ids (${m.tabIds.length}): ${m.tabIds.join(", ")}`);
+  }
+  if (m?.gridIds?.length) {
+    lines.push(
+      `Required grid ids (${m.gridIds.length}): ${m.gridIds.join(", ")}`,
+    );
+  }
+  if (m?.selectFieldPaths?.length) {
+    lines.push(
+      `Select/multiselect binding paths (${m.selectFieldPaths.length}): ${m.selectFieldPaths.join(", ")}`,
+    );
+  }
+  const todos = manager.builderTodo ?? [];
+  const maxLines = 80;
+  const perTaskMax = 160;
+  lines.push(
+    `\nbuilderTodo summary (${todos.length} tasks, each truncated to ${perTaskMax} chars):`,
+  );
+  todos.slice(0, maxLines).forEach((item, i) => {
+    const action = item.action ?? "";
+    const target = item.target ?? "";
+    const task = (item.task ?? "").slice(0, perTaskMax);
+    lines.push(`${i + 1}. [${action}] ${target}: ${task}`);
+  });
+  if (todos.length > maxLines) {
+    lines.push(`… plus ${todos.length - maxLines} more tasks (implement all in schema).`);
+  }
+  lines.push("=== End build manifest ===\n");
+  return lines.join("\n");
+}
+
+/**
+ * Stable prefix for every builder attempt: scope, tracker state, conversation, master data IDs, full manager plan, manifest.
+ * Never omit Pre-Resolved Master Data on later retries — foreign bindings depend on it.
+ */
+export function buildBuilderStableUserMessagePrefix(
   inputs: PromptInputs,
   manager: ManagerSchema,
-): string[] {
+): string {
   const {
-    query,
     currentStateBlock,
     conversationContext,
-    hasFullTrackerStateForPatch,
     resolvedMasterData,
     masterDataScope,
   } = inputs;
   const managerBlock = formatManagerPlan(manager);
   const scopeBlock = formatMasterDataScope(masterDataScope);
+  const mdBlock = resolvedMasterData?.length
+    ? formatResolvedMasterData(resolvedMasterData)
+    : "";
+  const manifest = buildManagerManifestText(manager);
+  return `${scopeBlock}${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n${manifest}`;
+}
+
+export type BuilderRepairPromptParams = {
+  serverErrors: string;
+  completenessGaps?: string[];
+  /** Truncated JSON of last builder output for context */
+  priorTrackerSummary?: string;
+};
+
+/**
+ * User message for a post-validation repair pass (after postprocess failed).
+ */
+export function buildBuilderRepairUserPrompt(
+  inputs: PromptInputs,
+  manager: ManagerSchema,
+  params: BuilderRepairPromptParams,
+): string {
+  const prefix = buildBuilderStableUserMessagePrefix(inputs, manager);
+  const { query, hasFullTrackerStateForPatch } = inputs;
+  const stateHint = hasFullTrackerStateForPatch
+    ? " Use trackerPatch against Current Tracker State when patch mode applies; otherwise output a full tracker."
+    : " Output a full tracker (greenfield).";
+  const gapLines = (params.completenessGaps ?? []).filter(Boolean);
+  const gaps =
+    gapLines.length > 0
+      ? `\n\nCompleteness gaps detected:\n${gapLines.map((g) => `- ${g}`).join("\n")}`
+      : "";
+  const prior =
+    params.priorTrackerSummary && params.priorTrackerSummary.trim()
+      ? `\n\nPrevious draft (excerpt, fix — do not shrink the plan):\n${params.priorTrackerSummary}`
+      : "";
+
+  return `${prefix}\n\nUser Request: ${query}\n\n=== SERVER VALIDATION FAILED ===\n${params.serverErrors}${gaps}${prior}\n\nFix the schema so it passes validation and binding rules. Preserve the Manager architecture (tabs/sections/grids/fields).${stateHint}`;
+}
+
+/**
+ * Fallback prompts for generateObject when builder streaming fails.
+ * Each pass keeps full context (manager plan + pre-resolved master data) and nudges toward valid JSON without collapsing to a toy tracker.
+ */
+export function buildBuilderFallbackPrompts(
+  inputs: PromptInputs,
+  manager: ManagerSchema,
+): string[] {
+  const { query, hasFullTrackerStateForPatch, currentStateBlock } = inputs;
+  const prefix = buildBuilderStableUserMessagePrefix(inputs, manager);
   const stateHint =
     currentStateBlock && hasFullTrackerStateForPatch
       ? " Start from the Current Tracker State above."
       : "";
-  const mdBlock = resolvedMasterData?.length
-    ? formatResolvedMasterData(resolvedMasterData)
-    : "";
+  const baseUser = `User Request: ${query}\n\n`;
 
   return [
-    `${scopeBlock}${currentStateBlock}${conversationContext}${mdBlock}${managerBlock}\n\nUser: ${query}\n\nSimplify: output a minimal valid tracker (one tab, one section, one grid, a few fields) that matches the user's intent. Output only "tracker" in valid JSON.${stateHint}`,
-    `${scopeBlock}${currentStateBlock}User: ${query}\n\nOutput only a minimal tracker JSON: one tab, one section, one grid, and one text field. Include "tracker" with tabs, sections, grids, fields, layoutNodes, and bindings.${stateHint}`,
-    'Output a minimal valid tracker JSON with one tab "Main", one section "Default", one grid "Grid 1", one text field "Name", and empty layoutNodes and bindings.',
+    `${prefix}${baseUser}The stream failed or returned incomplete JSON. Output a FULL "tracker" implementing the Manager plan and checklist above. Prioritize structural completeness (tabs, sections, grids, fields, layoutNodes, bindings for every select/multiselect). Keep labels short if needed.${stateHint}`,
+    `${prefix}${baseUser}Output a FULL "tracker" with dense field ui labels and lean configs, but do NOT drop tabs, grids, fields, or foreign bindings from Pre-Resolved Master Data.${stateHint}`,
+    `${prefix}${baseUser}Output valid complete JSON only. Full tracker. You may omit advanced validations/calculations/fieldRules if necessary, but NOT tabs, grids, fields, layoutNodes, or bindings for options fields.${stateHint}`,
+    `${prefix}${baseUser}Last attempt: minimal optional configs and short strings; still implement every builderTodo line as real schema elements and satisfy Pre-Resolved Master Data binding rules.${stateHint}`,
   ];
 }
 
@@ -239,6 +329,25 @@ function formatManagerPlan(manager: ManagerSchema): string {
   if (manager.thinking) {
     lines.push(`\n🏗️ ARCHITECTURAL THINKING:`);
     lines.push(manager.thinking);
+  }
+
+  const manifest = manager.buildManifest;
+  if (
+    manifest &&
+    (manifest.tabIds?.length ||
+      manifest.gridIds?.length ||
+      manifest.selectFieldPaths?.length)
+  ) {
+    lines.push("\n📌 BUILD MANIFEST (machine checklist):");
+    if (manifest.tabIds?.length) {
+      lines.push(` tabIds: ${manifest.tabIds.join(", ")}`);
+    }
+    if (manifest.gridIds?.length) {
+      lines.push(` gridIds: ${manifest.gridIds.join(", ")}`);
+    }
+    if (manifest.selectFieldPaths?.length) {
+      lines.push(` selectFieldPaths: ${manifest.selectFieldPaths.join(", ")}`);
+    }
   }
 
   // BuilderTodo organized by phase

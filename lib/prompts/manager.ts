@@ -143,6 +143,10 @@ Your output is a ManagerSchema with:
 2. **prd**: { name, description?, keyFeatures[] }
 3. **builderTodo**: [] — detailed 8-phase build plan with explicit tasks (include view suggestions where appropriate)
 4. **requiredMasterData**: [] — (module/project scope only) external master data entities needed
+5. **buildManifest** (recommended for 10+ builderTodo items or multi-tab trackers): concise machine checklist the Builder must satisfy:
+   - tabIds: every tab id to create (snake_case ending in _tab)
+   - gridIds: every primary data grid id (ending in _grid)
+   - selectFieldPaths: every planned select/multiselect as "grid_id.field_id" for binding coverage
 
 The Builder executes builderTodo exactly. Make it clear, explicit, and complete.
 

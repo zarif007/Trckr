@@ -27,12 +27,19 @@ const encodeEventMock = vi.hoisted(() => vi.fn((evt) => JSON.stringify(evt)));
 vi.mock("@/lib/ai", () => ({
   logAiStage: logAiStageMock,
   logAiError: logAiErrorMock,
+  DEEPSEEK_CHAT_MAX_OUTPUT: 8192,
+  getConfiguredMaxOutputTokens: () => 8192,
 }));
 vi.mock("@/lib/agent/events", () => ({ encodeEvent: encodeEventMock }));
 vi.mock("../manager-agent", () => ({ runManagerAgent: runManagerAgentMock }));
 vi.mock("../master-data-agent", () => ({ runMasterDataAgent: runMasterDataAgentMock }));
 vi.mock("../builder-agent", () => ({ runBuilderAgent: runBuilderAgentMock }));
-vi.mock("../postprocess", () => ({ postProcessBuilderOutput: postProcessMock }));
+vi.mock("../postprocess", () => ({
+  postProcessBuilderOutput: postProcessMock,
+  materializeBuilderTracker: (output: { tracker?: unknown; trackerPatch?: unknown }) =>
+    (output?.tracker as Record<string, unknown> | null | undefined) ?? null,
+  repairTrackerStructure: (t: Record<string, unknown>) => t,
+}));
 
 import { orchestrateBuildTracker } from "../orchestrate";
 import type { PromptInputs } from "../prompts";
