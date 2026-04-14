@@ -142,12 +142,6 @@ export function ModuleContent({
     staleTime: STALE_TIME_MS,
   });
 
-  const moduleReports = useMemo(
-    () =>
-      (projectForReports?.reports ?? []).filter((r) => r.moduleId === moduleId),
-    [projectForReports?.reports, moduleId],
-  );
-
   const moduleAnalyses = useMemo(
     () =>
       (projectForReports?.analyses ?? []).filter(
@@ -208,13 +202,6 @@ export function ModuleContent({
           body: JSON.stringify({ name: newName }),
         });
         if (!res.ok) throw new Error("Failed to rename tracker");
-      } else if (kind === "report") {
-        const res = await fetch(`/api/reports/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newName }),
-        });
-        if (!res.ok) throw new Error("Failed to rename report");
       } else if (kind === "analysis") {
         const res = await fetch(`/api/analyses/${id}`, {
           method: "PATCH",
@@ -259,13 +246,6 @@ export function ModuleContent({
           method: "DELETE",
         });
         if (!res.ok) throw new Error("Failed to delete tracker");
-        invalidateModuleAndProjects();
-        await fetchProjects();
-      } else if (item.kind === "report") {
-        const res = await fetch(`/api/reports/${item.id}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) throw new Error("Failed to delete report");
         invalidateModuleAndProjects();
         await fetchProjects();
       } else if (item.kind === "analysis") {
@@ -361,31 +341,6 @@ export function ModuleContent({
                         t.id === id ? { ...t, name } : t,
                       ),
                     })),
-                  },
-            ),
-          );
-        } else if (kind === "report") {
-          queryClient.setQueryData<Project>(
-            dashboardQueryKeys.project(projectId),
-            (prev) =>
-              prev
-                ? {
-                    ...prev,
-                    reports: prev.reports.map((r) =>
-                      r.id === id ? { ...r, name } : r,
-                    ),
-                  }
-                : prev,
-          );
-          setProjects((prev) =>
-            prev.map((p) =>
-              p.id !== projectId
-                ? p
-                : {
-                    ...p,
-                    reports: p.reports.map((r) =>
-                      r.id === id ? { ...r, name } : r,
-                    ),
                   },
             ),
           );
@@ -604,44 +559,6 @@ export function ModuleContent({
           );
         };
       }
-      if (item.kind === "report" && projectForReports) {
-        const report = projectForReports.reports.find((r) => r.id === item.id);
-        if (!report) return;
-        queryClient.setQueryData<Project>(
-          dashboardQueryKeys.project(projectId),
-          (prev) =>
-            prev
-              ? {
-                  ...prev,
-                  reports: prev.reports.filter((r) => r.id !== item.id),
-                }
-              : prev,
-        );
-        setProjects((prev) =>
-          prev.map((p) =>
-            p.id !== projectId
-              ? p
-              : {
-                  ...p,
-                  reports: p.reports.filter((r) => r.id !== item.id),
-                },
-          ),
-        );
-        return () => {
-          queryClient.setQueryData<Project>(
-            dashboardQueryKeys.project(projectId),
-            (prev) =>
-              prev ? { ...prev, reports: [...prev.reports, report] } : prev,
-          );
-          setProjects((prev) =>
-            prev.map((p) =>
-              p.id !== projectId
-                ? p
-                : { ...p, reports: [...p.reports, report] },
-            ),
-          );
-        };
-      }
       if (item.kind === "analysis" && projectForReports) {
         const analysis = (projectForReports.analyses ?? []).find(
           (a) => a.id === item.id,
@@ -773,7 +690,6 @@ export function ModuleContent({
     (hasModuleConfigs ? 1 : 0) +
     trackerSchemas.length +
     childModules.length +
-    moduleReports.length +
     moduleAnalyses.length +
     moduleBoards.length;
   const isEmpty = totalItems === 0;
@@ -824,15 +740,6 @@ export function ModuleContent({
             calculationsHref: string;
             fieldRulesHref: string;
           };
-        }
-      | {
-          kind: "report";
-          id: string;
-          label: string;
-          sublabel: string;
-          icon: typeof FileText;
-          updatedAt: string;
-          href: string;
         }
       | {
           kind: "analysis";
@@ -914,15 +821,6 @@ export function ModuleContent({
         },
       };
     });
-    const reportRows = moduleReports.map((r) => ({
-      kind: "report" as const,
-      id: r.id,
-      label: r.name?.trim() || "Untitled report",
-      sublabel: "Report",
-      icon: FileText,
-      updatedAt: r.updatedAt,
-      href: `/report/${r.id}`,
-    }));
     const analysisRows = moduleAnalyses.map((a) => ({
       kind: "analysis" as const,
       id: a.id,
@@ -945,7 +843,6 @@ export function ModuleContent({
       ...rows,
       ...moduleRows,
       ...trackerRows,
-      ...reportRows,
       ...analysisRows,
       ...boardRows,
     ];
@@ -956,7 +853,6 @@ export function ModuleContent({
     mod,
     childModules,
     trackerSchemas,
-    moduleReports,
     moduleAnalyses,
     moduleBoards,
     hasModuleConfigs,
@@ -970,11 +866,6 @@ export function ModuleContent({
     },
     [invalidateModuleAndProjects, fetchProjects, router],
   );
-
-  const handleReportCreated = useCallback(async () => {
-    invalidateModuleAndProjects();
-    await fetchProjects();
-  }, [invalidateModuleAndProjects, fetchProjects]);
 
   const handleAnalysisCreated = useCallback(async () => {
     invalidateModuleAndProjects();
@@ -1123,7 +1014,6 @@ export function ModuleContent({
               variant="toolbar"
               onError={(msg) => setErrorMessage(msg || null)}
               onTrackerCreated={handleTrackerCreated}
-              onReportCreated={handleReportCreated}
               onAnalysisCreated={handleAnalysisCreated}
               onBoardCreated={handleBoardCreated}
               availableConfigTypes={availableFileTypes}
@@ -1139,7 +1029,7 @@ export function ModuleContent({
               <ProjectEmptyStatePanel
                 icon={FileText}
                 title="This module is empty"
-                description="Add trackers, nested modules, reports, or dashboards from the menu above."
+                description="Add trackers, nested modules, analyses, or dashboards from the menu above."
               >
                 <CreateDropdown
                   projectId={projectId}
@@ -1147,7 +1037,6 @@ export function ModuleContent({
                   variant="empty"
                   onError={(msg) => setErrorMessage(msg || null)}
                   onTrackerCreated={handleTrackerCreated}
-                  onReportCreated={handleReportCreated}
                   onAnalysisCreated={handleAnalysisCreated}
                   onBoardCreated={handleBoardCreated}
                   availableConfigTypes={availableFileTypes}
@@ -1177,7 +1066,6 @@ export function ModuleContent({
                   const canRenameDelete =
                     row.kind === "module" ||
                     row.kind === "tracker" ||
-                    row.kind === "report" ||
                     row.kind === "analysis" ||
                     row.kind === "board";
                   return (
@@ -1240,7 +1128,6 @@ export function ModuleContent({
                         )}
                       </motion.button>
                       {(row.kind === "tracker" ||
-                        row.kind === "report" ||
                         row.kind === "analysis" ||
                         row.kind === "board") &&
                         !isRenamingThis && (
@@ -1248,13 +1135,11 @@ export function ModuleContent({
                             type="button"
                             className={projectAreaTileOverflowButtonClass}
                             aria-label={
-                              row.kind === "report"
-                                ? "Report actions"
-                                : row.kind === "analysis"
-                                  ? "Analysis actions"
-                                  : row.kind === "board"
-                                    ? "Dashboard actions"
-                                    : "Tracker actions"
+                              row.kind === "analysis"
+                                ? "Analysis actions"
+                                : row.kind === "board"
+                                  ? "Dashboard actions"
+                                  : "Tracker actions"
                             }
                             onClick={(e: MouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();

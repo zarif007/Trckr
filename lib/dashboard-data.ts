@@ -8,7 +8,6 @@ import { findModuleByIdForUser } from "@/lib/repositories/module-repository";
 import type {
   Project,
   Module,
-  ReportSummary,
   AnalysisSummary,
   BoardSummary,
   WorkflowSummary,
@@ -20,22 +19,6 @@ type ProjectFromDb = NonNullable<
 type ProjectFromList = Awaited<ReturnType<typeof listProjectsForUser>>[number];
 
 type FlatModule = Omit<Module, "children"> & { parentId: string | null };
-
-function serializeReports(
-  reports: {
-    id: string;
-    name: string;
-    moduleId: string | null;
-    updatedAt: Date;
-  }[],
-): ReportSummary[] {
-  return reports.map((r) => ({
-    id: r.id,
-    name: r.name,
-    moduleId: r.moduleId,
-    updatedAt: r.updatedAt.toISOString(),
-  }));
-}
 
 function serializeAnalyses(
   analyses: {
@@ -153,7 +136,6 @@ function serializeProject(p: ProjectFromDb): Project | null {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     })),
-    reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
     boards: serializeBoards(p.boards ?? []),
     workflows: serializeWorkflows(p.workflows ?? []),
@@ -231,7 +213,6 @@ function serializeProjectFromList(p: ProjectFromList): Project {
       createdAt: t.createdAt.toISOString(),
       updatedAt: t.updatedAt.toISOString(),
     })),
-    reports: serializeReports(p.reports ?? []),
     analyses: serializeAnalyses(p.analyses ?? []),
     boards: serializeBoards(p.boards ?? []),
     workflows: serializeWorkflows(p.workflows ?? []),

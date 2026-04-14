@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import Markdown from "react-markdown";
-import { BarChart3, BookOpen, Pause, Play, Table2, Workflow } from "lucide-react";
+import { BookOpen, Pause, Play, Table2, Workflow } from "lucide-react";
 import { TrackerDisplay } from "@/app/components/tracker-display";
 import type { TrackerDisplayProps } from "@/app/components/tracker-display/types";
 import { ExprFlowBuilder } from "@/app/components/tracker-display/edit-mode/expr/ExprFlowBuilder";
@@ -32,13 +32,14 @@ import {
   LANDING_DEMO_SNAPSHOT_AS_OF_ISO,
 } from "@/app/components/landing-page/landing-demo-insights";
 import { AnalysisDocumentView } from "@/app/analysis/components/AnalysisDocumentView";
-import { filterDraftFromQueryPlan } from "@/app/report/lib/replay-overrides";
-import { ReportRecipeFilters } from "@/app/report/components/ReportRecipeFilters";
+import { AnalysisRecipeFilters } from "@/app/analysis/components/AnalysisRecipeFilters";
+import { filterDraftFromQueryPlan } from "@/app/analysis/lib/replay-overrides";
+import { theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/app/tracker/hooks/useMediaQuery";
 import type { ExprNode } from "@/lib/functions/types";
 
-type SurfaceId = "tracker" | "expression" | "report" | "analysis";
+type SurfaceId = "tracker" | "expression" | "analysis";
 
 const SURFACES: {
   id: SurfaceId;
@@ -46,10 +47,9 @@ const SURFACES: {
   icon: typeof Table2;
   index: string;
 }[] = [
-  { id: "tracker", label: "Tracker", icon: Table2, index: "01/04" },
-  { id: "expression", label: "Expressions", icon: Workflow, index: "02/04" },
-  { id: "report", label: "Report", icon: BarChart3, index: "03/04" },
-  { id: "analysis", label: "Analysis", icon: BookOpen, index: "04/04" },
+  { id: "tracker", label: "Tracker", icon: Table2, index: "01/03" },
+  { id: "expression", label: "Expressions", icon: Workflow, index: "02/03" },
+  { id: "analysis", label: "Analysis", icon: BookOpen, index: "03/03" },
 ];
 
 const DESKTOP_CYCLE_MS = 6000;
@@ -253,13 +253,13 @@ export default function Demo() {
               flowHeightClassName="h-[min(52vh,560px)]"
             />
           );
-        case "report":
+        case "analysis":
           return (
-            <div className="space-y-4 p-4 sm:p-5">
+            <div className="space-y-4 max-h-[min(78vh,720px)] overflow-y-auto p-4 sm:p-5">
               <div className="prose prose-sm max-w-none text-foreground/90 dark:prose-invert">
                 <Markdown>{LANDING_DEMO_REPORT_MARKDOWN}</Markdown>
               </div>
-              <ReportRecipeFilters
+              <AnalysisRecipeFilters
                 defaultOpen={false}
                 disabled
                 userRequirementPrompt="For High and Medium priority work that is not Completed, sum estimated budget, count initiatives, average hourly rate, and max deal size — grouped by status."
@@ -278,7 +278,12 @@ export default function Demo() {
                 filtersDirty={false}
                 filterBaselineReady
               />
-              <div className="w-full min-w-0 rounded-sm overflow-hidden border border-border/40">
+              <div
+                className={cn(
+                  "w-full min-w-0 rounded-sm overflow-hidden border",
+                  theme.uiChrome.floating,
+                )}
+              >
                 <DataTable<Record<string, unknown>, unknown>
                   columns={reportColumns}
                   data={LANDING_DEMO_REPORT_ROWS}
@@ -289,11 +294,6 @@ export default function Demo() {
                   showRowDetails={false}
                 />
               </div>
-            </div>
-          );
-        case "analysis":
-          return (
-            <div className="max-h-[min(78vh,720px)] overflow-y-auto p-4 sm:p-5">
               <AnalysisDocumentView
                 document={LANDING_DEMO_ANALYSIS_DOCUMENT}
                 header={{

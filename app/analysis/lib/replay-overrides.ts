@@ -1,5 +1,5 @@
-import type { QueryPlanV1 } from "@/lib/reports/ast-schemas";
-import type { ReplayQueryOverrides } from "@/lib/reports/query-plan-overrides";
+import type { QueryPlanV1 } from "@/lib/insights-query/schemas";
+import type { ReplayQueryOverrides } from "@/lib/insights-query/query-plan-overrides";
 
 export type FilterRowDraft = {
   path: string;

@@ -180,7 +180,7 @@ Every function and component must be safe, correct, and free of latent defects b
 
 Tests use vitest and are colocated with source:
 - `lib/**/__tests__/*.test.ts` or `lib/**/*.test.ts`
-- Run single test: `vitest run lib/reports/calc-plan.test.ts`
+- Run single test: `vitest run lib/insights-query/query-plan-overrides.test.ts`
 
 ## Key Files
 

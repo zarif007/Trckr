@@ -43,7 +43,7 @@ export function DashboardProjectGrid({
             No projects yet
           </p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
-            Create a project to organize trackers, reports, and boards. Use the
+            Create a project to organize trackers, analyses, and boards. Use the
             card below or the Create menu.
           </p>
         </div>

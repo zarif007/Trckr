@@ -21,7 +21,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { NewModuleButton } from "./NewModuleButton";
 import { NewTrackerDialog } from "./NewTrackerDialog";
-import { NewReportDialog } from "./NewReportDialog";
 import { NewAnalysisDialog } from "./NewAnalysisDialog";
 import { NewBoardDialog } from "./NewBoardDialog";
 import type { SystemFileType } from "../dashboard-context";
@@ -39,7 +38,6 @@ type CreateDropdownProjectProps = CreateDropdownBaseProps & {
   moduleId?: never;
   availableConfigTypes?: never;
   onTrackerCreated?: (trackerId: string) => void;
-  onReportCreated?: () => void | Promise<void>;
   onAnalysisCreated?: () => void | Promise<void>;
   onBoardCreated?: () => void | Promise<void>;
   onWorkflowCreated?: (id: string) => void;
@@ -50,7 +48,6 @@ type CreateDropdownModuleProps = CreateDropdownBaseProps & {
   moduleId: string;
   availableConfigTypes?: SystemFileType[];
   onTrackerCreated?: (trackerId: string) => void;
-  onReportCreated?: () => void | Promise<void>;
   onAnalysisCreated?: () => void | Promise<void>;
   onBoardCreated?: () => void | Promise<void>;
   onAddConfig?: (type: SystemFileType) => void;
@@ -84,8 +81,6 @@ function isDashboardProps(
 
 export function CreateDropdown(props: CreateDropdownProps) {
   const { variant = "toolbar", onError, onTrackerCreated } = props;
-  const onReportCreated =
-    "onReportCreated" in props ? props.onReportCreated : undefined;
   const onAnalysisCreated =
     "onAnalysisCreated" in props ? props.onAnalysisCreated : undefined;
   const onBoardCreated =
@@ -103,7 +98,6 @@ export function CreateDropdown(props: CreateDropdownProps) {
   const [open, setOpen] = useState(false);
   const [configSubmenuOpen, setConfigSubmenuOpen] = useState(false);
   const [trackerDialogOpen, setTrackerDialogOpen] = useState(false);
-  const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [analysisDialogOpen, setAnalysisDialogOpen] = useState(false);
   const [boardDialogOpen, setBoardDialogOpen] = useState(false);
   const [moduleDialogOpen, setModuleDialogOpen] = useState(false);
@@ -135,11 +129,6 @@ export function CreateDropdown(props: CreateDropdownProps) {
     setTrackerDialogOpen(true);
   }, []);
 
-  const handleReportClick = useCallback(() => {
-    setOpen(false);
-    setReportDialogOpen(true);
-  }, []);
-
   const handleAnalysisClick = useCallback(() => {
     setOpen(false);
     setAnalysisDialogOpen(true);
@@ -157,7 +146,6 @@ export function CreateDropdown(props: CreateDropdownProps) {
 
   const handleWorkflowClick = useCallback(() => {
     setOpen(false);
-    // Navigate to workflows list page
     if (projectId) {
       router.push(`/project/${projectId}/workflows`);
     }
@@ -218,16 +206,6 @@ export function CreateDropdown(props: CreateDropdownProps) {
               <Table2 className="h-3.5 w-3.5 text-muted-foreground" />
               Tracker
             </button>
-            {!isDashboard && projectId && (
-              <button
-                type="button"
-                onClick={handleReportClick}
-                className="flex items-center gap-2 px-2.5 py-1.5 text-xs font-medium rounded-sm hover:bg-muted/60 transition-colors text-left w-full"
-              >
-                <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                Report
-              </button>
-            )}
             {!isDashboard && projectId && (
               <button
                 type="button"
@@ -315,17 +293,6 @@ export function CreateDropdown(props: CreateDropdownProps) {
         onCreated={onTrackerCreated}
         onError={onError}
       />
-
-      {!isDashboard && projectId && (
-        <NewReportDialog
-          projectId={projectId}
-          moduleId={isModule ? props.moduleId : undefined}
-          open={reportDialogOpen}
-          onOpenChange={setReportDialogOpen}
-          onError={onError}
-          onCreated={onReportCreated}
-        />
-      )}
 
       {!isDashboard && projectId && (
         <NewAnalysisDialog

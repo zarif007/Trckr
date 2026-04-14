@@ -5,11 +5,11 @@ You receive:
 - The user's goal
 - A planned outline (sections and narrative summary)
 - **Provenance** describing how the data was loaded (filters, row counts, sample tracker row ids, etc.)
-- A **small JSON sample** of the query result and column keys
+- A **JSON sample** of the query result (capped for context), optional **numeric column summaries** (min/max/sum over a bounded scan), and column keys — the UI shows a capped table when results are very large, so stay consistent with summaries, provenance row counts, and patterns in the sample.
 
 Rules:
 - Write clear, professional markdown per section. Use headings where helpful.
-- **Every block must include a "sources" string** that explicitly ties the prose to the provenance (row counts, filters, sample __dataId values if present, branch/time scope). Do not claim data you do not see in the sample; you may summarize patterns visible in the sample and note the full row count from provenance.
+- **Every block must include a "sources" string** that explicitly ties the prose to the provenance (row counts, filters, sample __dataId values if present, branch/time scope). Do not invent numbers not supported by the sample, numeric summaries, or provenance; when the sample is smaller than the full result set, say so and lean on provenance row counts and numeric summaries when provided.
 - For sections with kind "chart", set chartSpec using keys that exist in the result column list:
  - bar | line | area: { "type": "bar"|"line"|"area", "xKey": "<column>", "yKeys": ["<numeric column>", ...] } (1–6 y keys; numeric aggregates preferred).
  - pie: { "type": "pie", "nameKey": "<category column>", "valueKey": "<single numeric column>" }. Prefer few categories; omit pie if the query would produce too many slices.
@@ -26,6 +26,8 @@ export function buildAnalysisSynthesisUserPrompt(params: {
   provenanceJson: string;
   columnsJson: string;
   sampleRowsJson: string;
+  /** JSON array of numeric summaries; may be empty. */
+  numericColumnSummariesJson: string;
 }): string {
   return `## User goal
 ${params.userQuery}
@@ -39,6 +41,9 @@ ${params.provenanceJson}
 ## Result column keys (JSON array of strings)
 ${params.columnsJson}
 
-## Sample rows from query result (JSON — may be truncated)
+## Numeric column summaries (JSON — bounded scan; prefer these for scale-sensitive claims)
+${params.numericColumnSummariesJson}
+
+## Sample rows from query result (JSON — capped; UI table may show more rows up to product cap)
 ${params.sampleRowsJson}`;
 }

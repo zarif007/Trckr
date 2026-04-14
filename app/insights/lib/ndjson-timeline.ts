@@ -1,5 +1,5 @@
 /**
- * Shared NDJSON phase timeline for report and analysis generation streams.
+ * Shared NDJSON phase timeline for analysis generation streams.
  * See `lib/insights/README.md`.
  */
 
@@ -81,7 +81,7 @@ export function toPhaseStreamEvent(
 }
 
 /**
- * Merge one NDJSON stream event into the collapsible phase timeline state (report and analysis UIs).
+ * Merge one NDJSON stream event into the collapsible phase timeline state (analysis UI).
  * See `lib/insights/README.md`.
  */
 export function applyPhaseStreamEvent(

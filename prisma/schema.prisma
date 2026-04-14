@@ -22,7 +22,6 @@ model User {
   llmTokenUsages  LlmTokenUsage[]
   loginEvents     LoginEvent[]
   projects        Project[]
-  reports         Report[]
   analyses        Analysis[]
   boards          Board[]
   sessions        Session[]
@@ -82,7 +81,6 @@ model Project {
   updatedAt      DateTime        @updatedAt
   llmTokenUsages LlmTokenUsage[]
   modules        Module[]
-  reports        Report[]
   analyses       Analysis[]
   boards         Board[]
   workflows      Workflow[]
@@ -103,7 +101,6 @@ model Module {
   parent         Module?         @relation("ModuleHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children       Module[]        @relation("ModuleHierarchy")
   project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  reports        Report[]
   analyses       Analysis[]
   boards         Board[]
   trackerSchemas TrackerSchema[]
@@ -144,7 +141,6 @@ model TrackerSchema {
 
   conversations   Conversation[]
   llmTokenUsages  LlmTokenUsage[]
-  reports         Report[]
   analyses        Analysis[]
   listForSchema   TrackerSchema?    @relation("ListCompanion", fields: [listForSchemaId], references: [id], onDelete: Cascade)
   listCompanion   TrackerSchema?    @relation("ListCompanion")
@@ -171,75 +167,6 @@ enum ReportRunStatus {
   running
   completed
   failed
-}
-
-model Report {
-  id              String          @id @default(cuid())
-  projectId       String
-  moduleId        String?
-  userId          String
-  name            String
-  trackerSchemaId String
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  llmTokenUsages  LlmTokenUsage[]
-  module          Module?         @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  trackerSchema   TrackerSchema   @relation(fields: [trackerSchemaId], references: [id], onDelete: Cascade)
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  definition      ReportDefinition?
-  runs            ReportRun[]
-
-  @@index([projectId])
-  @@index([userId])
-  @@index([trackerSchemaId])
-  @@index([moduleId])
-}
-
-model ReportDefinition {
-  id                String                 @id @default(cuid())
-  reportId          String                 @unique
-  userPrompt        String                 @default("")
-  intent            Json?
-  queryPlan         Json?
-  /// Per-row ExprNode-derived columns (report calc agent); replay applies before formatter.
-  calcPlan          Json?
-  formatterPlan     Json?
-  definitionVersion Int                    @default(1)
-  schemaFingerprint String?
-  status            ReportDefinitionStatus @default(draft)
-  readyAt           DateTime?
-  lastError         String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  report            Report                 @relation(fields: [reportId], references: [id], onDelete: Cascade)
-}
-
-model ReportRun {
-  id         String           @id @default(cuid())
-  reportId   String
-  trigger    ReportRunTrigger
-  status     ReportRunStatus  @default(running)
-  startedAt  DateTime         @default(now())
-  finishedAt DateTime?
-  report     Report           @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  events     ReportRunEvent[]
-
-  @@index([reportId])
-}
-
-model ReportRunEvent {
-  id            String    @id @default(cuid())
-  reportRunId   String
-  seq           Int
-  eventType     String
-  phase         String?
-  payload       Json?
-  createdAt     DateTime  @default(now())
-  reportRun     ReportRun @relation(fields: [reportRunId], references: [id], onDelete: Cascade)
-
-  @@unique([reportRunId, seq])
-  @@index([reportRunId])
 }
 
 model Analysis {
@@ -332,7 +259,6 @@ model LlmTokenUsage {
   userId           String
   projectId        String?
   trackerSchemaId  String?
-  reportId         String?
   analysisId       String?
   source           String
   promptTokens     Int
@@ -340,7 +266,6 @@ model LlmTokenUsage {
   totalTokens      Int
   createdAt        DateTime       @default(now())
   project          Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  report           Report?        @relation(fields: [reportId], references: [id], onDelete: SetNull)
   analysis         Analysis?      @relation(fields: [analysisId], references: [id], onDelete: SetNull)
   trackerSchema    TrackerSchema? @relation(fields: [trackerSchemaId], references: [id], onDelete: SetNull)
   user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -348,7 +273,6 @@ model LlmTokenUsage {
   @@index([userId])
   @@index([userId, projectId])
   @@index([userId, trackerSchemaId])
-  @@index([userId, trackerSchemaId, reportId])
   @@index([userId, trackerSchemaId, analysisId])
   @@index([createdAt])
 }

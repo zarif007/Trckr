@@ -3,10 +3,10 @@ import { z } from "zod";
 import {
   comparisonOpSchema,
   queryPlanV1Schema,
-  reportStructuredJsonValueSchema,
   rowTimeFilterSchema,
+  structuredJsonValueSchema,
   type QueryPlanV1,
-} from "./ast-schemas";
+} from "./schemas";
 
 /** Client-sent patches applied only onto the server-stored query plan during replay. */
 export const replayQueryOverridesSchema = z
@@ -23,7 +23,7 @@ export const replayQueryOverridesSchema = z
         z.object({
           path: z.string(),
           op: comparisonOpSchema,
-          value: reportStructuredJsonValueSchema,
+          value: structuredJsonValueSchema,
         }),
       )
       .optional(),
@@ -58,7 +58,7 @@ export function mergeQueryPlanWithOverrides(
       return {
         ok: false,
         error:
-          "This report has no aggregate step; group-by cannot be changed without Regenerate.",
+          "This analysis has no aggregate step; group-by cannot be changed without Regenerate.",
       };
     }
     next.aggregate = {

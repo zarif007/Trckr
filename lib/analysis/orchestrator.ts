@@ -26,11 +26,7 @@ import {
 import { fingerprintFromCatalog } from "@/lib/insights-query/fingerprint";
 import { loadTrackerDataForQueryPlan } from "@/lib/insights-query/load-tracker-rows";
 import { generateQueryPlanV1 } from "@/lib/insights-query/query-plan-agent";
-import {
-  executeQueryPlan,
-  resultSchemaFromRows,
-  type TrackerDataInput,
-} from "@/lib/insights-query/query-executor";
+import { executeQueryPlan, resultSchemaFromRows } from "@/lib/insights-query/query-executor";
 import { parseQueryPlan, type QueryPlanV1 } from "@/lib/insights-query/schemas";
 
 import {
@@ -45,6 +41,8 @@ import {
   type AnalysisOutlinePayload,
 } from "./analysis-schemas";
 import { hydrateChartDataForBlocks } from "./chart-hydrate";
+import { buildNumericColumnSummaries } from "./query-result-summary";
+import { buildFinalAnalysisStreamEvent } from "./table-stream";
 import {
   appendAnalysisRunEvent,
   createAnalysisRun,
@@ -152,12 +150,14 @@ export function isAnalysisReplayable(analysis: LoadedAnalysis): boolean {
 export async function executeAnalysisReplay(params: {
   analysis: LoadedAnalysis;
   writeNdjsonLine: (line: string) => Promise<void> | void;
+  /** When set (e.g. client replay overrides), use instead of the persisted query plan. */
+  queryPlan?: QueryPlanV1;
 }): Promise<void> {
-  const { analysis, writeNdjsonLine } = params;
+  const { analysis, writeNdjsonLine, queryPlan: planOverride } = params;
   const def = analysis.definition;
   if (!def) throw new Error("Missing definition");
 
-  const plan = parseQueryPlan(def.queryPlan);
+  const plan = planOverride ?? parseQueryPlan(def.queryPlan);
   const savedDoc = parseAnalysisDocument(def.document);
   if (!plan || !savedDoc) throw new Error("Invalid saved analysis recipe");
 
@@ -194,7 +194,7 @@ export async function executeAnalysisReplay(params: {
     const document: AnalysisDocumentV1 = { version: 1, blocks: hydratedBlocks };
 
     await forward({ t: "phase_end", phase: "replay", summary: "Done." });
-    await forward({ t: "final", document });
+    await forward(buildFinalAnalysisStreamEvent({ document, rawRows: rawResult }));
 
     await prisma.analysisDefinition.update({
       where: { analysisId: analysis.id },
@@ -296,7 +296,6 @@ export async function executeAnalysisFullGeneration(params: {
       provider,
       maxOutputTokens: maxTokens,
       userPromptContext: {
-        mode: "analysis",
         outline: outlinePayload,
         catalogText,
         userQuery: userPrompt,
@@ -340,7 +339,7 @@ export async function executeAnalysisFullGeneration(params: {
       trackerInstance: analysis.trackerSchema.instance,
     });
     const rawResult = executeQueryPlan(trackerRows, queryPlan);
-    const preSchema = resultSchemaFromRows(rawResult, 25);
+    const preSchema = resultSchemaFromRows(rawResult, 80);
 
     await forward({
       t: "data_preview",
@@ -366,6 +365,7 @@ export async function executeAnalysisFullGeneration(params: {
       text: "Agent 2: prose, charts, and sources from data + plan…",
     });
 
+    const numericSummaries = buildNumericColumnSummaries(rawResult);
     const synthResult = await provider.generateObject({
       system: getAnalysisSynthesisSystemPrompt(),
       prompt: buildAnalysisSynthesisUserPrompt({
@@ -373,7 +373,8 @@ export async function executeAnalysisFullGeneration(params: {
         outlineJson: JSON.stringify(outlinePayload, null, 2),
         provenanceJson: JSON.stringify(provenance, null, 2),
         columnsJson: JSON.stringify(preSchema.columns.map((c) => c.key)),
-        sampleRowsJson: JSON.stringify(preSchema.sample.slice(0, 20), null, 2),
+        numericColumnSummariesJson: JSON.stringify(numericSummaries, null, 2),
+        sampleRowsJson: JSON.stringify(preSchema.sample.slice(0, 80), null, 2),
       }),
       schema: analysisDocumentFromModelSchema,
       maxOutputTokens: maxTokens,
@@ -409,7 +410,7 @@ export async function executeAnalysisFullGeneration(params: {
       phase: "synthesis",
       summary: `${document.blocks.length} section(s).`,
     });
-    await forward({ t: "final", document });
+    await forward(buildFinalAnalysisStreamEvent({ document, rawRows: rawResult }));
 
     await saveAnalysisDefinitionArtifacts({
       analysisId: analysis.id,
@@ -429,6 +430,8 @@ export async function runAnalysisPipeline(params: {
   analysisId: string;
   userPrompt: string;
   regenerate: boolean;
+  /** Merged plan for replay-only runs (server applies client overrides to saved plan). */
+  replayQueryPlan?: QueryPlanV1;
   writeNdjsonLine: (line: string) => Promise<void> | void;
 }): Promise<void> {
   const analysis = await getAnalysisForUser(params.analysisId, params.userId);
@@ -449,6 +452,7 @@ export async function runAnalysisPipeline(params: {
       await executeAnalysisReplay({
         analysis,
         writeNdjsonLine: params.writeNdjsonLine,
+        queryPlan: params.replayQueryPlan,
       });
     } else {
       if (!prompt) {

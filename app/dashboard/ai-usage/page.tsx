@@ -56,8 +56,8 @@ export default async function DashboardAiUsagePage() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Tokens from the model provider for your account, scoped to projects
-          and trackers when known. Under each tracker, report AI is split out,
-          then shown per report with the data tracker name.
+          and trackers when known. Under each tracker, analysis AI is split out,
+          then shown per analysis with the data tracker name.
         </p>
       </div>
 
@@ -155,11 +155,11 @@ export default async function DashboardAiUsagePage() {
               </thead>
               <tbody>
                 {data.byTracker.map((row) => {
-                  const reportsTotal = sumRows(row.reportDetails);
-                  const hasReports = row.reportDetails.length > 0;
+                  const analysesTotal = sumRows(row.analysisDetails);
+                  const hasAnalyses = row.analysisDetails.length > 0;
                   const hasOther = hasTokens(row.otherOnTracker);
                   const showNestedBreakdown =
-                    hasReports ||
+                    hasAnalyses ||
                     (hasOther &&
                       row.otherOnTracker.totalTokens < row.totalTokens);
 
@@ -229,7 +229,7 @@ export default async function DashboardAiUsagePage() {
                           </td>
                         </tr>
                       ) : null}
-                      {row.reportDetails.length > 0 ? (
+                      {row.analysisDetails.length > 0 ? (
                         <>
                           <tr
                             className={cn(
@@ -238,21 +238,21 @@ export default async function DashboardAiUsagePage() {
                             )}
                           >
                             <td className="py-1.5 pr-4 pl-6 font-medium text-muted-foreground">
-                              Reports
+                              Analyses
                             </td>
                             <td className="py-1.5 pr-4 font-medium tabular-nums text-muted-foreground">
-                              {formatTokens(reportsTotal.totalTokens)}
+                              {formatTokens(analysesTotal.totalTokens)}
                             </td>
                             <td className="py-1.5 pr-4 font-medium tabular-nums text-muted-foreground">
-                              {formatTokens(reportsTotal.promptTokens)}
+                              {formatTokens(analysesTotal.promptTokens)}
                             </td>
                             <td className="py-1.5 font-medium tabular-nums text-muted-foreground">
-                              {formatTokens(reportsTotal.completionTokens)}
+                              {formatTokens(analysesTotal.completionTokens)}
                             </td>
                           </tr>
-                          {row.reportDetails.map((detail, i) => (
+                          {row.analysisDetails.map((detail, i) => (
                             <tr
-                              key={`${row.trackerSchemaId}-r-${detail.reportId ?? `legacy-${i}`}`}
+                              key={`${row.trackerSchemaId}-a-${detail.analysisId ?? `legacy-${i}`}`}
                               className={tableRowClass}
                             >
                               <td className="py-1.5 pr-4 pl-10">
@@ -260,15 +260,15 @@ export default async function DashboardAiUsagePage() {
                                   {detail.dataTrackerName}
                                 </div>
                                 <div className="mt-0.5 text-xs text-muted-foreground">
-                                  {detail.reportId ? (
+                                  {detail.analysisId ? (
                                     <Link
-                                      href={`/report/${detail.reportId}`}
+                                      href={`/analysis/${detail.analysisId}`}
                                       className="text-primary hover:underline"
                                     >
-                                      {detail.reportName}
+                                      {detail.analysisName}
                                     </Link>
                                   ) : (
-                                    detail.reportName
+                                    detail.analysisName
                                   )}
                                 </div>
                               </td>

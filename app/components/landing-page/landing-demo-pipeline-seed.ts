@@ -1,6 +1,6 @@
 /**
  * Canonical pipeline rows for the marketing landing demo. Budget in the grid is
- * materialized in buildLandingDemoGridData as estHours × hourlyRate so report
+ * materialized in buildLandingDemoGridData as estHours × hourlyRate so analysis
  * query execution matches on-screen numbers.
  */
 export type LandingPipelineSeedRow = {

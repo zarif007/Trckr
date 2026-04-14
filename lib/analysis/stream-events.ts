@@ -12,7 +12,16 @@ export type AnalysisStreamEvent =
       data: unknown;
     }
   | { t: "data_preview"; rowCount: number; columns: string[] }
-  | { t: "final"; document: AnalysisDocumentV1 }
+  | {
+      t: "final";
+      document: AnalysisDocumentV1;
+      /** Flattened query result rows (capped; see `tableRowTotalCount` / `tableRowsTruncated`). */
+      tableRows?: Record<string, unknown>[];
+      /** Total rows returned by `executeQueryPlan` before stream capping. */
+      tableRowTotalCount?: number;
+      /** True when `tableRows` is shorter than `tableRowTotalCount`. */
+      tableRowsTruncated?: boolean;
+    }
   | { t: "error"; message: string };
 
 export function encodeNdjsonLine(event: AnalysisStreamEvent): string {

@@ -1,5 +1,5 @@
 /**
- * Public API for tracker-backed query planning and execution (reports + analyses).
+ * Public API for tracker-backed query planning and execution (analyses).
  * Prefer importing from this barrel for new code.
  */
 export { evalComputeExpression, getAtPath, toNumeric } from "./compute-expr";

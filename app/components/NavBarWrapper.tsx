@@ -5,7 +5,7 @@ import NavBar from "./NavBar";
 
 /**
  * Renders the general site NavBar only on routes that don't have their own navbar
- * (e.g. /tracker and /board use TrackerNavBar from their layouts; /report has its own back link in-page).
+ * (e.g. /tracker and /board use TrackerNavBar from their layouts; /analysis has its own header in-page).
  */
 export default function NavBarWrapper() {
   const pathname = usePathname();
@@ -13,7 +13,6 @@ export default function NavBarWrapper() {
   const isBoardPage = pathname?.startsWith("/board") ?? false;
   const isDashboardPage = pathname?.startsWith("/dashboard") ?? false;
   const isProjectPage = pathname?.startsWith("/project") ?? false;
-  const isReportPage = pathname?.startsWith("/report") ?? false;
   const isAnalysisPage = pathname?.startsWith("/analysis") ?? false;
 
   if (
@@ -21,7 +20,6 @@ export default function NavBarWrapper() {
     isBoardPage ||
     isDashboardPage ||
     isProjectPage ||
-    isReportPage ||
     isAnalysisPage
   ) {
     return null;

@@ -3,16 +3,12 @@ import "server-only";
 import type { LanguageModelUsage } from "ai";
 
 import type { StructuredAiProvider } from "@/lib/ai/provider";
-import {
-  buildReportQueryPlanUserPrompt,
-  getReportQueryPlanSystemPrompt,
-} from "@/lib/prompts/report-query-plan";
-import type { ReportIntent } from "@/lib/reports/report-schemas";
+import { getReportQueryPlanSystemPrompt } from "@/lib/prompts/report-query-plan";
 
 import { parseQueryPlan, queryPlanV1Schema, type QueryPlanV1 } from "./schemas";
 
 /**
- * Analysis outline shape for the shared query-plan LLM (mirrors `AnalysisOutlinePayload` in `lib/analysis`).
+ * Analysis outline shape for the query-plan LLM (mirrors `AnalysisOutlinePayload` in `lib/analysis`).
  */
 export type AnalysisOutlineForQueryPlan = {
   version: 1;
@@ -26,32 +22,13 @@ export type AnalysisOutlineForQueryPlan = {
   }>;
 };
 
-export type QueryPlanUserContext =
-  | {
-      mode: "report";
-      intent: ReportIntent;
-      userQuery: string;
-      catalogText: string;
-      trackerInstance: "SINGLE" | "MULTI";
-      versionControl: boolean;
-    }
-  | {
-      mode: "analysis";
-      outline: AnalysisOutlineForQueryPlan;
-      userQuery: string;
-      catalogText: string;
-    };
+export type QueryPlanUserContext = {
+  outline: AnalysisOutlineForQueryPlan;
+  userQuery: string;
+  catalogText: string;
+};
 
 export function buildQueryPlanUserPrompt(ctx: QueryPlanUserContext): string {
-  if (ctx.mode === "report") {
-    return buildReportQueryPlanUserPrompt({
-      intent: ctx.intent,
-      catalogText: ctx.catalogText,
-      userQuery: ctx.userQuery,
-      trackerInstance: ctx.trackerInstance,
-      versionControl: ctx.versionControl,
-    });
-  }
   return `## Field catalog
 ${ctx.catalogText}
 
@@ -68,7 +45,7 @@ export type GenerateQueryPlanV1Result = {
 };
 
 /**
- * Single LLM call producing `QueryPlanV1` for reports and analyses.
+ * LLM call producing `QueryPlanV1` for tracker-backed analyses.
  */
 export async function generateQueryPlanV1(params: {
   provider: StructuredAiProvider;

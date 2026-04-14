@@ -86,7 +86,6 @@ export async function recordLlmUsage(params: {
   usage: LanguageModelUsage;
   projectId?: string | null;
   trackerSchemaId?: string | null;
-  reportId?: string | null;
   analysisId?: string | null;
 }): Promise<void> {
   const counts = tokenCountsFromUsage(params.usage);
@@ -101,7 +100,6 @@ export async function recordLlmUsage(params: {
       totalTokens: counts.totalTokens,
       projectId: params.projectId ?? null,
       trackerSchemaId: params.trackerSchemaId ?? null,
-      reportId: params.reportId ?? null,
       analysisId: params.analysisId ?? null,
     },
   });
@@ -132,15 +130,15 @@ export type LlmUsageByTrackerRow = LlmUsageDashboardRow & {
   projectId: string | null;
 };
 
-export type LlmUsageReportDetailRow = LlmUsageDashboardRow & {
-  reportId: string | null;
-  reportName: string;
+export type LlmUsageAnalysisDetailRow = LlmUsageDashboardRow & {
+  analysisId: string | null;
+  analysisName: string;
   dataTrackerName: string;
 };
 
 export type LlmUsageByTrackerBreakdownRow = LlmUsageByTrackerRow & {
   otherOnTracker: LlmUsageDashboardRow;
-  reportDetails: LlmUsageReportDetailRow[];
+  analysisDetails: LlmUsageAnalysisDetailRow[];
 };
 
 export type LlmUsageDashboard = {
@@ -188,17 +186,17 @@ export async function getLlmUsageDashboard(
     where: {
       userId,
       trackerSchemaId: { not: null },
-      NOT: { source: { startsWith: "report-" } },
+      NOT: { source: { startsWith: "analysis-" } },
     },
     _sum: { totalTokens: true, promptTokens: true, completionTokens: true },
   });
 
-  const reportPipelineGroups = await prisma.llmTokenUsage.groupBy({
-    by: ["trackerSchemaId", "reportId"],
+  const analysisPipelineGroups = await prisma.llmTokenUsage.groupBy({
+    by: ["trackerSchemaId", "analysisId"],
     where: {
       userId,
       trackerSchemaId: { not: null },
-      source: { startsWith: "report-" },
+      source: { startsWith: "analysis-" },
     },
     _sum: { totalTokens: true, promptTokens: true, completionTokens: true },
   });
@@ -238,17 +236,17 @@ export async function getLlmUsageDashboard(
       .map((g) => [g.trackerSchemaId, sumRow(g)]),
   );
 
-  const reportIdsForLabels = [
+  const analysisIdsForLabels = [
     ...new Set(
-      reportPipelineGroups
-        .map((g) => g.reportId)
+      analysisPipelineGroups
+        .map((g) => g.analysisId)
         .filter((id): id is string => id != null),
     ),
   ];
-  const reportsForLabels =
-    reportIdsForLabels.length > 0
-      ? await prisma.report.findMany({
-          where: { id: { in: reportIdsForLabels }, userId },
+  const analysesForLabels =
+    analysisIdsForLabels.length > 0
+      ? await prisma.analysis.findMany({
+          where: { id: { in: analysisIdsForLabels }, userId },
           select: {
             id: true,
             name: true,
@@ -257,18 +255,18 @@ export async function getLlmUsageDashboard(
           },
         })
       : [];
-  const reportLabelById = Object.fromEntries(
-    reportsForLabels.map((r) => [
+  const analysisLabelById = Object.fromEntries(
+    analysesForLabels.map((r) => [
       r.id,
       {
-        name: r.name?.trim() || "Untitled report",
+        name: r.name?.trim() || "Untitled analysis",
         dataTrackerName: r.trackerSchema?.name?.trim() || "Untitled tracker",
       },
     ]),
   );
 
-  const reportDetailsByTracker = new Map<string, LlmUsageReportDetailRow[]>();
-  for (const g of reportPipelineGroups) {
+  const analysisDetailsByTracker = new Map<string, LlmUsageAnalysisDetailRow[]>();
+  for (const g of analysisPipelineGroups) {
     if (g.trackerSchemaId == null) continue;
     const tid = g.trackerSchemaId;
     const row = sumRow(g);
@@ -279,29 +277,29 @@ export async function getLlmUsageDashboard(
     )
       continue;
 
-    let reportName: string;
+    let analysisName: string;
     let dataTrackerName: string;
-    if (g.reportId) {
-      const labels = reportLabelById[g.reportId];
-      reportName = labels?.name ?? "Report";
+    if (g.analysisId) {
+      const labels = analysisLabelById[g.analysisId];
+      analysisName = labels?.name ?? "Analysis";
       dataTrackerName =
         labels?.dataTrackerName ??
         (trackerMeta[tid]?.name?.trim() || "Untitled tracker");
     } else {
-      reportName = "Report runs (before per-report tracking)";
+      analysisName = "Analysis runs (before per-analysis tracking)";
       dataTrackerName = trackerMeta[tid]?.name?.trim() || "Untitled tracker";
     }
 
-    const list = reportDetailsByTracker.get(tid) ?? [];
+    const list = analysisDetailsByTracker.get(tid) ?? [];
     list.push({
-      reportId: g.reportId,
-      reportName,
+      analysisId: g.analysisId,
+      analysisName,
       dataTrackerName,
       ...row,
     });
-    reportDetailsByTracker.set(tid, list);
+    analysisDetailsByTracker.set(tid, list);
   }
-  for (const [, list] of reportDetailsByTracker) {
+  for (const [, list] of analysisDetailsByTracker) {
     list.sort((a, b) => b.totalTokens - a.totalTokens);
   }
 
@@ -333,7 +331,8 @@ export async function getLlmUsageDashboard(
             promptTokens: 0,
             completionTokens: 0,
           },
-          reportDetails: reportDetailsByTracker.get(g.trackerSchemaId) ?? [],
+          analysisDetails:
+            analysisDetailsByTracker.get(g.trackerSchemaId) ?? [],
         };
       })
       .sort((a, b) => b.totalTokens - a.totalTokens),

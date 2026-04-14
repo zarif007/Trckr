@@ -1,6 +1,6 @@
-# Insights pipeline (reports & analyses)
+# Insights pipeline (analyses)
 
-Shared server and client pieces for **tracker-backed insights**: field catalog → `QueryPlanV1` → `executeQueryPlan`, then product-specific formatting (reports) or synthesis (analyses).
+Shared server and client pieces for **tracker-backed analyses**: field catalog → `QueryPlanV1` → `executeQueryPlan` → synthesis, with optional **client-side replay** of the saved query plan (filters, caps) before re-execution.
 
 ## Architecture
 
@@ -9,23 +9,17 @@ flowchart LR
   subgraph shared [lib/insights-query]
     QP[generateQueryPlanV1]
     CAT[catalog + executeQueryPlan]
-  end
-  subgraph report [Report pipeline]
-    RI[intent LLM]
-    QP
-    EX[execute]
-    CF[calc + formatter]
-    RI --> QP --> EX --> CF
+    RO[query-plan overrides]
   end
   subgraph analysis [Analysis pipeline]
-    AO[outline LLM only]
+    AO[outline LLM]
     QP
-    EX2[execute]
+    EX[execute]
     SY[synthesis LLM]
-    AO --> QP --> EX2 --> SY
+    AO --> QP --> EX --> SY
   end
+  RO -.->|replay merge| EX
   CAT --> EX
-  CAT --> EX2
 ```
 
 ## Server
@@ -34,12 +28,11 @@ flowchart LR
 |--------|----------|
 | Shared query execution + schemas + row load | [`lib/insights-query`](../insights-query/README.md) (`generateQueryPlanV1`, `executeQueryPlan`, `loadTrackerDataForQueryPlan`, …) |
 | Query AST rules (single source of truth for the query-plan model) | `lib/prompts/report-query-plan.ts` (`getReportQueryPlanSystemPrompt`) |
-| Report orchestration (intent, calc, formatter) | `lib/reports/orchestrator.ts` |
 | Analysis outline schema (no embedded query plan) | `lib/analysis/analysis-schemas.ts` (`analysisOutlineOnlySchema`) |
-| Analysis orchestration | `lib/analysis/orchestrator.ts` |
+| Analysis orchestration | [`lib/analysis/orchestrator.ts`](../analysis/orchestrator.ts) — see [`lib/analysis/README.md`](../analysis/README.md) |
 | Traced NDJSON runs (DB + stream) | `lib/insights/with-traced-run.ts` (`withTracedRun`) |
 
-LLM usage sources include `report-query-plan`, `analysis-query-plan`, `analysis-planning`, `analysis-synthesis`, etc., so dashboards can split costs by step.
+LLM usage sources include `analysis-query-plan`, `analysis-planning`, `analysis-synthesis`, etc., so dashboards can split costs by step.
 
 ## Client
 
@@ -48,13 +41,11 @@ LLM usage sources include `report-query-plan`, `analysis-query-plan`, `analysis-
 | Phase timeline state + NDJSON reader | `app/insights/lib/ndjson-timeline.ts` (`applyPhaseStreamEvent`, `consumeInsightNdjsonStream`) |
 | Timeline UI | `app/insights/components/GenerationTimeline.tsx` |
 | Page chrome (header, stale banner, prompt shell) | `app/insights/components/InsightPageHeader.tsx`, `StaleDefinitionBanner.tsx`, `InsightPromptCard.tsx` |
-| Multiline prompt (report + analysis) | `app/insights/components/InsightMultilinePrompt.tsx` |
-| New report/analysis dialog | `app/insights/components/NewTrackerBackedItemDialog.tsx` |
+| Multiline prompt (analysis) | `app/insights/components/InsightMultilinePrompt.tsx` |
+| New analysis dialog | `app/insights/components/NewTrackerBackedItemDialog.tsx` |
 
-Report-only UI (e.g. recipe filters) and analysis-only UI (document view) stay on their respective pages.
+Filters, data table, CSV export, and the analysis document live on `app/analysis/[id]/page.tsx`.
 
 ## Out of scope here
 
-- Merging report and analysis **API routes** (separate resources).
-- Sharing **formatter/calc** with analysis (different outputs).
 - **Per-section query plans** (future extension to `generateQueryPlanV1`).

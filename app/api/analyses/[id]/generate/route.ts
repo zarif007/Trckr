@@ -13,10 +13,16 @@ import {
   isAnalysisReplayable,
   runAnalysisPipeline,
 } from "@/lib/analysis/orchestrator";
+import {
+  mergeQueryPlanWithOverrides,
+  replayQueryOverridesSchema,
+} from "@/lib/insights-query/query-plan-overrides";
+import { parseQueryPlan, type QueryPlanV1 } from "@/lib/insights-query/schemas";
 
 const bodySchema = z.object({
   prompt: z.string().optional(),
   regenerate: z.boolean().optional(),
+  replayQueryOverrides: replayQueryOverridesSchema.optional(),
 });
 
 export async function POST(
@@ -42,6 +48,22 @@ export async function POST(
     return badRequest("Prompt is required for the first run.");
   }
 
+  let replayQueryPlan: QueryPlanV1 | undefined;
+  if (replayable && parsed.data.replayQueryOverrides !== undefined) {
+    const base = parseQueryPlan(analysis.definition?.queryPlan);
+    if (!base) {
+      return badRequest("Invalid saved recipe.");
+    }
+    const merged = mergeQueryPlanWithOverrides(
+      base,
+      parsed.data.replayQueryOverrides,
+    );
+    if (!merged.ok) {
+      return badRequest(merged.error);
+    }
+    replayQueryPlan = merged.plan;
+  }
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -54,10 +76,14 @@ export async function POST(
           analysisId: id,
           userPrompt: prompt || savedPrompt,
           regenerate,
+          replayQueryPlan,
           writeNdjsonLine,
         });
-      } catch {
-        // Orchestrator forwards errors when possible.
+      } catch (error) {
+        // `withTracedRun` emits an `error` NDJSON line before rethrowing; log for server diagnostics.
+        const message =
+          error instanceof Error ? error.message : "Analysis pipeline failed";
+        console.error("[POST /api/analyses/[id]/generate]", message);
       } finally {
         controller.close();
       }

@@ -191,12 +191,12 @@ const highBudgetFormatted =
 const mediumBudgetFormatted =
   LANDING_DEMO_REPORT_MEDIUM_PRIORITY_BUDGET.toLocaleString("en-US");
 
-export const LANDING_DEMO_REPORT_MARKDOWN = `**Active portfolio (High + Medium, excluding Completed)** — This recipe matches the **Pipeline** tab seed: flatten **Projects**, require **Priority ∈ {High, Medium}**, drop **Completed**, then **sum Est. budget** with **count**, **avg rate**, and **max deal** by **Status**. Rows and totals below are produced by the same \`executeQueryPlan\` path as live reports.
+export const LANDING_DEMO_REPORT_MARKDOWN = `**Active portfolio (High + Medium, excluding Completed)** — This recipe matches the **Pipeline** tab seed: flatten **Projects**, require **Priority ∈ {High, Medium}**, drop **Completed**, then **sum Est. budget** with **count**, **avg rate**, and **max deal** by **Status**. Rows and totals below are produced by the same \`executeQueryPlan\` path as live analyses.
 
 - **In Progress** carries the largest share of committed dollars; **Blocked** is a close second on risk (work is stalled but still funded).
 - **High** vs **Medium** budget split is almost even (**$${highBudgetFormatted}** vs **$${mediumBudgetFormatted}**) — capacity planning should treat both tiers as first-class.
 
-**Total** Est. budget in this cohort: **$${totalBudgetFormatted}** across **${String(LANDING_DEMO_REPORT_FILTERED_DEAL_COUNT)}** initiatives. Sign in to run live generation and edit recipes.`;
+**Total** Est. budget in this cohort: **$${totalBudgetFormatted}** across **${String(LANDING_DEMO_REPORT_FILTERED_DEAL_COUNT)}** initiatives. Sign in to run live generation and adjust filters.`;
 
 const analysisBarChartData = LANDING_DEMO_REPORT_ROWS.map((r) => ({
   status: String(r.project_status ?? ""),
@@ -242,7 +242,7 @@ export const LANDING_DEMO_ANALYSIS_DOCUMENT: AnalysisDocumentV1 = {
 Suggested next steps:
 1. **Unblock** *Laptop refresh Q1* and *Customer research panels* or re-scope dates — combined they anchor the **Blocked** bucket.
 2. **Guard capacity** on *Data warehouse refactor* and *New onboarding flow* — they dominate **In Progress** dollars.
-3. **Re-run** after any pipeline edit so reports and analysis stay wired to the same query plan.`,
+3. **Re-run** after any pipeline edit so the table and narrative stay wired to the same query plan.`,
       chartSpec: {
         type: "pie",
         nameKey: "priority",
@@ -263,7 +263,7 @@ Suggested next steps:
       markdown:
         "1. **Security / GTM alignment** — *SOC 2 evidence pack* sits in **In Progress** with a high blended rate; keep evidence IDs attached in the tracker for audit trail.\n2. **RevOps** — *CRM data hygiene* is out of this cohort (Low priority); escalate if leadership wants it in the next planning slice.\n3. **Reproducibility** — This brief is static marketing data, but the numbers are generated with the product query executor so the story matches the implementation.",
       sources:
-        "Demo narrative · aligned with landing pipeline seed and report snapshot",
+        "Demo narrative · aligned with landing pipeline seed and demo query snapshot",
     },
   ],
 };

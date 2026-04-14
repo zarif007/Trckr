@@ -86,7 +86,7 @@ export function CapabilityVisual({
     | "calc"
     | "validate"
     | "master"
-    | "report";
+    | "analysisDocument";
   className?: string;
 }) {
   const h = "h-[3.35rem]";
@@ -243,20 +243,23 @@ export function CapabilityVisual({
     );
   }
 
-  /* report */
-  return (
-    <div
-      className={cn("p-2 flex flex-col gap-1", frame, h, className)}
-      aria-hidden
-    >
-      <div className="h-2 w-1/2 rounded-sm bg-foreground/15" />
-      <div className="flex-1 rounded border bg-background/60 p-1 space-y-0.5 min-h-0">
-        <div className="h-1 rounded-sm bg-foreground/10" />
-        <div className="h-1 w-5/6 rounded-sm bg-foreground/8" />
-        <div className="h-1 w-4/6 rounded-sm bg-foreground/8" />
+  if (variant === "analysisDocument") {
+    return (
+      <div
+        className={cn("p-2 flex flex-col gap-1", frame, h, className)}
+        aria-hidden
+      >
+        <div className="h-2 w-1/2 rounded-sm bg-foreground/15" />
+        <div className="flex-1 rounded border bg-background/60 p-1 space-y-0.5 min-h-0">
+          <div className="h-1 rounded-sm bg-foreground/10" />
+          <div className="h-1 w-5/6 rounded-sm bg-foreground/8" />
+          <div className="h-1 w-4/6 rounded-sm bg-foreground/8" />
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }
 
 const askH = "h-[4.25rem]";

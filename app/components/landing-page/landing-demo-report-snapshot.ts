@@ -3,7 +3,7 @@ import {
   executeQueryPlan,
   type TrackerDataInput,
 } from "@/lib/insights-query/query-executor";
-import type { QueryPlanV1 } from "@/lib/reports/ast-schemas";
+import type { QueryPlanV1 } from "@/lib/insights-query/schemas";
 
 /** Fixed “as of” for marketing analysis headers (matches synthetic tracker row). */
 export const LANDING_DEMO_SNAPSHOT_AS_OF_ISO = "2026-03-15T14:30:00.000Z";

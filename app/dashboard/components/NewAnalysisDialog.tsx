@@ -16,7 +16,6 @@ export function NewAnalysisDialog(props: NewAnalysisDialogProps) {
   return (
     <NewTrackerBackedItemDialog
       {...props}
-      resource="analysis"
       title={
         <>
           <BarChart2 className="h-4 w-4" />

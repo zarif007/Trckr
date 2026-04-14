@@ -26,14 +26,7 @@ type TrackerOption = {
   moduleId: string | null;
 };
 
-export type TrackerBackedResource = "report" | "analysis";
-
-function apiCollection(resource: TrackerBackedResource) {
-  return resource === "report" ? "reports" : "analyses";
-}
-
 export type NewTrackerBackedItemDialogProps = {
-  resource: TrackerBackedResource;
   projectId: string;
   moduleId?: string;
   open: boolean;
@@ -47,7 +40,6 @@ export type NewTrackerBackedItemDialogProps = {
 };
 
 export function NewTrackerBackedItemDialog({
-  resource,
   projectId,
   moduleId,
   open,
@@ -60,7 +52,6 @@ export function NewTrackerBackedItemDialog({
   createFailedMessage,
 }: NewTrackerBackedItemDialogProps) {
   const router = useRouter();
-  const collection = apiCollection(resource);
   const [name, setName] = useState("");
   const [trackerId, setTrackerId] = useState<string>("");
   const [trackers, setTrackers] = useState<TrackerOption[]>([]);
@@ -89,7 +80,7 @@ export function NewTrackerBackedItemDialog({
     setLoadingList(true);
     const q = new URLSearchParams({ projectId });
     if (moduleId) q.set("moduleId", moduleId);
-    fetch(`/api/${collection}/trackers?${q.toString()}`)
+    fetch(`/api/analyses/trackers?${q.toString()}`)
       .then(async (res) => {
         if (!res.ok) {
           const j = await res.json().catch(() => ({}));
@@ -121,7 +112,7 @@ export function NewTrackerBackedItemDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, projectId, moduleId, onError, collection]);
+  }, [open, projectId, moduleId, onError]);
 
   const handleCreate = useCallback(async () => {
     const trimmed = name.trim();
@@ -136,7 +127,7 @@ export function NewTrackerBackedItemDialog({
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch(`/api/${collection}`, {
+      const res = await fetch(`/api/analyses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -156,7 +147,7 @@ export function NewTrackerBackedItemDialog({
       if (!id) throw new Error("Invalid response");
       handleOpenChange(false);
       await onCreated?.();
-      router.push(resource === "report" ? `/report/${id}` : `/analysis/${id}`);
+      router.push(`/analysis/${id}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : createFailedMessage;
       setError(msg);
@@ -173,8 +164,6 @@ export function NewTrackerBackedItemDialog({
     handleOpenChange,
     onError,
     onCreated,
-    collection,
-    resource,
     createFailedMessage,
   ]);
 

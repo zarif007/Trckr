@@ -2,7 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/db";
 
-/** Tracker picker options for report/analysis creation (GENERAL schemas in a project/module). */
+/** Tracker picker options for analysis creation (GENERAL schemas in a project/module). */
 export async function listTrackersForScope(
   userId: string,
   projectId: string,

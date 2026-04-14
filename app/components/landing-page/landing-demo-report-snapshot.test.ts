@@ -13,7 +13,7 @@ import {
 } from "@/app/components/landing-page/landing-demo-report-snapshot";
 import { parseAnalysisDocument } from "@/lib/analysis/analysis-schemas";
 import { executeQueryPlan } from "@/lib/insights-query/query-executor";
-import { parseQueryPlan } from "@/lib/reports/ast-schemas";
+import { parseQueryPlan } from "@/lib/insights-query/schemas";
 
 describe("landing-demo-report-snapshot", () => {
   it("parses the marketing query plan", () => {

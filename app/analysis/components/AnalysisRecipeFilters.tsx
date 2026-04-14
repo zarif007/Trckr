@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MultiSelect } from "@/components/ui/multi-select";
-import type { QueryPlanV1 } from "@/lib/reports/ast-schemas";
-import type { FilterRowDraft } from "@/app/report/lib/replay-overrides";
+import type { QueryPlanV1 } from "@/lib/insights-query/schemas";
+import type { FilterRowDraft } from "@/app/analysis/lib/replay-overrides";
+import { theme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 export type FieldCatalogEntry = {
@@ -54,14 +55,14 @@ const META_PATH_SUGGESTIONS = [
   "__gridId",
 ];
 
-type ReportRecipeFiltersProps = {
+type AnalysisRecipeFiltersProps = {
   disabled: boolean;
   queryPlan: QueryPlanV1;
   formatterOnlyGroupBy: boolean;
   fieldCatalog: FieldCatalogEntry[];
   /** Original user request; filter defaults come from the recipe built from this. */
   userRequirementPrompt?: string | null;
-  /** When true, the panel starts expanded (e.g. above the report output). */
+  /** When true, the panel starts expanded (e.g. above the analysis output). */
   defaultOpen?: boolean;
   rowTimeFilter: QueryPlanV1["load"]["rowTimeFilter"] | null;
   onRowTimeFilterChange: (
@@ -91,7 +92,7 @@ function datetimeLocalToIso(local: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-export function ReportRecipeFilters({
+export function AnalysisRecipeFilters({
   disabled,
   queryPlan,
   formatterOnlyGroupBy,
@@ -109,7 +110,7 @@ export function ReportRecipeFilters({
   applying,
   filtersDirty,
   filterBaselineReady,
-}: ReportRecipeFiltersProps) {
+}: AnalysisRecipeFiltersProps) {
   const dateEnabled = rowTimeFilter != null;
   const hasAggregate = Boolean(queryPlan.aggregate);
 
@@ -140,18 +141,31 @@ export function ReportRecipeFilters({
 
   return (
     <details
-      className="rounded-sm border border-border/50 bg-background overflow-hidden group"
+      className={cn(
+        "rounded-sm border bg-background overflow-hidden group",
+        theme.uiChrome.floating,
+      )}
       {...(defaultOpen ? { defaultOpen: true } : {})}
     >
-      <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground/90 border-b border-border/40 bg-muted/15 hover:bg-muted/25 [&::-webkit-details-marker]:hidden flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-t-md">
-        <span>Report filters</span>
+      <summary
+        className={cn(
+          "cursor-pointer list-none px-4 py-3 text-sm font-medium text-foreground/90 border-b bg-muted/15 hover:bg-muted/25 [&::-webkit-details-marker]:hidden flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-t-md",
+          theme.uiChrome.border,
+        )}
+      >
+        <span>Analysis filters</span>
         <span className="text-xs font-normal text-muted-foreground sm:text-right">
-          From your request — use Apply to update the report below
+          From your request — use Apply to update the analysis below
         </span>
       </summary>
       <div className="px-4 py-4 space-y-5 text-sm">
         {requirement ? (
-          <div className="rounded-sm border border-border/40 bg-muted/15 px-3 py-2 space-y-1">
+          <div
+            className={cn(
+              "rounded-sm border bg-muted/15 px-3 py-2 space-y-1",
+              theme.uiChrome.border,
+            )}
+          >
             <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               Your request
             </p>
@@ -161,8 +175,13 @@ export function ReportRecipeFilters({
           </div>
         ) : null}
         {formatterOnlyGroupBy ? (
-          <p className="text-xs text-muted-foreground rounded-sm border border-border/40 bg-muted/20 px-3 py-2">
-            This report groups data only in the formatter step. Change grouping
+          <p
+            className={cn(
+              "text-xs text-muted-foreground rounded-sm border bg-muted/20 px-3 py-2",
+              theme.uiChrome.border,
+            )}
+          >
+            This analysis groups data only in the formatter step. Change grouping
             with{" "}
             <strong className="font-medium text-foreground/80">
               Regenerate
@@ -171,7 +190,12 @@ export function ReportRecipeFilters({
           </p>
         ) : null}
 
-        <div className="rounded-sm border border-border/50 bg-muted/20 p-3 sm:p-4 space-y-3">
+        <div
+          className={cn(
+            "rounded-sm border bg-muted/20 p-3 sm:p-4 space-y-3",
+            theme.uiChrome.floating,
+          )}
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div className="flex gap-3 min-w-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary/10 text-primary">
@@ -210,7 +234,12 @@ export function ReportRecipeFilters({
             </button>
           </div>
           {dateEnabled && rowTimeFilter ? (
-            <div className="rounded-sm border border-border/40 bg-background/90 p-3 sm:p-4 space-y-4">
+            <div
+              className={cn(
+                "rounded-sm border bg-background/90 p-3 sm:p-4 space-y-4",
+                theme.uiChrome.border,
+              )}
+            >
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
                 Configure range
               </p>
@@ -372,7 +401,8 @@ export function ReportRecipeFilters({
                 <li
                   key={idx}
                   className={cn(
-                    "grid gap-2 items-end sm:grid-cols-[1fr_minmax(0,7rem)_1fr_auto] p-2 rounded-sm border border-border/40 bg-muted/10",
+                    "grid gap-2 items-end sm:grid-cols-[1fr_minmax(0,7rem)_1fr_auto] p-2 rounded-sm border bg-muted/10",
+                    theme.uiChrome.border,
                   )}
                 >
                   <div className="space-y-1 min-w-0">
@@ -380,7 +410,7 @@ export function ReportRecipeFilters({
                       Field
                     </span>
                     <Input
-                      list={`report-filter-paths-${idx}`}
+                      list={`analysis-filter-paths-${idx}`}
                       value={row.path}
                       onChange={(e) => {
                         const next = [...filterRows];
@@ -391,7 +421,7 @@ export function ReportRecipeFilters({
                       disabled={disabled}
                       className="text-xs font-mono rounded-sm"
                     />
-                    <datalist id={`report-filter-paths-${idx}`}>
+                    <datalist id={`analysis-filter-paths-${idx}`}>
                       {pathOptions.map((o) => (
                         <option key={o.id} value={o.id} label={o.label} />
                       ))}
@@ -457,14 +487,19 @@ export function ReportRecipeFilters({
           )}
         </div>
 
-        <div className="flex flex-col gap-3 pt-2 border-t border-border/40 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className={cn(
+            "flex flex-col gap-3 pt-2 border-t sm:flex-row sm:items-center sm:justify-between",
+            theme.uiChrome.border,
+          )}
+        >
           <p className="text-xs text-muted-foreground min-w-0">
             {filtersDirty ? (
               <span className="text-amber-800/90 dark:text-amber-200/90">
-                You have filter changes that are not shown in the report yet.
+                You have filter changes that are not shown in the analysis yet.
               </span>
             ) : filterBaselineReady ? (
-              <span>Report matches these filters.</span>
+              <span>Analysis matches these filters.</span>
             ) : (
               <span>Preparing filter state…</span>
             )}
@@ -477,7 +512,7 @@ export function ReportRecipeFilters({
             onClick={onApply}
           >
             {applying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-            Apply to report
+            Apply to analysis
           </Button>
         </div>
       </div>

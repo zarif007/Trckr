@@ -81,7 +81,10 @@ export async function GET(
     fingerprintNow,
     fieldCatalog: fieldCatalogEntries,
     document,
-    recipe: recipe != null ? { queryPlan: recipe } : null,
+    recipe:
+      recipe != null
+        ? { queryPlan: recipe, formatterOnlyGroupBy: false }
+        : null,
   });
 }
 

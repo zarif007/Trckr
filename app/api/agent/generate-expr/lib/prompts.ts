@@ -4,7 +4,7 @@ export interface ExprPromptInputs {
   prompt: string;
   gridId: string;
   fieldId: string;
-  purpose: "validation" | "calculation" | "report" | "field-rule";
+  purpose: "validation" | "calculation" | "field-rule";
   availableFields: AvailableField[];
 }
 
@@ -17,23 +17,19 @@ export function buildSystemPrompt(
       ? "- The expression should evaluate to a boolean/truthy result suitable for validation checks."
       : purpose === "calculation"
         ? "- The expression should compute the target field value (number/string/boolean/etc), not a validation boolean unless explicitly requested."
-        : purpose === "field-rule"
-          ? [
-              "- The expression evaluates to the new value for the target field property:",
-              " - visibility/required/disabled: boolean",
-              " - label: string",
-              " - options: array of { label: string, value: unknown }",
-              " - value: any type matching the target field",
-            ].join("\n")
-          : "- The expression should compute one value **per report row** (e.g. line total = quantity × unit_price, margin, conditional adjustments). Use numeric result when the user asks for totals or amounts.";
+        : [
+            "- The expression evaluates to the new value for the target field property:",
+            " - visibility/required/disabled: boolean",
+            " - label: string",
+            " - options: array of { label: string, value: unknown }",
+            " - value: any type matching the target field",
+          ].join("\n");
   const taskLabel =
     purpose === "validation"
       ? "field validation"
       : purpose === "calculation"
         ? "field calculation"
-        : purpose === "field-rule"
-          ? "field rule outcome"
-          : "report row calculation";
+        : "field rule outcome";
 
   return `
 You are generating a JSON expression AST for ${taskLabel}.
@@ -47,7 +43,7 @@ Rules:
  - ✓ CORRECT: { "op": "accumulate", "sourceFieldId": "other_grid.price", "action": "add" }
  - ✗ WRONG: { "op": "mul", "args": [{ "op": "field", "fieldId": "other_grid.cost" }, quantity] }
 - Only use operators listed in the "Supported operators" section above — do not generate other operators.
-${purpose === "report" ? '- For reports, each evaluation uses one **flattened grid row**: row values include both bare field ids (e.g. quantity) and "gridId.fieldId" when __gridId is known — prefer "gridId.fieldId" from the available fields list for clarity.\n' : ""}${purposeRules}
+${purposeRules}
 
 Supported operators and their canonical shapes:
 
@@ -93,22 +89,6 @@ function formatAvailableFields(fields: AvailableField[]): string {
 export function buildUserPrompt(inputs: ExprPromptInputs): string {
   const { prompt, gridId, fieldId, purpose, availableFields } = inputs;
   const fieldList = formatAvailableFields(availableFields);
-  if (purpose === "report") {
-    return `
-Report calculation (one ExprNode evaluated once per flattened row).
-
-Primary grid context: ${gridId}
-Label: ${fieldId}
-
-Available fields (use gridId.fieldId in "field" nodes):
-${fieldList}
-
-What to compute:
-${prompt}
-
-Generate the expression AST.
-`.trim();
-  }
   const modeLabel =
     purpose === "field-rule" ? "field rule outcome expression" : purpose;
 

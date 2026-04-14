@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { mergeQueryPlanWithOverrides } from "./query-plan-overrides";
-import type { QueryPlanV1 } from "./ast-schemas";
+import type { QueryPlanV1 } from "./schemas";
 
 const basePlan: QueryPlanV1 = {
   version: 1,

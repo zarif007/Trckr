@@ -28,7 +28,7 @@ const CAPABILITIES = [
   {
     section: "ANALYSIS",
     icon: "▣",
-    title: "Ask a question. Get a report.",
+    title: "Ask a question. Get an analysis.",
     body: "Ask the AI analyst for summaries, charts, trends, and action items. Grounded entirely in your tracker data — no hallucination, no assumptions.",
     proof: "06 · Pipeline concentration detected",
   },

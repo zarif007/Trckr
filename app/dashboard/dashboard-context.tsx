@@ -35,13 +35,6 @@ export const SYSTEM_FILE_LABELS: Record<SystemFileType, string> = {
   CONNECTIONS: "Connections",
 };
 
-export type ReportSummary = {
-  id: string;
-  name: string;
-  moduleId: string | null;
-  updatedAt: string;
-};
-
 export type AnalysisSummary = {
   id: string;
   name: string;
@@ -84,7 +77,6 @@ export type Project = {
   createdAt: string;
   updatedAt: string;
   trackerSchemas: TrackerSchema[];
-  reports: ReportSummary[];
   analyses: AnalysisSummary[];
   boards: BoardSummary[];
   workflows: WorkflowSummary[];

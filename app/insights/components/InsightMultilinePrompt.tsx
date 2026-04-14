@@ -4,7 +4,7 @@ import type { TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Native multiline prompt for report/analysis pages — avoids single-line input height tokens.
+ * Native multiline prompt for analysis pages — avoids single-line input height tokens.
  */
 export function InsightMultilinePrompt({
   className,

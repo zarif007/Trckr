@@ -10,7 +10,7 @@ export default function middleware(req: NextRequest) {
   const isLoggedIn = isAuthenticatedRequest(req)
   const isTracker = pathname.startsWith('/tracker')
   const isDashboard = pathname.startsWith('/dashboard')
-  const isReport = pathname.startsWith('/report')
+  const isAnalysis = pathname.startsWith('/analysis')
   const isLogin = pathname === '/login'
 
   if (isLogin && isLoggedIn) {
@@ -18,7 +18,7 @@ export default function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(callbackUrl, req.url))
   }
 
-  if (!isLoggedIn && (isTracker || isDashboard || isReport)) {
+  if (!isLoggedIn && (isTracker || isDashboard || isAnalysis)) {
     const loginUrl = new URL('/login', req.url)
     loginUrl.searchParams.set('callbackUrl', pathname)
     return NextResponse.redirect(loginUrl)

@@ -35,7 +35,7 @@ export function TrackerInputArea({
   const isDataMode = mode === "data";
   const placeholder = isDataMode
     ? isChatEmpty
-      ? "Ask for a report, summary, or insights on this tracker’s data..."
+      ? "Ask for a summary or analysis of this tracker’s data..."
       : "Ask follow-up questions or new analyses on your data..."
     : isChatEmpty
       ? "Describe your ideal tracker..."

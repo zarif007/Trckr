@@ -18,7 +18,7 @@ const VIEW_COPY: Record<
   },
   projects: {
     title: "Projects",
-    subtitle: "Open a folder to work with trackers, reports, and modules.",
+    subtitle: "Open a folder to work with trackers, analyses, and modules.",
   },
   recents: {
     title: "Recent trackers",
